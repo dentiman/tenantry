@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import './index.css';
@@ -26,9 +27,18 @@ async function bootstrap(): Promise<void> {
 
   createRoot(rootElement).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      {/* HeroUI v3 очікує class + data-theme на <html>; system — стартове значення */}
+      <ThemeProvider
+        attribute={['class', 'data-theme']}
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+        storageKey="saas_theme"
+      >
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ThemeProvider>
     </StrictMode>,
   );
 }

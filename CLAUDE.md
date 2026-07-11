@@ -29,7 +29,8 @@ pnpm api:test:e2e         # 40 jest+supertest тестів; ВИМАГАЄ за�
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, health. Pino, PrismaExceptionFilter
 apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss
-apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form
+apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
+                HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system)
 libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod)
 libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global)
 libs/shared     Черги: defineJob (Zod payload), JobDispatcher (абстракція, pg-boss замінюваний),
@@ -82,6 +83,13 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
    він замокан через `moduleNameMapper` (`apps/api/test/__mocks__/pg-boss.ts`); зникне з міграцією на Vitest.
 9. **pg-boss send-опції**: не передавати ключі зі значенням `undefined` — його attorney-валідація
    падає (`priority must be an integer`). Опції збирати умовно (див. PgBossJobDispatcher).
+10. **HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після tailwindcss у index.css;
+    тема = `class` + `data-theme` на `<html>` (next-themes, `attribute={['class','data-theme']}`,
+    storageKey `saas_theme`). Compound API: `Table.Content/Header/Body`, `Dropdown.Popover/Menu/Item`,
+    `AlertDialog.Backdrop/Container/Dialog`, `Pagination.Content/Item/Link`. Семантичні токени в розмітці:
+    `bg-background/bg-surface`, `text-foreground/text-muted/text-danger/text-link`, `border-border`.
+    RHF: `register()` кладеться прямо на `<Input>` усередині `<TextField isInvalid>` + `<FieldError>`.
+    Мінімалізм — рішення користувача: тільки потрібні компоненти, без пакетів іконок (інлайн-SVG).
 
 ## Зафіксовані рішення (НЕ переглядати без запиту користувача)
 

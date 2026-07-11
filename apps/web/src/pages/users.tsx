@@ -1,4 +1,14 @@
 import { useState } from 'react';
+import {
+  AlertDialog,
+  Button,
+  Chip,
+  Input,
+  Pagination,
+  Spinner,
+  Table,
+  TextField,
+} from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getUsersFindAllQueryKey,
@@ -10,6 +20,27 @@ import type { UsersFindAllParams } from '../api/generated/model';
 import { useAuthStore } from '../stores/auth.store';
 
 const LIMIT = 10;
+
+type PageItem = number | 'ellipsis-left' | 'ellipsis-right';
+
+// Вікно сторінок: 1 … (p-1, p, p+1) … total
+function pageItems(current: number, total: number): PageItem[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const items: PageItem[] = [1];
+  if (current > 3) {
+    items.push('ellipsis-left');
+  }
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+    items.push(p);
+  }
+  if (current < total - 2) {
+    items.push('ellipsis-right');
+  }
+  items.push(total);
+  return items;
+}
 
 export function UsersPage() {
   const [page, setPage] = useState(1);
@@ -41,25 +72,27 @@ export function UsersPage() {
   });
 
   const totalPages = data?.totalPages ?? 1;
+  const items = data?.items ?? [];
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-        <input
-          type="search"
-          placeholder="Search…"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-        />
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-foreground">Users</h1>
+        <TextField aria-label="Search users" className="w-64">
+          <Input
+            type="search"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </TextField>
       </div>
 
       <form
-        className="mb-4 flex gap-2"
+        className="mb-4 flex items-start gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           if (newEmail) {
@@ -67,118 +100,154 @@ export function UsersPage() {
           }
         }}
       >
-        <input
-          type="email"
-          placeholder="new-user@example.com"
-          value={newEmail}
-          onChange={(e) => {
-            setNewEmail(e.target.value);
-          }}
-          className="w-72 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={createUser.isPending}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <TextField aria-label="New user email" className="w-72">
+          <Input
+            type="email"
+            placeholder="new-user@example.com"
+            value={newEmail}
+            onChange={(e) => {
+              setNewEmail(e.target.value);
+            }}
+          />
+        </TextField>
+        <Button type="submit" variant="primary" isDisabled={createUser.isPending}>
           Add user
-        </button>
+        </Button>
         {createUser.isError && (
-          <span className="self-center text-sm text-red-600">Failed (duplicate email?)</span>
+          <span className="self-center text-sm text-danger">Failed (duplicate email?)</span>
         )}
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-gray-200 text-xs text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Active</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {data?.items.map((u) => (
-              <tr key={u.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-3 font-medium text-gray-900">{u.email}</td>
-                <td className="px-4 py-3 text-gray-600">{u.name ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      u.role === 'ADMIN'
-                        ? 'rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700'
-                        : 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
-                    }
-                  >
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{u.isActive ? 'Yes' : 'No'}</td>
-                <td className="px-4 py-3 text-gray-600">
-                  {new Date(u.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {u.id !== currentUser?.id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        removeUser.mutate({ id: u.id });
-                      }}
-                      className="text-xs font-medium text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {data?.items.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-10">
+          <Spinner aria-label="Loading users" />
+        </div>
+      ) : (
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label="Users">
+              <Table.Header>
+                <Table.Column isRowHeader>Email</Table.Column>
+                <Table.Column>Name</Table.Column>
+                <Table.Column>Role</Table.Column>
+                <Table.Column>Active</Table.Column>
+                <Table.Column>Created</Table.Column>
+                <Table.Column aria-label="Actions"> </Table.Column>
+              </Table.Header>
+              <Table.Body>
+                {items.map((u) => (
+                  <Table.Row key={u.id} id={u.id}>
+                    <Table.Cell className="font-medium text-foreground">{u.email}</Table.Cell>
+                    <Table.Cell>{u.name ?? '—'}</Table.Cell>
+                    <Table.Cell>
+                      <Chip size="sm" color={u.role === 'ADMIN' ? 'accent' : 'default'}>
+                        {u.role}
+                      </Chip>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Chip size="sm" color={u.isActive ? 'success' : 'danger'}>
+                        {u.isActive ? 'Active' : 'Inactive'}
+                      </Chip>
+                    </Table.Cell>
+                    <Table.Cell>{new Date(u.createdAt).toLocaleDateString()}</Table.Cell>
+                    <Table.Cell className="text-right">
+                      {u.id !== currentUser?.id && (
+                        <AlertDialog>
+                          <Button size="sm" variant="danger-soft">
+                            Delete
+                          </Button>
+                          <AlertDialog.Backdrop>
+                            <AlertDialog.Container>
+                              <AlertDialog.Dialog className="sm:max-w-[400px]">
+                                <AlertDialog.CloseTrigger />
+                                <AlertDialog.Header>
+                                  <AlertDialog.Icon status="danger" />
+                                  <AlertDialog.Heading>Delete user?</AlertDialog.Heading>
+                                </AlertDialog.Header>
+                                <AlertDialog.Body>
+                                  <p>
+                                    This will permanently delete <strong>{u.email}</strong>. This
+                                    action cannot be undone.
+                                  </p>
+                                </AlertDialog.Body>
+                                <AlertDialog.Footer>
+                                  <Button slot="close" variant="tertiary">
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    slot="close"
+                                    variant="danger"
+                                    onPress={() => {
+                                      removeUser.mutate({ id: u.id });
+                                    }}
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialog.Footer>
+                              </AlertDialog.Dialog>
+                            </AlertDialog.Container>
+                          </AlertDialog.Backdrop>
+                        </AlertDialog>
+                      )}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
+      )}
 
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <span>
+      {!isLoading && items.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted">No users found</p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-sm text-muted">
           Total: {data?.total ?? 0} · Page {page} of {totalPages}
         </span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => {
-              setPage((p) => p - 1);
-            }}
-            className="rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-100 disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => {
-              setPage((p) => p + 1);
-            }}
-            className="rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-100 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
+        <Pagination>
+          <Pagination.Content>
+            <Pagination.Item>
+              <Pagination.Previous
+                isDisabled={page <= 1}
+                onPress={() => {
+                  setPage((p) => p - 1);
+                }}
+              >
+                <Pagination.PreviousIcon />
+              </Pagination.Previous>
+            </Pagination.Item>
+            {pageItems(page, totalPages).map((item) =>
+              typeof item === 'number' ? (
+                <Pagination.Item key={item}>
+                  <Pagination.Link
+                    isActive={item === page}
+                    onPress={() => {
+                      setPage(item);
+                    }}
+                  >
+                    {item}
+                  </Pagination.Link>
+                </Pagination.Item>
+              ) : (
+                <Pagination.Item key={item}>
+                  <Pagination.Ellipsis />
+                </Pagination.Item>
+              ),
+            )}
+            <Pagination.Item>
+              <Pagination.Next
+                isDisabled={page >= totalPages}
+                onPress={() => {
+                  setPage((p) => p + 1);
+                }}
+              >
+                <Pagination.NextIcon />
+              </Pagination.Next>
+            </Pagination.Item>
+          </Pagination.Content>
+        </Pagination>
       </div>
     </div>
   );

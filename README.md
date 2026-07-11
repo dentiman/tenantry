@@ -13,6 +13,7 @@
 | Contracts   | Zod 4 — єдине джерело правди типів API (`libs/contracts`)                              |
 | API-конвеєр | `@nestjs/swagger` → `openapi.json` → orval → typed TanStack Query hooks                |
 | Frontend    | React 19, Vite 7, TanStack Router + Query v5, Zustand, Tailwind CSS 4, react-hook-form |
+| UI          | HeroUI v3 (React Aria) — мінімальний набір компонентів; тема light/dark/system (next-themes) |
 | Auth        | JWT (15m) + refresh rotation (`tokenId:secret`, argon2) + theft detection              |
 | Monorepo    | pnpm workspaces + Turborepo, ESLint 9 (strict type-checked), Prettier, Husky           |
 
@@ -36,7 +37,7 @@ pnpm web:dev              # Web на http://localhost:5173 (проксі /api �
 apps/
   api/        # NestJS REST API: auth, users, health; Swagger на /api/docs
   worker/     # NestJS-процес без HTTP: обробники job-ів pg-boss + cron
-  web/        # React SPA: login/register, dashboard, users CRUD
+  web/        # React SPA (HeroUI v3): admin-layout, login/register, dashboard, users CRUD
 libs/
   contracts/  # Zod-схеми + z.infer типи (залежить лише від zod)
   database/   # Prisma schema, migrations, seed, PrismaService/PrismaModule

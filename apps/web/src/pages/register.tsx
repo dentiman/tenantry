@@ -1,3 +1,4 @@
+import { Button, Card, FieldError, Input, Label, TextField } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -23,68 +24,39 @@ export function RegisterPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-gray-900">Create account</h1>
-        <form onSubmit={(e) => void onSubmit(e)} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-              {...register('name')}
-            />
-          </div>
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-              {...register('email')}
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
-          </div>
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-              {...register('password')}
-            />
-            {errors.password && (
-              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
-            )}
-          </div>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-sm p-8">
+        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">Create account</h1>
+        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+          <TextField isInvalid={Boolean(errors.name)}>
+            <Label>Name</Label>
+            <Input type="text" autoComplete="name" {...register('name')} />
+            <FieldError>{errors.name?.message}</FieldError>
+          </TextField>
+          <TextField isInvalid={Boolean(errors.email)}>
+            <Label>Email</Label>
+            <Input type="email" autoComplete="email" {...register('email')} />
+            <FieldError>{errors.email?.message}</FieldError>
+          </TextField>
+          <TextField isInvalid={Boolean(errors.password)}>
+            <Label>Password</Label>
+            <Input type="password" autoComplete="new-password" {...register('password')} />
+            <FieldError>{errors.password?.message}</FieldError>
+          </TextField>
           {registerMutation.isError && (
-            <p className="text-sm text-red-600">Registration failed — email may already be taken</p>
+            <p className="text-sm text-danger">Registration failed — email may already be taken</p>
           )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          <Button type="submit" variant="primary" fullWidth isDisabled={isSubmitting}>
             {isSubmitting ? 'Creating…' : 'Create account'}
-          </button>
+          </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm text-muted">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/login" className="font-medium text-link hover:underline">
             Sign in
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 }
