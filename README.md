@@ -72,7 +72,8 @@ pnpm web:codegen        # apps/web/src/api/generated (orval)
 ```bash
 pnpm lint         # ESLint (strict type-checked, 0 warnings)
 pnpm typecheck    # tsc по всіх пакетах (turbo)
-pnpm api:test:e2e # Jest + supertest проти реальної БД (40 тестів)
+pnpm api:test:e2e # Jest + supertest проти реальної БД (43 тести; окрема БД saas_skeleton_test,
+                  # створюється і мігрується автоматично — dev-дані і seed не чіпаються)
 ```
 
 CI (GitHub Actions): lint → typecheck → build → міграції → e2e з PostgreSQL-сервісом.

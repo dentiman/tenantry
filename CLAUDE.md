@@ -19,7 +19,8 @@ pnpm web:dev              # Web: http://localhost:5173 (Vite проксі /api �
 pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 40 jest+supertest тестів; ВИМАГАЄ запущеного Postgres; ЧИСТИТЬ таблиці БД
+pnpm api:test:e2e         # 43 jest+supertest тести; ВИМАГАЄ запущеного Postgres. Ганяються в ОКРЕМІЙ
+                          # БД saas_skeleton_test (globalSetup сам створює її і мігрує) — dev-дані не чіпає
 ```
 
 Після зміни контрактів/контролерів завжди: `openapi:generate` → `web:codegen` (обидва артефакти комітяться).
