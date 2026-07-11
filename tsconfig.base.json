@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "strict": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@saas-skeleton/contracts": ["libs/contracts/src/index.ts"],
+      "@saas-skeleton/contracts/*": ["libs/contracts/src/*"],
+      "@saas-skeleton/database": ["libs/database/src/index.ts"],
+      "@saas-skeleton/database/*": ["libs/database/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

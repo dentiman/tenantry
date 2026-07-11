@@ -1,0 +1,20 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "../",
+  "testEnvironment": "node",
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/tsconfig.spec.json"
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^@fibo-admin/prisma$": "<rootDir>/../../libs/prisma/src/index.ts",
+    "^@fibo-admin/prisma/(.*)$": "<rootDir>/../../libs/prisma/src/$1",
+    "^@fibo-admin/contracts$": "<rootDir>/../../libs/contracts/src/index.ts",
+    "^@fibo-admin/contracts/(.*)$": "<rootDir>/../../libs/contracts/src/$1"
+  }
+}

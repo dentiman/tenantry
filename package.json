@@ -1,0 +1,79 @@
+{
+  "name": "saas-skeleton",
+  "version": "0.0.1",
+  "private": true,
+  "description": "SaaS Skeleton — multitenant CRM/ERP foundation (NestJS + React)",
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "turbo run typecheck",
+    "prepare": "husky",
+    "api:dev": "pnpm --filter @saas-skeleton/api dev",
+    "api:build": "pnpm --filter @saas-skeleton/api build",
+    "api:start": "pnpm --filter @saas-skeleton/api start",
+    "api:test:e2e": "pnpm --filter @saas-skeleton/api test:e2e",
+    "openapi:generate": "pnpm --filter @saas-skeleton/api openapi:generate",
+    "web:dev": "pnpm --filter @saas-skeleton/web dev",
+    "web:build": "pnpm --filter @saas-skeleton/web build",
+    "web:codegen": "pnpm --filter @saas-skeleton/web codegen",
+    "db:generate": "pnpm --filter @saas-skeleton/database db:generate",
+    "db:migrate:dev": "pnpm --filter @saas-skeleton/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @saas-skeleton/database db:migrate:deploy",
+    "db:studio": "pnpm --filter @saas-skeleton/database db:studio",
+    "db:seed": "pnpm --filter @saas-skeleton/database db:seed",
+    "db:reset": "pnpm --filter @saas-skeleton/database db:reset",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "logs:clean": "rm -rf apps/api/logs/*.log*",
+    "logs:tail": "tail -f apps/api/logs/api-pretty.log"
+  },
+  "keywords": [
+    "saas",
+    "crm",
+    "erp",
+    "skeleton",
+    "nestjs",
+    "react",
+    "template"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml,css}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@nestjs/cli": "^11.0.16",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma",
+      "argon2",
+      "esbuild",
+      "@tailwindcss/oxide",
+      "unrs-resolver"
+    ]
+  }
+}

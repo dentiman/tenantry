@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "rootDir": "../../",
+    "target": "ES2023",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "paths": {
+      "@saas-skeleton/database": ["../../libs/database/src/index.ts"],
+      "@saas-skeleton/database/*": ["../../libs/database/src/*"],
+      "@saas-skeleton/contracts": ["../../libs/contracts/src/index.ts"],
+      "@saas-skeleton/contracts/*": ["../../libs/contracts/src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*", "../../libs/*/src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
