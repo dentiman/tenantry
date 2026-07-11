@@ -1,2 +1,19 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
+
+/* Менша округлість поверхонь (рішення користувача): панелі, вікна, попапи
+   24px → 12px; таблиця 20px → 12px (внутрішні кути 16px → 8px).
+   Кнопки, чіпи і випадаючі меню (.dropdown__popover, .select__popover)
+   свідомо не чіпаємо. Правила поза @layer — перекривають шар components. */
+.card,
+.modal__dialog,
+.alert-dialog__dialog,
+.popover {
+  border-radius: var(--radius-xl);
+}
+
+.table-root--primary {
+  /* усі кути шапки/тіла таблиці посилаються на --radius-2xl — звужуємо локально */
+  --radius-2xl: var(--radius-lg);
+  border-radius: var(--radius-xl);
+}
