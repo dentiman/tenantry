@@ -38,9 +38,13 @@
 [data-theme='light'] .popover,
 [data-theme='light'] .dropdown__popover,
 [data-theme='light'] .select__popover {
-  --overlay-shadow:
-    0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
-    0 14px 28px 0 rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border);
+  /* box-shadow напряму: перевизначати --overlay-shadow на елементі марно —
+     токен --shadow-overlay уже підставлений на :root і успадковується готовим */
+  box-shadow:
+    0 2px 8px 0 rgba(0, 0, 0, 0.06),
+    0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+    0 14px 28px 0 rgba(0, 0, 0, 0.08),
+    0 0 0 1px var(--border);
 }
 
 /* Пункти меню/списків усередині попапів: 16px → 8px
