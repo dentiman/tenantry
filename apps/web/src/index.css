@@ -12,6 +12,9 @@
      --border тема-залежний; hover/focus-стани полів мають власні токени */
   --field-border: var(--border);
   --field-border-width: var(--border-width);
+  /* З рамкою тінь полів зайва; transparent замість none — так робить темна
+     тема HeroUI, щоб ring-утиліти продовжували працювати */
+  --field-shadow: 0 0 0 0 transparent inset;
 }
 
 .card,
