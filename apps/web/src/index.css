@@ -18,6 +18,13 @@
   border-radius: var(--radius-xl);
 }
 
+/* Пункти меню/списків усередині попапів: 16px → 8px
+   (внутрішній радіус = зовнішні 12px мінус ~4px відступу) */
+.menu-item,
+.list-box-item {
+  border-radius: var(--radius-lg);
+}
+
 .table-root--primary {
   /* усі кути шапки/тіла таблиці посилаються на --radius-2xl — звужуємо локально */
   --radius-2xl: var(--radius-lg);
