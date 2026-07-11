@@ -168,6 +168,34 @@ describe('Users API (e2e)', () => {
     );
   });
 
+  it('searches users by partial email and partial name (case-insensitive)', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-search-admin`);
+    const target = await prisma.user.create({
+      data: { email: 'carol.finder@example.com', name: 'Carol Finder', role: 'USER' },
+    });
+    await prisma.user.create({
+      data: { email: `other-${Date.now()}@example.com`, name: 'Dave Other', role: 'USER' },
+    });
+
+    // Частковий фрагмент email, інший регістр
+    const byEmail = await request(app.getHttpServer())
+      .get('/api/users')
+      .set(headers)
+      .query({ search: 'CAROL.FIND', page: 1, limit: 10 })
+      .expect(200);
+    expect(byEmail.body.total).toBe(1);
+    expect(byEmail.body.items[0].id).toBe(target.id);
+
+    // Частковий фрагмент імені
+    const byName = await request(app.getHttpServer())
+      .get('/api/users')
+      .set(headers)
+      .query({ search: 'finde', page: 1, limit: 10 })
+      .expect(200);
+    expect(byName.body.total).toBe(1);
+    expect(byName.body.items[0].id).toBe(target.id);
+  });
+
   it('gets user by id', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-get-admin`);
     const user = await prisma.user.create({

@@ -5,6 +5,7 @@ import {
   Outlet,
   redirect,
 } from '@tanstack/react-router';
+import { z } from 'zod';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
 import { LoginPage } from './pages/login';
@@ -58,9 +59,17 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 });
 
+// Стан списку живе в URL — лінк можна шерити, F5 не губить пошук/сторінку.
+// .catch() — невалідні значення з URL тихо падають у дефолт замість помилки роута
+const UsersSearchSchema = z.object({
+  search: z.string().trim().optional().catch(undefined),
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+});
+
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/users',
+  validateSearch: (search) => UsersSearchSchema.parse(search),
   component: UsersPage,
 });
 

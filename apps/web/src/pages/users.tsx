@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import {
   AlertDialog,
   Button,
@@ -16,6 +17,9 @@ import { useAuthStore } from '../stores/auth.store';
 import { CreateUserModal } from '../components/create-user-modal';
 
 const LIMIT = 10;
+const SEARCH_DEBOUNCE_MS = 300;
+
+const routeApi = getRouteApi('/app/users');
 
 type PageItem = number | 'ellipsis-left' | 'ellipsis-right';
 
@@ -39,10 +43,44 @@ function pageItems(current: number, total: number): PageItem[] {
 }
 
 export function UsersPage() {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  // Джерело правди для пошуку/сторінки — URL (?search=&page=)
+  const { search = '', page = 1 } = routeApi.useSearch();
+  const navigate = routeApi.useNavigate();
+  const [searchInput, setSearchInput] = useState(search);
+  // Останнє значення, яке МИ поклали в URL — відрізняє наш navigate від back/forward
+  const pushedSearchRef = useRef(search);
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+
+  // Debounce: URL (і запит до API) оновлюється після паузи у введенні
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        pushedSearchRef.current = searchInput;
+        void navigate({
+          search: { search: searchInput || undefined, page: undefined },
+          replace: true,
+        });
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput, search, navigate]);
+
+  // Зовнішня зміна URL (back/forward, вставлений лінк) — підтягуємо в інпут
+  useEffect(() => {
+    if (search !== pushedSearchRef.current) {
+      pushedSearchRef.current = search;
+      setSearchInput(search);
+    }
+  }, [search]);
+
+  const goToPage = (target: number) => {
+    void navigate({
+      search: (prev) => ({ ...prev, page: target <= 1 ? undefined : target }),
+    });
+  };
 
   const params: UsersFindAllParams = {
     page,
@@ -69,11 +107,10 @@ export function UsersPage() {
           <TextField aria-label="Search users" className="w-64">
             <Input
               type="search"
-              placeholder="Search…"
-              value={search}
+              placeholder="Search by email or name…"
+              value={searchInput}
               onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
+                setSearchInput(e.target.value);
               }}
             />
           </TextField>
@@ -175,7 +212,7 @@ export function UsersPage() {
               <Pagination.Previous
                 isDisabled={page <= 1}
                 onPress={() => {
-                  setPage((p) => p - 1);
+                  goToPage(page - 1);
                 }}
               >
                 <Pagination.PreviousIcon />
@@ -187,7 +224,7 @@ export function UsersPage() {
                   <Pagination.Link
                     isActive={item === page}
                     onPress={() => {
-                      setPage(item);
+                      goToPage(item);
                     }}
                   >
                     {item}
@@ -203,7 +240,7 @@ export function UsersPage() {
               <Pagination.Next
                 isDisabled={page >= totalPages}
                 onPress={() => {
-                  setPage((p) => p + 1);
+                  goToPage(page + 1);
                 }}
               >
                 <Pagination.NextIcon />
