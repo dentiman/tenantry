@@ -68,15 +68,29 @@ export function CreateUserModal() {
                   label="Email"
                   type="email"
                   placeholder="user@example.com"
+                  variant="secondary"
                 />
-                <FormTextField control={control} name="name" label="Name" placeholder="Optional" />
-                <FormSelect control={control} name="role" label="Role" options={roleOptions} />
+                <FormTextField
+                  control={control}
+                  name="name"
+                  label="Name"
+                  placeholder="Optional"
+                  variant="secondary"
+                />
+                <FormSelect
+                  control={control}
+                  name="role"
+                  label="Role"
+                  options={roleOptions}
+                  variant="secondary"
+                />
                 <FormTextField
                   control={control}
                   name="password"
                   label="Initial password"
                   type="password"
                   autoComplete="new-password"
+                  variant="secondary"
                 />
                 {errors.root?.server && (
                   <p className="text-sm text-danger">{errors.root.server.message}</p>

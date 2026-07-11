@@ -16,6 +16,8 @@ interface FormSelectProps<T extends FieldValues> {
   name: FieldPath<T>;
   label: string;
   options: FormSelectOption[];
+  /** 'secondary' — для полів на однотонній поверхні (модалки) */
+  variant?: 'primary' | 'secondary';
 }
 
 /** RHF ↔ HeroUI Select (single-select по рядковому ключу) */
@@ -24,12 +26,14 @@ export function FormSelect<T extends FieldValues>({
   name,
   label,
   options,
+  variant,
 }: FormSelectProps<T>) {
   const { field, fieldState } = useController({ control, name });
 
   return (
     <Select
       isInvalid={fieldState.invalid}
+      variant={variant}
       name={field.name}
       value={field.value ?? null}
       onChange={field.onChange}

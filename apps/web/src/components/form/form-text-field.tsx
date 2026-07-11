@@ -13,6 +13,8 @@ interface FormTextFieldProps<T extends FieldValues> {
   type?: string;
   autoComplete?: string;
   placeholder?: string;
+  /** 'secondary' — для полів на однотонній поверхні (модалки), інакше поле зливається з фоном */
+  variant?: 'primary' | 'secondary';
 }
 
 /** Єдина точка інтеграції RHF ↔ HeroUI TextField: значення, blur, ref, помилки */
@@ -23,6 +25,7 @@ export function FormTextField<T extends FieldValues>({
   type = 'text',
   autoComplete,
   placeholder,
+  variant,
 }: FormTextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
 
@@ -31,6 +34,7 @@ export function FormTextField<T extends FieldValues>({
       <Label>{label}</Label>
       <Input
         type={type}
+        variant={variant}
         autoComplete={autoComplete}
         placeholder={placeholder}
         value={field.value ?? ''}
