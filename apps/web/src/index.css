@@ -7,6 +7,10 @@
    Кнопки і чіпи не чіпаємо. Правила поза @layer — перекривають шар components. */
 :root {
   --field-radius: var(--radius-lg);
+  /* Рішення користувача: поля мають видиму рамку, як картки/попапи.
+     Дефолт HeroUI — transparent; --border тема-залежний, hover/focus-стани
+     полів мають власні токени і не зачіпаються */
+  --field-border: var(--border);
 }
 
 .card,
