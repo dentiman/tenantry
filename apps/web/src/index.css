@@ -8,9 +8,10 @@
 :root {
   --field-radius: var(--radius-lg);
   /* Рішення користувача: поля мають видиму рамку, як картки/попапи.
-     Дефолт HeroUI — transparent; --border тема-залежний, hover/focus-стани
-     полів мають власні токени і не зачіпаються */
+     Потрібні ОБИДВА токени: дефолт HeroUI — колір transparent І ширина 0px.
+     --border тема-залежний; hover/focus-стани полів мають власні токени */
   --field-border: var(--border);
+  --field-border-width: var(--border-width);
 }
 
 .card,
