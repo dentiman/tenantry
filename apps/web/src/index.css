@@ -23,11 +23,15 @@
 
 .card,
 .modal__dialog,
-.alert-dialog__dialog,
+.alert-dialog__dialog {
+  border-radius: var(--radius-xl);
+}
+
+/* Попапи — той самий радіус, що в полів (8px); діалоги лишаються 12px */
 .popover,
 .dropdown__popover,
 .select__popover {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
 }
 
 /* Світла тема: 1px-обвід ЛИШЕ для попапів (dropdown/select/generic) —
@@ -47,11 +51,11 @@
     0 0 0 1px var(--border);
 }
 
-/* Пункти меню/списків усередині попапів: 16px → 8px
-   (внутрішній радіус = зовнішні 12px мінус ~4px відступу) */
+/* Пункти меню/списків усередині попапів: трохи менше за контейнер (8px),
+   щоб кути hover-підсвітки не впирались у кути попапа */
 .menu-item,
 .list-box-item {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 }
 
 .table-root--primary {
