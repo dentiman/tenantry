@@ -15,6 +15,22 @@
   /* З рамкою тінь полів зайва; transparent замість none — так робить темна
      тема HeroUI, щоб ring-утиліти продовжували працювати */
   --field-shadow: 0 0 0 0 transparent inset;
+  /* Фокус поля: бордер стає акцентним (синім) замість сіруватого color-mix */
+  --field-border-focus: var(--focus);
+}
+
+/* Фокус поля = 1px синій бордер. Штатне ring-2 (box-shadow) поверх бордера
+   давало подвійну обводку — гасимо ЛИШЕ ring-складову, не чіпаючи інші тіні.
+   Invalid-стан використовує outline і не зачіпається */
+.input:focus,
+.input[data-focused='true'],
+.input:focus-visible,
+.input[data-focus-visible='true'],
+.select__trigger:focus,
+.select__trigger[data-focused='true'],
+.select__trigger:focus-visible,
+.select__trigger[data-focus-visible='true'] {
+  --tw-ring-shadow: 0 0 #0000;
 }
 
 .card,
