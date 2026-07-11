@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@saas-skeleton/database';
 import type { User as PrismaUser } from '@saas-skeleton/database';
 import type { Register, Login, AuthTokens } from '@saas-skeleton/contracts';
+import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 
@@ -15,6 +16,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly jobDispatcher: JobDispatcher,
   ) {}
 
   async register(data: Register): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
@@ -39,6 +41,16 @@ export class AuthService {
     });
 
     this.logger.log(`User registered successfully: ${user.email} (ID: ${user.id})`);
+
+    // Черга — некритичний side effect: реєстрація не повинна падати через неї
+    try {
+      await this.jobDispatcher.send(userRegisteredJob, { userId: user.id, email: user.email });
+    } catch (error) {
+      this.logger.error(
+        `Failed to dispatch ${userRegisteredJob.name} for user ${user.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     const tokens = await this.generateTokens(user);
     return { user, tokens };

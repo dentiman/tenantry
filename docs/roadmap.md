@@ -15,12 +15,15 @@
 
 ## Фаза 2 — черги + зміцнення auth
 
-1. **pg-boss** + `apps/worker` (окремий NestJS-процес, спільні доменні модулі).
-   Інтерфейс `JobDispatcher`/`@JobHandler()` у `libs/shared` (створити лібу — див. правило «нова ліба» в CLAUDE.md).
-   Cron через pg-boss schedule. Ідемпотентність: singletonKey, стан-переходи, processed_jobs.
+1. ✅ **pg-boss + `apps/worker`** (завершено 2026-07-11). `libs/shared`: `defineJob` (Zod-схема payload-а),
+   абстрактний `JobDispatcher` (pg-boss замінюваний), `@JobHandler()` + автореєстрація через DiscoveryService,
+   cron через pg-boss schedule, `JobInboxService` (processed_jobs, exactly-once для DB-ефектів),
+   транзакційна постановка через `fromPrisma(tx)`. Живі приклади: cron `auth.cleanup-expired-tokens`
+   і `users.user-registered` (диспатч з API при реєстрації). Перевірено живим флоу API → worker.
 2. **Auth-безпека**: reuse-detection ротованих токенів (`revokedAt` замість delete рядка);
    refresh → httpOnly + Secure + SameSite cookie (прибрати з localStorage).
-3. `notifications`-модуль як перший споживач черги (email через Mailpit у dev).
+3. `notifications`-модуль як перший споживач черги (email через Mailpit у dev) —
+   підключається в `UserRegisteredHandler` (apps/worker).
 
 ## Фаза 3 — організації та RBAC (початок мультитенантності)
 

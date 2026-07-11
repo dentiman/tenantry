@@ -26,6 +26,7 @@ pnpm db:generate          # Prisma client
 pnpm db:migrate:dev       # міграції
 pnpm db:seed              # admin@example.com / Admin12345
 pnpm api:dev              # API на http://localhost:3001 (Swagger: /api/docs)
+pnpm worker:dev           # Worker: споживачі черги pg-boss + cron (окремий процес)
 pnpm web:dev              # Web на http://localhost:5173 (проксі /api → 3001)
 ```
 
@@ -34,10 +35,12 @@ pnpm web:dev              # Web на http://localhost:5173 (проксі /api �
 ```
 apps/
   api/        # NestJS REST API: auth, users, health; Swagger на /api/docs
+  worker/     # NestJS-процес без HTTP: обробники job-ів pg-boss + cron
   web/        # React SPA: login/register, dashboard, users CRUD
 libs/
   contracts/  # Zod-схеми + z.infer типи (залежить лише від zod)
   database/   # Prisma schema, migrations, seed, PrismaService/PrismaModule
+  shared/     # Черги: defineJob, JobDispatcher, @JobHandler, inbox-ідемпотентність
 docker/       # docker-compose: postgres
 docs/         # архітектурна пропозиція та рішення
 ```
@@ -73,7 +76,15 @@ pnpm api:test:e2e # Jest + supertest проти реальної БД (40 тес
 
 CI (GitHub Actions): lint → typecheck → build → міграції → e2e з PostgreSQL-сервісом.
 
-## Фаза 2 (заплановано)
+## Черги (фаза 2.1 — готово)
 
-Черги на pg-boss (окремий `apps/worker`), RBAC/permissions, organizations (мультитенантність),
-refresh-токени в httpOnly cookie, справжня reuse-detection ротованих токенів. Деталі — у docs.
+Job = `defineJob(name, zodSchema, { cron?, retry* })` у `libs/shared`. API інжектить `JobDispatcher`
+і викликає `send()` (опційно транзакційно через `{ tx }`); worker позначає класи `@JobHandler(def)` —
+вони реєструються автоматично, разом із cron-розкладами. Ідемпотентність — `JobInboxService`
+(таблиця `processed_jobs`). Живі приклади: `auth.cleanup-expired-tokens` (cron),
+`users.user-registered` (диспатч при реєстрації).
+
+## Далі за roadmap
+
+RBAC/permissions, organizations (мультитенантність), refresh-токени в httpOnly cookie,
+справжня reuse-detection ротованих токенів, notifications через чергу. Деталі — у docs/roadmap.md.

@@ -14,6 +14,7 @@ module.exports = function (options) {
       alias: {
         '@saas-skeleton/database': path.resolve(__dirname, '../../libs/database/src'),
         '@saas-skeleton/contracts': path.resolve(__dirname, '../../libs/contracts/src'),
+        '@saas-skeleton/shared': path.resolve(__dirname, '../../libs/shared/src'),
       },
     },
   };

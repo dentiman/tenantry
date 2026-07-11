@@ -12,9 +12,6 @@
     ]
   },
   "moduleNameMapper": {
-    "^@fibo-admin/prisma$": "<rootDir>/../../libs/prisma/src/index.ts",
-    "^@fibo-admin/prisma/(.*)$": "<rootDir>/../../libs/prisma/src/$1",
-    "^@fibo-admin/contracts$": "<rootDir>/../../libs/contracts/src/index.ts",
-    "^@fibo-admin/contracts/(.*)$": "<rootDir>/../../libs/contracts/src/$1"
+    "^pg-boss$": "<rootDir>/test/__mocks__/pg-boss.ts"
   }
 }

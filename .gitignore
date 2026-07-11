@@ -12,6 +12,7 @@ libs/database/src/generated/
 *.log
 *.log.*
 apps/api/logs/
+apps/worker/logs/
 
 # Environment
 .env

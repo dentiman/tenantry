@@ -42,3 +42,12 @@ model RefreshToken {
   @@index([userId])
   @@map("refresh_tokens")
 }
+
+// Inbox-патерн для ідемпотентності обробки job-ів (див. libs/shared JobInboxService)
+model ProcessedJob {
+  id          String   @id // pg-boss job id
+  jobName     String   @map("job_name")
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@map("processed_jobs")
+}
