@@ -12,4 +12,9 @@ export interface CreateUserDto {
   /** @nullable */
   name?: string | null;
   role?: CreateUserDtoRole;
+  /**
+   * @minLength 8
+   * @maxLength 128
+   */
+  password: string;
 }

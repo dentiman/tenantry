@@ -101,6 +101,8 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                              |
 | Zod               | v4 (закрито у фазі 1)                                                                                                                                                               |
 | Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                     |
+| Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало |
+| Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)          |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
 

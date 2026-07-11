@@ -10,14 +10,10 @@ import {
   TextField,
 } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  getUsersFindAllQueryKey,
-  useUsersCreate,
-  useUsersFindAll,
-  useUsersRemove,
-} from '../api/generated/api';
+import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
 import type { UsersFindAllParams } from '../api/generated/model';
 import { useAuthStore } from '../stores/auth.store';
+import { CreateUserModal } from '../components/create-user-modal';
 
 const LIMIT = 10;
 
@@ -45,7 +41,6 @@ function pageItems(current: number, total: number): PageItem[] {
 export function UsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [newEmail, setNewEmail] = useState('');
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
@@ -59,14 +54,6 @@ export function UsersPage() {
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
 
-  const createUser = useUsersCreate({
-    mutation: {
-      onSuccess: () => {
-        setNewEmail('');
-        void invalidateUsers();
-      },
-    },
-  });
   const removeUser = useUsersRemove({
     mutation: { onSuccess: () => void invalidateUsers() },
   });
@@ -78,45 +65,21 @@ export function UsersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">Users</h1>
-        <TextField aria-label="Search users" className="w-64">
-          <Input
-            type="search"
-            placeholder="Search…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </TextField>
+        <div className="flex items-center gap-2">
+          <TextField aria-label="Search users" className="w-64">
+            <Input
+              type="search"
+              placeholder="Search…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </TextField>
+          <CreateUserModal />
+        </div>
       </div>
-
-      <form
-        className="mb-4 flex items-start gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (newEmail) {
-            createUser.mutate({ data: { email: newEmail } });
-          }
-        }}
-      >
-        <TextField aria-label="New user email" className="w-72">
-          <Input
-            type="email"
-            placeholder="new-user@example.com"
-            value={newEmail}
-            onChange={(e) => {
-              setNewEmail(e.target.value);
-            }}
-          />
-        </TextField>
-        <Button type="submit" variant="primary" isDisabled={createUser.isPending}>
-          Add user
-        </Button>
-        {createUser.isError && (
-          <span className="self-center text-sm text-danger">Failed (duplicate email?)</span>
-        )}
-      </form>
 
       {isLoading ? (
         <div className="flex justify-center py-10">

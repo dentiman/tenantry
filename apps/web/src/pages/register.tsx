@@ -1,10 +1,11 @@
-import { Button, Card, FieldError, Input, Label, TextField } from '@heroui/react';
+import { Button, Card } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { RegisterSchema, type Register } from '@saas-skeleton/contracts';
 import { useAuthRegister } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
+import { applyServerError, FormTextField } from '../components/form';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -12,15 +13,26 @@ export function RegisterPage() {
   const registerMutation = useAuthRegister();
 
   const {
-    register,
+    control,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<Register>({ resolver: zodResolver(RegisterSchema) });
+    setError,
+    formState: { isSubmitting, errors },
+  } = useForm<Register>({
+    resolver: zodResolver(RegisterSchema),
+    defaultValues: { email: '', password: '', name: '' },
+  });
 
   const onSubmit = handleSubmit(async (values) => {
-    const res = await registerMutation.mutateAsync({ data: values });
-    setSession(res.user, res.tokens);
-    await navigate({ to: '/' });
+    try {
+      const res = await registerMutation.mutateAsync({ data: values });
+      setSession(res.user, res.tokens);
+      await navigate({ to: '/' });
+    } catch (error) {
+      applyServerError(error, setError, {
+        conflictField: 'email',
+        conflictMessage: 'Email already registered',
+      });
+    }
   });
 
   return (
@@ -28,23 +40,17 @@ export function RegisterPage() {
       <Card className="w-full max-w-sm p-8">
         <h1 className="mb-6 text-center text-xl font-semibold text-foreground">Create account</h1>
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-          <TextField isInvalid={Boolean(errors.name)}>
-            <Label>Name</Label>
-            <Input type="text" autoComplete="name" {...register('name')} />
-            <FieldError>{errors.name?.message}</FieldError>
-          </TextField>
-          <TextField isInvalid={Boolean(errors.email)}>
-            <Label>Email</Label>
-            <Input type="email" autoComplete="email" {...register('email')} />
-            <FieldError>{errors.email?.message}</FieldError>
-          </TextField>
-          <TextField isInvalid={Boolean(errors.password)}>
-            <Label>Password</Label>
-            <Input type="password" autoComplete="new-password" {...register('password')} />
-            <FieldError>{errors.password?.message}</FieldError>
-          </TextField>
-          {registerMutation.isError && (
-            <p className="text-sm text-danger">Registration failed — email may already be taken</p>
+          <FormTextField control={control} name="name" label="Name" autoComplete="name" />
+          <FormTextField control={control} name="email" label="Email" type="email" autoComplete="email" />
+          <FormTextField
+            control={control}
+            name="password"
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+          />
+          {errors.root?.server && (
+            <p className="text-sm text-danger">{errors.root.server.message}</p>
           )}
           <Button type="submit" variant="primary" fullWidth isDisabled={isSubmitting}>
             {isSubmitting ? 'Creating…' : 'Create account'}

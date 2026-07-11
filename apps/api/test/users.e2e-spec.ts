@@ -14,11 +14,20 @@ describe('Users API (e2e)', () => {
 
   const createUserPayload = (
     suffix: string,
-  ): { email: string; name: string; role: 'ADMIN' | 'USER' } => ({
+  ): { email: string; name: string; role: 'ADMIN' | 'USER'; password: string } => ({
     email: `user-${suffix}@example.com`,
     name: `User ${suffix}`,
     role: 'USER',
+    password: 'InitialPass123',
   });
+
+  // Для прямого prisma.user.create — без password (у БД зберігається тільки хеш)
+  const createDbUserData = (
+    suffix: string,
+  ): { email: string; name: string; role: 'ADMIN' | 'USER' } => {
+    const { password: _password, ...data } = createUserPayload(suffix);
+    return data;
+  };
 
   const createAuthUserPayload = (
     suffix: string,
@@ -86,6 +95,41 @@ describe('Users API (e2e)', () => {
     );
   });
 
+  it('rejects create without password', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-no-password-admin`);
+    const { password: _password, ...withoutPassword } = createUserPayload(
+      `${Date.now()}-no-password`,
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send(withoutPassword)
+      .expect(400);
+  });
+
+  it('created user can login with the initial password', async () => {
+    const payload = createUserPayload(`${Date.now()}-login`);
+    const headers = await createAuthHeaders(`${Date.now()}-login-admin`);
+
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send(payload)
+      .expect(201);
+
+    // Пароль (і його хеш) не витікають у відповідь
+    expect(created.body).not.toHaveProperty('password');
+    expect(created.body).not.toHaveProperty('passwordHash');
+
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: payload.email, password: payload.password })
+      .expect(200);
+
+    expect(login.body.tokens.accessToken).toMatch(/^eyJ/);
+  });
+
   it('lists users with pagination and filtering', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-list-admin`);
     const admin = await prisma.user.create({
@@ -127,7 +171,7 @@ describe('Users API (e2e)', () => {
   it('gets user by id', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-get-admin`);
     const user = await prisma.user.create({
-      data: createUserPayload(`${Date.now()}-get`),
+      data: createDbUserData(`${Date.now()}-get`),
     });
 
     const response = await request(app.getHttpServer())
@@ -149,7 +193,7 @@ describe('Users API (e2e)', () => {
   it('updates a user', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-update-admin`);
     const user = await prisma.user.create({
-      data: createUserPayload(`${Date.now()}-update`),
+      data: createDbUserData(`${Date.now()}-update`),
     });
 
     const response = await request(app.getHttpServer())
@@ -170,7 +214,7 @@ describe('Users API (e2e)', () => {
   it('deletes a user', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-delete-admin`);
     const user = await prisma.user.create({
-      data: createUserPayload(`${Date.now()}-delete`),
+      data: createDbUserData(`${Date.now()}-delete`),
     });
 
     await request(app.getHttpServer()).delete(`/api/users/${user.id}`).set(headers).expect(204);

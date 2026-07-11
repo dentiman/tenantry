@@ -18,13 +18,17 @@
                       "example": "ok"
                     }
                   },
-                  "required": ["status"]
+                  "required": [
+                    "status"
+                  ]
                 }
               }
             }
           }
         },
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/api/auth/register": {
@@ -53,7 +57,9 @@
             }
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/login": {
@@ -82,7 +88,9 @@
             }
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/refresh": {
@@ -111,7 +119,9 @@
             }
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/me": {
@@ -135,7 +145,9 @@
             "bearer": []
           }
         ],
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/users": {
@@ -170,7 +182,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["ADMIN", "USER"]
+              "enum": [
+                "ADMIN",
+                "USER"
+              ]
             }
           },
           {
@@ -179,7 +194,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true", "false"]
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           },
           {
@@ -208,7 +226,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "post": {
         "operationId": "usersCreate",
@@ -240,7 +260,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     },
     "/api/users/{id}": {
@@ -273,7 +295,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "patch": {
         "operationId": "usersUpdate",
@@ -314,7 +338,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "delete": {
         "operationId": "usersRemove",
@@ -338,7 +364,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     }
   },
@@ -375,7 +403,10 @@
             "nullable": true
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "AuthResponseDto_Output": {
         "type": "object",
@@ -399,7 +430,10 @@
               },
               "role": {
                 "type": "string",
-                "enum": ["ADMIN", "USER"]
+                "enum": [
+                  "ADMIN",
+                  "USER"
+                ]
               },
               "isActive": {
                 "type": "boolean"
@@ -415,7 +449,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
               }
             },
-            "required": ["id", "email", "name", "role", "isActive", "createdAt", "updatedAt"],
+            "required": [
+              "id",
+              "email",
+              "name",
+              "role",
+              "isActive",
+              "createdAt",
+              "updatedAt"
+            ],
             "additionalProperties": false
           },
           "tokens": {
@@ -428,11 +470,17 @@
                 "type": "string"
               }
             },
-            "required": ["accessToken", "refreshToken"],
+            "required": [
+              "accessToken",
+              "refreshToken"
+            ],
             "additionalProperties": false
           }
         },
-        "required": ["user", "tokens"],
+        "required": [
+          "user",
+          "tokens"
+        ],
         "additionalProperties": false
       },
       "LoginDto": {
@@ -446,7 +494,10 @@
             "minLength": 1
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "RefreshDto": {
         "type": "object",
@@ -456,7 +507,9 @@
             "minLength": 1
           }
         },
-        "required": ["refreshToken"]
+        "required": [
+          "refreshToken"
+        ]
       },
       "AuthTokensDto_Output": {
         "type": "object",
@@ -468,7 +521,10 @@
             "type": "string"
           }
         },
-        "required": ["accessToken", "refreshToken"],
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
         "additionalProperties": false
       },
       "MeResponseDto_Output": {
@@ -490,7 +546,10 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "isActive": {
             "type": "boolean"
@@ -506,7 +565,15 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": ["id", "email", "name", "role", "isActive", "createdAt", "updatedAt"],
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
         "additionalProperties": false
       },
       "UserListResponseDto_Output": {
@@ -533,7 +600,10 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["ADMIN", "USER"]
+                  "enum": [
+                    "ADMIN",
+                    "USER"
+                  ]
                 },
                 "isActive": {
                   "type": "boolean"
@@ -549,7 +619,15 @@
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                 }
               },
-              "required": ["id", "email", "name", "role", "isActive", "createdAt", "updatedAt"],
+              "required": [
+                "id",
+                "email",
+                "name",
+                "role",
+                "isActive",
+                "createdAt",
+                "updatedAt"
+              ],
               "additionalProperties": false
             }
           },
@@ -566,7 +644,13 @@
             "type": "number"
           }
         },
-        "required": ["items", "total", "page", "limit", "totalPages"],
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ],
         "additionalProperties": false
       },
       "UserResponseDto_Output": {
@@ -588,7 +672,10 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "isActive": {
             "type": "boolean"
@@ -604,7 +691,15 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": ["id", "email", "name", "role", "isActive", "createdAt", "updatedAt"],
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
         "additionalProperties": false
       },
       "CreateUserDto": {
@@ -620,10 +715,21 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
           }
         },
-        "required": ["email"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "UpdateUserDto": {
         "type": "object",
@@ -638,7 +744,10 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           }
         }
       }

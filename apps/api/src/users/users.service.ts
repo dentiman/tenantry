@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@saas-skeleton/database';
 import type { User as PrismaUser } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class UsersService {
@@ -59,7 +60,10 @@ export class UsersService {
 
   async create(data: CreateUser): Promise<PrismaUser> {
     this.logger.log(`Creating new user: ${data.email}`);
-    const user = await this.prisma.user.create({ data });
+    // password не потрапляє в Prisma напряму — зберігається тільки argon2-хеш
+    const { password, ...rest } = data;
+    const passwordHash = await argon2.hash(password);
+    const user = await this.prisma.user.create({ data: { ...rest, passwordHash } });
     this.logger.log(`User created successfully: ${user.email} (ID: ${user.id})`);
     return user;
   }

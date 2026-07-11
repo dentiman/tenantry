@@ -17,9 +17,12 @@ export const CreateUserSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   name: z.string().nullable().optional(),
   role: z.enum(['ADMIN', 'USER']).default('USER').optional(),
+  // Рішення користувача: адмін завжди задає початковий пароль (межі — як у register)
+  password: z.string().min(8).max(128),
 });
 
-export const UpdateUserSchema = CreateUserSchema.partial();
+// Зміна пароля — окремий security-флоу, не через users PATCH
+export const UpdateUserSchema = CreateUserSchema.omit({ password: true }).partial();
 
 export const UserQuerySchema = PaginationQuerySchema.extend({
   role: z.enum(['ADMIN', 'USER']).optional(),
