@@ -24,6 +24,8 @@
       "@saas-skeleton/contracts/*": ["libs/contracts/src/*"],
       "@saas-skeleton/database": ["libs/database/src/index.ts"],
       "@saas-skeleton/database/*": ["libs/database/src/*"],
+      "@saas-skeleton/i18n": ["libs/i18n/src/index.ts"],
+      "@saas-skeleton/i18n/*": ["libs/i18n/src/*"],
       "@saas-skeleton/shared": ["libs/shared/src/index.ts"],
       "@saas-skeleton/shared/*": ["libs/shared/src/*"]
     }

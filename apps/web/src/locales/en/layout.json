@@ -1,0 +1,16 @@
+{
+  "brand": "SaaS Skeleton",
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "jobs": "Jobs"
+  },
+  "accountMenu": "Account menu",
+  "logout": "Log out",
+  "theme": {
+    "switchLabel": "Switch theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}

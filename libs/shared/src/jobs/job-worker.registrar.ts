@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import type { Job } from 'pg-boss';
+import type { JobDefinition } from './job-definition';
 import { JobHandler, JobHandlerContract } from './job-handler.decorator';
 import { PgBossService } from './pg-boss.service';
 
@@ -30,8 +31,7 @@ export class JobWorkerRegistrar implements OnApplicationBootstrap {
       await this.pgBoss.ensureQueue(definition);
       await this.pgBoss.boss.work(definition.name, async (jobs: Job[]) => {
         for (const job of jobs) {
-          const payload = definition.schema.parse(job.data);
-          await handler.handle(payload, { id: job.id, name: job.name });
+          await this.runJob(definition, handler, job);
         }
       });
 
@@ -43,6 +43,35 @@ export class JobWorkerRegistrar implements OnApplicationBootstrap {
         `Registered job handler: ${definition.name}` +
           (definition.options.cron ? ` (cron: ${definition.options.cron})` : ''),
       );
+    }
+  }
+
+  /**
+   * Лог-конверт довкола хендлера: pg-boss падіння хендлера НЕ логує (пише лише
+   * в pgboss.job.output), тому без цього try/catch впала job невидима в логах.
+   * Помилка re-throw-иться, щоб pg-boss позначив job failed і застосував retry-політику.
+   */
+  private async runJob(
+    definition: JobDefinition,
+    handler: JobHandlerContract,
+    job: Job,
+  ): Promise<void> {
+    const meta = { jobId: job.id, jobName: job.name };
+    const startedAt = Date.now();
+    this.logger.debug(meta, `Job started: ${job.name} (${job.id})`);
+    try {
+      const payload = definition.schema.parse(job.data);
+      await handler.handle(payload, { id: job.id, name: job.name });
+      this.logger.log(
+        { ...meta, durationMs: Date.now() - startedAt },
+        `Job completed: ${job.name} (${job.id})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        { ...meta, err: error, durationMs: Date.now() - startedAt },
+        `Job failed: ${job.name} (${job.id})`,
+      );
+      throw error;
     }
   }
 }

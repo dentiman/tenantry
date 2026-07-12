@@ -1,0 +1,36 @@
+{
+  "title": "Jobs",
+  "filters": {
+    "queueLabel": "queue",
+    "stateLabel": "state",
+    "all": "All ({{label}})"
+  },
+  "queueCard": {
+    "total": "total: {{count}}",
+    "active": "active: {{count}}",
+    "completed": "completed: {{count}}",
+    "failed": "failed: {{count}}",
+    "retry": "retry: {{count}}"
+  },
+  "states": {
+    "created": "Created",
+    "retry": "Retry",
+    "active": "Active",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "failed": "Failed"
+  },
+  "table": {
+    "ariaLabel": "Jobs",
+    "queue": "Queue",
+    "state": "State",
+    "attempts": "Attempts",
+    "data": "Data",
+    "created": "Created",
+    "started": "Started",
+    "completed": "Completed",
+    "output": "Output"
+  },
+  "loadingLabel": "Loading jobs",
+  "empty": "No jobs found"
+}

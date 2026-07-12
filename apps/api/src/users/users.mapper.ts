@@ -8,6 +8,8 @@ export function toUserResponse(user: PrismaUser): UserResponse {
     name: user.name,
     role: user.role,
     isActive: user.isActive,
+    // Prisma зберігає locale як звичайний string; валідність гарантує вхідний Zod-контракт
+    locale: user.locale as UserResponse['locale'],
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

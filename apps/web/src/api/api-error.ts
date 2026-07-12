@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 import { ApiErrorSchema } from '@saas-skeleton/contracts';
 import type { ApiErrorCode, FieldError } from '@saas-skeleton/contracts';
+import i18n from '../i18n';
 
 /** Нормалізована помилка запиту: ApiError envelope бекенда або синтезований fallback */
 export interface ParsedApiError {
@@ -12,9 +13,6 @@ export interface ParsedApiError {
   fieldErrors: FieldError[];
   requestId?: string;
 }
-
-const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
-const NETWORK_MESSAGE = 'Cannot reach the server. Check your connection and try again.';
 
 export function parseApiError(error: unknown): ParsedApiError {
   if (isAxiosError(error) && error.response) {
@@ -31,12 +29,12 @@ export function parseApiError(error: unknown): ParsedApiError {
       }
       return result;
     }
-    return { status: error.response.status, code: null, message: GENERIC_MESSAGE, fieldErrors: [] };
+    return { status: error.response.status, code: null, message: i18n.t('errors:generic'), fieldErrors: [] };
   }
   if (isAxiosError(error)) {
-    return { status: null, code: null, message: NETWORK_MESSAGE, fieldErrors: [] };
+    return { status: null, code: null, message: i18n.t('errors:network'), fieldErrors: [] };
   }
-  return { status: null, code: null, message: GENERIC_MESSAGE, fieldErrors: [] };
+  return { status: null, code: null, message: i18n.t('errors:generic'), fieldErrors: [] };
 }
 
 /**

@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { CreateUserDtoRole } from './createUserDtoRole';
+import type { CreateUserDtoLocale } from './createUserDtoLocale';
 
 export interface CreateUserDto {
   email: string;
   /** @nullable */
   name?: string | null;
   role?: CreateUserDtoRole;
+  locale?: CreateUserDtoLocale;
   /**
    * @minLength 8
    * @maxLength 128

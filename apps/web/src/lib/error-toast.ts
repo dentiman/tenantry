@@ -1,4 +1,5 @@
 import { toast } from '@heroui/react';
+import i18n from '../i18n';
 import type { ParsedApiError } from '../api/api-error';
 
 /** Анти-спам: однакова помилка не частіше ніж раз на вікно (сторінки з автооновленням) */
@@ -7,15 +8,20 @@ const recentToasts = new Map<string, number>();
 
 function toastTitle(parsed: ParsedApiError): string {
   if (parsed.status === null) {
-    return 'Connection problem';
+    return i18n.t('errors:toast.connectionTitle');
   }
   if (parsed.status === 403) {
-    return 'Access denied';
+    return i18n.t('errors:toast.accessDeniedTitle');
   }
   if (parsed.code === 'SERVICE_UNAVAILABLE') {
-    return 'Service unavailable';
+    return i18n.t('errors:toast.serviceUnavailableTitle');
   }
-  return 'Server error';
+  return i18n.t('errors:toast.serverErrorTitle');
+}
+
+/** `code` покриває всі ApiErrorCode — перекладений опис; без code (network/parse-помилка) — вже перекладений message */
+function toastDescription(parsed: ParsedApiError): string {
+  return parsed.code ? i18n.t(`errors:codes.${parsed.code}`) : parsed.message;
 }
 
 export function showApiErrorToast(parsed: ParsedApiError): void {
@@ -26,5 +32,5 @@ export function showApiErrorToast(parsed: ParsedApiError): void {
     return;
   }
   recentToasts.set(key, now);
-  toast.danger(toastTitle(parsed), { description: parsed.message });
+  toast.danger(toastTitle(parsed), { description: toastDescription(parsed) });
 }

@@ -44,7 +44,13 @@ function errorCode(error: unknown): string | undefined {
   return undefined;
 }
 
-function isZodError(error: unknown): error is { issues: { path: (string | number)[]; message: string }[] } {
+interface ZodIssueLike {
+  path: (string | number)[];
+  message: string;
+  code: string;
+}
+
+function isZodError(error: unknown): error is { issues: ZodIssueLike[] } {
   return typeof error === 'object' && error !== null && 'issues' in error && Array.isArray(error.issues);
 }
 
@@ -127,6 +133,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? zodError.issues.map((issue) => ({
           field: issue.path.join('.'),
           message: issue.message,
+          code: issue.code,
         }))
       : [];
     return {
@@ -183,7 +190,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: HttpStatus.CONFLICT,
         code: 'CONFLICT',
         message: targets.length > 0 ? `Already exists: ${targets.join(', ')}` : 'Already exists',
-        fieldErrors: targets.map((field) => ({ field, message: 'Already exists' })),
+        fieldErrors: targets.map((field) => ({ field, message: 'Already exists', code: 'already_exists' })),
       };
     }
     if (exception.code === 'P2003') {

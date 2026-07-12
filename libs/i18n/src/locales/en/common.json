@@ -1,0 +1,10 @@
+{
+  "actions": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save"
+  },
+  "pagination": {
+    "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}"
+  }
+}

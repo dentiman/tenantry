@@ -1,5 +1,6 @@
 import { Avatar, Dropdown } from '@heroui/react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
 import { ThemeSwitcher } from './theme-switcher';
 
@@ -10,6 +11,7 @@ const activeProps = {
 };
 
 export function AppLayout() {
+  const { t } = useTranslation('layout');
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-surface">
-        <div className="px-5 py-5 text-lg font-semibold text-accent">SaaS Skeleton</div>
+        <div className="px-5 py-5 text-lg font-semibold text-accent">{t('brand')}</div>
         <nav className="flex flex-col gap-1 px-3">
           <Link
             to="/"
@@ -32,13 +34,13 @@ export function AppLayout() {
             activeProps={activeProps}
             activeOptions={{ exact: true }}
           >
-            Dashboard
+            {t('nav.dashboard')}
           </Link>
           <Link to="/users" className={navLinkClass} activeProps={activeProps}>
-            Users
+            {t('nav.users')}
           </Link>
           <Link to="/jobs" className={navLinkClass} activeProps={activeProps}>
-            Jobs
+            {t('nav.jobs')}
           </Link>
         </nav>
       </aside>
@@ -48,7 +50,7 @@ export function AppLayout() {
           <ThemeSwitcher />
           <Dropdown>
             <Dropdown.Trigger
-              aria-label="Account menu"
+              aria-label={t('accountMenu')}
               className="flex cursor-pointer items-center gap-2 rounded-full"
             >
               <Avatar size="sm">
@@ -64,8 +66,8 @@ export function AppLayout() {
                   }
                 }}
               >
-                <Dropdown.Item id="logout" textValue="Log out" className="text-danger">
-                  Log out
+                <Dropdown.Item id="logout" textValue={t('logout')} className="text-danger">
+                  {t('logout')}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>

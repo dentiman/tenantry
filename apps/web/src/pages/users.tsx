@@ -11,11 +11,13 @@ import {
   TextField,
 } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
 import type { UsersFindAllParams } from '../api/generated/model';
 import { useAuthStore } from '../stores/auth.store';
 import { CreateUserModal } from '../components/create-user-modal';
 import { pageItems } from '../lib/page-items';
+import { formatDate } from '../lib/format';
 
 const LIMIT = 10;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -23,6 +25,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const routeApi = getRouteApi('/app/users');
 
 export function UsersPage() {
+  const { t } = useTranslation(['users', 'common']);
   // Джерело правди для пошуку/сторінки — URL (?search=&page=)
   const { search = '', page = 1 } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
@@ -82,12 +85,12 @@ export function UsersPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Users</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <div className="flex items-center gap-2">
-          <TextField aria-label="Search users" className="w-64">
+          <TextField aria-label={t('searchLabel')} className="w-64">
             <Input
               type="search"
-              placeholder="Search by email or name…"
+              placeholder={t('searchPlaceholder')}
               value={searchInput}
               onChange={(e) => {
                 setSearchInput(e.target.value);
@@ -100,19 +103,19 @@ export function UsersPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-10">
-          <Spinner aria-label="Loading users" />
+          <Spinner aria-label={t('loadingLabel')} />
         </div>
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Users">
+            <Table.Content aria-label={t('table.ariaLabel')}>
               <Table.Header>
-                <Table.Column isRowHeader>Email</Table.Column>
-                <Table.Column>Name</Table.Column>
-                <Table.Column>Role</Table.Column>
-                <Table.Column>Active</Table.Column>
-                <Table.Column>Created</Table.Column>
-                <Table.Column aria-label="Actions"> </Table.Column>
+                <Table.Column isRowHeader>{t('table.email')}</Table.Column>
+                <Table.Column>{t('table.name')}</Table.Column>
+                <Table.Column>{t('table.role')}</Table.Column>
+                <Table.Column>{t('table.active')}</Table.Column>
+                <Table.Column>{t('table.created')}</Table.Column>
+                <Table.Column aria-label={t('table.actions')}> </Table.Column>
               </Table.Header>
               <Table.Body>
                 {items.map((u) => (
@@ -121,20 +124,20 @@ export function UsersPage() {
                     <Table.Cell>{u.name ?? '—'}</Table.Cell>
                     <Table.Cell>
                       <Chip size="sm" color={u.role === 'ADMIN' ? 'accent' : 'default'}>
-                        {u.role}
+                        {t(`roles.${u.role}`)}
                       </Chip>
                     </Table.Cell>
                     <Table.Cell>
                       <Chip size="sm" color={u.isActive ? 'success' : 'danger'}>
-                        {u.isActive ? 'Active' : 'Inactive'}
+                        {u.isActive ? t('status.active') : t('status.inactive')}
                       </Chip>
                     </Table.Cell>
-                    <Table.Cell>{new Date(u.createdAt).toLocaleDateString()}</Table.Cell>
+                    <Table.Cell>{formatDate(u.createdAt)}</Table.Cell>
                     <Table.Cell className="text-right">
                       {u.id !== currentUser?.id && (
                         <AlertDialog>
                           <Button size="sm" variant="danger-soft">
-                            Delete
+                            {t('delete.button')}
                           </Button>
                           <AlertDialog.Backdrop>
                             <AlertDialog.Container>
@@ -142,17 +145,21 @@ export function UsersPage() {
                                 <AlertDialog.CloseTrigger />
                                 <AlertDialog.Header>
                                   <AlertDialog.Icon status="danger" />
-                                  <AlertDialog.Heading>Delete user?</AlertDialog.Heading>
+                                  <AlertDialog.Heading>{t('delete.heading')}</AlertDialog.Heading>
                                 </AlertDialog.Header>
                                 <AlertDialog.Body>
                                   <p>
-                                    This will permanently delete <strong>{u.email}</strong>. This
-                                    action cannot be undone.
+                                    <Trans
+                                      t={t}
+                                      i18nKey="delete.body"
+                                      values={{ email: u.email }}
+                                      components={{ strong: <strong /> }}
+                                    />
                                   </p>
                                 </AlertDialog.Body>
                                 <AlertDialog.Footer>
                                   <Button slot="close" variant="tertiary">
-                                    Cancel
+                                    {t('delete.cancel')}
                                   </Button>
                                   <Button
                                     slot="close"
@@ -161,7 +168,7 @@ export function UsersPage() {
                                       removeUser.mutate({ id: u.id });
                                     }}
                                   >
-                                    Delete
+                                    {t('delete.confirm')}
                                   </Button>
                                 </AlertDialog.Footer>
                               </AlertDialog.Dialog>
@@ -179,12 +186,12 @@ export function UsersPage() {
       )}
 
       {!isLoading && items.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">No users found</p>
+        <p className="py-6 text-center text-sm text-muted">{t('empty')}</p>
       )}
 
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm text-muted">
-          Total: {data?.total ?? 0} · Page {page} of {totalPages}
+          {t('common:pagination.summary', { total: data?.total ?? 0, page, totalPages })}
         </span>
         <Pagination>
           <Pagination.Content>

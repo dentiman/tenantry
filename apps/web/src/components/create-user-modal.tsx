@@ -3,19 +3,21 @@ import { Button, Modal } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { CreateUserSchema, type CreateUser } from '@saas-skeleton/contracts';
 import { getUsersFindAllQueryKey, useUsersCreate } from '../api/generated/api';
 import { applyServerError, FormSelect, FormTextField } from './form';
 
-const roleOptions = [
-  { id: 'USER', label: 'User' },
-  { id: 'ADMIN', label: 'Admin' },
-];
-
 export function CreateUserModal() {
+  const { t } = useTranslation('users');
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
   const createUser = useUsersCreate();
+
+  const roleOptions = [
+    { id: 'USER', label: t('roles.USER') },
+    { id: 'ADMIN', label: t('roles.ADMIN') },
+  ];
 
   const form = useForm<CreateUser>({
     resolver: zodResolver(CreateUserSchema),
@@ -49,29 +51,34 @@ export function CreateUserModal() {
 
   return (
     <Modal isOpen={isOpen} onOpenChange={close}>
-      <Button variant="primary">Add user</Button>
+      <Button variant="primary">{t('create.trigger')}</Button>
       <Modal.Backdrop>
         <Modal.Container>
           <Modal.Dialog className="sm:max-w-[420px]">
             <Modal.CloseTrigger />
             <Modal.Header>
-              <Modal.Heading>Add user</Modal.Heading>
+              <Modal.Heading>{t('create.heading')}</Modal.Heading>
             </Modal.Header>
             <form onSubmit={(e) => void onSubmit(e)} noValidate>
               <Modal.Body className="flex flex-col gap-4">
                 <FormTextField
                   control={control}
                   name="email"
-                  label="Email"
+                  label={t('create.email')}
                   type="email"
-                  placeholder="user@example.com"
+                  placeholder={t('create.emailPlaceholder')}
                 />
-                <FormTextField control={control} name="name" label="Name" placeholder="Optional" />
-                <FormSelect control={control} name="role" label="Role" options={roleOptions} />
+                <FormTextField
+                  control={control}
+                  name="name"
+                  label={t('create.name')}
+                  placeholder={t('create.namePlaceholder')}
+                />
+                <FormSelect control={control} name="role" label={t('create.role')} options={roleOptions} />
                 <FormTextField
                   control={control}
                   name="password"
-                  label="Initial password"
+                  label={t('create.password')}
                   type="password"
                   autoComplete="new-password"
                 />
@@ -81,10 +88,10 @@ export function CreateUserModal() {
               </Modal.Body>
               <Modal.Footer>
                 <Button slot="close" variant="tertiary">
-                  Cancel
+                  {t('create.cancel')}
                 </Button>
                 <Button type="submit" variant="primary" isDisabled={isSubmitting}>
-                  {isSubmitting ? 'Creating…' : 'Create user'}
+                  {isSubmitting ? t('create.submitting') : t('create.submit')}
                 </Button>
               </Modal.Footer>
             </form>

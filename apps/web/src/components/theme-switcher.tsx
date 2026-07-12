@@ -1,5 +1,6 @@
 import { Button, Dropdown } from '@heroui/react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 function SunIcon() {
   return (
@@ -19,11 +20,12 @@ function MoonIcon() {
 }
 
 export function ThemeSwitcher() {
+  const { t } = useTranslation('layout');
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <Dropdown>
-      <Button aria-label="Switch theme" isIconOnly size="sm" variant="ghost">
+      <Button aria-label={t('theme.switchLabel')} isIconOnly size="sm" variant="ghost">
         {resolvedTheme === 'dark' ? <MoonIcon /> : <SunIcon />}
       </Button>
       <Dropdown.Popover placement="bottom end">
@@ -32,14 +34,14 @@ export function ThemeSwitcher() {
             setTheme(String(key));
           }}
         >
-          <Dropdown.Item id="light" textValue="Light">
-            Light
+          <Dropdown.Item id="light" textValue={t('theme.light')}>
+            {t('theme.light')}
           </Dropdown.Item>
-          <Dropdown.Item id="dark" textValue="Dark">
-            Dark
+          <Dropdown.Item id="dark" textValue={t('theme.dark')}>
+            {t('theme.dark')}
           </Dropdown.Item>
-          <Dropdown.Item id="system" textValue="System">
-            System
+          <Dropdown.Item id="system" textValue={t('theme.system')}>
+            {t('theme.system')}
           </Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown.Popover>

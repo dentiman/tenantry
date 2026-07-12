@@ -1,0 +1,34 @@
+{
+  "network": "Cannot reach the server. Check your connection and try again.",
+  "generic": "Something went wrong. Please try again.",
+  "codes": {
+    "VALIDATION_ERROR": "Validation failed",
+    "BAD_REQUEST": "Invalid request",
+    "UNAUTHORIZED": "Authentication required",
+    "FORBIDDEN": "Access denied",
+    "NOT_FOUND": "Not found",
+    "CONFLICT": "Conflict",
+    "INTERNAL_ERROR": "Internal server error",
+    "SERVICE_UNAVAILABLE": "Service temporarily unavailable, please try again"
+  },
+  "toast": {
+    "connectionTitle": "Connection problem",
+    "accessDeniedTitle": "Access denied",
+    "serviceUnavailableTitle": "Service unavailable",
+    "serverErrorTitle": "Server error"
+  },
+  "fieldErrors": {
+    "already_exists": "Already exists",
+    "invalid_type": "Invalid value",
+    "too_big": "Value is too large",
+    "too_small": "Value is too small",
+    "invalid_format": "Invalid format",
+    "not_multiple_of": "Invalid value",
+    "unrecognized_keys": "Unrecognized field",
+    "invalid_union": "Invalid value",
+    "invalid_key": "Invalid key",
+    "invalid_element": "Invalid value",
+    "invalid_value": "Invalid value",
+    "custom": "Invalid value"
+  }
+}

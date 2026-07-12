@@ -14,5 +14,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: saas-skeleton-mailpit
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_SMTP_PORT:-1025}:1025' # SMTP — сюди шле apps/worker
+      - '${MAILPIT_UI_PORT:-8025}:8025' # веб-UI — перегляд листів у dev
+
 volumes:
   pgdata:

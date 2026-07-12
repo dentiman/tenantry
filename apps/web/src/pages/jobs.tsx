@@ -1,9 +1,12 @@
 import { Card, Chip, ListBox, Pagination, Select, Spinner, Table } from '@heroui/react';
 import { getRouteApi } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
 import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
 import type { JobsFindAllParams } from '../api/generated/model';
 import { pageItems } from '../lib/page-items';
+import { formatDateTime } from '../lib/format';
 
 const LIMIT = 20;
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
@@ -22,21 +25,18 @@ const stateColor: Record<JobState, 'accent' | 'danger' | 'default' | 'success' |
   failed: 'danger',
 };
 
-function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString() : '—';
-}
-
 interface FilterSelectProps {
-  label: string;
+  ariaLabel: string;
+  allLabel: string;
   value: string | undefined;
   options: { id: string; label: string }[];
   onChange: (value: string | undefined) => void;
 }
 
-function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
+function FilterSelect({ ariaLabel, allLabel, value, options, onChange }: FilterSelectProps) {
   return (
     <Select
-      aria-label={label}
+      aria-label={ariaLabel}
       className="w-48"
       value={value ?? 'all'}
       onChange={(key) => {
@@ -49,8 +49,8 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
       </Select.Trigger>
       <Select.Popover>
         <ListBox>
-          <ListBox.Item id="all" textValue={`All (${label})`}>
-            All ({label})
+          <ListBox.Item id="all" textValue={allLabel}>
+            {allLabel}
             <ListBox.ItemIndicator />
           </ListBox.Item>
           {options.map((option) => (
@@ -65,7 +65,12 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
   );
 }
 
+function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): string {
+  return t(`states.${state}`);
+}
+
 export function JobsPage() {
+  const { t } = useTranslation(['jobs', 'common']);
   // Джерело правди для фільтрів/сторінки — URL (?state=&queue=&page=)
   const { page = 1, state, queue } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
@@ -103,10 +108,11 @@ export function JobsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Jobs</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <div className="flex items-center gap-2">
           <FilterSelect
-            label="queue"
+            ariaLabel={t('filters.queueLabel')}
+            allLabel={t('filters.all', { label: t('filters.queueLabel') })}
             value={queue}
             options={queues.map((q) => ({ id: q.name, label: q.name }))}
             onChange={(value) => {
@@ -114,9 +120,10 @@ export function JobsPage() {
             }}
           />
           <FilterSelect
-            label="state"
+            ariaLabel={t('filters.stateLabel')}
+            allLabel={t('filters.all', { label: t('filters.stateLabel') })}
             value={state}
-            options={JOB_STATES.map((s) => ({ id: s, label: s }))}
+            options={JOB_STATES.map((s) => ({ id: s, label: jobStateLabel(t, s) }))}
             onChange={(value) => {
               setFilter({ state: value as JobState | undefined });
             }}
@@ -130,11 +137,15 @@ export function JobsPage() {
             <Card key={q.name} className="p-4">
               <p className="truncate text-sm font-medium text-foreground">{q.name}</p>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                <span>total: {q.total}</span>
-                <span>active: {q.active}</span>
-                <span>completed: {q.completed}</span>
-                {q.failed > 0 && <span className="text-danger">failed: {q.failed}</span>}
-                {q.retry > 0 && <span className="text-warning">retry: {q.retry}</span>}
+                <span>{t('queueCard.total', { count: q.total })}</span>
+                <span>{t('queueCard.active', { count: q.active })}</span>
+                <span>{t('queueCard.completed', { count: q.completed })}</span>
+                {q.failed > 0 && (
+                  <span className="text-danger">{t('queueCard.failed', { count: q.failed })}</span>
+                )}
+                {q.retry > 0 && (
+                  <span className="text-warning">{t('queueCard.retry', { count: q.retry })}</span>
+                )}
               </div>
             </Card>
           ))}
@@ -143,21 +154,21 @@ export function JobsPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-10">
-          <Spinner aria-label="Loading jobs" />
+          <Spinner aria-label={t('loadingLabel')} />
         </div>
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Jobs">
+            <Table.Content aria-label={t('table.ariaLabel')}>
               <Table.Header>
-                <Table.Column isRowHeader>Queue</Table.Column>
-                <Table.Column>State</Table.Column>
-                <Table.Column>Attempts</Table.Column>
-                <Table.Column>Data</Table.Column>
-                <Table.Column>Created</Table.Column>
-                <Table.Column>Started</Table.Column>
-                <Table.Column>Completed</Table.Column>
-                <Table.Column>Output</Table.Column>
+                <Table.Column isRowHeader>{t('table.queue')}</Table.Column>
+                <Table.Column>{t('table.state')}</Table.Column>
+                <Table.Column>{t('table.attempts')}</Table.Column>
+                <Table.Column>{t('table.data')}</Table.Column>
+                <Table.Column>{t('table.created')}</Table.Column>
+                <Table.Column>{t('table.started')}</Table.Column>
+                <Table.Column>{t('table.completed')}</Table.Column>
+                <Table.Column>{t('table.output')}</Table.Column>
               </Table.Header>
               <Table.Body>
                 {items.map((job) => (
@@ -165,7 +176,7 @@ export function JobsPage() {
                     <Table.Cell className="font-medium text-foreground">{job.name}</Table.Cell>
                     <Table.Cell>
                       <Chip size="sm" color={stateColor[job.state]}>
-                        {job.state}
+                        {jobStateLabel(t, job.state)}
                       </Chip>
                     </Table.Cell>
                     <Table.Cell>
@@ -180,9 +191,9 @@ export function JobsPage() {
                         '—'
                       )}
                     </Table.Cell>
-                    <Table.Cell>{formatDate(job.createdAt)}</Table.Cell>
-                    <Table.Cell>{formatDate(job.startedAt)}</Table.Cell>
-                    <Table.Cell>{formatDate(job.completedAt)}</Table.Cell>
+                    <Table.Cell>{formatDateTime(job.createdAt)}</Table.Cell>
+                    <Table.Cell>{formatDateTime(job.startedAt)}</Table.Cell>
+                    <Table.Cell>{formatDateTime(job.completedAt)}</Table.Cell>
                     <Table.Cell>
                       {job.output ? (
                         <span className="block max-w-56 truncate" title={job.output}>
@@ -201,12 +212,12 @@ export function JobsPage() {
       )}
 
       {!isLoading && items.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">No jobs found</p>
+        <p className="py-6 text-center text-sm text-muted">{t('empty')}</p>
       )}
 
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm text-muted">
-          Total: {data?.total ?? 0} · Page {page} of {totalPages}
+          {t('common:pagination.summary', { total: data?.total ?? 0, page, totalPages })}
         </span>
         <Pagination>
           <Pagination.Content>

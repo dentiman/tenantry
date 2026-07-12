@@ -18,7 +18,12 @@ export const ApiErrorCodeSchema = z.enum([
 export const FieldErrorSchema = z.object({
   /** Шлях до поля як у request-схемі, вкладеність через крапку: "email", "address.city" */
   field: z.string(),
+  /** Англійська діагностика — фронт показує лише як fallback, коли немає перекладу під `code` */
   message: z.string(),
+  /** Машинний код (Zod issue code, "already_exists"...) — фронт перекладає під `errors:fieldErrors.<code>` */
+  code: z.string().optional(),
+  /** Параметри для інтерполяції в перекладене повідомлення (наприклад, мінімальна довжина) */
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 export const ApiErrorSchema = z.object({

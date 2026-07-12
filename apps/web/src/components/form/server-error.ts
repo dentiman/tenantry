@@ -1,5 +1,18 @@
 import type { FieldPath, FieldValues, UseFormReturn } from 'react-hook-form';
+import type { FieldError } from '@saas-skeleton/contracts';
 import { isGlobalApiError, parseApiError } from '../../api/api-error';
+import i18n from '../../i18n';
+
+/** `code` — відкрита множина (Zod issue codes + бізнес-коди); немає ключа → англійський message як fallback */
+function translateFieldError(fieldError: FieldError): string {
+  if (!fieldError.code) {
+    return fieldError.message;
+  }
+  return i18n.t(`errors:fieldErrors.${fieldError.code}`, {
+    defaultValue: fieldError.message,
+    ...fieldError.params,
+  });
+}
 
 /**
  * Мапить ApiError бекенда на форму по іменах полів:
@@ -24,15 +37,16 @@ export function applyServerError<T extends FieldValues>(
 
   for (const fieldError of parsed.fieldErrors) {
     const rootKey = fieldError.field.split('.')[0] ?? '';
+    const message = translateFieldError(fieldError);
     if (knownFields.has(rootKey)) {
       form.setError(
         fieldError.field as FieldPath<T>,
-        { type: 'server', message: fieldError.message },
+        { type: 'server', message },
         { shouldFocus: !hasFieldError },
       );
       hasFieldError = true;
     } else {
-      orphans.push(`${fieldError.field}: ${fieldError.message}`);
+      orphans.push(`${fieldError.field}: ${message}`);
     }
   }
 

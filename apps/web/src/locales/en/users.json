@@ -1,0 +1,44 @@
+{
+  "title": "Users",
+  "searchLabel": "Search users",
+  "searchPlaceholder": "Search by email or name…",
+  "table": {
+    "ariaLabel": "Users",
+    "email": "Email",
+    "name": "Name",
+    "role": "Role",
+    "active": "Active",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "roles": {
+    "USER": "User",
+    "ADMIN": "Admin"
+  },
+  "loadingLabel": "Loading users",
+  "empty": "No users found",
+  "delete": {
+    "button": "Delete",
+    "heading": "Delete user?",
+    "body": "This will permanently delete <strong>{{email}}</strong>. This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "create": {
+    "trigger": "Add user",
+    "heading": "Add user",
+    "email": "Email",
+    "emailPlaceholder": "user@example.com",
+    "name": "Name",
+    "namePlaceholder": "Optional",
+    "role": "Role",
+    "password": "Initial password",
+    "cancel": "Cancel",
+    "submit": "Create user",
+    "submitting": "Creating…"
+  }
+}

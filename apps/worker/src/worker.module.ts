@@ -7,6 +7,7 @@ import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensHandler } from './handlers/cleanup-expired-tokens.handler';
 import { UserRegisteredHandler } from './handlers/user-registered.handler';
 import { WelcomeEmailHandler } from './handlers/welcome-email.handler';
+import { MailerService } from './mail/mailer.service';
 
 @Module({
   imports: [
@@ -18,6 +19,6 @@ import { WelcomeEmailHandler } from './handlers/welcome-email.handler';
     PrismaModule,
     JobsModule.forWorker(),
   ],
-  providers: [CleanupExpiredTokensHandler, UserRegisteredHandler, WelcomeEmailHandler],
+  providers: [CleanupExpiredTokensHandler, UserRegisteredHandler, WelcomeEmailHandler, MailerService],
 })
 export class WorkerModule {}

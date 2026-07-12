@@ -537,6 +537,12 @@
               "isActive": {
                 "type": "boolean"
               },
+              "locale": {
+                "type": "string",
+                "enum": [
+                  "en"
+                ]
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time",
@@ -554,6 +560,7 @@
               "name",
               "role",
               "isActive",
+              "locale",
               "createdAt",
               "updatedAt"
             ],
@@ -653,6 +660,12 @@
           "isActive": {
             "type": "boolean"
           },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en"
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -670,6 +683,7 @@
           "name",
           "role",
           "isActive",
+          "locale",
           "createdAt",
           "updatedAt"
         ],
@@ -707,6 +721,12 @@
                 "isActive": {
                   "type": "boolean"
                 },
+                "locale": {
+                  "type": "string",
+                  "enum": [
+                    "en"
+                  ]
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -724,6 +744,7 @@
                 "name",
                 "role",
                 "isActive",
+                "locale",
                 "createdAt",
                 "updatedAt"
               ],
@@ -779,6 +800,12 @@
           "isActive": {
             "type": "boolean"
           },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en"
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -796,6 +823,7 @@
           "name",
           "role",
           "isActive",
+          "locale",
           "createdAt",
           "updatedAt"
         ],
@@ -817,6 +845,13 @@
             "enum": [
               "ADMIN",
               "USER"
+            ]
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en"
             ]
           },
           "password": {
@@ -846,6 +881,13 @@
             "enum": [
               "ADMIN",
               "USER"
+            ]
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en"
             ]
           }
         }

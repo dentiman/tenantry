@@ -1,0 +1,6 @@
+{
+  "welcome": {
+    "subject": "Welcome to SaaS Skeleton!",
+    "body": "<p>Hi {{name}},</p><p>Your account has been created. Welcome aboard!</p>"
+  }
+}

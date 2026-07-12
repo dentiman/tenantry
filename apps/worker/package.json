@@ -17,7 +17,9 @@
     "@saas-skeleton/contracts": "workspace:*",
     "@saas-skeleton/database": "workspace:*",
     "@saas-skeleton/shared": "workspace:*",
+    "i18next": "^26.3.6",
     "nestjs-pino": "^4.5.0",
+    "nodemailer": "^9.0.3",
     "pg-boss": "^12.26.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
@@ -30,6 +32,7 @@
   "devDependencies": {
     "@nestjs/schematics": "^11.0.5",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.1",
     "ts-loader": "^9.5.0",
     "typescript": "^5.9.3",
     "webpack-node-externals": "^3.0.0"

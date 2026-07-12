@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { UpdateUserDtoRole } from './updateUserDtoRole';
+import type { UpdateUserDtoLocale } from './updateUserDtoLocale';
 
 export interface UpdateUserDto {
   email?: string;
   /** @nullable */
   name?: string | null;
   role?: UpdateUserDtoRole;
+  locale?: UpdateUserDtoLocale;
 }

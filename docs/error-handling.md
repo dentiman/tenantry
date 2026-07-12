@@ -47,8 +47,13 @@
 | `statusCode`  | `number`                     | HTTP-статус (дублюється в тілі — envelope самодостатній)          |
 | `code`        | enum (закритий)              | Машинний код — фронт світчиться по ньому, **не** по `message`     |
 | `message`     | `string`                     | Людське повідомлення; для 5xx завжди замасковане                  |
-| `fieldErrors` | `{field, message}[]` (опц.)  | Прив'язка до полів request-схеми; вкладеність через крапку        |
+| `fieldErrors` | `{field, message, code?, params?}[]` (опц.) | Прив'язка до полів request-схеми; вкладеність через крапку |
 | `requestId`   | `string` (опц.)              | id запиту з pino-http — кореляція відповіді з рядком у лозі       |
+
+**I18N-2** (`libs/contracts/src/error/error.schema.ts`): `FieldError.code` — машинний код помилки
+поля (Zod issue code: `too_small`, `invalid_format`… або бізнес-код `already_exists`), `params` —
+значення для інтерполяції в переклад. Обидва опційні — `message` лишається fallback, коли фронт
+не знає код (наприклад, ще не перекладений новий бізнес-код).
 
 ### Коди (`ApiErrorCodeSchema`)
 
@@ -75,10 +80,10 @@
 
 | Джерело винятку                                        | HTTP | `code`                | Що у відповіді                                            |
 | ------------------------------------------------------ | ---- | --------------------- | --------------------------------------------------------- |
-| `ZodValidationException` (nestjs-zod pipe)             | 400  | `VALIDATION_ERROR`    | `fieldErrors` з `issue.path.join('.')` + `issue.message`  |
+| `ZodValidationException` (nestjs-zod pipe)             | 400  | `VALIDATION_ERROR`    | `fieldErrors` з `issue.path.join('.')` + `issue.message` + `issue.code` (Zod issue code — ключ `errors:fieldErrors.<code>` на фронті) |
 | `HttpException` 4xx (сервіси, guards)                  | як у винятку | мапа статусів | `message` з винятку; `fieldErrors`, якщо передані в тілі  |
-| `fieldConflictException(field, msg)` (`common/errors.ts`) | 409 | `CONFLICT`          | `fieldErrors: [{field, message}]` — помилка «під полем»   |
-| Prisma `P2002` (unique constraint)                     | 409  | `CONFLICT`            | `fieldErrors` з полів констрейнта (див. підводний камінь) |
+| `fieldConflictException(field, msg, code?)` (`common/errors.ts`) | 409 | `CONFLICT`   | `fieldErrors: [{field, message, code}]` — `code` за замовчуванням `already_exists` |
+| Prisma `P2002` (unique constraint)                     | 409  | `CONFLICT`            | `fieldErrors` з полів констрейнта + `code: 'already_exists'` (див. підводний камінь) |
 | Prisma `P2003` (FK constraint)                         | 409  | `CONFLICT`            | без поля                                                  |
 | Prisma `P2025` (запис не знайдено)                     | 404  | `NOT_FOUND`           | `Resource not found`                                      |
 | Prisma `P1000/P1001/P1002/P1008/P1010/P1017/P2024`     | 503  | `SERVICE_UNAVAILABLE` | «please retry» — маскування деталей                       |
@@ -102,8 +107,12 @@
 ### Як кидати помилки в новому модулі
 
 ```ts
-// Конфлікт із прив'язкою до поля — фронт покаже помилку під полем форми:
+// Конфлікт із прив'язкою до поля — фронт покаже помилку під полем форми;
+// code за замовчуванням 'already_exists' (перекладається як errors:fieldErrors.already_exists):
 throw fieldConflictException('email', 'Email already registered');
+
+// Інший бізнес-код конфлікту — додати ключ у libs/i18n/src/locales/en/errors.json → fieldErrors:
+throw fieldConflictException('slug', 'Slug is reserved', 'reserved_slug');
 
 // Звичайні випадки — стандартні HttpException, фільтр сам загорне в envelope:
 throw new NotFoundException(`Customer "${id}" not found`);
@@ -143,6 +152,12 @@ throw new UnauthorizedException('Invalid email or password');
   не спамлять однаковими тостами.
 - **Розміщення** (`components/toast-host.tsx`, живе в root-роуті): адмінка — `top end`
   (верхній правий кут), гостьові `/login`, `/register` — `bottom` (знизу по центру).
+- **I18N-2, переклад**: заголовок — `errors:toast.connectionTitle` / `accessDeniedTitle` /
+  `serviceUnavailableTitle` / `serverErrorTitle` (`toastTitle()`, гілки за `status`/`code`
+  один в один з таблицею вище). Опис — `errors:codes.<code>` (`toastDescription()`); коли
+  `code` немає (network, невалідний envelope) — `parsed.message` вже перекладений на
+  джерелі, в `parseApiError()` (`errors:network`/`errors:generic`), бо ці рядки повністю
+  фронтові, бекенд їх не надсилає.
 
 ### Форми: `applyServerError(error, form)` (`components/form/server-error.ts`)
 
@@ -150,6 +165,12 @@ throw new UnauthorizedException('Invalid email or password');
 2. Кожен `fieldErrors[i].field` звіряється з полями форми (`Object.keys(form.getValues())`) →
    збіг: `setError(field, { type: 'server' })` (+focus на перше поле).
 3. Невідомі поля та помилки без `fieldErrors` → `errors.root.server` з message бекенда.
+4. **I18N-2, переклад** (`translateFieldError()`): `fieldError.code` є → ключ
+   `errors:fieldErrors.<code>` з `{ defaultValue: fieldError.message, ...fieldError.params }` —
+   немає перекладу для коду (відкрита множина, на відміну від `ApiErrorCode`) → фронт тихо
+   падає на англійський `message`, а не показує сирий ключ. `errors.root.server` (крок 3) і
+   orphan-поля лишаються англійським `message` бекенда — не мапляться на форму, перекладати
+   немає куди.
 
 **Вимога**: форма мусить задавати **повні `defaultValues`** — по них визначаються відомі поля.
 
@@ -169,9 +190,13 @@ catch (error) { applyServerError(error, form); }
 | Сценарій                                   | Перевіряється                                              |
 | ------------------------------------------ | ---------------------------------------------------------- |
 | Невалідний payload create/query            | 400, `code: VALIDATION_ERROR`, `fieldErrors` з іменами полів |
-| Дубль email (users create, явна перевірка) | 409, `CONFLICT`, `fieldErrors: [{field: 'email', message: 'Email already registered'}]` |
+| Дубль email (users create, явна перевірка) | 409, `CONFLICT`, `fieldErrors: [{field: 'email', message: 'Email already registered', code: 'already_exists'}]` |
 | Неіснуючий id (get/patch/delete)           | 404, `Resource not found`                                  |
 | Без токена / протухлий токен               | 401                                                        |
 
 Перевірено вручну на живо (2026-07-12): обрив БД → 503 envelope; вимкнений API → toast;
 дубль email у формах реєстрації та створення юзера → помилка під полем Email.
+**I18N-2** (2026-07-12): дубль email у create-user-modal → мережа підтверджує
+`fieldErrors: [{field: 'email', message: 'Email already registered', code: 'already_exists'}]`,
+поле форми показує перекладене **«Already exists»** (не сирий `message`) — ключ
+`errors:fieldErrors.already_exists` спрацював.

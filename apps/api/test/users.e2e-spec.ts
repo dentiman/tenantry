@@ -284,7 +284,7 @@ describe('Users API (e2e)', () => {
         statusCode: 409,
         code: 'CONFLICT',
         message: 'Email already registered',
-        fieldErrors: [{ field: 'email', message: 'Email already registered' }],
+        fieldErrors: [{ field: 'email', message: 'Email already registered', code: 'already_exists' }],
       }),
     );
   });

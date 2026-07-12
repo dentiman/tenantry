@@ -7,6 +7,7 @@ import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import { isGlobalApiError, parseApiError } from './api/api-error';
 import { showApiErrorToast } from './lib/error-toast';
+import './i18n';
 import './index.css';
 
 // Глобальна політика: network/5xx/403 → toast; 401 гасить refresh-інтерсептор;
