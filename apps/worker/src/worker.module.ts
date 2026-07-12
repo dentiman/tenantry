@@ -6,6 +6,7 @@ import { JobsModule } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensHandler } from './handlers/cleanup-expired-tokens.handler';
 import { UserRegisteredHandler } from './handlers/user-registered.handler';
+import { WelcomeEmailHandler } from './handlers/welcome-email.handler';
 
 @Module({
   imports: [
@@ -17,6 +18,6 @@ import { UserRegisteredHandler } from './handlers/user-registered.handler';
     PrismaModule,
     JobsModule.forWorker(),
   ],
-  providers: [CleanupExpiredTokensHandler, UserRegisteredHandler],
+  providers: [CleanupExpiredTokensHandler, UserRegisteredHandler, WelcomeEmailHandler],
 })
 export class WorkerModule {}

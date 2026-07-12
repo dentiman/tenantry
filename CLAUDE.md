@@ -28,7 +28,8 @@ pnpm api:test:e2e         # 43 jest+supertest тести; ВИМАГАЄ зап�
 ## Архітектура
 
 ```
-apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, health. Pino, PrismaExceptionFilter
+apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, jobs (read-only моніторинг черг:
+                raw SQL до pgboss.job, 42P01 → порожньо), health. Pino, PrismaExceptionFilter
 apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system)
@@ -55,6 +56,10 @@ API: `JobsModule.forApi()` (global) → інжект `JobDispatcher` → `send(d
 (`tx` = Prisma-транзакція, транзакційна постановка через `fromPrisma`). Worker: `JobsModule.forWorker()` +
 `@Injectable() @JobHandler(def) class X implements JobHandlerContract` — реєструється автоматично, cron теж.
 Ідемпотентність: `JobInboxService.runOnce(context, fn)` — вставка в processed_jobs + fn в одній транзакції.
+Fan-out еталон: подія `users.user-registered` (диспатчиться і з register, і з адмінського create,
+singletonKey=userId) → її хендлер через inbox+tx ставить `notifications.welcome-email` (заглушка до Mailpit).
+Історія job-ів — стандартний retention pg-boss ~7 днів (рішення користувача, окремої таблиці немає).
+Моніторинг — сторінка /jobs в адмінці (фільтри state/queue в URL, автооновлення 5s).
 
 **Шари backend-модуля (обов'язково):** DTO (`createZodDto` зі схеми contracts) → Service
 (логіка + Prisma) → Mapper (явний мапінг Prisma→response; не витікають `passwordHash` тощо) →

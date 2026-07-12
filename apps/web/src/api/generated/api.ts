@@ -26,8 +26,11 @@ import type {
   AuthTokensDtoOutput,
   CreateUserDto,
   HealthCheck200,
+  JobListResponseDtoOutput,
+  JobsFindAllParams,
   LoginDto,
   MeResponseDtoOutput,
+  QueueStatsResponseDtoOutput,
   RefreshDto,
   RegisterDto,
   UpdateUserDto,
@@ -860,3 +863,199 @@ export const useUsersRemove = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const jobsFindAll = (
+  params?: JobsFindAllParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<JobListResponseDtoOutput>(
+    { url: `/api/jobs`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getJobsFindAllQueryKey = (params?: JobsFindAllParams) => {
+  return [`/api/jobs`, ...(params ? [params] : [])] as const;
+};
+
+export const getJobsFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof jobsFindAll>>,
+  TError = unknown,
+>(
+  params?: JobsFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getJobsFindAllQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof jobsFindAll>>> = ({ signal }) =>
+    jobsFindAll(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof jobsFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type JobsFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof jobsFindAll>>>;
+export type JobsFindAllQueryError = unknown;
+
+export function useJobsFindAll<TData = Awaited<ReturnType<typeof jobsFindAll>>, TError = unknown>(
+  params: undefined | JobsFindAllParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsFindAll>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof jobsFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof jobsFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useJobsFindAll<TData = Awaited<ReturnType<typeof jobsFindAll>>, TError = unknown>(
+  params?: JobsFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsFindAll>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof jobsFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof jobsFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useJobsFindAll<TData = Awaited<ReturnType<typeof jobsFindAll>>, TError = unknown>(
+  params?: JobsFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useJobsFindAll<TData = Awaited<ReturnType<typeof jobsFindAll>>, TError = unknown>(
+  params?: JobsFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getJobsFindAllQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const jobsQueues = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<QueueStatsResponseDtoOutput>(
+    { url: `/api/jobs/queues`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getJobsQueuesQueryKey = () => {
+  return [`/api/jobs/queues`] as const;
+};
+
+export const getJobsQueuesQueryOptions = <
+  TData = Awaited<ReturnType<typeof jobsQueues>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsQueues>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getJobsQueuesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof jobsQueues>>> = ({ signal }) =>
+    jobsQueues(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof jobsQueues>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type JobsQueuesQueryResult = NonNullable<Awaited<ReturnType<typeof jobsQueues>>>;
+export type JobsQueuesQueryError = unknown;
+
+export function useJobsQueues<TData = Awaited<ReturnType<typeof jobsQueues>>, TError = unknown>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsQueues>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof jobsQueues>>,
+          TError,
+          Awaited<ReturnType<typeof jobsQueues>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useJobsQueues<TData = Awaited<ReturnType<typeof jobsQueues>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsQueues>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof jobsQueues>>,
+          TError,
+          Awaited<ReturnType<typeof jobsQueues>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useJobsQueues<TData = Awaited<ReturnType<typeof jobsQueues>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsQueues>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useJobsQueues<TData = Awaited<ReturnType<typeof jobsQueues>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof jobsQueues>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getJobsQueuesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}

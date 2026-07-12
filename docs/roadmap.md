@@ -22,8 +22,11 @@
    і `users.user-registered` (диспатч з API при реєстрації). Перевірено живим флоу API → worker.
 2. **Auth-безпека**: reuse-detection ротованих токенів (`revokedAt` замість delete рядка);
    refresh → httpOnly + Secure + SameSite cookie (прибрати з localStorage).
-3. `notifications`-модуль як перший споживач черги (email через Mailpit у dev) —
-   підключається в `UserRegisteredHandler` (apps/worker).
+3. `notifications`-модуль як перший споживач черги (email через Mailpit у dev).
+   ⏳ Частково (2026-07-12): fan-out подія → `notifications.welcome-email` +
+   `WelcomeEmailHandler`-заглушка; моніторинг черг в адмінці (`/jobs`: список із
+   `pgboss.job` + зведення; історія — стандартний 7-денний retention pg-boss,
+   рішення користувача). Лишилось: реальна відправка email через Mailpit.
 
 ## Фаза 3 — організації та RBAC (початок мультитенантності)
 

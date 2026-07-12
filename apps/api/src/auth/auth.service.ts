@@ -44,7 +44,11 @@ export class AuthService {
 
     // Черга — некритичний side effect: реєстрація не повинна падати через неї
     try {
-      await this.jobDispatcher.send(userRegisteredJob, { userId: user.id, email: user.email });
+      await this.jobDispatcher.send(
+        userRegisteredJob,
+        { userId: user.id, email: user.email },
+        { singletonKey: user.id },
+      );
     } catch (error) {
       this.logger.error(
         `Failed to dispatch ${userRegisteredJob.name} for user ${user.id}`,

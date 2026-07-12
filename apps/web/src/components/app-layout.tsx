@@ -37,6 +37,9 @@ export function AppLayout() {
           <Link to="/users" className={navLinkClass} activeProps={activeProps}>
             Users
           </Link>
+          <Link to="/jobs" className={navLinkClass} activeProps={activeProps}>
+            Jobs
+          </Link>
         </nav>
       </aside>
 

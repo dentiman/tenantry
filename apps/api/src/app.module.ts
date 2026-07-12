@@ -6,6 +6,7 @@ import { JobsModule } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { JobsMonitorModule } from './jobs/jobs.module';
 import { loggerConfig } from './common/logger';
 
 @Module({
@@ -19,6 +20,7 @@ import { loggerConfig } from './common/logger';
     JobsModule.forApi(),
     AuthModule,
     UsersModule,
+    JobsMonitorModule,
   ],
   controllers: [HealthController],
 })

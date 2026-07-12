@@ -6,12 +6,14 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { z } from 'zod';
+import { JobStateSchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
 import { LoginPage } from './pages/login';
 import { RegisterPage } from './pages/register';
 import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
+import { JobsPage } from './pages/jobs';
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -73,10 +75,23 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
+const JobsSearchSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+  state: JobStateSchema.optional().catch(undefined),
+  queue: z.string().optional().catch(undefined),
+});
+
+const jobsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/jobs',
+  validateSearch: (search) => JobsSearchSchema.parse(search),
+  component: JobsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
-  appRoute.addChildren([dashboardRoute, usersRoute]),
+  appRoute.addChildren([dashboardRoute, usersRoute, jobsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

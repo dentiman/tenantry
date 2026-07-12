@@ -2,13 +2,17 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@saas-skeleton/database';
 import type { User as PrismaUser } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
+import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobDispatcher: JobDispatcher,
+  ) {}
 
   async findAll(query: UserQuery): Promise<{
     items: PrismaUser[];
@@ -65,6 +69,21 @@ export class UsersService {
     const passwordHash = await argon2.hash(password);
     const user = await this.prisma.user.create({ data: { ...rest, passwordHash } });
     this.logger.log(`User created successfully: ${user.email} (ID: ${user.id})`);
+
+    // Та сама подія, що й при самостійній реєстрації; черга — некритичний side effect
+    try {
+      await this.jobDispatcher.send(
+        userRegisteredJob,
+        { userId: user.id, email: user.email },
+        { singletonKey: user.id },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to dispatch ${userRegisteredJob.name} for user ${user.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
     return user;
   }
 
