@@ -12,15 +12,15 @@ export function RegisterPage() {
   const setSession = useAuthStore((s) => s.setSession);
   const registerMutation = useAuthRegister();
 
-  const {
-    control,
-    handleSubmit,
-    setError,
-    formState: { isSubmitting, errors },
-  } = useForm<Register>({
+  const form = useForm<Register>({
     resolver: zodResolver(RegisterSchema),
     defaultValues: { email: '', password: '', name: '' },
   });
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting, errors },
+  } = form;
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -28,10 +28,7 @@ export function RegisterPage() {
       setSession(res.user, res.tokens);
       await navigate({ to: '/' });
     } catch (error) {
-      applyServerError(error, setError, {
-        conflictField: 'email',
-        conflictMessage: 'Email already registered',
-      });
+      applyServerError(error, form);
     }
   });
 

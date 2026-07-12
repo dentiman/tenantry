@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { JobStateSchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
+import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
 import { RegisterPage } from './pages/register';
 import { DashboardPage } from './pages/dashboard';
@@ -16,7 +17,13 @@ import { UsersPage } from './pages/users';
 import { JobsPage } from './pages/jobs';
 
 const rootRoute = createRootRoute({
-  component: () => <Outlet />,
+  // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
+  component: () => (
+    <>
+      <Outlet />
+      <ToastHost />
+    </>
+  ),
 });
 
 function requireGuest(): void {

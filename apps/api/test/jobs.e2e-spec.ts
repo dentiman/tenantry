@@ -2,10 +2,9 @@
 
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
+import { configureApp } from '../src/app.setup';
 import { PrismaService } from '@saas-skeleton/database';
 
 describe('Jobs monitoring API (e2e)', () => {
@@ -33,9 +32,7 @@ describe('Jobs monitoring API (e2e)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ZodValidationPipe());
-    app.useGlobalFilters(new PrismaExceptionFilter(app.getHttpAdapter()));
+    configureApp(app);
 
     await app.init();
     prisma = app.get(PrismaService);

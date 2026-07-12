@@ -2,10 +2,9 @@
 
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
+import { configureApp } from '../src/app.setup';
 import { PrismaService } from '@saas-skeleton/database';
 
 describe('Users API (e2e)', () => {
@@ -43,10 +42,7 @@ describe('Users API (e2e)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ZodValidationPipe());
-    const httpAdapter = app.getHttpAdapter();
-    app.useGlobalFilters(new PrismaExceptionFilter(httpAdapter));
+    configureApp(app);
 
     await app.init();
     prisma = app.get(PrismaService);
@@ -261,9 +257,12 @@ describe('Users API (e2e)', () => {
     expect(response.body).toEqual(
       expect.objectContaining({
         statusCode: 400,
+        code: 'VALIDATION_ERROR',
       }),
     );
-    expect(Array.isArray(response.body.errors)).toBe(true);
+    const fieldErrors = response.body.fieldErrors as { field: string; message: string }[];
+    expect(Array.isArray(fieldErrors)).toBe(true);
+    expect(fieldErrors.map((fe) => fe.field)).toEqual(expect.arrayContaining(['email', 'role']));
   });
 
   it('returns 409 for duplicate email', async () => {
@@ -278,12 +277,16 @@ describe('Users API (e2e)', () => {
       .send(payload)
       .expect(409);
 
+    // Явна перевірка в UsersService.create → 409 із fieldErrors по полю email —
+    // фронт покаже помилку прямо під полем форми
     expect(response.body).toEqual(
       expect.objectContaining({
         statusCode: 409,
+        code: 'CONFLICT',
+        message: 'Email already registered',
+        fieldErrors: [{ field: 'email', message: 'Email already registered' }],
       }),
     );
-    expect(String(response.body.message)).toContain('Unique constraint violation');
   });
 
   it('returns 404 for get by non-existing user id', async () => {
@@ -342,8 +345,9 @@ describe('Users API (e2e)', () => {
     expect(response.body).toEqual(
       expect.objectContaining({
         statusCode: 400,
+        code: 'VALIDATION_ERROR',
       }),
     );
-    expect(Array.isArray(response.body.errors)).toBe(true);
+    expect(Array.isArray(response.body.fieldErrors)).toBe(true);
   });
 });

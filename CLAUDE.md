@@ -4,7 +4,9 @@
 Базові патерни портовані з `/Users/dentiman/dev/projects/fibo-admin` і розширені.
 **Фаза 1 завершена і перевірена** (2026-07-11): монорепо, auth + users end-to-end, конвеєр контрактів, CI.
 **Фаза 2.1 завершена і перевірена** (2026-07-11): pg-boss + `libs/shared` (JobDispatcher/@JobHandler) + `apps/worker`.
-Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази), `README.md` (quickstart).
+**Фаза 2.2 завершена і перевірена** (2026-07-12): наскрізна обробка помилок — ApiError envelope + AllExceptionsFilter + toast + fieldErrors у форми.
+Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
+`docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції), `README.md` (quickstart).
 
 ## Команди
 
@@ -19,7 +21,7 @@ pnpm web:dev              # Web: http://localhost:5173 (Vite проксі /api �
 pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 43 jest+supertest тести; ВИМАГАЄ запущеного Postgres. Ганяються в ОКРЕМІЙ
+pnpm api:test:e2e         # 47 jest+supertest тестів; ВИМАГАЄ запущеного Postgres. Ганяються в ОКРЕМІЙ
                           # БД saas_skeleton_test (globalSetup сам створює її і мігрує) — dev-дані не чіпає
 ```
 
@@ -29,7 +31,8 @@ pnpm api:test:e2e         # 43 jest+supertest тести; ВИМАГАЄ зап�
 
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, jobs (read-only моніторинг черг:
-                raw SQL до pgboss.job, 42P01 → порожньо), health. Pino, PrismaExceptionFilter
+                raw SQL до pgboss.job, 42P01 → порожньо), health. Pino, AllExceptionsFilter
+                (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
 apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system)
@@ -50,6 +53,19 @@ theft detection (невірний secret при валідному tokenId → �
 Глобальний `JwtAuthGuard` (APP_GUARD, без Passport), відкриті роути — `@Public()`.
 Фронт: access-токен тільки в пам'яті (Zustand), refresh у localStorage `saas_refresh_token`,
 axios-інтерсептор із single-flight refresh на 401 (`apps/web/src/api/http-client.ts`).
+
+**Помилки (фаза 2.2, наскрізний контракт):** єдиний envelope `ApiError` у `libs/contracts/src/error/`:
+`{ statusCode, code (закритий enum), message, fieldErrors?: [{field, message}], requestId }` — фронт імпортує
+тип напряму з contracts (без OpenAPI-шляху). Бекенд: `AllExceptionsFilter` (`@Catch()`) нормалізує ВСЕ:
+ZodValidationException → 400 VALIDATION_ERROR + fieldErrors з issue paths; Prisma P2002 → 409 + поле
+(УВАГА: Prisma 7 + adapter-pg кладе поля в `meta.driverAdapterError.cause.constraint.fields`, НЕ в
+`meta.target`; а при недоступній БД кидає код `ECONNREFUSED`, НЕ P1001 — обидва перевірені на живо);
+P2025 → 404; ECONNREFUSED/P1xxx/P2024 → 503; будь-який 5xx-message маскується ("Internal server error",
+деталі тільки в лог з requestId). Явний 409 з полем — `fieldConflictException()` (`common/errors.ts`).
+Фронт: `parseApiError()`/`isGlobalApiError()` (`apps/web/src/api/api-error.ts`); network/5xx/403 →
+HeroUI `toast.danger` (глобальні QueryCache/MutationCache onError у main.tsx, дедуп 5с, `<Toast.Provider>`);
+401 → refresh-інтерсептор; 4xx у формах — `applyServerError(error, form)`: fieldErrors → setError по
+імені поля (звірка з getValues, тому форми МУСЯТЬ мати повні defaultValues), решта → errors.root.server.
 
 **Черги (фаза 2.1):** job = `defineJob(name, zodSchema, { cron?, retry* })` у `libs/shared/src/jobs/definitions/`.
 API: `JobsModule.forApi()` (global) → інжект `JobDispatcher` → `send(def, payload, { singletonKey?, tx? })`

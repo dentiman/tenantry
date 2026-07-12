@@ -1,13 +1,26 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
+import { isGlobalApiError, parseApiError } from './api/api-error';
+import { showApiErrorToast } from './lib/error-toast';
 import './index.css';
 
+// Глобальна політика: network/5xx/403 → toast; 401 гасить refresh-інтерсептор;
+// решта 4xx — відповідальність місця виклику (форми через applyServerError)
+function handleGlobalError(error: unknown): void {
+  const parsed = parseApiError(error);
+  if (isGlobalApiError(parsed)) {
+    showApiErrorToast(parsed);
+  }
+}
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: handleGlobalError }),
+  mutationCache: new MutationCache({ onError: handleGlobalError }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

@@ -5,30 +5,31 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { LoginSchema, type Login } from '@saas-skeleton/contracts';
 import { useAuthLogin } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
-import { FormTextField } from '../components/form';
+import { applyServerError, FormTextField } from '../components/form';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
   const login = useAuthLogin();
 
-  const {
-    control,
-    handleSubmit,
-    setError,
-    formState: { isSubmitting, errors },
-  } = useForm<Login>({
+  const form = useForm<Login>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: '', password: '' },
   });
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting, errors },
+  } = form;
 
   const onSubmit = handleSubmit(async (values) => {
     try {
       const res = await login.mutateAsync({ data: values });
       setSession(res.user, res.tokens);
       await navigate({ to: '/' });
-    } catch {
-      setError('root.server', { type: 'server', message: 'Invalid email or password' });
+    } catch (error) {
+      // 401 → root.server з message бекенда; network/5xx покаже глобальний toast
+      applyServerError(error, form);
     }
   });
 

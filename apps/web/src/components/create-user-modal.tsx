@@ -17,16 +17,16 @@ export function CreateUserModal() {
   const queryClient = useQueryClient();
   const createUser = useUsersCreate();
 
-  const {
-    control,
-    handleSubmit,
-    setError,
-    reset,
-    formState: { isSubmitting, errors },
-  } = useForm<CreateUser>({
+  const form = useForm<CreateUser>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: { email: '', name: '', role: 'USER', password: '' },
   });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting, errors },
+  } = form;
 
   const close = (open: boolean) => {
     setIsOpen(open);
@@ -43,10 +43,7 @@ export function CreateUserModal() {
       await queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
       close(false);
     } catch (error) {
-      applyServerError(error, setError, {
-        conflictField: 'email',
-        conflictMessage: 'Email already registered',
-      });
+      applyServerError(error, form);
     }
   });
 

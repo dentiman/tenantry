@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@saas-skeleton/database';
@@ -7,6 +7,7 @@ import type { Register, Login, AuthTokens } from '@saas-skeleton/contracts';
 import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
+import { fieldConflictException } from '../common/errors';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,7 @@ export class AuthService {
     });
     if (existing) {
       this.logger.warn(`Registration failed - email already exists: ${data.email}`);
-      throw new ConflictException('Email already registered');
+      throw fieldConflictException('email', 'Email already registered');
     }
 
     const passwordHash = await argon2.hash(data.password);
