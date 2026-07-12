@@ -12,6 +12,7 @@ export interface JobRow {
   created_on: Date;
   started_on: Date | null;
   completed_on: Date | null;
+  data: unknown;
   output: unknown;
 }
 
@@ -57,7 +58,7 @@ export class JobsService {
       const [items, countRows] = await Promise.all([
         this.prisma.$queryRaw<JobRow[]>(Prisma.sql`
           SELECT id, name, state::text AS state, retry_count, retry_limit,
-                 singleton_key, created_on, started_on, completed_on, output
+                 singleton_key, created_on, started_on, completed_on, data, output
           FROM pgboss.job
           ${where}
           ORDER BY created_on DESC

@@ -12,6 +12,7 @@ export function toJobResponse(row: JobRow): JobResponse {
     createdAt: row.created_on.toISOString(),
     startedAt: row.started_on ? row.started_on.toISOString() : null,
     completedAt: row.completed_on ? row.completed_on.toISOString() : null,
+    data: row.data == null ? null : JSON.stringify(row.data),
     output: row.output == null ? null : JSON.stringify(row.output),
   };
 }

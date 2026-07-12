@@ -153,6 +153,7 @@ export function JobsPage() {
                 <Table.Column isRowHeader>Queue</Table.Column>
                 <Table.Column>State</Table.Column>
                 <Table.Column>Attempts</Table.Column>
+                <Table.Column>Data</Table.Column>
                 <Table.Column>Created</Table.Column>
                 <Table.Column>Started</Table.Column>
                 <Table.Column>Completed</Table.Column>
@@ -169,6 +170,15 @@ export function JobsPage() {
                     </Table.Cell>
                     <Table.Cell>
                       {job.retryCount}/{job.retryLimit}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {job.data ? (
+                        <code className="block max-w-56 truncate text-xs" title={job.data}>
+                          {job.data}
+                        </code>
+                      ) : (
+                        '—'
+                      )}
                     </Table.Cell>
                     <Table.Cell>{formatDate(job.createdAt)}</Table.Cell>
                     <Table.Cell>{formatDate(job.startedAt)}</Table.Cell>

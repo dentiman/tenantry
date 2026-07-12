@@ -22,6 +22,8 @@ export const JobSchema = z.object({
   createdAt: z.iso.datetime(),
   startedAt: z.iso.datetime().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  /** Серіалізований payload job-а (pgboss.job.data) */
+  data: z.string().nullable(),
   /** Серіалізований output (для failed — текст помилки) */
   output: z.string().nullable(),
 });

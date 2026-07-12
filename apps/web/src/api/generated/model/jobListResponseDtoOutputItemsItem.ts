@@ -37,5 +37,7 @@ export type JobListResponseDtoOutputItemsItem = {
    */
   completedAt: string | null;
   /** @nullable */
+  data: string | null;
+  /** @nullable */
   output: string | null;
 };
