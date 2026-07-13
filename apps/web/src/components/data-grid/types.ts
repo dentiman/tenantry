@@ -4,11 +4,13 @@ import type { SortDescriptor } from '@heroui/react';
 export type SortOrder = 'asc' | 'desc';
 
 /**
- * Мінімальна форма search-стану гріда: page/sortBy/sortOrder/search — решта полів
- * (фільтри) — довільні, специфічні для сторінки. Той самий тип, що й route-схема
- * сторінки (TanStack Router search), якщо грід синхронізується з URL.
+ * Мінімальна форма фільтрів гріда: page/sortBy/sortOrder/search — решта полів
+ * (доменні фільтри) — довільні, специфічні для сторінки. «Фільтри» тут у широкому
+ * сенсі — усе, що звужує/упорядковує список, включно з пагінацією і сортуванням.
+ * Той самий тип, що й route-схема сторінки (search params TanStack Router — це
+ * URL query, не текстовий пошук), якщо грід синхронізується з URL.
  */
-export interface DataGridSearchBase {
+export interface DataGridFiltersBase {
   page?: number;
   sortBy?: string;
   sortOrder?: SortOrder;

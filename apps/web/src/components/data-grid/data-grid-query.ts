@@ -13,7 +13,12 @@ export interface DataGridQueryResult<TItem> {
   total: number;
   totalPages: number;
   isLoading: boolean;
-  isFetching: boolean;
+  /**
+   * true, коли показуються СТАРІ дані під нові фільтри (keepPreviousData) — грід
+   * затемнює таблицю. Свідомо не isFetching: фонові рефетчі (refetchInterval,
+   * focus) не мають блимати затемненням.
+   */
+  isPlaceholderData: boolean;
 }
 
 /**
@@ -28,13 +33,16 @@ export const gridQueryOptions = { placeholderData: keepPreviousData };
  * типів). TItem виводиться з конкретного типу query.data в місці виклику.
  */
 export function toGridQueryResult<TItem>(
-  query: Pick<UseQueryResult<DataGridListResponse<TItem>>, 'data' | 'isLoading' | 'isFetching'>,
+  query: Pick<
+    UseQueryResult<DataGridListResponse<TItem>>,
+    'data' | 'isLoading' | 'isPlaceholderData'
+  >,
 ): DataGridQueryResult<TItem> {
   return {
     items: query.data?.items ?? [],
     total: query.data?.total ?? 0,
     totalPages: query.data?.totalPages ?? 1,
     isLoading: query.isLoading,
-    isFetching: query.isFetching,
+    isPlaceholderData: query.isPlaceholderData,
   };
 }

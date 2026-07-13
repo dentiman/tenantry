@@ -1,18 +1,25 @@
-import { Card, Chip, ListBox, Pagination, Select, Spinner, Table } from '@heroui/react';
-import { getRouteApi } from '@tanstack/react-router';
+import { Card, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
 import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
 import type { JobsFindAllParams } from '../api/generated/model';
-import { pageItems } from '../lib/page-items';
+import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
 import { formatDateTime } from '../lib/format';
+import type { JobsSearch } from '../router';
+import {
+  DataGrid,
+  DataGridFilters,
+  defineFilters,
+  gridQueryOptions,
+  toGridQueryResult,
+  useDataGridFilters,
+} from '../components/data-grid';
+import type { DataGridColumn, DataGridFilterDef } from '../components/data-grid';
 
 const LIMIT = 20;
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
 const REFETCH_INTERVAL_MS = 5000;
-
-const routeApi = getRouteApi('/app/jobs');
 
 const JOB_STATES: JobState[] = ['created', 'retry', 'active', 'completed', 'cancelled', 'failed'];
 
@@ -25,45 +32,8 @@ const stateColor: Record<JobState, 'accent' | 'danger' | 'default' | 'success' |
   failed: 'danger',
 };
 
-interface FilterSelectProps {
-  ariaLabel: string;
-  allLabel: string;
-  value: string | undefined;
-  options: { id: string; label: string }[];
-  onChange: (value: string | undefined) => void;
-}
-
-function FilterSelect({ ariaLabel, allLabel, value, options, onChange }: FilterSelectProps) {
-  return (
-    <Select
-      aria-label={ariaLabel}
-      className="w-48"
-      value={value ?? 'all'}
-      onChange={(key) => {
-        onChange(key === 'all' ? undefined : String(key));
-      }}
-    >
-      <Select.Trigger>
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover>
-        <ListBox>
-          <ListBox.Item id="all" textValue={allLabel}>
-            {allLabel}
-            <ListBox.ItemIndicator />
-          </ListBox.Item>
-          {options.map((option) => (
-            <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
-              {option.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </Select.Popover>
-    </Select>
-  );
-}
+// Фабрики фільтрів, привʼязані до search-схеми роуту /jobs
+const filter = defineFilters<JobsSearch>();
 
 function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): string {
   return t(`states.${state}`);
@@ -71,64 +41,109 @@ function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): strin
 
 export function JobsPage() {
   const { t } = useTranslation(['jobs', 'common']);
-  // Джерело правди для фільтрів/сторінки — URL (?state=&queue=&page=)
-  const { page = 1, state, queue } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+  // Фільтри живуть у search-параметрах роуту (?state=&queue=&page=&sortBy=…)
+  const grid = useDataGridFilters<JobsSearch>();
 
-  const params: JobsFindAllParams = {
-    page,
-    limit: LIMIT,
-    ...(state ? { state } : {}),
-    ...(queue ? { queue } : {}),
-  };
-
-  const { data, isLoading } = useJobsFindAll(params, {
-    query: { refetchInterval: REFETCH_INTERVAL_MS },
-  });
+  const params: JobsFindAllParams = { ...grid.filters, page: grid.page, limit: LIMIT };
+  const list = toGridQueryResult(
+    useJobsFindAll(params, {
+      query: { ...gridQueryOptions, refetchInterval: REFETCH_INTERVAL_MS },
+    }),
+  );
   const { data: stats } = useJobsQueues({
     query: { refetchInterval: REFETCH_INTERVAL_MS },
   });
-
-  const setFilter = (patch: { state?: JobState | undefined; queue?: string | undefined }) => {
-    void navigate({
-      search: (prev) => ({ ...prev, ...patch, page: undefined }),
-    });
-  };
-
-  const goToPage = (target: number) => {
-    void navigate({
-      search: (prev) => ({ ...prev, page: target <= 1 ? undefined : target }),
-    });
-  };
-
-  const totalPages = data?.totalPages ?? 1;
-  const items = data?.items ?? [];
   const queues = stats?.queues ?? [];
+
+  const filters: DataGridFilterDef<JobsSearch>[] = [
+    filter.select({
+      key: 'queue',
+      ariaLabel: t('filters.queueLabel'),
+      allLabel: t('filters.all', { label: t('filters.queueLabel') }),
+      options: queues.map((q) => ({ id: q.name, label: q.name })),
+    }),
+    filter.select({
+      key: 'state',
+      ariaLabel: t('filters.stateLabel'),
+      allLabel: t('filters.all', { label: t('filters.stateLabel') }),
+      options: JOB_STATES.map((s) => ({ id: s, label: jobStateLabel(t, s) })),
+    }),
+  ];
+
+  // sortable — тільки поля з whitelist JobQuerySchema.sortBy
+  const columns: DataGridColumn<JobListResponseDtoOutputItemsItem>[] = [
+    {
+      id: 'name',
+      header: t('table.queue'),
+      isRowHeader: true,
+      sortable: true,
+      className: 'font-medium text-foreground',
+      cell: (job) => job.name,
+    },
+    {
+      id: 'state',
+      header: t('table.state'),
+      sortable: true,
+      cell: (job) => (
+        <Chip size="sm" color={stateColor[job.state]}>
+          {jobStateLabel(t, job.state)}
+        </Chip>
+      ),
+    },
+    {
+      id: 'attempts',
+      header: t('table.attempts'),
+      cell: (job) => `${String(job.retryCount)}/${String(job.retryLimit)}`,
+    },
+    {
+      id: 'data',
+      header: t('table.data'),
+      cell: (job) =>
+        job.data ? (
+          <code className="block max-w-56 truncate text-xs" title={job.data}>
+            {job.data}
+          </code>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      id: 'createdAt',
+      header: t('table.created'),
+      sortable: true,
+      cell: (job) => formatDateTime(job.createdAt),
+    },
+    {
+      id: 'startedAt',
+      header: t('table.started'),
+      sortable: true,
+      cell: (job) => formatDateTime(job.startedAt),
+    },
+    {
+      id: 'completedAt',
+      header: t('table.completed'),
+      sortable: true,
+      cell: (job) => formatDateTime(job.completedAt),
+    },
+    {
+      id: 'output',
+      header: t('table.output'),
+      cell: (job) =>
+        job.output ? (
+          <span className="block max-w-56 truncate" title={job.output}>
+            {job.output}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+  ];
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
-        <div className="flex items-center gap-2">
-          <FilterSelect
-            ariaLabel={t('filters.queueLabel')}
-            allLabel={t('filters.all', { label: t('filters.queueLabel') })}
-            value={queue}
-            options={queues.map((q) => ({ id: q.name, label: q.name }))}
-            onChange={(value) => {
-              setFilter({ queue: value });
-            }}
-          />
-          <FilterSelect
-            ariaLabel={t('filters.stateLabel')}
-            allLabel={t('filters.all', { label: t('filters.stateLabel') })}
-            value={state}
-            options={JOB_STATES.map((s) => ({ id: s, label: jobStateLabel(t, s) }))}
-            onChange={(value) => {
-              setFilter({ state: value as JobState | undefined });
-            }}
-          />
-        </div>
+        <DataGridFilters grid={grid} filters={filters} />
       </div>
 
       {queues.length > 0 && (
@@ -152,116 +167,13 @@ export function JobsPage() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <Spinner aria-label={t('loadingLabel')} />
-        </div>
-      ) : (
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label={t('table.ariaLabel')}>
-              <Table.Header>
-                <Table.Column isRowHeader>{t('table.queue')}</Table.Column>
-                <Table.Column>{t('table.state')}</Table.Column>
-                <Table.Column>{t('table.attempts')}</Table.Column>
-                <Table.Column>{t('table.data')}</Table.Column>
-                <Table.Column>{t('table.created')}</Table.Column>
-                <Table.Column>{t('table.started')}</Table.Column>
-                <Table.Column>{t('table.completed')}</Table.Column>
-                <Table.Column>{t('table.output')}</Table.Column>
-              </Table.Header>
-              <Table.Body>
-                {items.map((job) => (
-                  <Table.Row key={job.id} id={job.id}>
-                    <Table.Cell className="font-medium text-foreground">{job.name}</Table.Cell>
-                    <Table.Cell>
-                      <Chip size="sm" color={stateColor[job.state]}>
-                        {jobStateLabel(t, job.state)}
-                      </Chip>
-                    </Table.Cell>
-                    <Table.Cell>
-                      {job.retryCount}/{job.retryLimit}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {job.data ? (
-                        <code className="block max-w-56 truncate text-xs" title={job.data}>
-                          {job.data}
-                        </code>
-                      ) : (
-                        '—'
-                      )}
-                    </Table.Cell>
-                    <Table.Cell>{formatDateTime(job.createdAt)}</Table.Cell>
-                    <Table.Cell>{formatDateTime(job.startedAt)}</Table.Cell>
-                    <Table.Cell>{formatDateTime(job.completedAt)}</Table.Cell>
-                    <Table.Cell>
-                      {job.output ? (
-                        <span className="block max-w-56 truncate" title={job.output}>
-                          {job.output}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
-      )}
-
-      {!isLoading && items.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">{t('empty')}</p>
-      )}
-
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-sm text-muted">
-          {t('common:pagination.summary', { total: data?.total ?? 0, page, totalPages })}
-        </span>
-        <Pagination>
-          <Pagination.Content>
-            <Pagination.Item>
-              <Pagination.Previous
-                isDisabled={page <= 1}
-                onPress={() => {
-                  goToPage(page - 1);
-                }}
-              >
-                <Pagination.PreviousIcon />
-              </Pagination.Previous>
-            </Pagination.Item>
-            {pageItems(page, totalPages).map((item) =>
-              typeof item === 'number' ? (
-                <Pagination.Item key={item}>
-                  <Pagination.Link
-                    isActive={item === page}
-                    onPress={() => {
-                      goToPage(item);
-                    }}
-                  >
-                    {item}
-                  </Pagination.Link>
-                </Pagination.Item>
-              ) : (
-                <Pagination.Item key={item}>
-                  <Pagination.Ellipsis />
-                </Pagination.Item>
-              ),
-            )}
-            <Pagination.Item>
-              <Pagination.Next
-                isDisabled={page >= totalPages}
-                onPress={() => {
-                  goToPage(page + 1);
-                }}
-              >
-                <Pagination.NextIcon />
-              </Pagination.Next>
-            </Pagination.Item>
-          </Pagination.Content>
-        </Pagination>
-      </div>
+      <DataGrid
+        ariaLabel={t('table.ariaLabel')}
+        columns={columns}
+        grid={grid}
+        list={list}
+        messages={{ loading: t('loadingLabel'), empty: t('empty') }}
+      />
     </div>
   );
 }

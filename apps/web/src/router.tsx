@@ -6,7 +6,7 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { z } from 'zod';
-import { JobStateSchema, SortOrderSchema, UserQuerySchema } from '@saas-skeleton/contracts';
+import { JobQuerySchema, UserQuerySchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
 import { ToastHost } from './components/toast-host';
@@ -76,9 +76,12 @@ const UsersSearchSchema = z.object({
   // Той самий whitelist полів, що й на бекенді (UserQuerySchema.sortBy) — не дублюємо enum
   sortBy: UserQuerySchema.shape.sortBy.catch(undefined),
   sortOrder: UserQuerySchema.shape.sortOrder.catch(undefined),
+  // В URL і в query-параметрах API фільтр їде РЯДКОМ 'true'/'false' (не reuse
+  // UserQuerySchema.shape.isActive — його transform дає boolean, а це wire-формат)
+  isActive: z.enum(['true', 'false']).optional().catch(undefined),
 });
 
-/** TSearch для useDataGridState на сторінці users — runtime-форму гарантує validateSearch */
+/** TFilters для useDataGridFilters на сторінці users — runtime-форму гарантує validateSearch */
 export type UsersSearch = z.infer<typeof UsersSearchSchema>;
 
 const usersRoute = createRoute({
@@ -90,9 +93,14 @@ const usersRoute = createRoute({
 
 const JobsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
-  state: JobStateSchema.optional().catch(undefined),
+  sortBy: JobQuerySchema.shape.sortBy.catch(undefined),
+  sortOrder: JobQuerySchema.shape.sortOrder.catch(undefined),
+  state: JobQuerySchema.shape.state.catch(undefined),
   queue: z.string().optional().catch(undefined),
 });
+
+/** TFilters для useDataGridFilters на сторінці jobs — runtime-форму гарантує validateSearch */
+export type JobsSearch = z.infer<typeof JobsSearchSchema>;
 
 const jobsRoute = createRoute({
   getParentRoute: () => appRoute,

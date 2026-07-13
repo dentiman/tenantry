@@ -22,7 +22,7 @@ interface DataGridProps<T extends { id: string }> {
   /** За замовчуванням — item.id (усі сутності мають uuid id); переозначити для інших ключів */
   getRowId?: (item: T) => string;
 
-  /** Сортування й пагінація — з useDataGridState(); URL-синхронізація опціональна там */
+  /** Сортування й пагінація — з useDataGridFilters(); URL-синхронізація опціональна там */
   grid: DataGridNavigation;
   /** Дані й стан фетчингу — з toGridQueryResult(); DataGrid сам нічого не запитує */
   list: DataGridQueryResult<T>;
@@ -32,7 +32,7 @@ interface DataGridProps<T extends { id: string }> {
 
 /**
  * Уніфікований список для серверних колекцій. Колонки/екшени — ззовні (page-специфічні),
- * сортування/пагінація — з grid, дані — з list (обидва з useDataGridState/toGridQueryResult).
+ * сортування/пагінація — з grid, дані — з list (обидва з useDataGridFilters/toGridQueryResult).
  */
 export function DataGrid<T extends { id: string }>({
   ariaLabel,
@@ -44,7 +44,7 @@ export function DataGrid<T extends { id: string }>({
   messages,
 }: DataGridProps<T>) {
   const { page, sortDescriptor, onSortChange, goToPage } = grid;
-  const { items, total, totalPages, isLoading, isFetching } = list;
+  const { items, total, totalPages, isLoading, isPlaceholderData } = list;
   const { t } = useTranslation('common');
   const loadingLabel = messages?.loading ?? t('loading');
   const emptyMessage = messages?.empty ?? t('empty');
@@ -76,7 +76,7 @@ export function DataGrid<T extends { id: string }>({
 
   return (
     <div>
-      <div className={isFetching ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+      <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
         <Table>
           <Table.ScrollContainer>
             <Table.Content

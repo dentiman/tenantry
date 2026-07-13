@@ -8,6 +8,7 @@
 **I18N-1 завершена і перевірена** (2026-07-12): `libs/i18n` + react-i18next в адмінці, усі рядки UI винесені в ключі.
 **I18N-2 завершена і перевірена** (2026-07-12): FieldError.code + переклад toast/fieldErrors/Zod-повідомлень на фронті.
 **I18N-3 завершена і перевірена** (2026-07-12): `users.locale` у БД, реальна відправка welcome-email через Mailpit локаллю юзера (закрито й давній пункт фази 2).
+**DataGrid-фільтри завершені і перевірені** (2026-07-13): фільтри гріда декларуються масивом (як columns), Search→Filters перейменування, /jobs мігровано на DataGrid (+сортування).
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4), `README.md` (quickstart).
@@ -96,6 +97,19 @@ singletonKey=userId) → її хендлер через inbox+tx ставить 
 (nodemailer, дефолти на Mailpit). Це at-least-once side effect (не exactly-once як БД-ефекти
 через `JobInboxService`) — pg-boss retry після падіння ПІСЛЯ успішного sendMail надішле лист
 повторно; прийнятно для welcome-листа, для платіжних/юридичних листів треба окремий idempotency-шар.
+
+**DataGrid (`apps/web/src/components/data-grid/`, обидві сторінки /users і /jobs на ньому):**
+стан — `useDataGridFilters<TFilters>()` (фільтри в search params роуту; `validateSearch` роуту =
+runtime-гарантія TFilters; debounce пошуку, скидання page); дані — `toGridQueryResult` +
+`gridQueryOptions` (keepPreviousData; затемнення таблиці по `isPlaceholderData`, НЕ `isFetching` —
+інакше refetchInterval блимає); вигляд — `<DataGrid columns rowActions grid list>`. Тулбар:
+фільтри масивом як columns — `<DataGridFilters grid filters>`; вбудовані через фабрики
+`defineFilters<TFilters>()` → `filter.search()`/`filter.select({ key, options })` (саме
+замикання-виклик: у масиві TS не виведе TFilters з аргументів вільної generic-функції);
+кастомний бізнес-фільтр = обʼєкт `{ id, render(grid) }` (еталон — `userStatusFilter` в users.tsx).
+Boolean-фільтри в URL/query їдуть РЯДКОМ `'true'/'false'` (wire-формат; не reuse
+transform-схем contracts, що дають boolean). «Search» у назвах TanStack Router = URL query,
+не текстовий пошук — у гріді все зветься Filters.
 
 **Шари backend-модуля (обов'язково):** DTO (`createZodDto` зі схеми contracts) → Service
 (логіка + Prisma) → Mapper (явний мапінг Prisma→response; не витікають `passwordHash` тощо) →

@@ -2,6 +2,10 @@
   "title": "Users",
   "searchLabel": "Search users",
   "searchPlaceholder": "Search by email or name…",
+  "filters": {
+    "statusLabel": "Status",
+    "statusAll": "All statuses"
+  },
   "table": {
     "ariaLabel": "Users",
     "email": "Email",

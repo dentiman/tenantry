@@ -1,27 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { fromSortDescriptor, toSortDescriptor } from './sort';
-import type { DataGridNavigation, DataGridSearchBase } from './types';
+import type { DataGridFiltersBase, DataGridNavigation } from './types';
 
-interface UseDataGridStateOptions<TSearch extends DataGridSearchBase> {
+interface UseDataGridFiltersOptions<TFilters extends DataGridFiltersBase> {
   /**
-   * true (дефолт) — стан живе в search-параметрах поточного роуту: шерабельний
-   * лінк, F5 і back/forward працюють. Роут МУСИТЬ мати validateSearch зі схемою,
-   * що відповідає TSearch (див. router.tsx) — вона і є runtime-гарантією типу.
+   * true (дефолт) — фільтри живуть у search-параметрах поточного роуту (URL query):
+   * шерабельний лінк, F5 і back/forward працюють. Роут МУСИТЬ мати validateSearch
+   * зі схемою, що відповідає TFilters (див. router.tsx) — вона і є runtime-гарантією типу.
    * false — локальний useState: для другого гріда на сторінці чи гріда в модалці.
    */
   syncToUrl?: boolean;
-  /** Стартовий стан для syncToUrl: false (в URL-режимі стартовий стан = сам URL) */
-  initialValue?: TSearch;
+  /** Стартові фільтри для syncToUrl: false (в URL-режимі стартовий стан = сам URL) */
+  initialValue?: TFilters;
   searchDebounceMs?: number;
 }
 
-export interface DataGridState<TSearch extends DataGridSearchBase> extends DataGridNavigation {
-  value: TSearch;
+export interface DataGridFiltersState<TFilters extends DataGridFiltersBase>
+  extends DataGridNavigation {
+  /** Поточні фільтри цілком — сторінка спредить їх у params запиту списку */
+  filters: TFilters;
   searchInput: string;
   setSearchInput: (value: string) => void;
-  /** Патчить довільні поля (фільтри) стану й скидає page — окремо від search (без debounce) */
-  setFilter: (patch: Partial<Omit<TSearch, 'page'>>) => void;
+  /** Патчить довільні поля фільтрів і скидає page — окремо від search (без debounce) */
+  setFilter: (patch: Partial<Omit<TFilters, 'page'>>) => void;
 }
 
 const DEFAULT_SEARCH_DEBOUNCE_MS = 300;
@@ -31,48 +33,48 @@ const DEFAULT_SEARCH_DEBOUNCE_MS = 300;
  * скидання page при зміні фільтра/сортування, міст SortDescriptor (HeroUI) ↔
  * sortBy/sortOrder. Роутер інжектиться всередині — сторінка не робить проводки.
  * Стан свідомо ПОВЕРТАЄТЬСЯ сторінці (а не ховається в <DataGrid>): fetching
- * лишається за сторінкою, а їй для params потрібен grid.value ДО рендера гріда.
+ * лишається за сторінкою, а їй для params потрібен grid.filters ДО рендера гріда.
  * Один хук — один DataGrid; кілька грідів = кілька викликів (URL-режим лише в одного).
  */
-export function useDataGridState<TSearch extends DataGridSearchBase = DataGridSearchBase>(
-  options: UseDataGridStateOptions<TSearch> = {},
-): DataGridState<TSearch> {
+export function useDataGridFilters<TFilters extends DataGridFiltersBase = DataGridFiltersBase>(
+  options: UseDataGridFiltersOptions<TFilters> = {},
+): DataGridFiltersState<TFilters> {
   const {
     syncToUrl = true,
-    initialValue = {} as TSearch,
+    initialValue = {} as TFilters,
     searchDebounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
   } = options;
 
   // Rules of Hooks: обидва режими ініціалізуються завжди, невибраний — ігнорується.
-  // strict: false — хук не знає свого роуту; runtime-форму TSearch гарантує
+  // strict: false — хук не знає свого роуту; runtime-форму TFilters гарантує
   // validateSearch роуту, тому касти нижче локалізовані й безпечні
   const rawSearch: unknown = useSearch({ strict: false });
-  const urlSearch = rawSearch as TSearch;
+  const urlFilters = rawSearch as TFilters;
   const navigate = useNavigate();
-  const [localValue, setLocalValue] = useState<TSearch>(initialValue);
+  const [localFilters, setLocalFilters] = useState<TFilters>(initialValue);
 
-  const value = syncToUrl ? urlSearch : localValue;
+  const filters = syncToUrl ? urlFilters : localFilters;
 
   // navigate типізований merged-схемою ВСІХ роутів — роутер-агностичний хук її не
   // знає, тому navigate перетипізовано до фактично використовуваної сигнатури
   const navigateSearch = navigate as unknown as (opts: {
     to: '.';
     replace: boolean;
-    search: (prev: TSearch) => TSearch;
+    search: (prev: TFilters) => TFilters;
   }) => Promise<void>;
 
-  const applyChange = (updater: (prev: TSearch) => TSearch, replace = false): void => {
+  const applyChange = (updater: (prev: TFilters) => TFilters, replace = false): void => {
     if (syncToUrl) {
       void navigateSearch({ to: '.', replace, search: updater });
     } else {
-      setLocalValue(updater);
+      setLocalFilters(updater);
     }
   };
   // "Останній" applyChange у ref — debounce-ефект не має перезапускатись щорендера
   const applyChangeRef = useRef(applyChange);
   applyChangeRef.current = applyChange;
 
-  const search = value.search ?? '';
+  const search = filters.search ?? '';
   const [searchInput, setSearchInput] = useState(search);
   // Останнє значення, яке МИ поклали в стан — відрізняє наш апдейт від зовнішнього
   // (back/forward для URL-режиму; сторонній setState — для локального)
@@ -101,7 +103,7 @@ export function useDataGridState<TSearch extends DataGridSearchBase = DataGridSe
     }
   }, [search]);
 
-  const setFilter = (patch: Partial<Omit<TSearch, 'page'>>): void => {
+  const setFilter = (patch: Partial<Omit<TFilters, 'page'>>): void => {
     applyChange((prev) => ({ ...prev, ...patch, page: undefined }));
   };
 
@@ -111,20 +113,20 @@ export function useDataGridState<TSearch extends DataGridSearchBase = DataGridSe
 
   const onSortChange: DataGridNavigation['onSortChange'] = (descriptor) => {
     const next = fromSortDescriptor(descriptor);
-    // descriptor.column — React Aria Key (string), TSearch['sortBy'] — закритий enum
+    // descriptor.column — React Aria Key (string), TFilters['sortBy'] — закритий enum
     // конкретної сторінки; звузити тут неможливо без знання цього enum
     setFilter({
       sortBy: next.sortBy,
       sortOrder: next.sortOrder,
-    } as Partial<Omit<TSearch, 'page'>>);
+    } as Partial<Omit<TFilters, 'page'>>);
   };
 
   return {
-    value,
-    page: value.page ?? 1,
+    filters,
+    page: filters.page ?? 1,
     searchInput,
     setSearchInput,
-    sortDescriptor: toSortDescriptor(value.sortBy, value.sortOrder),
+    sortDescriptor: toSortDescriptor(filters.sortBy, filters.sortOrder),
     onSortChange,
     goToPage,
     setFilter,

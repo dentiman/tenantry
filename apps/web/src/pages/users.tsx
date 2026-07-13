@@ -1,6 +1,7 @@
 import { Chip } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
 import type { UsersFindAllParams } from '../api/generated/model';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
@@ -10,23 +11,40 @@ import { formatDate } from '../lib/format';
 import type { UsersSearch } from '../router';
 import {
   DataGrid,
-  DataGridSearchField,
+  DataGridFilters,
+  defineFilters,
   gridQueryOptions,
   toGridQueryResult,
-  useDataGridState,
+  useDataGridFilters,
 } from '../components/data-grid';
-import type { DataGridColumn, DataGridRowAction } from '../components/data-grid';
+import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
 
 const LIMIT = 10;
 
+// Фабрики фільтрів, привʼязані до search-схеми роуту /users
+const filter = defineFilters<UsersSearch>();
+
+/** Бізнес-фільтр статусу юзера: Active/Inactive ↔ isActive=true/false в URL і query API */
+function userStatusFilter(t: TFunction<['users', 'common']>): DataGridFilterDef<UsersSearch> {
+  return filter.select({
+    key: 'isActive',
+    ariaLabel: t('filters.statusLabel'),
+    allLabel: t('filters.statusAll'),
+    options: [
+      { id: 'true', label: t('status.active') },
+      { id: 'false', label: t('status.inactive') },
+    ],
+  });
+}
+
 export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
-  // Стан списку живе в search-параметрах роуту (дефолт хука) — роутер усередині
-  const grid = useDataGridState<UsersSearch>();
+  // Фільтри живуть у search-параметрах роуту (дефолт хука) — роутер усередині
+  const grid = useDataGridFilters<UsersSearch>();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
-  const params: UsersFindAllParams = { ...grid.value, page: grid.page, limit: LIMIT };
+  const params: UsersFindAllParams = { ...grid.filters, page: grid.page, limit: LIMIT };
   const list = toGridQueryResult(useUsersFindAll(params, { query: gridQueryOptions }));
 
   const invalidateUsers = (): void => {
@@ -36,6 +54,12 @@ export function UsersPage() {
   const removeUser = useUsersRemove({
     mutation: { onSuccess: invalidateUsers },
   });
+
+  // Тулбар декларується так само, як columns: масив дефініцій
+  const filters: DataGridFilterDef<UsersSearch>[] = [
+    filter.search({ ariaLabel: t('searchLabel'), placeholder: t('searchPlaceholder') }),
+    userStatusFilter(t),
+  ];
 
   const columns: DataGridColumn<UserListResponseDtoOutputItemsItem>[] = [
     {
@@ -112,12 +136,7 @@ export function UsersPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <div className="flex items-center gap-2">
-          <DataGridSearchField
-            ariaLabel={t('searchLabel')}
-            placeholder={t('searchPlaceholder')}
-            value={grid.searchInput}
-            onChange={grid.setSearchInput}
-          />
+          <DataGridFilters grid={grid} filters={filters} />
           <CreateUserModal />
         </div>
       </div>

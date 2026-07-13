@@ -1,16 +1,16 @@
 export { DataGrid } from './data-grid';
-export { DataGridSearchField } from './search-field';
-export { FilterSelect } from './filter-select';
-export { useDataGridState } from './use-data-grid-state';
+export { DataGridFilters, defineFilters } from './filters';
+export { useDataGridFilters } from './use-data-grid-filters';
 export { toSortDescriptor, fromSortDescriptor } from './sort';
 export { gridQueryOptions, toGridQueryResult } from './data-grid-query';
-export type { DataGridState } from './use-data-grid-state';
+export type { DataGridFiltersState } from './use-data-grid-filters';
+export type { DataGridFilterDef } from './filters';
 export type { DataGridListResponse, DataGridQueryResult } from './data-grid-query';
 export type {
   DataGridColumn,
+  DataGridFiltersBase,
   DataGridMessages,
   DataGridNavigation,
   DataGridRowAction,
-  DataGridSearchBase,
   SortOrder,
 } from './types';
