@@ -5,6 +5,8 @@
  * Foundation API for multitenant CRM/ERP systems
  * OpenAPI spec version: 0.0.1
  */
+import type { UsersFindAllSortBy } from './usersFindAllSortBy';
+import type { UsersFindAllSortOrder } from './usersFindAllSortOrder';
 import type { UsersFindAllRole } from './usersFindAllRole';
 import type { UsersFindAllIsActive } from './usersFindAllIsActive';
 
@@ -19,6 +21,8 @@ export type UsersFindAllParams = {
    * @maximum 100
    */
   limit?: number;
+  sortBy?: UsersFindAllSortBy;
+  sortOrder?: UsersFindAllSortOrder;
   role?: UsersFindAllRole;
   isActive?: UsersFindAllIsActive;
   search?: string;

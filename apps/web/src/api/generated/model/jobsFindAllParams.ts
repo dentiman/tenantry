@@ -5,6 +5,8 @@
  * Foundation API for multitenant CRM/ERP systems
  * OpenAPI spec version: 0.0.1
  */
+import type { JobsFindAllSortBy } from './jobsFindAllSortBy';
+import type { JobsFindAllSortOrder } from './jobsFindAllSortOrder';
 import type { JobsFindAllState } from './jobsFindAllState';
 
 export type JobsFindAllParams = {
@@ -18,6 +20,8 @@ export type JobsFindAllParams = {
    * @maximum 100
    */
   limit?: number;
+  sortBy?: JobsFindAllSortBy;
+  sortOrder?: JobsFindAllSortOrder;
   state?: JobsFindAllState;
   queue?: string;
 };

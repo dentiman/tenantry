@@ -88,4 +88,30 @@ describe('Jobs monitoring API (e2e)', () => {
       .query({ page: 1, limit: 10, state: 'exploded' })
       .expect(400);
   });
+
+  it('returns 400 for an unknown sortBy value', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-invalid-sort`);
+
+    await request(app.getHttpServer())
+      .get('/api/jobs')
+      .set(headers)
+      .query({ page: 1, limit: 10, sortBy: 'retryCount' })
+      .expect(400);
+  });
+
+  // Whitelist-мап колонок не повинен ламати SQL — валідний sortBy проходить
+  // до pgboss.job (якого нема в тестовій БД) так само, як дефолтне сортування
+  it('accepts a whitelisted sortBy without breaking the query', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-valid-sort`);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/jobs')
+      .set(headers)
+      .query({ page: 1, limit: 10, sortBy: 'state', sortOrder: 'desc' })
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ items: [], total: 0, page: 1, limit: 10 }),
+    );
+  });
 });

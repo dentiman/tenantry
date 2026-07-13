@@ -334,6 +334,56 @@ describe('Users API (e2e)', () => {
     expect(response.body.message).toBe('Resource not found');
   });
 
+  it('sorts users by email ascending and descending, with a stable tie-breaker', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-sort-admin`);
+    const suffix = Date.now();
+    // Різні email, той самий name (перевіряє tie-breaker по id, коли sortBy не унікальний)
+    await prisma.user.create({
+      data: { email: `charlie-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+    });
+    await prisma.user.create({
+      data: { email: `alpha-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+    });
+    await prisma.user.create({
+      data: { email: `bravo-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+    });
+
+    const asc = await request(app.getHttpServer())
+      .get('/api/users')
+      .set(headers)
+      .query({ search: String(suffix), sortBy: 'email', sortOrder: 'asc', page: 1, limit: 10 })
+      .expect(200);
+    expect(asc.body.items.map((u: { email: string }) => u.email)).toEqual([
+      `alpha-${suffix}@example.com`,
+      `bravo-${suffix}@example.com`,
+      `charlie-${suffix}@example.com`,
+    ]);
+
+    const desc = await request(app.getHttpServer())
+      .get('/api/users')
+      .set(headers)
+      .query({ search: String(suffix), sortBy: 'email', sortOrder: 'desc', page: 1, limit: 10 })
+      .expect(200);
+    expect(desc.body.items.map((u: { email: string }) => u.email)).toEqual([
+      `charlie-${suffix}@example.com`,
+      `bravo-${suffix}@example.com`,
+      `alpha-${suffix}@example.com`,
+    ]);
+  });
+
+  it('returns 400 for an unknown sortBy value', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-invalid-sort-admin`);
+    const response = await request(app.getHttpServer())
+      .get('/api/users')
+      .set(headers)
+      .query({ sortBy: 'passwordHash' })
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ statusCode: 400, code: 'VALIDATION_ERROR' }),
+    );
+  });
+
   it('returns 400 for invalid list query params', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-invalid-list-admin`);
     const response = await request(app.getHttpServer())

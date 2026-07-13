@@ -21,9 +21,9 @@ export class UsersService {
     page: number;
     limit: number;
   }> {
-    const { page, limit, role, isActive, search } = query;
+    const { page, limit, role, isActive, search, sortBy, sortOrder } = query;
     this.logger.debug(
-      `Fetching users list - page: ${String(page)}, limit: ${String(limit)}, role: ${role ?? 'all'}, isActive: ${String(isActive ?? 'all')}, search: ${search ?? 'none'}`,
+      `Fetching users list - page: ${String(page)}, limit: ${String(limit)}, role: ${role ?? 'all'}, isActive: ${String(isActive ?? 'all')}, search: ${search ?? 'none'}, sortBy: ${sortBy ?? 'default'}`,
     );
 
     const where = {
@@ -37,12 +37,17 @@ export class UsersService {
       }),
     };
 
+    // tie-breaker по id обов'язковий — інакше пагінація "пливе" при рівних значеннях sortBy
+    const orderBy = sortBy
+      ? [{ [sortBy]: sortOrder ?? 'asc' }, { id: 'desc' as const }]
+      : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
+
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy,
       }),
       this.prisma.user.count({ where }),
     ]);

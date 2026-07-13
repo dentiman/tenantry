@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PaginationQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
+import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
 
 /**
  * Локаль для server-rendered тексту (email у worker) — окрема закрита множина від
@@ -33,7 +33,13 @@ export const CreateUserSchema = z.object({
 // Зміна пароля — окремий security-флоу, не через users PATCH
 export const UpdateUserSchema = CreateUserSchema.omit({ password: true }).partial();
 
-export const UserQuerySchema = PaginationQuerySchema.extend({
+export const UserQuerySchema = listQuerySchema([
+  'email',
+  'name',
+  'role',
+  'isActive',
+  'createdAt',
+]).extend({
   role: z.enum(['ADMIN', 'USER']).optional(),
   isActive: z
     .enum(['true', 'false'])

@@ -2,9 +2,12 @@
   "actions": {
     "cancel": "Cancel",
     "delete": "Delete",
-    "save": "Save"
+    "save": "Save",
+    "menu": "Row actions"
   },
   "pagination": {
     "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}"
-  }
+  },
+  "loading": "Loading…",
+  "empty": "No results found"
 }

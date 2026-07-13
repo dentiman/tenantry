@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, PrismaService } from '@saas-skeleton/database';
 import type { JobQuery, JobState } from '@saas-skeleton/contracts';
 
+type JobSortBy = NonNullable<JobQuery['sortBy']>;
+
 export interface JobRow {
   id: string;
   name: string;
@@ -24,6 +26,16 @@ interface QueueStateRow {
 
 const MISSING_TABLE = '42P01';
 
+// Статичний whitelist: у SQL підставляється лише назва колонки з цього мапу,
+// НІКОЛИ значення query-параметра напряму (raw SQL, немає параметризації для ідентифікаторів)
+const JOB_SORT_COLUMNS: Record<JobSortBy, Prisma.Sql> = {
+  name: Prisma.sql`name`,
+  state: Prisma.sql`state`,
+  createdAt: Prisma.sql`created_on`,
+  startedAt: Prisma.sql`started_on`,
+  completedAt: Prisma.sql`completed_on`,
+};
+
 /**
  * Read-only моніторинг черг: читає таблиці pg-boss напряму (raw SQL),
  * Prisma-схема їх не описує. Якщо схеми pgboss ще немає (pg-boss жодного
@@ -41,7 +53,7 @@ export class JobsService {
     page: number;
     limit: number;
   }> {
-    const { page, limit, state, queue } = query;
+    const { page, limit, state, queue, sortBy, sortOrder } = query;
 
     const conditions: Prisma.Sql[] = [];
     if (state) {
@@ -54,6 +66,11 @@ export class JobsService {
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
       : Prisma.empty;
 
+    // tie-breaker по id обов'язковий — інакше пагінація "пливе" при рівних значеннях sortBy
+    const orderBy = sortBy
+      ? Prisma.sql`ORDER BY ${JOB_SORT_COLUMNS[sortBy]} ${sortOrder === 'desc' ? Prisma.sql`DESC` : Prisma.sql`ASC`}, id DESC`
+      : Prisma.sql`ORDER BY created_on DESC, id DESC`;
+
     try {
       const [items, countRows] = await Promise.all([
         this.prisma.$queryRaw<JobRow[]>(Prisma.sql`
@@ -61,7 +78,7 @@ export class JobsService {
                  singleton_key, created_on, started_on, completed_on, data, output
           FROM pgboss.job
           ${where}
-          ORDER BY created_on DESC
+          ${orderBy}
           LIMIT ${limit} OFFSET ${(page - 1) * limit}
         `),
         this.prisma.$queryRaw<{ count: number }[]>(Prisma.sql`

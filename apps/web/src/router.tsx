@@ -6,7 +6,7 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { z } from 'zod';
-import { JobStateSchema } from '@saas-skeleton/contracts';
+import { JobStateSchema, SortOrderSchema, UserQuerySchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
 import { ToastHost } from './components/toast-host';
@@ -73,7 +73,13 @@ const dashboardRoute = createRoute({
 const UsersSearchSchema = z.object({
   search: z.string().trim().optional().catch(undefined),
   page: z.coerce.number().int().min(1).optional().catch(undefined),
+  // Той самий whitelist полів, що й на бекенді (UserQuerySchema.sortBy) — не дублюємо enum
+  sortBy: UserQuerySchema.shape.sortBy.catch(undefined),
+  sortOrder: UserQuerySchema.shape.sortOrder.catch(undefined),
 });
+
+/** TSearch для useDataGridState на сторінці users — runtime-форму гарантує validateSearch */
+export type UsersSearch = z.infer<typeof UsersSearchSchema>;
 
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,

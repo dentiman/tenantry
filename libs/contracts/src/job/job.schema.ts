@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PaginationQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
+import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
 
 /** Стани pg-boss v12 (enum pgboss.job_state) */
 export const JobStateSchema = z.enum([
@@ -28,7 +28,13 @@ export const JobSchema = z.object({
   output: z.string().nullable(),
 });
 
-export const JobQuerySchema = PaginationQuerySchema.extend({
+export const JobQuerySchema = listQuerySchema([
+  'name',
+  'state',
+  'createdAt',
+  'startedAt',
+  'completedAt',
+]).extend({
   state: JobStateSchema.optional(),
   queue: z.string().optional(),
 });
