@@ -21,6 +21,30 @@
   --field-border-focus: transparent;
 }
 
+/* Чекбокс — НЕ «поле», але його контрол споживає ті самі --field-* токени
+   (border-field-border/bg-field/shadow-field у .checkbox__control). Рамка полів
+   з :root вище — не для нього: повертаємо стокові значення HeroUI (рамки немає,
+   тінь контрола стокова). Обидва імені ширини — про всяк випадок, стилі
+   бібліотеки посилаються на --border-width-field */
+.checkbox {
+  --field-border: transparent;
+  --field-border-width: 0px;
+  --border-width-field: 0px;
+  /* стоковий hover-бордер рахується з transparent, а не з нашого --border
+     (:root-калькуляція --field-border-hover уже «запекла» перевизначений колір) */
+  --field-border-hover: color-mix(in oklab, transparent 88%, var(--field-foreground) 10%);
+  /* стокова тінь світлої теми HeroUI */
+  --field-shadow:
+    0 2px 4px 0 rgba(0, 0, 0, 0.04),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] .checkbox {
+  /* стокова темна тема: тіні немає (transparent замість none — як у HeroUI) */
+  --field-shadow: 0 0 0 0 transparent inset;
+}
+
 .card,
 .modal__dialog,
 .alert-dialog__dialog {

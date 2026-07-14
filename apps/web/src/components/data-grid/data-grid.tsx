@@ -1,8 +1,20 @@
-import { useState } from 'react';
-import { AlertDialog, Button, Dropdown, EmptyState, Label, Pagination, Spinner, Table } from '@heroui/react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  AlertDialog,
+  Button,
+  Checkbox,
+  Dropdown,
+  EmptyState,
+  Label,
+  Pagination,
+  Spinner,
+  Table,
+} from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { pageItems } from '../../lib/page-items';
 import type { DataGridQueryResult } from './data-grid-query';
+import type { DataGridSelectionState } from './use-data-grid-selection';
 import type { DataGridColumn, DataGridMessages, DataGridNavigation, DataGridRowAction } from './types';
 
 function MoreIcon() {
@@ -27,7 +39,66 @@ interface DataGridProps<T extends { id: string }> {
   /** Дані й стан фетчингу — з toGridQueryResult(); DataGrid сам нічого не запитує */
   list: DataGridQueryResult<T>;
 
+  /** Мультивибір рядків — з useDataGridSelection(); без пропа чекбоксів немає */
+  selection?: DataGridSelectionState<T>;
+
   messages?: DataGridMessages;
+}
+
+/**
+ * Чекбокс вибору: візуал — компаундний HeroUI Checkbox (як у доках компонента),
+ * взаємодія — власний прозорий нативний <input> поверх нього. Причина: у HeroUI v3
+ * beta (3.2.x) прес по чекбоксу всередині таблиці не перемикає стан (перевірено),
+ * тому HeroUI-частина інертна (лише малює isSelected/isIndeterminate), а клік,
+ * клавіатура, фокус і a11y йдуть через нативний інпут. Клік по рядку не обирає.
+ */
+function SelectionCheckbox({
+  label,
+  isSelected,
+  isIndeterminate = false,
+  onChange,
+  isRow,
+}: {
+  label: string;
+  isSelected: boolean;
+  isIndeterminate?: boolean;
+  onChange: (isSelected: boolean) => void;
+  isRow?: boolean;
+}) {
+  return (
+    <span className="relative inline-flex rounded-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+      {/* inert: візуал не потрапляє ні в таб-ордер, ні в дерево доступності */}
+      <span inert>
+        <Checkbox
+          aria-label={label}
+          // slot={null} відв'язує від CheckboxContext таблиці (інакше RAC вимагає slot="selection")
+          slot={null}
+          isSelected={isSelected}
+          isIndeterminate={isIndeterminate}
+          variant={isRow ? 'secondary' : undefined}
+        >
+          <Checkbox.Content>
+            <Checkbox.Control>
+              <Checkbox.Indicator />
+            </Checkbox.Control>
+          </Checkbox.Content>
+        </Checkbox>
+      </span>
+      <input
+        type="checkbox"
+        aria-label={label}
+        checked={isSelected}
+        ref={(el) => {
+          // indeterminate виставляється лише через DOM-властивість, атрибута немає
+          if (el) el.indeterminate = isIndeterminate;
+        }}
+        onChange={(e) => {
+          onChange(e.target.checked);
+        }}
+        className="absolute inset-0 z-10 m-0 size-full cursor-pointer opacity-0"
+      />
+    </span>
+  );
 }
 
 /**
@@ -41,6 +112,7 @@ export function DataGrid<T extends { id: string }>({
   getRowId = (item) => item.id,
   grid,
   list,
+  selection,
   messages,
 }: DataGridProps<T>) {
   const { page, sortDescriptor, onSortChange, goToPage } = grid;
@@ -49,11 +121,44 @@ export function DataGrid<T extends { id: string }>({
   const loadingLabel = messages?.loading ?? t('loading');
   const emptyMessage = messages?.empty ?? t('empty');
   const paginationSummary = t('pagination.summary', { total, page, totalPages });
+  // Стан хедер-чекбокса відносно ПОТОЧНОЇ сторінки (вибір з інших сторінок не враховується)
+  const pageRowIds = selection ? items.map(getRowId) : [];
+  const allPageSelected =
+    selection !== undefined &&
+    pageRowIds.length > 0 &&
+    pageRowIds.every((id) => selection.selectedIds.has(id));
+  const somePageSelected =
+    selection !== undefined &&
+    !allPageSelected &&
+    pageRowIds.some((id) => selection.selectedIds.has(id));
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     action: DataGridRowAction<T>;
     item: T;
   } | null>(null);
+
+  // Хедер-чекбокс рендериться ПОРТАЛОМ у <th>: вміст колонок React Aria кешує
+  // в колекції (пропси/замикання там застигають на старих рендерах), а портальний
+  // вузол живе поза колекцією і оновлюється звичайним React-рендером DataGrid.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [selectAllCell, setSelectAllCell] = useState<HTMLElement | null>(null);
+  const hasSelection = selection !== undefined;
+  useEffect(() => {
+    if (!hasSelection || isLoading) {
+      setSelectAllCell(null);
+      return;
+    }
+    const find = (): void => {
+      // setState з тим самим елементом не спричиняє повторний рендер
+      setSelectAllCell(rootRef.current?.querySelector<HTMLElement>('thead th') ?? null);
+    };
+    find();
+    // RAC монтує видиму таблицю окремим комітом після побудови колекції
+    const timer = setTimeout(find, 0);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [hasSelection, isLoading, items]);
 
   if (isLoading) {
     return (
@@ -75,7 +180,23 @@ export function DataGrid<T extends { id: string }>({
   };
 
   return (
-    <div>
+    <div ref={rootRef}>
+      {selection &&
+        selectAllCell &&
+        createPortal(
+          <SelectionCheckbox
+            label={t('selection.selectAll')}
+            isSelected={allPageSelected}
+            isIndeterminate={somePageSelected}
+            onChange={(isSelected) => {
+              selection.setPage(
+                items.map((item) => [getRowId(item), item] as const),
+                isSelected,
+              );
+            }}
+          />,
+          selectAllCell,
+        )}
       <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
         <Table>
           <Table.ScrollContainer>
@@ -85,6 +206,12 @@ export function DataGrid<T extends { id: string }>({
               onSortChange={onSortChange}
             >
               <Table.Header>
+                {selection && (
+                  /* вміст приходить порталом (selectAllCell) — див. коментар вище */
+                  <Table.Column aria-label={t('selection.selectAll')} className="pr-0">
+                    {' '}
+                  </Table.Column>
+                )}
                 {columns.map((column) => (
                   <Table.Column
                     key={column.id}
@@ -116,6 +243,18 @@ export function DataGrid<T extends { id: string }>({
                   const visibleActions = rowActions?.filter((action) => action.isVisible?.(item) ?? true);
                   return (
                     <Table.Row key={rowId} id={rowId}>
+                      {selection && (
+                        <Table.Cell className="pr-0">
+                          <SelectionCheckbox
+                            label={t('selection.selectRow')}
+                            isSelected={selection.selectedIds.has(rowId)}
+                            onChange={() => {
+                              selection.toggle(rowId, item);
+                            }}
+                            isRow
+                          />
+                        </Table.Cell>
+                      )}
                       {columns.map((column) => (
                         <Table.Cell
                           key={column.id}

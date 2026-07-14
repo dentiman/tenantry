@@ -8,6 +8,13 @@
   "pagination": {
     "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}"
   },
+  "selection": {
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "summary_one": "{{count}} selected",
+    "summary_other": "{{count}} selected",
+    "clear": "Clear"
+  },
   "loading": "Loading…",
   "empty": "No results found"
 }

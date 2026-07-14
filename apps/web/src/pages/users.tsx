@@ -1,4 +1,4 @@
-import { Chip } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -16,10 +16,9 @@ import {
   gridQueryOptions,
   toGridQueryResult,
   useDataGridFilters,
+  useDataGridSelection,
 } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
-
-const LIMIT = 10;
 
 // Фабрики фільтрів, привʼязані до search-схеми роуту /users
 const filter = defineFilters<UsersSearch>();
@@ -41,10 +40,13 @@ export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
   // Фільтри живуть у search-параметрах роуту (дефолт хука) — роутер усередині
   const grid = useDataGridFilters<UsersSearch>();
+  // Вибір типізований рядком гріда: назовні виходять цілі обрані юзери, не лише id
+  const selection = useDataGridSelection<UserListResponseDtoOutputItemsItem>();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
-  const params: UsersFindAllParams = { ...grid.filters, page: grid.page, limit: LIMIT };
+  // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
+  const params: UsersFindAllParams = { ...grid.filters, page: grid.page };
   const list = toGridQueryResult(useUsersFindAll(params, { query: gridQueryOptions }));
 
   const invalidateUsers = (): void => {
@@ -141,12 +143,24 @@ export function UsersPage() {
         </div>
       </div>
 
+      {selection.selectedItems.length > 0 && (
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-sm text-muted">
+            {t('common:selection.summary', { count: selection.selectedItems.length })}
+          </span>
+          <Button size="sm" variant="ghost" onPress={selection.clear}>
+            {t('common:selection.clear')}
+          </Button>
+        </div>
+      )}
+
       <DataGrid
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
         grid={grid}
         list={list}
+        selection={selection}
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
     </div>

@@ -17,7 +17,6 @@ import {
 } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef } from '../components/data-grid';
 
-const LIMIT = 20;
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
 const REFETCH_INTERVAL_MS = 5000;
 
@@ -44,7 +43,8 @@ export function JobsPage() {
   // Фільтри живуть у search-параметрах роуту (?state=&queue=&page=&sortBy=…)
   const grid = useDataGridFilters<JobsSearch>();
 
-  const params: JobsFindAllParams = { ...grid.filters, page: grid.page, limit: LIMIT };
+  // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
+  const params: JobsFindAllParams = { ...grid.filters, page: grid.page };
   const list = toGridQueryResult(
     useJobsFindAll(params, {
       query: { ...gridQueryOptions, refetchInterval: REFETCH_INTERVAL_MS },
