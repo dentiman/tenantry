@@ -17,7 +17,8 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UsersService } from './users.service';
+import { StorageService } from '@saas-skeleton/shared';
+import { UsersService, type UserWithAvatar } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -29,14 +30,17 @@ import type { UserResponse, UserListResponse } from '@saas-skeleton/contracts';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly storage: StorageService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ type: UserListResponseDto.Output })
   async findAll(@Query() query: UserQueryDto): Promise<UserListResponse> {
     const { items, total, page, limit } = await this.usersService.findAll(query);
     return {
-      items: items.map(toUserResponse),
+      items: await Promise.all(items.map((user) => this.toResponse(user))),
       total,
       page,
       limit,
@@ -48,21 +52,21 @@ export class UsersController {
   @ApiOkResponse({ type: UserResponseDto.Output })
   async findOne(@Param('id') id: string): Promise<UserResponse> {
     const user = await this.usersService.findOne(id);
-    return toUserResponse(user);
+    return this.toResponse(user);
   }
 
   @Post()
   @ApiCreatedResponse({ type: UserResponseDto.Output })
   async create(@Body() dto: CreateUserDto): Promise<UserResponse> {
     const user = await this.usersService.create(dto);
-    return toUserResponse(user);
+    return this.toResponse(user);
   }
 
   @Patch(':id')
   @ApiOkResponse({ type: UserResponseDto.Output })
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<UserResponse> {
     const user = await this.usersService.update(id, dto);
-    return toUserResponse(user);
+    return this.toResponse(user);
   }
 
   @Delete(':id')
@@ -70,5 +74,15 @@ export class UsersController {
   @ApiNoContentResponse()
   async remove(@Param('id') id: string): Promise<void> {
     await this.usersService.remove(id);
+  }
+
+  /** avatarUrl — presigned GET мініатюри (fallback на оригінал до генерації thumbnail-а) */
+  private async toResponse(user: UserWithAvatar): Promise<UserResponse> {
+    const avatar = user.avatarFile;
+    const avatarUrl =
+      avatar?.status === 'READY'
+        ? await this.storage.getDownloadUrl(avatar.thumbnailKey ?? avatar.key)
+        : null;
+    return toUserResponse(user, avatarUrl);
   }
 }

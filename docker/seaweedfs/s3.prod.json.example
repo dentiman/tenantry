@@ -1,0 +1,15 @@
+{
+  "_comment": "Прод-креденшели S3: скопіювати у s3.prod.json (gitignored) і згенерувати ключі: openssl rand -hex 24. Ті самі значення йдуть у S3_ACCESS_KEY/S3_SECRET_KEY застосунку.",
+  "identities": [
+    {
+      "name": "saas-prod",
+      "credentials": [
+        {
+          "accessKey": "REPLACE_WITH_openssl_rand_hex_24",
+          "secretKey": "REPLACE_WITH_openssl_rand_hex_24"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

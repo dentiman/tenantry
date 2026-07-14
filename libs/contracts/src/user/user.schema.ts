@@ -15,6 +15,10 @@ export const UserSchema = z.object({
   role: z.enum(['ADMIN', 'USER']),
   isActive: z.boolean(),
   locale: UserLocaleSchema,
+  avatarFileId: z.uuid().nullable(),
+  // Presigned GET мініатюри аватара (короткий TTL). Віддається в JSON, бо <img src>
+  // не вміє слати Authorization-заголовок — авторизація вже зашита в підпис URL
+  avatarUrl: z.url().nullable(),
   // Wire-формат API: дати передаються як ISO-рядки
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -31,7 +35,10 @@ export const CreateUserSchema = z.object({
 });
 
 // Зміна пароля — окремий security-флоу, не через users PATCH
-export const UpdateUserSchema = CreateUserSchema.omit({ password: true }).partial();
+export const UpdateUserSchema = CreateUserSchema.omit({ password: true }).partial().extend({
+  // Демо-споживач файлової підсистеми: файл має бути READY і бути зображенням (перевіряє сервіс)
+  avatarFileId: z.uuid().nullable().optional(),
+});
 
 export const UserQuerySchema = listQuerySchema([
   'email',

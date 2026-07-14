@@ -1,10 +1,14 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@saas-skeleton/database';
-import type { User as PrismaUser } from '@saas-skeleton/database';
+import type { Prisma } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
+import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '../common/errors';
+
+/** avatarFile потрібен контролеру для presign мініатюри в UserResponse.avatarUrl */
+export type UserWithAvatar = Prisma.UserGetPayload<{ include: { avatarFile: true } }>;
 
 @Injectable()
 export class UsersService {
@@ -16,7 +20,7 @@ export class UsersService {
   ) {}
 
   async findAll(query: UserQuery): Promise<{
-    items: PrismaUser[];
+    items: UserWithAvatar[];
     total: number;
     page: number;
     limit: number;
@@ -48,6 +52,7 @@ export class UsersService {
         skip: (page - 1) * limit,
         take: limit,
         orderBy,
+        include: { avatarFile: true },
       }),
       this.prisma.user.count({ where }),
     ]);
@@ -57,9 +62,12 @@ export class UsersService {
     return { items, total, page, limit };
   }
 
-  async findOne(id: string): Promise<PrismaUser> {
+  async findOne(id: string): Promise<UserWithAvatar> {
     this.logger.debug(`Fetching user by id: ${id}`);
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { avatarFile: true },
+    });
     if (!user) {
       this.logger.warn(`User not found: ${id}`);
       throw new NotFoundException(`User with id "${id}" not found`);
@@ -68,7 +76,7 @@ export class UsersService {
     return user;
   }
 
-  async create(data: CreateUser): Promise<PrismaUser> {
+  async create(data: CreateUser): Promise<UserWithAvatar> {
     this.logger.log(`Creating new user: ${data.email}`);
 
     // Явна перевірка → 409 з fieldErrors по полю email; гонку добиває
@@ -82,7 +90,10 @@ export class UsersService {
     // password не потрапляє в Prisma напряму — зберігається тільки argon2-хеш
     const { password, ...rest } = data;
     const passwordHash = await argon2.hash(password);
-    const user = await this.prisma.user.create({ data: { ...rest, passwordHash } });
+    const user = await this.prisma.user.create({
+      data: { ...rest, passwordHash },
+      include: { avatarFile: true },
+    });
     this.logger.log(`User created successfully: ${user.email} (ID: ${user.id})`);
 
     // Та сама подія, що й при самостійній реєстрації; черга — некритичний side effect
@@ -102,17 +113,37 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, data: UpdateUser): Promise<PrismaUser> {
+  async update(id: string, data: UpdateUser): Promise<UserWithAvatar> {
     this.logger.log(`Updating user: ${id}`);
-    const user = await this.prisma.user.update({ where: { id }, data });
+    if (typeof data.avatarFileId === 'string') {
+      await this.assertUsableAvatar(data.avatarFileId);
+    }
+    const user = await this.prisma.user.update({
+      where: { id },
+      data,
+      include: { avatarFile: true },
+    });
     this.logger.log(`User updated successfully: ${user.email} (ID: ${user.id})`);
     return user;
   }
 
-  async remove(id: string): Promise<PrismaUser> {
+  /** Аватаром може стати лише підтверджений (READY) файл-зображення */
+  private async assertUsableAvatar(fileId: string): Promise<void> {
+    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
+    const isImage = (IMAGE_MIME_TYPES as readonly string[]).includes(file?.mimeType ?? '');
+    if (file?.status !== 'READY' || !isImage) {
+      throw new BadRequestException({
+        message: 'avatarFileId must reference a completed image upload',
+        fieldErrors: [
+          { field: 'avatarFileId', message: 'Must be an uploaded image', code: 'invalid_file' },
+        ],
+      });
+    }
+  }
+
+  async remove(id: string): Promise<void> {
     this.logger.log(`Deleting user: ${id}`);
     const user = await this.prisma.user.delete({ where: { id } });
     this.logger.log(`User deleted successfully: ${user.email} (ID: ${user.id})`);
-    return user;
   }
 }

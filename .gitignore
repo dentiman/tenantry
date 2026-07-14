@@ -18,6 +18,8 @@ apps/worker/logs/
 .env
 .env.local
 .env.*.local
+.env.production
+docker/seaweedfs/s3.prod.json
 
 # IDE
 .idea/

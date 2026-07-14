@@ -21,8 +21,12 @@ model User {
   locale       String   @default("en")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  // Демо-споживач файлової підсистеми (Files v1)
+  avatarFileId String?  @map("avatar_file_id")
 
   refreshTokens RefreshToken[]
+  avatarFile    File?          @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  uploadedFiles File[]         @relation("UploadedFiles")
 
   @@map("users")
 }
@@ -43,6 +47,53 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// Файлова підсистема (Files v1): метадані об'єктів S3-сховища.
+// Байти живуть у S3 (dev: SeaweedFS), тут — тільки метадані і статус двофазного upload-у:
+// PENDING (виданий presigned PUT, байтів може ще не бути) → READY (complete підтвердив HeadObject).
+// PENDING старші за поріг прибирає cron files.cleanup-orphans (S3-об'єкт + рядок).
+model File {
+  id           String     @id @default(uuid())
+  // Ключ у бакеті: {yyyy}/{mm}/{uuid}[.ext] — НЕ оригінальна назва; префікс під майбутній tenantId
+  key          String     @unique
+  filename     String
+  mimeType     String     @map("mime_type")
+  size         Int
+  status       FileStatus @default(PENDING)
+  // Мініатюра зображення (worker, sharp); для не-зображень завжди null
+  thumbnailKey String?    @map("thumbnail_key")
+  uploadedById String?    @map("uploaded_by_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  uploadedBy  User?        @relation("UploadedFiles", fields: [uploadedById], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  avatarOf    User[]       @relation("UserAvatar")
+
+  @@index([status, createdAt])
+  @@map("files")
+}
+
+enum FileStatus {
+  PENDING
+  READY
+}
+
+// Універсальна прив'язка файлу до доменної сутності (customers/tickets у майбутніх фазах).
+// Полиморфний (entityType — рядок), тому без FK на сутність; цілісність — відповідальність домену.
+model Attachment {
+  id         String   @id @default(uuid())
+  fileId     String   @map("file_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("attachments")
 }
 
 // Inbox-патерн для ідемпотентності обробки job-ів (див. libs/shared JobInboxService)

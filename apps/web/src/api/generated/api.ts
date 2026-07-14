@@ -24,7 +24,12 @@ import type {
 import type {
   AuthResponseDtoOutput,
   AuthTokensDtoOutput,
+  CreateFileUploadDto,
+  CreateFileUploadResponseDtoOutput,
   CreateUserDto,
+  FileDownloadUrlResponseDtoOutput,
+  FileResponseDtoOutput,
+  FilesDownloadUrlParams,
   HealthCheck200,
   JobListResponseDtoOutput,
   JobsFindAllParams,
@@ -863,6 +868,373 @@ export const useUsersRemove = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const filesCreate = (
+  createFileUploadDto: CreateFileUploadDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<CreateFileUploadResponseDtoOutput>(
+    {
+      url: `/api/files`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: createFileUploadDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getFilesCreateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof filesCreate>>,
+    TError,
+    { data: CreateFileUploadDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof filesCreate>>,
+  TError,
+  { data: CreateFileUploadDto },
+  TContext
+> => {
+  const mutationKey = ['filesCreate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof filesCreate>>,
+    { data: CreateFileUploadDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return filesCreate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FilesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof filesCreate>>>;
+export type FilesCreateMutationBody = CreateFileUploadDto;
+export type FilesCreateMutationError = unknown;
+
+export const useFilesCreate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof filesCreate>>,
+      TError,
+      { data: CreateFileUploadDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof filesCreate>>,
+  TError,
+  { data: CreateFileUploadDto },
+  TContext
+> => {
+  const mutationOptions = getFilesCreateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const filesComplete = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<FileResponseDtoOutput>(
+    { url: `/api/files/${id}/complete`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getFilesCompleteMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof filesComplete>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof filesComplete>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['filesComplete'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof filesComplete>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return filesComplete(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FilesCompleteMutationResult = NonNullable<Awaited<ReturnType<typeof filesComplete>>>;
+
+export type FilesCompleteMutationError = unknown;
+
+export const useFilesComplete = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof filesComplete>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof filesComplete>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getFilesCompleteMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const filesFindOne = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<FileResponseDtoOutput>(
+    { url: `/api/files/${id}`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getFilesFindOneQueryKey = (id?: string) => {
+  return [`/api/files/${id}`] as const;
+};
+
+export const getFilesFindOneQueryOptions = <
+  TData = Awaited<ReturnType<typeof filesFindOne>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getFilesFindOneQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof filesFindOne>>> = ({ signal }) =>
+    filesFindOne(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof filesFindOne>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type FilesFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof filesFindOne>>>;
+export type FilesFindOneQueryError = unknown;
+
+export function useFilesFindOne<TData = Awaited<ReturnType<typeof filesFindOne>>, TError = unknown>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesFindOne>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof filesFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof filesFindOne>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFilesFindOne<TData = Awaited<ReturnType<typeof filesFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesFindOne>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof filesFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof filesFindOne>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFilesFindOne<TData = Awaited<ReturnType<typeof filesFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useFilesFindOne<TData = Awaited<ReturnType<typeof filesFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getFilesFindOneQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const filesDownloadUrl = (
+  id: string,
+  params?: FilesDownloadUrlParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<FileDownloadUrlResponseDtoOutput>(
+    { url: `/api/files/${id}/download-url`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getFilesDownloadUrlQueryKey = (id?: string, params?: FilesDownloadUrlParams) => {
+  return [`/api/files/${id}/download-url`, ...(params ? [params] : [])] as const;
+};
+
+export const getFilesDownloadUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof filesDownloadUrl>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: FilesDownloadUrlParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesDownloadUrl>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getFilesDownloadUrlQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof filesDownloadUrl>>> = ({ signal }) =>
+    filesDownloadUrl(id, params, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof filesDownloadUrl>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type FilesDownloadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof filesDownloadUrl>>>;
+export type FilesDownloadUrlQueryError = unknown;
+
+export function useFilesDownloadUrl<
+  TData = Awaited<ReturnType<typeof filesDownloadUrl>>,
+  TError = unknown,
+>(
+  id: string,
+  params: undefined | FilesDownloadUrlParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesDownloadUrl>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof filesDownloadUrl>>,
+          TError,
+          Awaited<ReturnType<typeof filesDownloadUrl>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFilesDownloadUrl<
+  TData = Awaited<ReturnType<typeof filesDownloadUrl>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: FilesDownloadUrlParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesDownloadUrl>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof filesDownloadUrl>>,
+          TError,
+          Awaited<ReturnType<typeof filesDownloadUrl>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFilesDownloadUrl<
+  TData = Awaited<ReturnType<typeof filesDownloadUrl>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: FilesDownloadUrlParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesDownloadUrl>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useFilesDownloadUrl<
+  TData = Awaited<ReturnType<typeof filesDownloadUrl>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: FilesDownloadUrlParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof filesDownloadUrl>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getFilesDownloadUrlQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 export const jobsFindAll = (
   params?: JobsFindAllParams,

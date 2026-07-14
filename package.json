@@ -6,6 +6,8 @@
   "scripts": {
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:prod:up": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production up -d",
+    "docker:prod:down": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production down",
     "db:generate": "pnpm --filter @saas-skeleton/database db:generate",
     "db:migrate:dev": "pnpm --filter @saas-skeleton/database db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @saas-skeleton/database db:migrate:deploy",
@@ -76,7 +78,8 @@
       "argon2",
       "esbuild",
       "@tailwindcss/oxide",
-      "unrs-resolver"
+      "unrs-resolver",
+      "sharp"
     ]
   }
 }

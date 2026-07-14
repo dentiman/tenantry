@@ -1,0 +1,45 @@
+# Продакшн-інфраструктура для self-hosted розгортання на одному сервері.
+#
+# Відмінності від dev-compose:
+#  - дані лежать у ЯВНО замаплених хостових директоріях (${SAAS_DATA_DIR}/postgres,
+#    ${SAAS_DATA_DIR}/seaweedfs), а не в named volume — бекап = снапшот/rsync цих
+#    директорій. Postgres і сховище бекапити УЗГОДЖЕНО: метадані файлів у БД
+#    посилаються на ключі об'єктів (відновлювати сховище станом не старішим за БД);
+#  - теги образів зафіксовані; креденшели — обов'язкові env (compose падає без них);
+#  - порти опубліковані ТІЛЬКИ на 127.0.0.1: назовні дивиться лише reverse proxy з TLS.
+#    Проксі для S3 (files.example.com → 127.0.0.1:8333) МУСИТЬ зберігати Host-заголовок —
+#    він входить у SigV4-підпис presigned URL — і мати ліміт тіла запиту ≥ FILE_MAX_SIZE
+#    (25MB). Апки api/worker запускаються на хості (pnpm build + start:prod);
+#  - Mailpit відсутній — прод шле пошту через реальний SMTP (env SMTP_* воркера).
+#
+# Запуск: скопіювати .env.production.example → .env.production, заповнити,
+#         `pnpm docker:prod:up` (або docker compose -f ... --env-file ... напряму).
+
+name: saas-skeleton-prod
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: saas-skeleton-prod-db
+    restart: always
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set it in .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-saas_skeleton}
+    volumes:
+      - ${SAAS_DATA_DIR:?set it in .env.production}/postgres:/var/lib/postgresql/data
+
+  seaweedfs:
+    # Той самий образ, що перевірений у dev; тег зафіксовано (у dev свідомо latest)
+    image: chrislusf/seaweedfs:4.39
+    container_name: saas-skeleton-prod-s3
+    restart: always
+    command: 'server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=1024'
+    ports:
+      - '127.0.0.1:${S3_PORT:-8333}:8333'
+    volumes:
+      - ${SAAS_DATA_DIR:?set it in .env.production}/seaweedfs:/data
+      # Сильні ключі: згенерувати з s3.prod.json.example (файл gitignored)
+      - ${SAAS_S3_CONFIG:-./seaweedfs/s3.prod.json}:/etc/seaweedfs/s3.json:ro

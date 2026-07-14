@@ -14,6 +14,7 @@
     ]
   },
   "moduleNameMapper": {
-    "^pg-boss$": "<rootDir>/test/__mocks__/pg-boss.ts"
+    "^pg-boss$": "<rootDir>/test/__mocks__/pg-boss.ts",
+    "^file-type$": "<rootDir>/test/__mocks__/file-type.ts"
   }
 }

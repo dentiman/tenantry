@@ -9,15 +9,20 @@
 **I18N-2 завершена і перевірена** (2026-07-12): FieldError.code + переклад toast/fieldErrors/Zod-повідомлень на фронті.
 **I18N-3 завершена і перевірена** (2026-07-12): `users.locale` у БД, реальна відправка welcome-email через Mailpit локаллю юзера (закрито й давній пункт фази 2).
 **DataGrid-фільтри завершені і перевірені** (2026-07-13): фільтри гріда декларуються масивом (як columns), Search→Filters перейменування, /jobs мігровано на DataGrid (+сортування).
+**Files v1 завершена і перевірена** (2026-07-14): S3-сумісне сховище (dev: SeaweedFS у compose), двофазний presigned-upload, magic-bytes валідація, thumbnail (sharp у worker), cron-очистка PENDING, демо — аватар користувача на /users. Перевірено живим прогоном: PUT у SeaweedFS, CORS preflight, відхилення підробленого MIME.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
-`docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4), `README.md` (quickstart).
+`docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
+`docs/file-storage.md` (файлова підсистема: структура, presigned-флоу, приклад end-to-end на аватарі,
+формати запитів/відповідей), `README.md` (quickstart).
 
 ## Команди
 
 ```bash
-pnpm docker:up            # PostgreSQL 17 + Mailpit (OrbStack у користувача, не Docker Desktop)
+pnpm docker:up            # PostgreSQL 17 + Mailpit + SeaweedFS (OrbStack у користувача, не Docker Desktop)
                           # Mailpit UI: http://localhost:8025 (SMTP :1025 — дефолти MailerService)
+                          # SeaweedFS S3: http://localhost:8333 (креденшели — docker/seaweedfs/s3.json,
+                          # дефолти StorageService збігаються; бакет+CORS створює сам API на старті)
 pnpm db:generate          # Prisma client → libs/database/src/generated (gitignored)
 pnpm db:migrate:dev       # міграції (dev; НЕ передавати ім'я через `pnpm ... -- --name X` —
                           # pnpm дублює `--`, prisma йде в інтерактивний prompt і висить;
@@ -38,9 +43,9 @@ pnpm api:test:e2e         # 47 jest+supertest тестів; ВИМАГАЄ за�
 ## Архітектура
 
 ```
-apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, jobs (read-only моніторинг черг:
-                raw SQL до pgboss.job, 42P01 → порожньо), health. Pino, AllExceptionsFilter
-                (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
+apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, files (presigned upload/download),
+                jobs (read-only моніторинг черг: raw SQL до pgboss.job, 42P01 → порожньо), health.
+                Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
 apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss,
                 MailerService (nodemailer → Mailpit), плейн i18next для email-контенту
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
@@ -51,9 +56,17 @@ libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/P
 libs/i18n       Спільні i18next-ресурси для web (common/errors/validation); worker НЕ споживає —
                 свій контент локально (apps/worker/src/locales), спільного поки немає
 libs/shared     Черги: defineJob (Zod payload), JobDispatcher (абстракція, pg-boss замінюваний),
-                @JobHandler() + DiscoveryService-автореєстрація, JobInboxService (processed_jobs)
+                @JobHandler() + DiscoveryService-автореєстрація, JobInboxService (processed_jobs).
+                Сховище: StorageService (@aws-sdk/client-s3: presign PUT/GET, head/get/put/delete,
+                ensureBucket+CORS на старті) + StorageModule (@Global)
 docker/         compose (name: saas-skeleton — namespaced volume, НЕ прибирати name!): Postgres 17,
-                Mailpit (SMTP :1025, UI :8025)
+                Mailpit (SMTP :1025, UI :8025), SeaweedFS (S3 :8333, creds — seaweedfs/s3.json).
+                docker-compose.prod.yml (перевірений димовим прогоном): self-hosted прод на одному
+                сервері — дані в замаплених хостових директоріях ${SAAS_DATA_DIR}/{postgres,seaweedfs}
+                (бекапити узгоджено!), теги запінені, порти тільки 127.0.0.1 (назовні — reverse proxy
+                з TLS, для S3 зберігати Host — він у SigV4-підписі), без Mailpit. Креденшели:
+                seaweedfs/s3.prod.json + .env.production (обидва gitignored, є .example);
+                `pnpm docker:prod:up/down`
 ```
 
 **Конвеєр типів:** Zod-схема (`libs/contracts`) → `createZodDto` (nestjs-zod v5) → Swagger
@@ -97,6 +110,26 @@ singletonKey=userId) → її хендлер через inbox+tx ставить 
 (nodemailer, дефолти на Mailpit). Це at-least-once side effect (не exactly-once як БД-ефекти
 через `JobInboxService`) — pg-boss retry після падіння ПІСЛЯ успішного sendMail надішле лист
 повторно; прийнятно для welcome-листа, для платіжних/юридичних листів треба окремий idempotency-шар.
+
+**Файли (Files v1, зафіксовані рішення):** S3 API = абстракція сховища (окремого StorageDriver
+немає, аналогічно pg-boss): dev — SeaweedFS з compose, прод — будь-який S3 через env `S3_*`.
+MinIO НЕ використовувати (репо заархівовано 04/2026). Флоу двофазний: `POST /files` (Zod-валідація
+allowlist MIME/розміру → PENDING-рядок у `files` + presigned PUT, TTL 10 хв) → браузер PUT напряму
+в сховище (минаючи API; байти через NestJS не течуть, контракти лишаються JSON-only) →
+`POST /files/:id/complete` (HeadObject: об'єкт існує + розмір збігається; magic bytes через
+`file-type` звіряються з заявленим MIME — Content-Type клієнта недовірений; невалідний вміст →
+видалення об'єкта і рядка + 400; повторний complete — ідемпотентний no-op) → READY. Ключі
+`{yyyy}/{mm}/{uuid}.ext` (префікс під майбутній tenantId), назовні НЕ віддаються — доступ до байтів
+тільки `GET /files/:id/download-url` (presigned GET, TTL 5 хв, тільки READY; `?variant=thumbnail`
+з fallback на оригінал). Після complete зображень — джоба `files.generate-thumbnail` (worker, sharp
+256px webp, ідемпотентна без inbox); покинуті PENDING чистить cron `files.cleanup-orphans` (24h,
+спершу S3-об'єкт, потім рядок). `attachments` (полиморфні fileId+entityType+entityId) — таблиця під
+майбутні домени, API поки немає. Демо-споживач: `users.avatarFileId` (PATCH валідує READY+image) →
+`UserResponse.avatarUrl` = presigned GET мініатюри (в JSON, бо `<img>` не шле Authorization; auth-роути
+аватар не пресайнять — тільки users). Фронт: `useFileUpload` (create→PUT з progress→complete, сирий
+axios без інтерсепторів) + `FileDropzone` (свій, у HeroUI v3 немає) + `ChangeAvatarModal` (row action
+на /users). E2E: StorageService підміняється in-memory фейком (`overrideProvider`), file-type замокано
+міні-детектором magic bytes — живий SeaweedFS тестам не потрібен.
 
 **DataGrid (`apps/web/src/components/data-grid/`, обидві сторінки /users і /jobs на ньому):**
 публічний API — фабрика `createDataGrid<TFilters, TItem>()` на рівні модуля сторінки (аналог
@@ -150,7 +183,16 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
    він замокан через `moduleNameMapper` (`apps/api/test/__mocks__/pg-boss.ts`); зникне з міграцією на Vitest.
 9. **pg-boss send-опції**: не передавати ключі зі значенням `undefined` — його attorney-валідація
    падає (`priority must be an integer`). Опції збирати умовно (див. PgBossJobDispatcher).
-10. **HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після tailwindcss у index.css;
+10. **@aws-sdk/client-s3 + presigned PUT**: обов'язково `requestChecksumCalculation: 'WHEN_REQUIRED'`
+    (+ response-аналог) у конфігу S3Client — інакше SDK вшиває в presigned URL CRC32-чексуму
+    ПОРОЖНЬОГО payload (`x-amz-checksum-crc32=AAAAAA==`), сховище валідує її проти реального тіла
+    і відхиляє upload 400-кою (спіймано на живому SeaweedFS). SDK — пряма залежність apps/api,
+    apps/worker і libs/shared (webpack externals, як pg-boss).
+11. **file-type — ESM-only** (та сама категорія, що pg-boss): types не резолвляться під
+    moduleResolution=node10 → ручна декларація `apps/api/src/types/file-type.d.ts`; ts-node її бачить
+    лише з `"ts-node": {"files": true}` у tsconfig (без цього openapi:generate падає); у e2e замокано
+    через moduleNameMapper (`test/__mocks__/file-type.ts`). Runtime ок — Node 24 require(esm).
+12. **HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після tailwindcss у index.css;
     тема = `class` + `data-theme` на `<html>` (next-themes, `attribute={['class','data-theme']}`,
     storageKey `saas_theme`). Compound API: `Table.Content/Header/Body`, `Dropdown.Popover/Menu/Item`,
     `AlertDialog.Backdrop/Container/Dialog`, `Pagination.Content/Item/Link`. Семантичні токени в розмітці:
@@ -170,6 +212,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                     |
 | Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало |
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)          |
+| Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md` |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)

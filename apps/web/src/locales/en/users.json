@@ -8,6 +8,7 @@
   },
   "table": {
     "ariaLabel": "Users",
+    "avatar": "Avatar",
     "email": "Email",
     "name": "Name",
     "role": "Role",
@@ -31,6 +32,15 @@
     "body": "This will permanently delete <strong>{{email}}</strong>. This action cannot be undone.",
     "cancel": "Cancel",
     "confirm": "Delete"
+  },
+  "avatar": {
+    "action": "Change avatar",
+    "heading": "Change avatar",
+    "description": "Upload an image (JPEG, PNG, WebP or GIF).",
+    "uploading": "Uploading…",
+    "saving": "Saving…",
+    "saveFailed": "Could not set the avatar, please try again",
+    "cancel": "Cancel"
   },
   "create": {
     "trigger": "Add user",

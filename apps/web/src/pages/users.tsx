@@ -1,10 +1,12 @@
-import { Chip } from '@heroui/react';
+import { useState } from 'react';
+import { Avatar, Chip } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { useAuthStore } from '../stores/auth.store';
+import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { CreateUserModal } from '../components/create-user-modal';
 import { formatDate } from '../lib/format';
 import type { UsersSearch } from '../router';
@@ -32,6 +34,8 @@ export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  // Юзер, якому міняємо аватар (демо файлової підсистеми); null — модалка закрита
+  const [avatarUser, setAvatarUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
 
   const invalidateUsers = (): void => {
     void queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
@@ -48,6 +52,16 @@ export function UsersPage() {
   ];
 
   const columns: DataGridColumn<UserListResponseDtoOutputItemsItem>[] = [
+    {
+      id: 'avatar',
+      header: t('table.avatar'),
+      cell: (u) => (
+        <Avatar size="sm">
+          {u.avatarUrl && <Avatar.Image alt={u.email} src={u.avatarUrl} />}
+          <Avatar.Fallback>{(u.name ?? u.email).slice(0, 2).toUpperCase()}</Avatar.Fallback>
+        </Avatar>
+      ),
+    },
     {
       id: 'email',
       header: t('table.email'),
@@ -91,6 +105,13 @@ export function UsersPage() {
   ];
 
   const rowActions: DataGridRowAction<UserListResponseDtoOutputItemsItem>[] = [
+    {
+      id: 'avatar',
+      label: t('avatar.action'),
+      onAction: (u) => {
+        setAvatarUser(u);
+      },
+    },
     {
       id: 'delete',
       label: t('delete.button'),
@@ -139,6 +160,13 @@ export function UsersPage() {
         columns={columns}
         rowActions={rowActions}
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
+      />
+
+      <ChangeAvatarModal
+        user={avatarUser}
+        onClose={() => {
+          setAvatarUser(null);
+        }}
       />
     </Grid.Root>
   );
