@@ -99,17 +99,28 @@ singletonKey=userId) → її хендлер через inbox+tx ставить 
 повторно; прийнятно для welcome-листа, для платіжних/юридичних листів треба окремий idempotency-шар.
 
 **DataGrid (`apps/web/src/components/data-grid/`, обидві сторінки /users і /jobs на ньому):**
-стан — `useDataGridFilters<TFilters>()` (фільтри в search params роуту; `validateSearch` роуту =
-runtime-гарантія TFilters; debounce пошуку, скидання page); дані — `toGridQueryResult` +
-`gridQueryOptions` (keepPreviousData; затемнення таблиці по `isPlaceholderData`, НЕ `isFetching` —
-інакше refetchInterval блимає); вигляд — `<DataGrid columns rowActions grid list>`. Тулбар:
-фільтри масивом як columns — `<DataGridFilters grid filters>`; вбудовані через фабрики
-`defineFilters<TFilters>()` → `filter.search()`/`filter.select({ key, options })` (саме
-замикання-виклик: у масиві TS не виведе TFilters з аргументів вільної generic-функції);
-кастомний бізнес-фільтр = обʼєкт `{ id, render(grid) }` (еталон — `userStatusFilter` в users.tsx).
-Boolean-фільтри в URL/query їдуть РЯДКОМ `'true'/'false'` (wire-формат; не reuse
-transform-схем contracts, що дають boolean). «Search» у назвах TanStack Router = URL query,
-не текстовий пошук — у гріді все зветься Filters.
+публічний API — фабрика `createDataGrid<TFilters, TItem>()` на рівні модуля сторінки (аналог
+defineFilters: замикання фіксує типи один раз, свій createContext на виклик → усе типізовано без
+кастів). Повертає компаунд-набір: `Grid.Root` (тримає ВЕСЬ стан — фільтри в URL, query, selection —
+і роздає контекстом), `Grid.Filters` (тулбар; фільтри масивом як columns), `Grid.Table`,
+`Grid.SelectionSummary` («N selected» + Clear + опційний render-prop для bulk-дій), `Grid.filter`
+(фабрики `search()`/`select({ key, options })`). Фетчинг: сторінка декларує «як фетчити» пропом
+`useListQuery={(params, gridOptions) => useUsersFindAll(params, { query: gridOptions })}` —
+замикання виконується ЯК ХУК усередині Root (мусить безумовно кликати той самий orval-хук; імʼя
+пропа use* — вимога rules-of-hooks); Root сам домішує keepPreviousData і нормалізує page;
+розширення — спред `{ ...gridOptions, refetchInterval }` (еталон — jobs.tsx). Саме замикання, а НЕ
+queryOptions-обʼєкт: orval-хуки мають 4 перевантаження + DataTag, generic-over-hook плутає
+виведення типів. Вибір рядків: `selection` на Root — `true` (внутрішній стан) або зовнішній
+`useDataGridSelection()` (controlled); Root сам скидає вибір при зміні ЗВУЖУВАЛЬНИХ фільтрів
+(пошук/доменні — вибрані рядки могли випасти з результату), але НЕ при page (накопичення між
+сторінками — фіча) і НЕ при сортуванні (склад результату той самий). Кастомний бізнес-фільтр = обʼєкт `{ id, render(grid) }`
+(еталон — `userStatusFilter` в users.tsx). Headless-нутрощі експортовані як escape hatch:
+`useDataGridFilters` (validateSearch роуту = runtime-гарантія TFilters; debounce пошуку, скидання
+page), `toGridQueryResult` (затемнення по `isPlaceholderData`, НЕ `isFetching` — інакше
+refetchInterval блимає). Boolean-фільтри в URL/query їдуть РЯДКОМ `'true'/'false'` (wire-формат;
+не reuse transform-схем contracts, що дають boolean). «Search» у назвах TanStack Router = URL
+query, не текстовий пошук — у гріді все зветься Filters. Інвалідація списку після мутацій — за
+сторінкою (queryClient + `getUsersFindAllQueryKey()`), грід нею не володіє.
 
 **Шари backend-модуля (обов'язково):** DTO (`createZodDto` зі схеми contracts) → Service
 (логіка + Prisma) → Mapper (явний мапінг Prisma→response; не витікають `passwordHash` тощо) →

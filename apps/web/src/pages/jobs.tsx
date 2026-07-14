@@ -3,18 +3,10 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
 import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
-import type { JobsFindAllParams } from '../api/generated/model';
 import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
 import { formatDateTime } from '../lib/format';
 import type { JobsSearch } from '../router';
-import {
-  DataGrid,
-  DataGridFilters,
-  defineFilters,
-  gridQueryOptions,
-  toGridQueryResult,
-  useDataGridFilters,
-} from '../components/data-grid';
+import { createDataGrid } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef } from '../components/data-grid';
 
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
@@ -31,8 +23,9 @@ const stateColor: Record<JobState, 'accent' | 'danger' | 'default' | 'success' |
   failed: 'danger',
 };
 
-// Фабрики фільтрів, привʼязані до search-схеми роуту /jobs
-const filter = defineFilters<JobsSearch>();
+// Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
+// привʼязані до search-схеми роуту /jobs
+const Grid = createDataGrid<JobsSearch, JobListResponseDtoOutputItemsItem>();
 
 function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): string {
   return t(`states.${state}`);
@@ -40,29 +33,20 @@ function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): strin
 
 export function JobsPage() {
   const { t } = useTranslation(['jobs', 'common']);
-  // Фільтри живуть у search-параметрах роуту (?state=&queue=&page=&sortBy=…)
-  const grid = useDataGridFilters<JobsSearch>();
 
-  // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
-  const params: JobsFindAllParams = { ...grid.filters, page: grid.page };
-  const list = toGridQueryResult(
-    useJobsFindAll(params, {
-      query: { ...gridQueryOptions, refetchInterval: REFETCH_INTERVAL_MS },
-    }),
-  );
   const { data: stats } = useJobsQueues({
     query: { refetchInterval: REFETCH_INTERVAL_MS },
   });
   const queues = stats?.queues ?? [];
 
   const filters: DataGridFilterDef<JobsSearch>[] = [
-    filter.select({
+    Grid.filter.select({
       key: 'queue',
       ariaLabel: t('filters.queueLabel'),
       allLabel: t('filters.all', { label: t('filters.queueLabel') }),
       options: queues.map((q) => ({ id: q.name, label: q.name })),
     }),
-    filter.select({
+    Grid.filter.select({
       key: 'state',
       ariaLabel: t('filters.stateLabel'),
       allLabel: t('filters.all', { label: t('filters.stateLabel') }),
@@ -140,10 +124,17 @@ export function JobsPage() {
   ];
 
   return (
-    <div>
+    // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
+    <Grid.Root
+      useListQuery={(params, gridOptions) =>
+        useJobsFindAll(params, {
+          query: { ...gridOptions, refetchInterval: REFETCH_INTERVAL_MS },
+        })
+      }
+    >
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
-        <DataGridFilters grid={grid} filters={filters} />
+        <Grid.Filters filters={filters} />
       </div>
 
       {queues.length > 0 && (
@@ -167,13 +158,11 @@ export function JobsPage() {
         </div>
       )}
 
-      <DataGrid
+      <Grid.Table
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
-        grid={grid}
-        list={list}
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
-    </div>
+    </Grid.Root>
   );
 }

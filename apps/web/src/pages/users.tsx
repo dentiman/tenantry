@@ -1,31 +1,23 @@
-import { Button, Chip } from '@heroui/react';
+import { Chip } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
-import type { UsersFindAllParams } from '../api/generated/model';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { useAuthStore } from '../stores/auth.store';
 import { CreateUserModal } from '../components/create-user-modal';
 import { formatDate } from '../lib/format';
 import type { UsersSearch } from '../router';
-import {
-  DataGrid,
-  DataGridFilters,
-  defineFilters,
-  gridQueryOptions,
-  toGridQueryResult,
-  useDataGridFilters,
-  useDataGridSelection,
-} from '../components/data-grid';
+import { createDataGrid } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
 
-// Фабрики фільтрів, привʼязані до search-схеми роуту /users
-const filter = defineFilters<UsersSearch>();
+// Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
+// привʼязані до search-схеми роуту /users
+const Grid = createDataGrid<UsersSearch, UserListResponseDtoOutputItemsItem>();
 
 /** Бізнес-фільтр статусу юзера: Active/Inactive ↔ isActive=true/false в URL і query API */
 function userStatusFilter(t: TFunction<['users', 'common']>): DataGridFilterDef<UsersSearch> {
-  return filter.select({
+  return Grid.filter.select({
     key: 'isActive',
     ariaLabel: t('filters.statusLabel'),
     allLabel: t('filters.statusAll'),
@@ -38,16 +30,8 @@ function userStatusFilter(t: TFunction<['users', 'common']>): DataGridFilterDef<
 
 export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
-  // Фільтри живуть у search-параметрах роуту (дефолт хука) — роутер усередині
-  const grid = useDataGridFilters<UsersSearch>();
-  // Вибір типізований рядком гріда: назовні виходять цілі обрані юзери, не лише id
-  const selection = useDataGridSelection<UserListResponseDtoOutputItemsItem>();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-
-  // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
-  const params: UsersFindAllParams = { ...grid.filters, page: grid.page };
-  const list = toGridQueryResult(useUsersFindAll(params, { query: gridQueryOptions }));
 
   const invalidateUsers = (): void => {
     void queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
@@ -59,7 +43,7 @@ export function UsersPage() {
 
   // Тулбар декларується так само, як columns: масив дефініцій
   const filters: DataGridFilterDef<UsersSearch>[] = [
-    filter.search({ ariaLabel: t('searchLabel'), placeholder: t('searchPlaceholder') }),
+    Grid.filter.search({ ariaLabel: t('searchLabel'), placeholder: t('searchPlaceholder') }),
     userStatusFilter(t),
   ];
 
@@ -135,35 +119,27 @@ export function UsersPage() {
   ];
 
   return (
-    <div>
+    // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
+    <Grid.Root
+      useListQuery={(params, gridOptions) => useUsersFindAll(params, { query: gridOptions })}
+      selection
+    >
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <div className="flex items-center gap-2">
-          <DataGridFilters grid={grid} filters={filters} />
+          <Grid.Filters filters={filters} />
           <CreateUserModal />
         </div>
       </div>
 
-      {selection.selectedItems.length > 0 && (
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-sm text-muted">
-            {t('common:selection.summary', { count: selection.selectedItems.length })}
-          </span>
-          <Button size="sm" variant="ghost" onPress={selection.clear}>
-            {t('common:selection.clear')}
-          </Button>
-        </div>
-      )}
+      <Grid.SelectionSummary />
 
-      <DataGrid
+      <Grid.Table
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
-        grid={grid}
-        list={list}
-        selection={selection}
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
-    </div>
+    </Grid.Root>
   );
 }
