@@ -284,6 +284,7 @@ export function DataGrid<T extends { id: string }>({
                                       key={action.id}
                                       id={action.id}
                                       textValue={action.label}
+                                      isDisabled={action.isDisabled?.(item) ?? false}
                                       variant={action.isDanger ? 'danger' : undefined}
                                     >
                                       <Label>{action.label}</Label>

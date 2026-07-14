@@ -47,6 +47,8 @@ export interface DataGridRowAction<T> {
   label: string;
   isDanger?: boolean;
   isVisible?: (item: T) => boolean;
+  /** Пункт лишається в меню, але неактивний (React Aria не пускає його в onAction) */
+  isDisabled?: (item: T) => boolean;
   onAction: (item: T) => void;
   confirm?: {
     heading: string;

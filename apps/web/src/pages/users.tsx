@@ -111,7 +111,8 @@ export function UsersPage() {
       id: 'delete',
       label: t('delete.button'),
       isDanger: true,
-      isVisible: (u) => u.id !== currentUser?.id,
+      // Себе видалити не можна: пункт видно, але він неактивний
+      isDisabled: (u) => u.id === currentUser?.id,
       onAction: (u) => {
         removeUser.mutate({ id: u.id });
       },
