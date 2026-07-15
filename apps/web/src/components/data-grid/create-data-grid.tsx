@@ -51,6 +51,8 @@ interface DataGridTableProps<TItem> {
   columns: DataGridColumn<TItem>[];
   rowActions?: DataGridRowAction<TItem>[];
   getRowId?: (item: TItem) => string;
+  /** Варіанти «Items per page» у футері; false — прибрати селект зовсім */
+  pageSizeOptions?: number[] | false;
   messages?: DataGridMessages;
 }
 
@@ -118,13 +120,14 @@ export function createDataGrid<
       selection === true ? internalSelection : selection === false ? undefined : selection;
 
     // Зміна ЗВУЖУВАЛЬНИХ фільтрів (пошук/доменні) робить накопичений вибір
-    // неактуальним — скидаємо. page не враховується (вибір навмисно накопичується
-    // між сторінками), сортування теж (не змінює склад результату).
+    // неактуальним — скидаємо. page/limit не враховуються (вибір навмисно
+    // накопичується між сторінками), сортування теж (не змінює склад результату).
     const { filters } = grid;
     const narrowingKey = useMemo(() => {
       // Каст безпечний: TFilters — plain-обʼєкт search params (validateSearch роуту)
       const narrowing = { ...(filters as Record<string, unknown>) };
       delete narrowing.page;
+      delete narrowing.limit;
       delete narrowing.sortBy;
       delete narrowing.sortOrder;
       // Ключі відсортовано — порядок полів у search params не має спричиняти скид

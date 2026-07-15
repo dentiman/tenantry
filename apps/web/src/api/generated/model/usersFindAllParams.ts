@@ -18,7 +18,7 @@ export type UsersFindAllParams = {
   page?: number;
   /**
    * @minimum 1
-   * @maximum 100
+   * @maximum 200
    */
   limit?: number;
   sortBy?: UsersFindAllSortBy;

@@ -14,7 +14,12 @@
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
 `docs/file-storage.md` (файлова підсистема: структура, presigned-флоу, приклад end-to-end на аватарі,
-формати запитів/відповідей), `README.md` (quickstart).
+формати запитів/відповідей),
+`docs/multi-tenancy-plan.md` (мультитенантність — ЧОМУ: зафіксовані рішення + RLS-механіка +
+таксономія таблиць; переглядає два рішення від 2026-07-11 — RLS і Membership),
+`docs/multi-tenancy-migration.md` (мультитенантність — ЯК: план переходу MT-0…MT-4, кроки/SQL/файли/
+DoD/відкат, точки дотику в коді, 2 відомі поломки — `auth.service` по email і `/jobs` поза RLS),
+`README.md` (quickstart).
 
 ## Команди
 
@@ -206,7 +211,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                       |
 | Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено). ✅ Реалізовано у фазі 2.1 за власним інтерфейсом `JobDispatcher`; транзакційна постановка — `send(..., { tx })` через `fromPrisma`   |
-| Мультитенантність | **Відкладена.** План: shared schema + `tenantId`, tenant = Organization + Membership, nestjs-cls + Prisma Client Extension. Postgres RLS — НЕ вмикаємо поки                         |
+| Мультитенантність | **Реалізація відкладена, напрямок зафіксовано 2026-07-15** — `docs/multi-tenancy-plan.md` (фази MT-1…MT-4). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и: `apps/api` (tenant) + `apps/platform-api` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк |
 | Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                              |
 | Zod               | v4 (закрито у фазі 1)                                                                                                                                                               |
 | Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                     |
@@ -222,7 +227,13 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 - **Безпека auth**: (а) reuse-detection ротованих refresh-токенів — зараз повторне використання
   ротованого токена дає 401, але НЕ відкликає інші сесії (рядок видалено; треба `revokedAt`
   замість delete); (б) refresh у httpOnly cookie замість localStorage.
-- RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard.
-- Organizations + Memberships + Invitations (основа мультитенантності).
+- **Мультитенантність (фази MT-0…MT-4)**: рішення — `docs/multi-tenancy-plan.md`, план переходу —
+  `docs/multi-tenancy-migration.md`. DB-ролі (MT-0) → `Organization` (= tenant) + `tenant_id` +
+  nestjs-cls/extension (MT-1) → політики RLS + тести ізоляції (MT-2) → `apps/platform-api` (MT-3).
+  Еталонний домен для обкатки — customers (писати вже БЕЗ згадок tenantId). Усі відкриті питання
+  закриті 2026-07-15: `/jobs` переїжджає в platform-api на MT-3 (гейт: ДО CRUD тенантів, бо
+  `pgboss.*` поза RLS); перший admin тенанта — invite-лінк (оператор не знає пароля); `slug` — у MT-1.
+- RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard (після MT-2, поверх
+  готового tenant-контексту).
 - Доменні модулі: customers (еталонний CRUD) → tickets (workflow + події) → billing
   (PaymentProvider інтерфейс + fake-провайдер → Stripe) → notifications → audit-log.

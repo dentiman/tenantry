@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { fromSortDescriptor, toSortDescriptor } from './sort';
+import { DEFAULT_PAGE_LIMIT } from './types';
 import type { DataGridFiltersBase, DataGridNavigation } from './types';
 
 interface UseDataGridFiltersOptions<TFilters extends DataGridFiltersBase> {
@@ -111,6 +112,15 @@ export function useDataGridFilters<TFilters extends DataGridFiltersBase = DataGr
     applyChange((prev) => ({ ...prev, page: page <= 1 ? undefined : page }));
   };
 
+  const setLimit = (limit: number): void => {
+    // Дефолтний ліміт зникає з URL (як page 1); зміна розміру сторінки скидає page
+    applyChange((prev) => ({
+      ...prev,
+      limit: limit === DEFAULT_PAGE_LIMIT ? undefined : limit,
+      page: undefined,
+    }));
+  };
+
   const onSortChange: DataGridNavigation['onSortChange'] = (descriptor) => {
     const next = fromSortDescriptor(descriptor);
     // descriptor.column — React Aria Key (string), TFilters['sortBy'] — закритий enum
@@ -124,11 +134,13 @@ export function useDataGridFilters<TFilters extends DataGridFiltersBase = DataGr
   return {
     filters,
     page: filters.page ?? 1,
+    limit: filters.limit ?? DEFAULT_PAGE_LIMIT,
     searchInput,
     setSearchInput,
     sortDescriptor: toSortDescriptor(filters.sortBy, filters.sortOrder),
     onSortChange,
     goToPage,
+    setLimit,
     setFilter,
   };
 }

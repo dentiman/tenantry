@@ -6,7 +6,8 @@
     "menu": "Row actions"
   },
   "pagination": {
-    "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}"
+    "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}",
+    "perPage": "Items per page"
   },
   "selection": {
     "selectAll": "Select all",

@@ -73,6 +73,9 @@ const dashboardRoute = createRoute({
 const UsersSearchSchema = z.object({
   search: z.string().trim().optional().catch(undefined),
   page: z.coerce.number().int().min(1).optional().catch(undefined),
+  // max — дзеркало бекенда (PaginationQuerySchema): невалідний ліміт з URL падає
+  // в дефолт тут, а не 400-кою на API
+  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
   // Той самий whitelist полів, що й на бекенді (UserQuerySchema.sortBy) — не дублюємо enum
   sortBy: UserQuerySchema.shape.sortBy.catch(undefined),
   sortOrder: UserQuerySchema.shape.sortOrder.catch(undefined),
@@ -93,6 +96,7 @@ const usersRoute = createRoute({
 
 const JobsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
+  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
   sortBy: JobQuerySchema.shape.sortBy.catch(undefined),
   sortOrder: JobQuerySchema.shape.sortOrder.catch(undefined),
   state: JobQuerySchema.shape.state.catch(undefined),

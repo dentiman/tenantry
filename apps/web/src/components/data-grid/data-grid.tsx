@@ -7,7 +7,9 @@ import {
   Dropdown,
   EmptyState,
   Label,
+  ListBox,
   Pagination,
+  Select,
   Spinner,
   Table,
 } from '@heroui/react';
@@ -15,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { pageItems } from '../../lib/page-items';
 import type { DataGridQueryResult } from './data-grid-query';
 import type { DataGridSelectionState } from './use-data-grid-selection';
+import { DEFAULT_PAGE_SIZE_OPTIONS } from './types';
 import type { DataGridColumn, DataGridMessages, DataGridNavigation, DataGridRowAction } from './types';
 
 function MoreIcon() {
@@ -41,6 +44,9 @@ interface DataGridProps<T extends { id: string }> {
 
   /** Мультивибір рядків — з useDataGridSelection(); без пропа чекбоксів немає */
   selection?: DataGridSelectionState<T>;
+
+  /** Варіанти «Items per page» у футері; false — прибрати селект зовсім */
+  pageSizeOptions?: number[] | false;
 
   messages?: DataGridMessages;
 }
@@ -101,6 +107,50 @@ function SelectionCheckbox({
   );
 }
 
+/** Селект «Items per page» у футері; той самий компаунд Select, що й фільтри тулбара */
+function PageSizeSelect({
+  limit,
+  options,
+  onChange,
+}: {
+  limit: number;
+  options: number[];
+  onChange: (limit: number) => void;
+}) {
+  const { t } = useTranslation('common');
+  // Ліміт з URL може не бути серед options — додаємо, щоб Select завжди мав вибране значення
+  const items = options.includes(limit) ? options : [...options, limit].sort((a, b) => a - b);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="whitespace-nowrap text-sm text-muted">{t('pagination.perPage')}</span>
+      <Select
+        aria-label={t('pagination.perPage')}
+        variant="secondary"
+        className="w-24"
+        value={String(limit)}
+        onChange={(key) => {
+          onChange(Number(String(key)));
+        }}
+      >
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {items.map((option) => (
+              <ListBox.Item key={option} id={String(option)} textValue={String(option)}>
+                {option}
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
+    </div>
+  );
+}
+
 /**
  * Уніфікований список для серверних колекцій. Колонки/екшени — ззовні (page-специфічні),
  * сортування/пагінація — з grid, дані — з list (обидва з useDataGridFilters/toGridQueryResult).
@@ -113,9 +163,10 @@ export function DataGrid<T extends { id: string }>({
   grid,
   list,
   selection,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   messages,
 }: DataGridProps<T>) {
-  const { page, sortDescriptor, onSortChange, goToPage } = grid;
+  const { page, limit, sortDescriptor, onSortChange, goToPage, setLimit } = grid;
   const { items, total, totalPages, isLoading, isPlaceholderData } = list;
   const { t } = useTranslation('common');
   const loadingLabel = messages?.loading ?? t('loading');
@@ -345,6 +396,9 @@ export function DataGrid<T extends { id: string }>({
                   </Pagination.Next>
                 </Pagination.Item>
               </Pagination.Content>
+              {pageSizeOptions !== false && pageSizeOptions.length > 0 && (
+                <PageSizeSelect limit={limit} options={pageSizeOptions} onChange={setLimit} />
+              )}
             </Pagination>
           </Table.Footer>
         </Table>

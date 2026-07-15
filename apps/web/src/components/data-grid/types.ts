@@ -12,17 +12,27 @@ export type SortOrder = 'asc' | 'desc';
  */
 export interface DataGridFiltersBase {
   page?: number;
+  limit?: number;
   sortBy?: string;
   sortOrder?: SortOrder;
   search?: string;
 }
 
+/** Дефолт розміру сторінки — синхронізований із бекендом (PaginationQuerySchema, 20) */
+export const DEFAULT_PAGE_LIMIT = 20;
+
+/** Дефолтні варіанти для селекта «Items per page» у футері гріда */
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100, 200];
+
 /** Те, що DataGrid реально читає з grid-стану — не залежить від конкретного TSearch */
 export interface DataGridNavigation {
   page: number;
+  limit: number;
   sortDescriptor: SortDescriptor | undefined;
   onSortChange: (descriptor: SortDescriptor) => void;
   goToPage: (page: number) => void;
+  /** Зміна розміру сторінки скидає page; дефолтне значення зникає з URL */
+  setLimit: (limit: number) => void;
 }
 
 export interface DataGridColumn<T> {

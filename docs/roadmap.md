@@ -28,20 +28,37 @@
    користувача). Реальна відправка через Mailpit — завершено разом з I18N-3 (2026-07-12,
    деталі нижче): `WelcomeEmailHandler` більше не заглушка.
 
-## Фаза 3 — організації та RBAC (початок мультитенантності)
+## Фаза 3 — мультитенантність та RBAC
 
-1. Моделі: `Organization`, `Membership { userId, organizationId, role }`, `Invitation`.
-2. JWT отримує `orgId`; переключення організації = новий refresh-флоу.
-3. RBAC: мапа role → permissions у `libs/contracts`, `@RequirePermissions('tickets:write')` + guard.
-4. Tenant-контекст: `nestjs-cls` + Prisma Client Extension (авто-`where: { tenantId }`).
-   RLS — свідомо відкладено (рішення користувача); заготовку міграцій можна додати пізніше.
+> **Переглянуто 2026-07-15.** Рішення й архітектура — [multi-tenancy-plan.md](multi-tenancy-plan.md);
+> **детальний план переходу (кроки, SQL, файли, DoD, відкат)** —
+> [multi-tenancy-migration.md](multi-tenancy-migration.md) (фази MT-0…MT-4). Два рішення від 2026-07-11
+> переглянуті на запит користувача: **RLS з «не вмикаємо» став основою ізоляції**, а
+> «Organization + Membership» — **`users.tenant_id NOT NULL`** (User належить одному tenant-у).
+> Головний принцип: мультитенантність **невидима для бізнес-коду** — ні `where: { tenantId }`,
+> ні передачі tenantId у `create`; усе робить інфраструктура (CLS + extension + RLS + DB-default).
+
+1. **MT-0** — DB-ролі (`saas_migrator`/`saas_app`/`saas_platform`) + розділення env-URL-ів.
+   **MT-1** — фундамент без RLS: `Organization` (= tenant), `tenant_id` на tenant-таблицях,
+   `nestjs-cls` + Prisma extension (`set_config`, не `where`), `withTenantTx`; черги — tenantId
+   у payload + `cls.run` у воркері.
+2. **MT-2** — увімкнення RLS: політики `USING`+`WITH CHECK`, DB-default на `tenant_id`,
+   тести ізоляції (два тенанти / конкурентний / SQL-smoke / CI-чек `pg_policies`).
+3. **MT-3** — control plane: окремий `apps/platform-api` (окремі identity, JWT-ключі, `BYPASSRLS`-роль),
+   CRUD тенантів, глобальні довідники. Data plane фізично не має крос-tenant коду.
+4. **RBAC** (після MT-2, поверх готового tenant-контексту): мапа role → permissions
+   у `libs/contracts`, `@RequirePermissions('tickets:write')` + guard.
 5. Наскрізний correlationId у чергах (зафіксовано 2026-07-12, робити разом із nestjs-cls
-   з п. 4): зараз `req.id` з pino-http НЕ доїжджає до воркера — payload містить лише
+   у MT-1): зараз `req.id` з pino-http НЕ доїжджає до воркера — payload містить лише
    бізнес-дані, кореляція рветься на межі черги. План: `JobDispatcher.send` бере requestId
    з cls-контексту і кладе службовим полем поруч із payload (pg-boss окремого metadata
    не має), `JobWorkerRegistrar` знімає його в `JobContext` + child-логер — логи воркера
    зв'язуються з API-запитом. Лог-конверт довкола хендлера (started/completed/failed)
    уже зроблено у фазі 2. Див. також Observability у фазі 5.
+
+Single-tenant форки скелетона це не ускладнює: колонка `tenant_id` є завжди, single-tenant —
+це просто **N=1** (один рядок `Organization`, id з env, control plane не деплоїться). Схема БД
+і доменний код у обох режимах ідентичні; `if (multiTenant)` у коді немає.
 
 ## Фаза i18n — мультиязичність (зафіксовано 2026-07-12; виконати ДО фази 4)
 

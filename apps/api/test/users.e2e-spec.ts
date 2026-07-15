@@ -389,7 +389,7 @@ describe('Users API (e2e)', () => {
     const response = await request(app.getHttpServer())
       .get('/api/users')
       .set(headers)
-      .query({ page: 0, limit: 101, isActive: 'not-boolean' })
+      .query({ page: 0, limit: 201, isActive: 'not-boolean' })
       .expect(400);
 
     expect(response.body).toEqual(

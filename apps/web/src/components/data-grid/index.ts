@@ -4,6 +4,7 @@ export { DataGridFilters, defineFilters } from './filters';
 export { useDataGridFilters } from './use-data-grid-filters';
 export { useDataGridSelection } from './use-data-grid-selection';
 export { toSortDescriptor, fromSortDescriptor } from './sort';
+export { DEFAULT_PAGE_LIMIT, DEFAULT_PAGE_SIZE_OPTIONS } from './types';
 export { gridQueryOptions, toGridQueryResult } from './data-grid-query';
 export type {
   DataGridInstance,
