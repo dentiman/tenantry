@@ -12,11 +12,14 @@ axiosInstance.interceptors.request.use((config) => {
 });
 
 // Без refresh-механіки (platform-auth MVP — див. auth.store.ts): 401 просто
-// закінчує сесію і повертає на /login, single-flight refresh тут не потрібен
+// закінчує сесію і повертає на /login, single-flight refresh тут не потрібен.
+// /auth/login виключено — його 401 (невірні креденшели) мусить дійти до форми,
+// а не тригерити hard-redirect (інакше "невірний пароль" перезавантажує сторінку)
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url ?? '';
+    if (error.response?.status === 401 && !url.includes('/auth/login')) {
       useAuthStore.getState().clearSession();
       window.location.assign('/login');
     }

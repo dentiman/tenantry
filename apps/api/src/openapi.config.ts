@@ -9,7 +9,7 @@ export function buildOpenApiConfig(): Omit<OpenAPIObject, 'paths'> {
     .build();
 }
 
-// authRegister, usersFindAll, ... — з цих імен orval генерує назви хуків (useAuthRegister)
+// authLogin, usersFindAll, ... — з цих імен orval генерує назви хуків (useAuthLogin)
 export const openApiDocumentOptions: SwaggerDocumentOptions = {
   operationIdFactory: (controllerKey: string, methodKey: string): string => {
     const prefix = controllerKey.replace(/Controller$/, '');

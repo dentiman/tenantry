@@ -21,8 +21,10 @@ apps/worker/logs/
 .env.production
 docker/seaweedfs/s3.prod.json
 
-# IDE
-.idea/
+# IDE (runConfigurations — спільні для команди, коміт'яться; решта .idea/ — локальна)
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/**
 .vscode/
 
 # Misc

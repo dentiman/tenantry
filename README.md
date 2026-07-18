@@ -40,6 +40,10 @@ pnpm platform:web:dev     # Platform web на http://localhost:5174 (прокс�
 Почати геть з нуля (стирає всі дані): `pnpm db:reset` — DROP+CREATE бази, ролі, міграції
 й сід за одну команду (тільки localhost; деталі — [docs/database-seed.md](docs/database-seed.md)).
 
+Повний довідник **усіх** команд `package.json` з прикладами й поясненням, що робить
+кожна — [docs/commands.md](docs/commands.md) (там же — готові JetBrains Run Configurations
+для мінімального dev-набору, впорядковані під запуск "з нуля").
+
 ## Структура
 
 ```
