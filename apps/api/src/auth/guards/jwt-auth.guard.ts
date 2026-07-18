@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { TenantContextService } from '@saas-skeleton/database';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { JwtPayload } from '../decorators/current-user.decorator';
@@ -15,6 +16,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,13 +36,28 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing access token');
     }
 
+    let payload: JwtPayload;
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
-      request.user = payload;
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
 
+    // MT-3: звірка «токен vs резолвлений контекст» — ТІЛЬКИ для авторитетної резолюції
+    // (Static N=1 — завжди; slug — коли slug присутній; піддомени MT-4 — завжди).
+    // Неавторитетний fallback не конфліктує з токеном: авторитет — підписаний JWT.
+    // Після звірки контекст перезаписується tenant-ом токена — далі скоупить він.
+    const resolved = this.tenantContext.getTenantId();
+    if (
+      this.tenantContext.isResolutionAuthoritative() &&
+      resolved &&
+      payload.tenantId !== resolved
+    ) {
+      throw new UnauthorizedException('Invalid or expired access token');
+    }
+    this.tenantContext.set(payload.tenantId);
+
+    request.user = payload;
     return true;
   }
 

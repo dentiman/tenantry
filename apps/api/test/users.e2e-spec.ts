@@ -5,11 +5,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { PrismaService } from '@saas-skeleton/database';
+// MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
+import { SystemPrismaService } from '@saas-skeleton/database';
+import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
 
 describe('Users API (e2e)', () => {
   let app: INestApplication;
-  let prisma: PrismaService;
+  let prisma: SystemPrismaService;
 
   const createUserPayload = (
     suffix: string,
@@ -45,7 +47,7 @@ describe('Users API (e2e)', () => {
     configureApp(app);
 
     await app.init();
-    prisma = app.get(PrismaService);
+    prisma = app.get(SystemPrismaService);
   });
 
   beforeEach(async () => {
@@ -58,13 +60,11 @@ describe('Users API (e2e)', () => {
   });
 
   const createAuthHeaders = async (suffix: string): Promise<{ Authorization: string }> => {
-    const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send(createAuthUserPayload(suffix))
-      .expect(201);
-
+    // MT-1: register видалено — юзер створюється напряму і логіниться
+    const payload = createAuthUserPayload(suffix);
+    const { tokens } = await createAndLoginTestUser(app, prisma, payload);
     return {
-      Authorization: `Bearer ${String(response.body.tokens.accessToken)}`,
+      Authorization: `Bearer ${tokens.accessToken}`,
     };
   };
 
@@ -130,6 +130,7 @@ describe('Users API (e2e)', () => {
     const headers = await createAuthHeaders(`${Date.now()}-list-admin`);
     const admin = await prisma.user.create({
       data: {
+        tenantId: DEFAULT_TENANT_ID,
         email: `admin-${Date.now()}@example.com`,
         name: 'Alice Admin',
         role: 'ADMIN',
@@ -138,6 +139,7 @@ describe('Users API (e2e)', () => {
 
     await prisma.user.create({
       data: {
+        tenantId: DEFAULT_TENANT_ID,
         email: `user-${Date.now()}@example.com`,
         name: 'Bob User',
         role: 'USER',
@@ -167,10 +169,20 @@ describe('Users API (e2e)', () => {
   it('searches users by partial email and partial name (case-insensitive)', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-search-admin`);
     const target = await prisma.user.create({
-      data: { email: 'carol.finder@example.com', name: 'Carol Finder', role: 'USER' },
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        email: 'carol.finder@example.com',
+        name: 'Carol Finder',
+        role: 'USER',
+      },
     });
     await prisma.user.create({
-      data: { email: `other-${Date.now()}@example.com`, name: 'Dave Other', role: 'USER' },
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        email: `other-${Date.now()}@example.com`,
+        name: 'Dave Other',
+        role: 'USER',
+      },
     });
 
     // Частковий фрагмент email, інший регістр
@@ -195,7 +207,7 @@ describe('Users API (e2e)', () => {
   it('gets user by id', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-get-admin`);
     const user = await prisma.user.create({
-      data: createDbUserData(`${Date.now()}-get`),
+      data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-get`) },
     });
 
     const response = await request(app.getHttpServer())
@@ -217,7 +229,7 @@ describe('Users API (e2e)', () => {
   it('updates a user', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-update-admin`);
     const user = await prisma.user.create({
-      data: createDbUserData(`${Date.now()}-update`),
+      data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-update`) },
     });
 
     const response = await request(app.getHttpServer())
@@ -238,7 +250,7 @@ describe('Users API (e2e)', () => {
   it('deletes a user', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-delete-admin`);
     const user = await prisma.user.create({
-      data: createDbUserData(`${Date.now()}-delete`),
+      data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-delete`) },
     });
 
     await request(app.getHttpServer()).delete(`/api/users/${user.id}`).set(headers).expect(204);
@@ -284,7 +296,9 @@ describe('Users API (e2e)', () => {
         statusCode: 409,
         code: 'CONFLICT',
         message: 'Email already registered',
-        fieldErrors: [{ field: 'email', message: 'Email already registered', code: 'already_exists' }],
+        fieldErrors: [
+          { field: 'email', message: 'Email already registered', code: 'already_exists' },
+        ],
       }),
     );
   });
@@ -339,13 +353,28 @@ describe('Users API (e2e)', () => {
     const suffix = Date.now();
     // Різні email, той самий name (перевіряє tie-breaker по id, коли sortBy не унікальний)
     await prisma.user.create({
-      data: { email: `charlie-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        email: `charlie-${suffix}@example.com`,
+        name: 'Same Name',
+        role: 'USER',
+      },
     });
     await prisma.user.create({
-      data: { email: `alpha-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        email: `alpha-${suffix}@example.com`,
+        name: 'Same Name',
+        role: 'USER',
+      },
     });
     await prisma.user.create({
-      data: { email: `bravo-${suffix}@example.com`, name: 'Same Name', role: 'USER' },
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        email: `bravo-${suffix}@example.com`,
+        name: 'Same Name',
+        role: 'USER',
+      },
     });
 
     const asc = await request(app.getHttpServer())

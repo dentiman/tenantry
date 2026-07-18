@@ -9,8 +9,12 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://saas:saas@localhost:5432/saas_skeleton
+      # MT-0: runtime — saas_app, міграції — saas_migrator (ролі створює крок db:roles)
+      DATABASE_URL: postgresql://saas_app:saas_app@localhost:5432/saas_skeleton
+      MIGRATE_DATABASE_URL: postgresql://saas_migrator:saas_migrator@localhost:5432/saas_skeleton
+      POSTGRES_ADMIN_URL: postgresql://saas:saas@localhost:5432/postgres
       JWT_SECRET: ci-only-secret-not-for-production-min-32-chars
+      PLATFORM_JWT_SECRET: ci-only-platform-secret-not-for-production-32chars
     services:
       postgres:
         image: postgres:17-alpine
@@ -50,8 +54,14 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Ensure DB roles (MT-0)
+        run: pnpm db:roles
+
       - name: Apply migrations
         run: pnpm db:migrate:deploy
 
       - name: API e2e tests
         run: pnpm api:test:e2e
+
+      - name: Platform API e2e tests
+        run: pnpm platform:test:e2e

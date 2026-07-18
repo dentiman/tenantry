@@ -1,15 +1,20 @@
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { Client } from 'pg';
-import { buildTestDatabaseUrl, TEST_DB_NAME } from './test-database';
+import { buildAdminUrl, buildTestMigrateUrl, TEST_DB_NAME } from './test-database';
 
-/** Разово перед усіма сьютами: створює тестову БД (якщо немає) і застосовує міграції */
+const REPO_ROOT = join(__dirname, '..', '..', '..');
+
+/**
+ * Разово перед усіма сьютами:
+ * 1) створює тестову БД (якщо немає) під суперюзером;
+ * 2) MT-0: ролі saas_* + гранти в тестовій БД (`db:roles`, ідемпотентно) —
+ *    покриває і CI, де docker-init не виконується;
+ * 3) міграції під saas_migrator; самі тести ходять під saas_app (setup-env.ts) —
+ *    інакше RLS (MT-2) на них не діятиме і тести брехатимуть.
+ */
 export default async function globalSetup(): Promise<void> {
-  const testUrl = buildTestDatabaseUrl();
-
-  const adminUrl = new URL(testUrl);
-  adminUrl.pathname = '/postgres';
-  const client = new Client({ connectionString: adminUrl.toString() });
+  const client = new Client({ connectionString: buildAdminUrl() });
   await client.connect();
   try {
     const exists = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [
@@ -22,9 +27,14 @@ export default async function globalSetup(): Promise<void> {
     await client.end();
   }
 
+  execSync(`pnpm --filter @saas-skeleton/database db:roles -- --db ${TEST_DB_NAME}`, {
+    cwd: REPO_ROOT,
+    stdio: 'inherit',
+  });
+
   execSync('pnpm --filter @saas-skeleton/database db:migrate:deploy', {
-    cwd: join(__dirname, '..', '..', '..'),
-    env: { ...process.env, DATABASE_URL: testUrl },
+    cwd: REPO_ROOT,
+    env: { ...process.env, MIGRATE_DATABASE_URL: buildTestMigrateUrl() },
     stdio: 'inherit',
   });
 }

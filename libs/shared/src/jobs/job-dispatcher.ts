@@ -10,10 +10,18 @@ export interface JobSendOptions {
   priority?: number;
   /**
    * Транзакційна постановка: job вставляється в тій самій Prisma-транзакції,
-   * що й доменні зміни (передати tx з prisma.$transaction)
+   * що й доменні зміни (передати tx з TenantTransactions.withTenantTx)
    */
   tx?: PrismaTransactionLike;
 }
+
+/**
+ * MT-1: доменний код НЕ передає tenantId — для tenant-джоб його домішує
+ * диспатчер із tenant-контексту (тому в типі payload-а він опційний).
+ */
+export type JobSendPayload<TSchema extends z.ZodType> = Omit<z.input<TSchema>, 'tenantId'> & {
+  tenantId?: string;
+};
 
 /**
  * Абстракція над чергою. Доменний код залежить тільки від цього класу —
@@ -22,7 +30,7 @@ export interface JobSendOptions {
 export abstract class JobDispatcher {
   abstract send<TSchema extends z.ZodType>(
     definition: JobDefinition<TSchema>,
-    payload: z.input<TSchema>,
+    payload: JobSendPayload<TSchema>,
     options?: JobSendOptions,
   ): Promise<string | null>;
 }

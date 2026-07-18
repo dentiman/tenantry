@@ -4,15 +4,17 @@ import { UserResponseSchema } from '../user/user.schema';
 // Нормалізація перед валідацією: у Zod 4 перевірка формату йде до transform-ів
 const normalizedEmail = z.string().trim().toLowerCase().pipe(z.email());
 
-export const RegisterSchema = z.object({
-  email: normalizedEmail,
-  password: z.string().min(8).max(128),
-  name: z.string().nullable().optional(),
-});
+// MT-1: RegisterSchema видалено (рішення 2026-07-16) — self-serve реєстрації немає
 
 export const LoginSchema = z.object({
   email: normalizedEmail,
   password: z.string().min(1),
+  /**
+   * MT-3: slug тенанта — недовірена підказка, що лише звужує пошук юзера
+   * (доступ дають креденшели; JWT.tenantId завжди з рядка БД).
+   * Порожній рядок легальний = «без підказки» (SlugTenantResolver дає env-fallback).
+   */
+  tenant: z.string().trim().toLowerCase().max(63).optional(),
 });
 
 export const RefreshSchema = z.object({

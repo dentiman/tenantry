@@ -5,16 +5,18 @@
   "main": "src/index.ts",
   "scripts": {
     "db:generate": "prisma generate",
+    "db:roles": "tsx scripts/ensure-roles.ts",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "tsx scripts/reset-db.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",
-    "@prisma/client": "^7.0.0"
+    "@prisma/client": "^7.0.0",
+    "nestjs-cls": "^6.2.1"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0"
@@ -22,7 +24,9 @@
   "devDependencies": {
     "@nestjs/common": "^11.0.0",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.11.0",
     "argon2": "^0.44.0",
+    "pg": "^8.13.0",
     "prisma": "^7.0.0",
     "tsx": "^4.19.0"
   }

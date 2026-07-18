@@ -2,8 +2,7 @@
   "brand": "SaaS Skeleton",
   "nav": {
     "dashboard": "Dashboard",
-    "users": "Users",
-    "jobs": "Jobs"
+    "users": "Users"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",

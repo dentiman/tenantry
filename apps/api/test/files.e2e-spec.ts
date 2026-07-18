@@ -1,11 +1,14 @@
 /// <reference types="jest" />
 
+import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { PrismaService } from '@saas-skeleton/database';
+// MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
+import { SystemPrismaService } from '@saas-skeleton/database';
+import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
 import { StorageService } from '@saas-skeleton/shared';
 
 /**
@@ -19,6 +22,13 @@ class FakeStorageService {
 
   onModuleInit(): Promise<void> {
     return Promise.resolve();
+  }
+
+  // MT-1: сигнатура реального StorageService.buildObjectKey (tenant-префікс);
+  // у фейку tenant-контекст не читаємо — достатньо детермінованого префікса
+  buildObjectKey(filename: string): string {
+    const ext = filename.includes('.') ? `.${filename.split('.').pop() ?? ''}` : '';
+    return `${DEFAULT_TENANT_ID}/test/${randomUUID()}${ext}`;
   }
   getUploadUrl(key: string): Promise<string> {
     return Promise.resolve(`http://storage.test/upload/${encodeURIComponent(key)}?sig=fake`);
@@ -59,7 +69,7 @@ const TEXT_BYTES = new Uint8Array(Buffer.from('just some text, not an image'));
 
 describe('Files API (e2e)', () => {
   let app: INestApplication;
-  let prisma: PrismaService;
+  let prisma: SystemPrismaService;
   const storage = new FakeStorageService();
 
   beforeAll(async () => {
@@ -74,7 +84,7 @@ describe('Files API (e2e)', () => {
     configureApp(app);
 
     await app.init();
-    prisma = app.get(PrismaService);
+    prisma = app.get(SystemPrismaService);
   });
 
   beforeEach(async () => {
@@ -90,11 +100,13 @@ describe('Files API (e2e)', () => {
   });
 
   const createAuthHeaders = async (suffix: string): Promise<{ Authorization: string }> => {
-    const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({ email: `files-${suffix}@example.com`, password: 'SecurePass123', name: null })
-      .expect(201);
-    return { Authorization: `Bearer ${String(response.body.tokens.accessToken)}` };
+    // MT-1: register видалено — юзер створюється напряму і логіниться
+    const { tokens } = await createAndLoginTestUser(app, prisma, {
+      email: `files-${suffix}@example.com`,
+      password: 'SecurePass123',
+      name: null,
+    });
+    return { Authorization: `Bearer ${tokens.accessToken}` };
   };
 
   const initUpload = async (
@@ -226,7 +238,10 @@ describe('Files API (e2e)', () => {
       .expect(404);
 
     await storage.putObject(key, PNG_BYTES, 'image/png');
-    await request(app.getHttpServer()).post(`/api/files/${fileId}/complete`).set(headers).expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/files/${fileId}/complete`)
+      .set(headers)
+      .expect(200);
 
     const response = await request(app.getHttpServer())
       .get(`/api/files/${fileId}/download-url`)
@@ -237,9 +252,7 @@ describe('Files API (e2e)', () => {
   });
 
   describe('users avatar (демо-споживач)', () => {
-    const uploadReadyImage = async (headers: {
-      Authorization: string;
-    }): Promise<string> => {
+    const uploadReadyImage = async (headers: { Authorization: string }): Promise<string> => {
       const { fileId, key } = await initUpload(headers);
       await storage.putObject(key, PNG_BYTES, 'image/png');
       await request(app.getHttpServer())
@@ -253,7 +266,10 @@ describe('Files API (e2e)', () => {
       const headers = await createAuthHeaders(`${Date.now()}-avatar`);
       const fileId = await uploadReadyImage(headers);
       const target = await prisma.user.create({
-        data: { email: `avatar-target-${String(Date.now())}@example.com` },
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          email: `avatar-target-${String(Date.now())}@example.com`,
+        },
       });
 
       const response = await request(app.getHttpServer())
@@ -270,7 +286,10 @@ describe('Files API (e2e)', () => {
       const headers = await createAuthHeaders(`${Date.now()}-avatar-pending`);
       const { fileId } = await initUpload(headers);
       const target = await prisma.user.create({
-        data: { email: `avatar-pending-${String(Date.now())}@example.com` },
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          email: `avatar-pending-${String(Date.now())}@example.com`,
+        },
       });
 
       const response = await request(app.getHttpServer())

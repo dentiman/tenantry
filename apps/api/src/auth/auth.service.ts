@@ -1,13 +1,15 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '@saas-skeleton/database';
+import { PrismaService, TenantContextService } from '@saas-skeleton/database';
 import type { User as PrismaUser } from '@saas-skeleton/database';
-import type { Register, Login, AuthTokens } from '@saas-skeleton/contracts';
-import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
+import type { Login, AuthTokens } from '@saas-skeleton/contracts';
+
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
-import { fieldConflictException } from '../common/errors';
+
+// MT-1: self-serve реєстрації немає (рішення 2026-07-16) — юзерів створює tenant-адмін
+// (users-модуль), тенантів — platform-api (MT-3). Тому auth = тільки login/refresh/me.
 
 @Injectable()
 export class AuthService {
@@ -17,55 +19,18 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly jobDispatcher: JobDispatcher,
+    // Auth — легальне місце для tenantId (§0 плану): видача JWT і refresh-резолюція
+    private readonly tenantContext: TenantContextService,
   ) {}
-
-  async register(data: Register): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
-    this.logger.log(`Registration attempt for email: ${data.email}`);
-
-    const existing = await this.prisma.user.findUnique({
-      where: { email: data.email },
-    });
-    if (existing) {
-      this.logger.warn(`Registration failed - email already exists: ${data.email}`);
-      throw fieldConflictException('email', 'Email already registered');
-    }
-
-    const passwordHash = await argon2.hash(data.password);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        name: data.name ?? null,
-        passwordHash,
-      },
-    });
-
-    this.logger.log(`User registered successfully: ${user.email} (ID: ${user.id})`);
-
-    // Черга — некритичний side effect: реєстрація не повинна падати через неї
-    try {
-      await this.jobDispatcher.send(
-        userRegisteredJob,
-        { userId: user.id, email: user.email },
-        { singletonKey: user.id },
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to dispatch ${userRegisteredJob.name} for user ${user.id}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    const tokens = await this.generateTokens(user);
-    return { user, tokens };
-  }
 
   async login(data: Login): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
     this.logger.log(`Login attempt for email: ${data.email}`);
 
-    const user = await this.prisma.user.findUnique({
+    // Пошук у ВЖЕ резолвленому tenant-і (TenantResolutionMiddleware → CLS → RLS з MT-2);
+    // явного where по tenantId немає — скоупить база
+    const user = await this.prisma.user.findFirst({
       where: { email: data.email },
+      include: { tenant: true },
     });
 
     if (!user?.passwordHash) {
@@ -84,6 +49,12 @@ export class AuthService {
       throw new UnauthorizedException('Account is deactivated');
     }
 
+    // MT-1: suspend тенанта відмовляє вхід усім його юзерам; той самий 401 без деталізації
+    if (!user.tenant.isActive) {
+      this.logger.warn(`Login failed - tenant suspended: ${user.tenant.slug} (${data.email})`);
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
     this.logger.log(`User logged in successfully: ${user.email} (ID: ${user.id})`);
 
     const tokens = await this.generateTokens(user);
@@ -91,17 +62,23 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
-    const [tokenId, secret] = refreshToken.split(':');
-    if (!tokenId || !secret) {
+    // MT-1: формат tenantId:tokenId:secret — тенант резолвиться із самого токена
+    // (на /auth/refresh немає ні JWT, ні slug-а; для фронта рядок opaque)
+    const [tenantId, tokenId, secret] = refreshToken.split(':');
+    if (!tenantId || !tokenId || !secret) {
       this.logger.warn('Token refresh failed - invalid token format');
       throw new UnauthorizedException('Invalid refresh token format');
     }
+
+    // Перезаписуємо контекст middleware-а значенням із токена: далі всі запити
+    // (пошук токена, ротація, видача) йдуть у tenant-і токена, і RLS (MT-2) це звірить
+    this.tenantContext.set(tenantId);
 
     this.logger.debug(`Token refresh attempt for tokenId: ${tokenId}`);
 
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { id: tokenId },
-      include: { user: true },
+      include: { user: { include: { tenant: true } } },
     });
 
     if (!storedToken || storedToken.expiresAt < new Date()) {
@@ -112,6 +89,12 @@ export class AuthService {
         this.logger.warn(`Token refresh failed - token not found: ${tokenId}`);
       }
       throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Префікс мусить збігатися з tenant-ом рядка (захист від зшитого токена)
+    if (storedToken.tenantId !== tenantId) {
+      this.logger.warn(`Token refresh failed - tenant mismatch for token: ${tokenId}`);
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     const isValid = await argon2.verify(storedToken.tokenHash, secret);
@@ -134,6 +117,13 @@ export class AuthService {
       throw new UnauthorizedException('Account is deactivated');
     }
 
+    if (!storedToken.user.tenant.isActive) {
+      this.logger.warn(
+        `Token refresh failed - tenant suspended: ${storedToken.user.tenant.slug} (${storedToken.user.email})`,
+      );
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
     this.logger.log(
       `Token refreshed successfully for user: ${storedToken.user.email} (ID: ${storedToken.userId})`,
     );
@@ -152,12 +142,14 @@ export class AuthService {
   }
 
   private async generateTokens(user: PrismaUser): Promise<AuthTokens> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // tenantId — З РЯДКА ЮЗЕРА в БД, ніколи з запиту (§ «Джерело tenantId» плану)
+    const payload = { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId };
     const accessToken = await this.jwtService.signAsync(payload);
 
-    // Generate refresh token as tokenId:secret
+    // Generate refresh token as tenantId:tokenId:secret
     const tokenRecord = await this.prisma.refreshToken.create({
       data: {
+        tenantId: user.tenantId,
         userId: user.id,
         tokenHash: '', // placeholder, updated below
         expiresAt: new Date(
@@ -179,7 +171,7 @@ export class AuthService {
       `Generated new token pair for user: ${user.email} (tokenId: ${tokenRecord.id})`,
     );
 
-    const refreshToken = `${tokenRecord.id}:${secret}`;
+    const refreshToken = `${user.tenantId}:${tokenRecord.id}:${secret}`;
     return { accessToken, refreshToken };
   }
 }

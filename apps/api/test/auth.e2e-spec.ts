@@ -3,11 +3,16 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { PrismaService } from '@saas-skeleton/database';
+// MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
+import { SystemPrismaService } from '@saas-skeleton/database';
+import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
+
+// MT-1: POST /auth/register видалено зовсім (рішення 2026-07-16) — юзерів створює
+// tenant-адмін. Setup тестів — прямий create + login (test-users.ts).
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
-  let prisma: PrismaService;
+  let prisma: SystemPrismaService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,7 +21,7 @@ describe('Auth (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     configureApp(app);
-    prisma = moduleFixture.get<PrismaService>(PrismaService);
+    prisma = moduleFixture.get(SystemPrismaService);
     await app.init();
   });
 
@@ -30,149 +35,18 @@ describe('Auth (e2e)', () => {
     await prisma.user.deleteMany({});
   });
 
-  describe('POST /api/auth/register', () => {
-    it('should register a new user with valid data', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'newuser@example.com',
-          password: 'SecurePass123',
-          name: 'New User',
-        })
-        .expect(201);
-
-      expect(response.body).toMatchObject({
-        user: {
-          email: 'newuser@example.com',
-          name: 'New User',
-          role: 'USER',
-          isActive: true,
-        },
-        tokens: {
-          accessToken: expect.any(String),
-          refreshToken: expect.any(String),
-        },
-      });
-
-      expect(response.body.user.id).toBeDefined();
-      expect(response.body.tokens.accessToken).toMatch(/^eyJ/);
-      expect(response.body.tokens.refreshToken).toMatch(/^[a-f0-9-]{36}:[a-f0-9]{64}$/);
-    });
-
-    it('should register a user without name', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'noname@example.com',
-          password: 'SecurePass123',
-        })
-        .expect(201);
-
-      expect(response.body.user.name).toBeNull();
-    });
-
-    it('should return 409 for duplicate email', async () => {
+  describe('POST /api/auth/register (removed in MT-1)', () => {
+    it('should not exist anymore', async () => {
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({
-          email: 'duplicate@example.com',
-          password: 'Pass1234',
-        })
-        .expect(201);
-
-      const response = await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'duplicate@example.com',
-          password: 'DifferentPass',
-        })
-        .expect(409);
-
-      expect(response.body.message).toBe('Email already registered');
-    });
-
-    it('should return 409 for duplicate email with different casing', async () => {
-      // Register with lowercase
-      const registerResponse = await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'user@example.com',
-          password: 'Pass1234',
-        })
-        .expect(201);
-
-      // Email should be normalized to lowercase
-      expect(registerResponse.body.user.email).toBe('user@example.com');
-
-      // Try to register with mixed case - should be rejected
-      const duplicateResponse = await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'User@Example.COM',
-          password: 'DifferentPass',
-        })
-        .expect(409);
-
-      expect(duplicateResponse.body.message).toBe('Email already registered');
-
-      // Login should work with any casing (normalized internally)
-      await request(app.getHttpServer())
-        .post('/api/auth/login')
-        .send({
-          email: 'USER@EXAMPLE.COM',
-          password: 'Pass1234',
-        })
-        .expect(200);
-    });
-
-    it('should return 400 for invalid email format', async () => {
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'not-an-email',
-          password: 'SecurePass123',
-        })
-        .expect(400);
-    });
-
-    it('should return 400 for password too short', async () => {
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'test@example.com',
-          password: 'short',
-        })
-        .expect(400);
-    });
-
-    it('should return 400 for password too long', async () => {
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'test@example.com',
-          password: 'a'.repeat(129),
-        })
-        .expect(400);
-    });
-
-    it('should return 400 for missing required fields', async () => {
-      await request(app.getHttpServer()).post('/api/auth/register').send({}).expect(400);
-
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({ email: 'test@example.com' })
-        .expect(400);
-
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({ password: 'SecurePass123' })
-        .expect(400);
+        .send({ email: 'newuser@example.com', password: 'SecurePass123' })
+        .expect(404);
     });
   });
 
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
-      await request(app.getHttpServer()).post('/api/auth/register').send({
+      await createTestUser(prisma, {
         email: 'loginuser@example.com',
         password: 'LoginPass123',
         name: 'Login User',
@@ -200,6 +74,23 @@ describe('Auth (e2e)', () => {
           refreshToken: expect.any(String),
         },
       });
+
+      expect(response.body.user.id).toBeDefined();
+      expect(response.body.tokens.accessToken).toMatch(/^eyJ/);
+      // MT-1: формат refresh-токена — tenantId:tokenId:secret
+      expect(response.body.tokens.refreshToken).toMatch(
+        /^[a-f0-9-]{36}:[a-f0-9-]{36}:[a-f0-9]{64}$/,
+      );
+    });
+
+    it('should login with any email casing (normalized internally)', async () => {
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: 'LOGINUSER@EXAMPLE.COM',
+          password: 'LoginPass123',
+        })
+        .expect(200);
     });
 
     it('should return 401 for wrong password', async () => {
@@ -227,7 +118,7 @@ describe('Auth (e2e)', () => {
     });
 
     it('should return 401 for deactivated user', async () => {
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email: 'loginuser@example.com' },
       });
 
@@ -247,6 +138,31 @@ describe('Auth (e2e)', () => {
       expect(response.body.message).toBe('Account is deactivated');
     });
 
+    it('should return 401 for suspended tenant (MT-1)', async () => {
+      await prisma.tenant.update({
+        where: { id: DEFAULT_TENANT_ID },
+        data: { isActive: false },
+      });
+
+      try {
+        const response = await request(app.getHttpServer())
+          .post('/api/auth/login')
+          .send({
+            email: 'loginuser@example.com',
+            password: 'LoginPass123',
+          })
+          .expect(401);
+
+        // Той самий меседж, що й для юзера — без деталізації причини
+        expect(response.body.message).toBe('Account is deactivated');
+      } finally {
+        await prisma.tenant.update({
+          where: { id: DEFAULT_TENANT_ID },
+          data: { isActive: true },
+        });
+      }
+    });
+
     it('should return 400 for invalid request format', async () => {
       await request(app.getHttpServer()).post('/api/auth/login').send({}).expect(400);
 
@@ -261,12 +177,11 @@ describe('Auth (e2e)', () => {
     let refreshToken: string;
 
     beforeEach(async () => {
-      const response = await request(app.getHttpServer()).post('/api/auth/register').send({
+      const { tokens } = await createAndLoginTestUser(app, prisma, {
         email: 'refreshuser@example.com',
         password: 'RefreshPass123',
       });
-
-      refreshToken = response.body.tokens.refreshToken;
+      refreshToken = tokens.refreshToken;
     });
 
     it('should refresh access token with valid refresh token', async () => {
@@ -306,7 +221,7 @@ describe('Auth (e2e)', () => {
     });
 
     it('should return 401 for non-existent refresh token', async () => {
-      const fakeToken = '00000000-0000-0000-0000-000000000000:' + 'a'.repeat(64);
+      const fakeToken = `${DEFAULT_TENANT_ID}:00000000-0000-0000-0000-000000000000:${'a'.repeat(64)}`;
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken: fakeToken })
@@ -319,20 +234,30 @@ describe('Auth (e2e)', () => {
         .send({ refreshToken: 'malformed' })
         .expect(401);
 
+      // Старий (до-MT) формат tokenId:secret — тепер невалідний
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken: 'uuid:short' })
         .expect(401);
     });
 
+    it('should return 401 for token with mismatched tenant prefix', async () => {
+      // Зшитий токен: чужий (неіснуючий) tenant + валідні tokenId:secret
+      const [, tokenId, secret] = refreshToken.split(':');
+      const stitched = `11111111-1111-1111-1111-111111111111:${tokenId}:${secret}`;
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: stitched })
+        .expect(401);
+    });
+
     it('should revoke all tokens on theft detection (tampered secret)', async () => {
-      // Register another user to have multiple tokens in DB
-      await request(app.getHttpServer()).post('/api/auth/register').send({
+      // Інший юзер — щоб у БД було кілька токенів
+      await createAndLoginTestUser(app, prisma, {
         email: 'otheruser@example.com',
         password: 'OtherPass123',
       });
 
-      // Get current user tokens
       const tokensCountBefore = await prisma.refreshToken.count({
         where: { user: { email: 'refreshuser@example.com' } },
       });
@@ -340,8 +265,8 @@ describe('Auth (e2e)', () => {
       expect(tokensCountBefore).toBe(1);
 
       // Tamper with the secret part of the token (simulate token theft/modification)
-      const [tokenId] = refreshToken.split(':');
-      const tamperedToken = `${tokenId}:${'f'.repeat(64)}`;
+      const [tenantId, tokenId] = refreshToken.split(':');
+      const tamperedToken = `${tenantId}:${tokenId}:${'f'.repeat(64)}`;
 
       // Attempt to use tampered token - should trigger theft detection
       await request(app.getHttpServer())
@@ -369,13 +294,12 @@ describe('Auth (e2e)', () => {
     let accessToken: string;
 
     beforeEach(async () => {
-      const response = await request(app.getHttpServer()).post('/api/auth/register').send({
+      const { tokens } = await createAndLoginTestUser(app, prisma, {
         email: 'meuser@example.com',
         password: 'MePass123',
         name: 'Me User',
       });
-
-      accessToken = response.body.tokens.accessToken;
+      accessToken = tokens.accessToken;
     });
 
     it('should return current user profile with valid access token', async () => {
@@ -393,6 +317,8 @@ describe('Auth (e2e)', () => {
 
       expect(response.body.id).toBeDefined();
       expect(response.body.passwordHash).toBeUndefined();
+      // MT-1: tenantId — внутрішня колонка, назовні не віддається
+      expect(response.body.tenantId).toBeUndefined();
     });
 
     it('should return 401 without Authorization header', async () => {
@@ -435,12 +361,11 @@ describe('Auth (e2e)', () => {
     let accessToken: string;
 
     beforeEach(async () => {
-      const response = await request(app.getHttpServer()).post('/api/auth/register').send({
+      const { tokens } = await createAndLoginTestUser(app, prisma, {
         email: 'guardtest@example.com',
         password: 'GuardPass123',
       });
-
-      accessToken = response.body.tokens.accessToken;
+      accessToken = tokens.accessToken;
     });
 
     it('should allow access to public health endpoint without token', async () => {
@@ -463,20 +388,12 @@ describe('Auth (e2e)', () => {
       expect(response.body).toHaveProperty('total');
     });
 
-    it('should allow all auth endpoints without token', async () => {
-      await request(app.getHttpServer())
-        .post('/api/auth/register')
-        .send({
-          email: 'public@example.com',
-          password: 'PublicPass123',
-        })
-        .expect(201);
-
+    it('should allow auth endpoints without token', async () => {
       await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({
-          email: 'public@example.com',
-          password: 'PublicPass123',
+          email: 'guardtest@example.com',
+          password: 'GuardPass123',
         })
         .expect(200);
     });
@@ -484,20 +401,21 @@ describe('Auth (e2e)', () => {
 
   describe('JWT Payload Verification', () => {
     it('should include correct user data in JWT payload', async () => {
-      const registerResponse = await request(app.getHttpServer()).post('/api/auth/register').send({
+      const { user, tokens } = await createAndLoginTestUser(app, prisma, {
         email: 'jwttest@example.com',
         password: 'JwtPass123',
         name: 'JWT Test',
       });
 
-      const accessToken = registerResponse.body.tokens.accessToken;
-      const [, payloadBase64] = accessToken.split('.');
+      const payloadBase64 = tokens.accessToken.split('.')[1] ?? '';
       const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
 
       expect(payload).toMatchObject({
-        sub: registerResponse.body.user.id,
+        sub: user.id,
         email: 'jwttest@example.com',
         role: 'USER',
+        // MT-1: tenantId у клеймах — З РЯДКА БД
+        tenantId: DEFAULT_TENANT_ID,
       });
 
       expect(payload.iat).toBeDefined();

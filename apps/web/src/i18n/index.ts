@@ -5,7 +5,6 @@ import { en as zodEn } from 'zod/locales';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, commonEn, errorsEn, validationEn } from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
 import dashboardEn from '../locales/en/dashboard.json';
-import jobsEn from '../locales/en/jobs.json';
 import layoutEn from '../locales/en/layout.json';
 import usersEn from '../locales/en/users.json';
 
@@ -36,7 +35,6 @@ void i18n.use(initReactI18next).init({
       validation: validationEn,
       auth: authEn,
       dashboard: dashboardEn,
-      jobs: jobsEn,
       layout: layoutEn,
       users: usersEn,
     },

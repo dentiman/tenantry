@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { AllExceptionsFilter } from '@saas-skeleton/shared';
 
 /** Спільний сетап HTTP-шару — використовується в main.ts і e2e-тестах */
 export function configureApp(app: INestApplication): void {

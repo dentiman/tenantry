@@ -1,0 +1,41 @@
+{
+  "name": "@saas-skeleton/platform-web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "preview": "vite preview",
+    "codegen": "orval --config orval.config.ts"
+  },
+  "dependencies": {
+    "@heroui/react": "^3.2.2",
+    "@heroui/styles": "^3.2.2",
+    "@hookform/resolvers": "^5.2.0",
+    "@saas-skeleton/contracts": "workspace:*",
+    "@saas-skeleton/i18n": "workspace:*",
+    "@tanstack/react-query": "^5.90.0",
+    "@tanstack/react-router": "^1.130.0",
+    "axios": "^1.13.0",
+    "i18next": "^26.3.6",
+    "next-themes": "^0.4.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.60.0",
+    "react-i18next": "^17.0.9",
+    "zod": "^4.1.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "orval": "^7.13.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0"
+  }
+}

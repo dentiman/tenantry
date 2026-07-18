@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { PrismaModule } from '@saas-skeleton/database';
+import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
 import { JobsModule, StorageModule } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensHandler } from './handlers/cleanup-expired-tokens.handler';
@@ -18,6 +18,8 @@ import { MailerService } from './mail/mailer.service';
       envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'],
     }),
     LoggerModule.forRootAsync(loggerConfig),
+    // MT: без резолвера — tenantId приходить у payload джоби (JobWorkerRegistrar піднімає CLS)
+    TenancyModule.forRoot(),
     PrismaModule,
     JobsModule.forWorker(),
     StorageModule,

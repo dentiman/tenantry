@@ -31,37 +31,6 @@
         ]
       }
     },
-    "/api/auth/register": {
-      "post": {
-        "operationId": "authRegister",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthResponseDto_Output"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "auth"
-        ]
-      }
-    },
     "/api/auth/login": {
       "post": {
         "operationId": "authLogin",
@@ -550,133 +519,6 @@
           "files"
         ]
       }
-    },
-    "/api/jobs": {
-      "get": {
-        "operationId": "jobsFindAll",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "default": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 20,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "state",
-                "createdAt",
-                "startedAt",
-                "completedAt"
-              ]
-            }
-          },
-          {
-            "name": "sortOrder",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "asc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            }
-          },
-          {
-            "name": "state",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "created",
-                "retry",
-                "active",
-                "completed",
-                "cancelled",
-                "failed"
-              ]
-            }
-          },
-          {
-            "name": "queue",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobListResponseDto_Output"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "jobs"
-        ]
-      }
-    },
-    "/api/jobs/queues": {
-      "get": {
-        "operationId": "jobsQueues",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QueueStatsResponseDto_Output"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "jobs"
-        ]
-      }
     }
   },
   "info": {
@@ -696,7 +538,7 @@
       }
     },
     "schemas": {
-      "RegisterDto": {
+      "LoginDto": {
         "type": "object",
         "properties": {
           "email": {
@@ -704,12 +546,11 @@
           },
           "password": {
             "type": "string",
-            "minLength": 8,
-            "maxLength": 128
+            "minLength": 1
           },
-          "name": {
+          "tenant": {
             "type": "string",
-            "nullable": true
+            "maxLength": 63
           }
         },
         "required": [
@@ -811,22 +652,6 @@
           "tokens"
         ],
         "additionalProperties": false
-      },
-      "LoginDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
       },
       "RefreshDto": {
         "type": "object",
@@ -1370,177 +1195,6 @@
         "required": [
           "url",
           "expiresInSeconds"
-        ],
-        "additionalProperties": false
-      },
-      "JobListResponseDto_Output": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "state": {
-                  "type": "string",
-                  "enum": [
-                    "created",
-                    "retry",
-                    "active",
-                    "completed",
-                    "cancelled",
-                    "failed"
-                  ]
-                },
-                "retryCount": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "retryLimit": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "singletonKey": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "createdAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "startedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                  "nullable": true
-                },
-                "completedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                  "nullable": true
-                },
-                "data": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "output": {
-                  "type": "string",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "id",
-                "name",
-                "state",
-                "retryCount",
-                "retryLimit",
-                "singletonKey",
-                "createdAt",
-                "startedAt",
-                "completedAt",
-                "data",
-                "output"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "totalPages": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ],
-        "additionalProperties": false
-      },
-      "QueueStatsResponseDto_Output": {
-        "type": "object",
-        "properties": {
-          "queues": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "created": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "retry": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "active": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "completed": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "cancelled": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "failed": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "total": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                }
-              },
-              "required": [
-                "name",
-                "created",
-                "retry",
-                "active",
-                "completed",
-                "cancelled",
-                "failed",
-                "total"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "queues"
         ],
         "additionalProperties": false
       }

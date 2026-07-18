@@ -38,14 +38,25 @@
 > Головний принцип: мультитенантність **невидима для бізнес-коду** — ні `where: { tenantId }`,
 > ні передачі tenantId у `create`; усе робить інфраструктура (CLS + extension + RLS + DB-default).
 
-1. **MT-0** — DB-ролі (`saas_migrator`/`saas_app`/`saas_platform`) + розділення env-URL-ів.
-   **MT-1** — фундамент без RLS: `Organization` (= tenant), `tenant_id` на tenant-таблицях,
-   `nestjs-cls` + Prisma extension (`set_config`, не `where`), `withTenantTx`; черги — tenantId
-   у payload + `cls.run` у воркері.
-2. **MT-2** — увімкнення RLS: політики `USING`+`WITH CHECK`, DB-default на `tenant_id`,
-   тести ізоляції (два тенанти / конкурентний / SQL-smoke / CI-чек `pg_policies`).
-3. **MT-3** — control plane: окремий `apps/platform-api` (окремі identity, JWT-ключі, `BYPASSRLS`-роль),
-   CRUD тенантів, глобальні довідники. Data plane фізично не має крос-tenant коду.
+1. ✅ **MT-0** (2026-07-16) — DB-ролі (`saas_migrator`/`saas_app`/`saas_platform`) + розділення
+   env-URL-ів. ✅ **MT-1** (2026-07-16) — фундамент без RLS: `Tenant`, `tenant_id` на
+   tenant-таблицях, `TenancyModule` (nestjs-cls + extension `set_config`, не `where`),
+   `withTenantTx`; черги — tenantId у payload + `cls.run` у воркері; register видалено;
+   refresh `tenantId:tokenId:secret`. Деталі і спіймані граблі — CLAUDE.md шапка + migration-док.
+2. ✅ **MT-2** (2026-07-16) — RLS увімкнено: політики `USING`+`WITH CHECK` (+FORCE, крім
+   `tenants` — там SECURITY DEFINER `resolve_tenant`), тести ізоляції (два тенанти /
+   CLS-конкурентний / SQL-smoke fail-closed / авточек `pg_policies` у e2e). 67 e2e зелені,
+   живий фан-аут під RLS. Доменний код не змінювався.
+3. ✅ **MT-3** (2026-07-17) — control plane: `apps/platform-api` (:3002, `platform_users`,
+   окремий `PLATFORM_JWT_SECRET`, роль `saas_platform`); гейт дотримано — `/jobs` переїхав
+   ПЕРЕД CRUD тенантів (з tenant-api і web видалено); CRUD тенантів (create+перший admin
+   атомарно, suspend/resume); slug-login end-to-end (`SlugTenantResolver` + поле на формі).
+   63+11 e2e, живий прогін: create tenant → slug-login → ізоляція. Глобальні довідники —
+   відкладено до першого реального довідника (та сама логіка, що рівень 3).
+   ✅ **`apps/platform-web`** (2026-07-17) — клон каркасу `apps/web` (Vite/TanStack/HeroUI/orval):
+   сторінки Tenants (CRUD + suspend/resume через AlertDialog) і Jobs (моніторинг, той самий
+   `createDataGrid`, що був у tenant-web). Живий прогін у браузері: login → create tenant
+   з форми → suspend/resume → сесія переживає F5 → jobs-таблиця з реальними даними.
 4. **RBAC** (після MT-2, поверх готового tenant-контексту): мапа role → permissions
    у `libs/contracts`, `@RequirePermissions('tickets:write')` + guard.
 5. Наскрізний correlationId у чергах (зафіксовано 2026-07-12, робити разом із nestjs-cls
@@ -57,7 +68,7 @@
    уже зроблено у фазі 2. Див. також Observability у фазі 5.
 
 Single-tenant форки скелетона це не ускладнює: колонка `tenant_id` є завжди, single-tenant —
-це просто **N=1** (один рядок `Organization`, id з env, control plane не деплоїться). Схема БД
+це просто **N=1** (один рядок `Tenant`, id з env, control plane не деплоїться). Схема БД
 і доменний код у обох режимах ідентичні; `if (multiTenant)` у коді немає.
 
 ## Фаза i18n — мультиязичність (зафіксовано 2026-07-12; виконати ДО фази 4)

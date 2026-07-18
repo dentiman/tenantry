@@ -1,0 +1,48 @@
+# База даних — seed-дані та повний ресет
+
+> Стосується проєкту в цілому (БД одна на весь монорепо — і `apps/api`, і `apps/platform-api`,
+> і `apps/worker` ходять у неї), тому винесено з мультитенантних доків окремо. Механіка ролей
+> Postgres і RLS, від яких залежить сам факт, чому seed іде під певною роллю, а не будь-якою —
+> [multi-tenancy-architecture.md](multi-tenancy-architecture.md) (§4 «Ролі Postgres»).
+
+Джерело: [libs/database/prisma/seed.ts](../libs/database/prisma/seed.ts),
+[libs/database/scripts/reset-db.ts](../libs/database/scripts/reset-db.ts).
+
+## Стандартні ідентичності
+
+Свіжий дев-інстанс (після `pnpm db:seed` або повного `pnpm db:reset`) завжди піднімається
+з рівно трьома стандартними ідентичностями — не випадковими даними, а фіксованими,
+передбачуваними значеннями, на які можна покладатись у скриптах/тестах/демо:
+
+| Хто               | Де                               | Логін                  | Пароль          | Роль                                                                                                                    |
+| ----------------- | -------------------------------- | ---------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Tenant            | `tenants`                        | slug `default`         | —               | `id` = well-known `00000000-0000-4000-8000-000000000001` (той самий у `StaticTenantResolver`-fallback і в RLS-міграції) |
+| Tenant-адмін      | `users`, у tenant `default`      | `admin@example.com`    | `Admin12345`    | `ADMIN`                                                                                                                 |
+| Platform-оператор | `platform_users` (control plane) | `platform@example.com` | `Platform12345` | — (без ролей, оператор над усіма tenant-ами)                                                                            |
+
+Обидва юзери — `upsert` за унікальним ключем (`tenantId_email` / `email`), тому `pnpm db:seed`
+можна запускати повторно на вже заповненій БД без побічних ефектів — існуючі рядки не
+чіпаються (`update: {}`), нові з'являються, тільки якщо їх іще немає.
+
+## `pnpm db:reset` — повний цикл в одну команду
+
+Для «почати геть з нуля»:
+
+```
+DROP DATABASE (WITH FORCE) → CREATE DATABASE → db:roles → db:migrate:deploy → db:seed
+```
+
+Свідомо **не** `prisma migrate reset`. Той дропає й перестворює саму схему `public`
+(не всю БД), а `ALTER DEFAULT PRIVILEGES FOR ROLE saas_migrator IN SCHEMA public GRANT ...`
+(`ensure-roles.ts`, [multi-tenancy-architecture.md §4](multi-tenancy-architecture.md#4-ролі-postgres))
+прив'язаний до **OID** конкретної схеми — після `DROP SCHEMA`/`CREATE SCHEMA` OID новий,
+і правило default-privileges для старої схеми більше ні на що не діє: щойно замігровані
+таблиці `saas_app` не отримає жодних прав автоматично, RLS-політики й `resolve_tenant` при
+цьому відновляться (вони в самій міграції), а от DML-гранти — ні. `reset-db.ts` уникає цього,
+дропаючи й перестворюючи **цілу БД** (кластерний рівень: ролі й прив'язки схема↔дефолт-привілеї
+не існують до першого `db:roles`-виклику на свіжій БД — `ensure-roles.ts` встановлює їх заново
+явно, не покладаючись на те, що щось «саме зберіглось»).
+
+Запобіжник: скрипт відмовляється виконуватись, якщо host у `POSTGRES_ADMIN_URL` не
+`localhost`/`127.0.0.1` — це не заміна обережності, а страховка від фатальної помилки з
+неправильним `.env`.

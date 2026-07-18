@@ -1,6 +1,5 @@
 import type { z } from 'zod';
 import type {
-  RegisterSchema,
   LoginSchema,
   RefreshSchema,
   AuthTokensSchema,
@@ -8,7 +7,6 @@ import type {
   MeResponseSchema,
 } from './auth.schema';
 
-export type Register = z.infer<typeof RegisterSchema>;
 export type Login = z.infer<typeof LoginSchema>;
 export type Refresh = z.infer<typeof RefreshSchema>;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

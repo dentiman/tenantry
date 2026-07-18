@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   CreateBucketCommand,
@@ -10,6 +12,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { TenantContextService } from '@saas-skeleton/database';
 
 // Дефолти = SeaweedFS із docker-compose (як SMTP-дефолти MailerService → Mailpit)
 const DEFAULT_ENDPOINT = 'http://localhost:8333';
@@ -48,7 +51,7 @@ export class StorageService implements OnModuleInit {
   private readonly client: S3Client;
   readonly bucket: string;
 
-  constructor() {
+  constructor(private readonly tenantContext: TenantContextService) {
     this.bucket = process.env.S3_BUCKET ?? DEFAULT_BUCKET;
     this.client = new S3Client({
       endpoint: process.env.S3_ENDPOINT ?? DEFAULT_ENDPOINT,
@@ -117,6 +120,21 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /**
+   * Ключ нового об'єкта: {tenantId}/{yyyy}/{mm}/{uuid}[.ext] — без оригінальної назви.
+   * MT-1: tenant-префікс береться з контексту ТУТ (інфраструктура), щоб доменний
+   * files.service лишався tenant-agnostic. Поза tenant-контекстом — помилка (fail-closed).
+   */
+  buildObjectKey(filename: string): string {
+    const tenantId = this.tenantContext.requireTenantId();
+    const now = new Date();
+    const yyyy = String(now.getUTCFullYear());
+    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const ext = extname(filename).toLowerCase();
+    const safeExt = /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
+    return `${tenantId}/${yyyy}/${mm}/${randomUUID()}${safeExt}`;
+  }
+
   /** Presigned PUT. ContentType підписується — клієнт зобов'язаний слати саме заявлений MIME */
   async getUploadUrl(key: string, mimeType: string): Promise<string> {
     return getSignedUrl(
@@ -144,9 +162,7 @@ export class StorageService implements OnModuleInit {
   /** null — об'єкта немає (upload не відбувся або ключ хибний) */
   async headObject(key: string): Promise<{ size: number } | null> {
     try {
-      const head = await this.client.send(
-        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
-      );
+      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
       return { size: head.ContentLength ?? 0 };
     } catch (error) {
       if (isNotFoundError(error)) {

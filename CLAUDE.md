@@ -10,15 +10,43 @@
 **I18N-3 завершена і перевірена** (2026-07-12): `users.locale` у БД, реальна відправка welcome-email через Mailpit локаллю юзера (закрито й давній пункт фази 2).
 **DataGrid-фільтри завершені і перевірені** (2026-07-13): фільтри гріда декларуються масивом (як columns), Search→Filters перейменування, /jobs мігровано на DataGrid (+сортування).
 **Files v1 завершена і перевірена** (2026-07-14): S3-сумісне сховище (dev: SeaweedFS у compose), двофазний presigned-upload, magic-bytes валідація, thumbnail (sharp у worker), cron-очистка PENDING, демо — аватар користувача на /users. Перевірено живим прогоном: PUT у SeaweedFS, CORS preflight, відхилення підробленого MIME.
+**`pnpm db:reset` завершений і перевірений** (2026-07-17): один деструктивний dev-скрипт
+(`libs/database/scripts/reset-db.ts`) — DROP+CREATE DATABASE (як суперюзер, `WITH (FORCE)` рве
+активні конекшени) → `db:roles` → `db:migrate:deploy` → `db:seed`; відмовляється працювати
+проти нелокального host. **Свідомо НЕ `prisma migrate reset`**: той дропає/перестворює лише
+схему `public`, а `ALTER DEFAULT PRIVILEGES ... IN SCHEMA public` (`ensure-roles.ts`)
+прив'язаний до OID схеми — новий OID після перестворення інвалідує грант, і `saas_app`
+лишається без прав на щойно замігровані таблиці; DROP/CREATE усієї БД цього уникає, а ролі й
+default-privileges `ensure-roles.ts` перевстановлює явно й ідемпотентно. Дефолтні сід-дані
+(`libs/database/prisma/seed.ts`, вже існували з MT-1/MT-3, тепер задокументовані явно):
+tenant `slug=default` + tenant-адмін `admin@example.com`/`Admin12345` + platform-оператор
+`platform@example.com`/`Platform12345` — обидва upsert, ідемпотентні. Перевірено живим
+прогоном: `pnpm db:reset` на dev-БД → усі 7 міграцій застосувались чисто → `saas_app` бачить
+свій tenant тільки з контекстом (fail-closed без) і НЕ має прав на `platform_users`
+(`permission denied`, не порожній результат) → `saas_platform` бачить усе → логін в обох API
+з дефолтними кредами відпрацював.
+**apps/platform-web завершений і перевірений** (2026-07-17): UI control plane — клон каркасу `apps/web` (Vite/TanStack Router+Query/Zustand/HeroUI/react-i18next/orval, порт 5174, проксі на :3002). `data-grid/`, `form/`, `theme-switcher.tsx`, `api-error.ts` скопійовані БЕЗ ЗМІН (generic, спільний `ApiError`-конверт). Сторінки: **Tenants** (`/`) — плоска таблиця (НЕ `createDataGrid`: `GET /tenants` без пагінації/фільтрів, заводити фейкову route-search-схему заради переюзання гріда було б зайвим) + `CreateTenantModal` + suspend/resume через `AlertDialog`; **Jobs** (`/jobs`) — перенесено з tenant-web 1:1 (контракт не змінювався, переїхав тільки хост). Auth-стор — свідомий trade-off: access-токен (60m, без refresh) напряму в localStorage, а не тільки в пам'яті (як tenant-web) — інакше сесія губилася б на F5. Грабля: **vite/rollup резолвить workspace-субпаті через `package.json` `exports`, а НЕ через tsconfig `paths`/webpack alias** — `@saas-skeleton/contracts/platform` падав у build із «Rollup failed to resolve import», доки `libs/contracts/package.json` не отримав явний `exports: { ".": ..., "./platform": ... }` (tsc і webpack цю мапу ігнорують, тому раніше проблема не проявлялась). Перевірено живим прогоном у браузері: login оператором → реальний список тенантів із БД → New tenant через форму створює tenant+admin атомарно → Suspend/Resume з AlertDialog-підтвердженням → сесія переживає F5 → Jobs показує реальні джоби з попередніх фаз; консоль без помилок; `pnpm build` 6/6 таргетів.
+**MT-3 завершена і перевірена** (2026-07-17): control plane — `apps/platform-api` (порт 3002). Окрема identity `platform_users` (міграція робить `REVOKE ALL FROM saas_app` — tenant-api її навіть не читає), **окремий `PLATFORM_JWT_SECRET`** (без фолбека — токени plane-ів не крос-валідні, перевірено 401 в обидва боки), роль `saas_platform` через `SystemPrismaModule` (TenancyModule/PrismaModule у графі ВІДСУТНІ — §6 плану). Гейт дотримано: **`/jobs` переїхав ПЕРЕД CRUD тенантів** (модуль цілком + web-сторінка/роут/i18n видалені; у tenant-api /jobs → 404). CRUD тенантів: create = `Tenant` + перший admin (пароль від оператора) в одній транзакції, suspend/resume → login у data plane 401. **Slug-login працює end-to-end**: поле `tenant` у Login → `SlugTenantResolver` → `resolve_tenant(slug)`; web — опційне поле Organization. Контракти — `@saas-skeleton/contracts/platform` (subpath, НЕ реекспортується з index; свій openapi.json). `AllExceptionsFilter` переїхав у `libs/shared/errors` (обидва plane-и; subpath-імпорт, щоб не тягнути pg-boss/aws-sdk). Тести: 63 tenant e2e + 11 platform e2e. Живий прогін: operator login → create tenant → slug-login у нього → бачить ЛИШЕ себе; suspend → 401. Граблі: (1) **paths у app-tsconfig мертві** (extends ЗАМІНЮЄ paths, а успадкований baseUrl вказує на корінь репо; резолюція йшла через node_modules-симлінки, subpath так не працює) → у platform-api власний `baseUrl: "."`; (2) **звірка guard-ом «токен vs резолвлений tenant» мусить бути умовною** — введено `TenantResolution.authoritative` (Static/піддомен — завжди; slug — лише коли slug присутній; інакше авторитет у підписаного токена), без цього легальний токен tenant-а B падав на fallback-контексті A.
+**MT-2 завершена і перевірена** (2026-07-16): RLS увімкнено — ізоляція тенантів стала enforcement-ом БД. Політики `tenant_isolation` (FOR ALL, USING+WITH CHECK, `(SELECT nullif(current_setting('app.tenant_id', true), ''))` — InitPlan) + ENABLE/FORCE на users/refresh_tokens/files/attachments; `tenants` — політика `own_tenant` БЕЗ FORCE (свідомо: `resolve_tenant(slug)` — SECURITY DEFINER від власника, FORCE осліпив би її); `resolve_tenant()` з `SET search_path`, EXECUTE тільки saas_app (перебір тенантів неможливий). Сід → під `saas_platform` (upsert tenant-а під saas_app падав би на WITH CHECK). Тести: e2e тепер 67 (6 сьютів) — прямі prisma-доступи тестів переведені на `SystemPrismaService` (BYPASSRLS; під saas_app поза CLS вони бачили б 0 рядків), `setup-env.ts` ПЕРЕЗАПИСУЄ `PLATFORM_DATABASE_URL` на тестову БД (інакше тести чистили б dev!); нові `rls.e2e-spec` (fail-closed 0 рядків без контексту, INSERT падає на політиці, transaction-local set_config, авточек `pg_policies` — ловить «забули політику», працює в CI без окремого кроку) і `tenant-isolation.e2e-spec` (list A не бачить B; get/patch/delete чужого ID → 404; JWT tenant-а B у контексті A → 401 від guard-звірки; CLS-конкурентність runWith A/B без перетікання; login юзера B у контексті A → 401). Живий прогін під RLS: login → create user → fan-out → welcome-лист (handler читає юзера крізь tenant-CLS). Доменний код у фазі НЕ змінювався.
+**MT-1 завершена і перевірена** (2026-07-16): мультитенантний фундамент БЕЗ RLS (вмикається у MT-2). `Tenant`/`tenants` + `tenant_id NOT NULL` на users/refresh_tokens/files/attachments (експанд→бекфіл→NOT NULL, композитні FK, tenant-префіксні індекси); `TenancyModule.forRoot({ resolver })` у `libs/database/src/tenant/` (CLS + StaticTenantResolver + middleware на всі роути включно з @Public); PrismaService = tenant-extended клієнт (batch-tx `set_config` на кожну операцію; голий клієнт — токен `PRISMA_BASE`); `tenant_id` заповнює DB-default `nullif(current_setting('app.tenant_id'),'')` + `@default(dbgenerated(...))` у схемі (робить поле опційним у Prisma-типах — доменний код його НЕ передає); транзакції — ТІЛЬКИ `TenantTransactions.withTenantTx` (голий `$transaction` заборонено ESLint-ом, бо обходить extension); черги: `defineTenantJob` (схема примусово + tenantId), dispatcher домішує tenantId з CLS, registrar піднімає CLS з payload, дві cron-джоби — scope system під `SystemPrismaService` (BYPASSRLS); `POST /auth/register` видалено ЗОВСІМ (+web-сторінка, контракти, orval); login перевіряє `tenant.isActive`; refresh-токен `tenantId:tokenId:secret`; JWT += tenantId (з рядка БД); tenantId у кожному лог-записі (pino mixin з CLS). Перевірено: 57 e2e, живий фан-аут create user → payload обох джоб з tenantId → worker CLS → welcome-лист; tenantId НЕ витікає у відповіді API. Граблі, спіймані наживо: (1) **Zod 4 `z.uuid()` — строгий RFC** (version-ніббл): well-known id тенанта мусив стати `00000000-0000-4000-8000-000000000001`; (2) **pg-boss install робить `CREATE SCHEMA IF NOT EXISTS`, а Postgres перевіряє ACL ДО існування** → saas_app потребує `GRANT CREATE ON DATABASE`; (3) дві вимушені правки домену (НЕ tenant-логіка): `users.service` findUnique(email)→findFirst (unique тепер композитний), `files.service` buildKey→`storage.buildObjectKey` (tenant-префікс живе в інфрі).
+**MT-0 завершена і перевірена** (2026-07-16): три ролі Postgres (`saas_migrator` — власник схеми/міграції з CREATEDB під shadow-DB; `saas_app` — runtime api/worker БЕЗ DDL і BYPASSRLS; `saas_platform` — BYPASSRLS під майбутній control plane). Свіжий volume — `docker/postgres/init/01-roles.sql`; наявна БД/CI/тестова — ідемпотентний `pnpm db:roles` (переприсвоює і власників наявних таблиць, включно з pgboss). `MIGRATE_DATABASE_URL` (prisma.config.ts БЕЗ фолбека на DATABASE_URL — міграція під saas_app має впасти, а не пройти тихо); схема pgboss належить saas_app (pg-boss сам мігрує свої таблиці). Перевірено: свіжий init у throwaway-контейнері, db:roles на живій dev-БД, негативний DDL-тест під saas_app, 61 e2e, живі worker (5 хендлерів) і api (login).
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
 `docs/file-storage.md` (файлова підсистема: структура, presigned-флоу, приклад end-to-end на аватарі,
 формати запитів/відповідей),
+`docs/database-seed.md` (стандартні seed-ідентичності — дефолтні tenant/tenant-адмін/platform-оператор
+— і `pnpm db:reset`: чому НЕ `prisma migrate reset`; винесено окремо від MT-доків, бо стосується
+всього проєкту, не тільки мультитенантності),
+`docs/multi-tenancy-architecture.md` (мультитенантність — ЯК ЦЕ ПРАЦЮЄ ЗАРАЗ: довідник поточного
+стану без історії рішень — топологія 5 застосунків, схема БД, RLS, механіка контексту,
+auth обох plane-ів, черги, наскрізний приклад, контракт для нового доменного модуля; починати
+звідси, якщо треба зрозуміти архітектуру, а не її еволюцію),
 `docs/multi-tenancy-plan.md` (мультитенантність — ЧОМУ: зафіксовані рішення + RLS-механіка +
 таксономія таблиць; переглядає два рішення від 2026-07-11 — RLS і Membership),
-`docs/multi-tenancy-migration.md` (мультитенантність — ЯК: план переходу MT-0…MT-4, кроки/SQL/файли/
-DoD/відкат, точки дотику в коді, 2 відомі поломки — `auth.service` по email і `/jobs` поза RLS),
+`docs/multi-tenancy-migration.md` (мультитенантність — ЯК ДІЙШЛИ: план переходу MT-0…MT-4,
+кроки/SQL/файли/DoD/відкат, точки дотику в коді, 2 відомі поломки — `auth.service` по email
+і `/jobs` поза RLS),
 `README.md` (quickstart).
 
 ## Команди
@@ -32,15 +60,31 @@ pnpm db:generate          # Prisma client → libs/database/src/generated (gitig
 pnpm db:migrate:dev       # міграції (dev; НЕ передавати ім'я через `pnpm ... -- --name X` —
                           # pnpm дублює `--`, prisma йде в інтерактивний prompt і висить;
                           # `cd libs/database && pnpm exec prisma migrate dev --name X`)
-pnpm db:seed              # admin@example.com / Admin12345
+pnpm db:seed              # дефолтні сід-дані: tenant "default" + admin@example.com/Admin12345
+                          # (tenant-адмін) + platform@example.com/Platform12345 (platform-оператор);
+                          # ідемпотентний upsert — можна ганяти повторно на живій БД
 pnpm api:dev              # API: http://localhost:3001, Swagger: /api/docs
+pnpm platform:dev         # Control plane: http://localhost:3002 (MT-3; свій Swagger /api/docs,
+                          # окремий JWT-secret; юзер — platform@example.com / Platform12345 із сіда)
 pnpm worker:dev           # Worker: pg-boss споживачі + cron + welcome-email (окремий процес, без HTTP)
 pnpm web:dev              # Web: http://localhost:5173 (Vite проксі /api → 3001)
+pnpm platform:web:dev     # Platform web: http://localhost:5174 (Vite проксі /api → 3002)
 pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
+pnpm platform:web:codegen # orval: apps/platform-api/openapi.json → apps/platform-web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 47 jest+supertest тестів; ВИМАГАЄ запущеного Postgres. Ганяються в ОКРЕМІЙ
-                          # БД saas_skeleton_test (globalSetup сам створює її і мігрує) — dev-дані не чіпає
+pnpm api:test:e2e         # 63 тести tenant-api (rls, tenant-isolation, slug-login); ВИМАГАЄ Postgres.
+                          # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
+                          # і мігрує під saas_migrator; тести ходять під saas_app) — dev-дані не чіпає
+pnpm platform:test:e2e    # 11 тестів control plane (operator auth, tenants CRUD, jobs, cross-plane 401)
+pnpm db:roles             # MT-0: ідемпотентно створює ролі saas_migrator/saas_app/saas_platform і гранти
+                          # (для НАЯВНОЇ БД; свіжий volume отримує їх сам з docker/postgres/init)
+pnpm db:reset             # ДЕСТРУКТИВНО (dev-only, відмовляє на нелокальному host): DROP+CREATE
+                          # DATABASE → db:roles → db:migrate:deploy → db:seed за одну команду.
+                          # СВІДОМО не `prisma migrate reset` — той дропає/перестворює тільки схему
+                          # public, а ALTER DEFAULT PRIVILEGES прив'язаний до OID схеми: новий OID
+                          # після перестворення інвалідує грант saas_app і воно лишається без прав
+                          # (libs/database/scripts/reset-db.ts)
 ```
 
 Після зміни контрактів/контролерів завжди: `openapi:generate` → `web:codegen` (обидва артефакти комітяться).
@@ -49,15 +93,27 @@ pnpm api:test:e2e         # 47 jest+supertest тестів; ВИМАГАЄ за�
 
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, files (presigned upload/download),
-                jobs (read-only моніторинг черг: raw SQL до pgboss.job, 42P01 → порожньо), health.
+                health (jobs-моніторинг переїхав у platform-api на MT-3).
                 Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
+apps/platform-api  NestJS 11 (MT-3, control plane, :3002): platform-auth (platform_users, окремий
+                JWT-secret), tenants CRUD (create+перший admin атомарно, suspend/resume),
+                jobs (моніторинг черг — переїхав СЮДИ з tenant-api: pgboss.* поза RLS).
+                SystemPrismaModule (saas_platform, BYPASSRLS); TenancyModule НЕ імпортує (§6 плану).
+                Контракти — @saas-skeleton/contracts/platform (subpath), свій openapi.json
 apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss,
                 MailerService (nodemailer → Mailpit), плейн i18next для email-контенту
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system),
                 react-i18next
+apps/platform-web  Той самий стек, що apps/web (клон каркасу, MT-3, :5174, проксі на :3002).
+                Сторінки: Tenants (плоска таблиця — GET /tenants без пагінації, DataGrid не
+                потрібен) + CreateTenantModal + suspend/resume; Jobs (перенесено з web 1:1,
+                createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в localStorage
+                (не тільки в пам'яті, як web) — інакше сесія губилась би на F5
 libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod)
-libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global)
+libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global).
+                MT: `src/tenant/` — TenancyModule.forRoot({resolver}), TenantContextService (CLS),
+                TenantTransactions.withTenantTx, tenant-extension (set_config); SystemPrismaService (BYPASSRLS)
 libs/i18n       Спільні i18next-ресурси для web (common/errors/validation); worker НЕ споживає —
                 свій контент локально (apps/worker/src/locales), спільного поки немає
 libs/shared     Черги: defineJob (Zod payload), JobDispatcher (абстракція, pg-boss замінюваний),
@@ -78,10 +134,14 @@ docker/         compose (name: saas-skeleton — namespaced volume, НЕ при�
 (`@ApiOkResponse({ type: Dto.Output })`, `cleanupOpenApiDoc`) → `openapi.json` → orval →
 TanStack Query hooks (`useAuthLogin`, `useUsersFindAll`, …). Ручних типів API не існує.
 
-**Auth (порт із fibo-admin «як є», рішення користувача):** access JWT 15m (`{ sub, email, role }`) +
-refresh `tokenId:secret` (secret → argon2-хеш у `refresh_tokens`), ротація на кожен refresh,
+**Auth (порт із fibo-admin, MT-1 2026-07-16):** access JWT 15m (`{ sub, email, role, tenantId }` —
+tenantId ЗАВЖДИ з рядка БД) + refresh **`tenantId:tokenId:secret`** (тенант на /refresh резолвиться
+з префікса токена; secret → argon2-хеш у `refresh_tokens`), ротація на кожен refresh,
 theft detection (невірний secret при валідному tokenId → відкликання всіх сесій юзера).
-Глобальний `JwtAuthGuard` (APP_GUARD, без Passport), відкриті роути — `@Public()`.
+**register ВИДАЛЕНО зовсім** — юзерів створює tenant-адмін (create user), тенантів — platform-api (MT-3).
+Login шукає юзера findFirst у резолвленому tenant-і й перевіряє і `user.isActive`, і `tenant.isActive`
+(однаковий 401). Глобальний `JwtAuthGuard` (APP_GUARD, без Passport) звіряє `payload.tenantId`
+з резолвленим контекстом і перезаписує CLS; відкриті роути — `@Public()`.
 Фронт: access-токен тільки в пам'яті (Zustand), refresh у localStorage `saas_refresh_token`,
 axios-інтерсептор із single-flight refresh на 401 (`apps/web/src/api/http-client.ts`).
 
@@ -207,18 +267,18 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 
 ## Зафіксовані рішення (НЕ переглядати без запиту користувача)
 
-| Питання           | Рішення                                                                                                                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                       |
-| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено). ✅ Реалізовано у фазі 2.1 за власним інтерфейсом `JobDispatcher`; транзакційна постановка — `send(..., { tx })` через `fromPrisma`   |
-| Мультитенантність | **Реалізація відкладена, напрямок зафіксовано 2026-07-15** — `docs/multi-tenancy-plan.md` (фази MT-1…MT-4). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и: `apps/api` (tenant) + `apps/platform-api` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк |
-| Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                              |
-| Zod               | v4 (закрито у фазі 1)                                                                                                                                                               |
-| Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                     |
-| Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало |
-| Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)          |
-| Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог |
-| i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md` |
+| Питання           | Рішення                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено). ✅ Реалізовано у фазі 2.1 за власним інтерфейсом `JobDispatcher`; транзакційна постановка — `send(..., { tx })` через `fromPrisma`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Мультитенантність | **MT-0…MT-3 реалізовано й перевірено 2026-07-16/17** (фази MT-1…MT-4 — `docs/multi-tenancy-plan.md`; лишилась тільки MT-4/беклог). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и, ОБИДВА з UI: `apps/api`+`apps/web` (tenant) і `apps/platform-api`+`apps/platform-web` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк |
+| Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Zod               | v4 (закрито у фазі 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                               |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
 
@@ -228,11 +288,18 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
   ротованого токена дає 401, але НЕ відкликає інші сесії (рядок видалено; треба `revokedAt`
   замість delete); (б) refresh у httpOnly cookie замість localStorage.
 - **Мультитенантність (фази MT-0…MT-4)**: рішення — `docs/multi-tenancy-plan.md`, план переходу —
-  `docs/multi-tenancy-migration.md`. DB-ролі (MT-0) → `Organization` (= tenant) + `tenant_id` +
-  nestjs-cls/extension (MT-1) → політики RLS + тести ізоляції (MT-2) → `apps/platform-api` (MT-3).
-  Еталонний домен для обкатки — customers (писати вже БЕЗ згадок tenantId). Усі відкриті питання
-  закриті 2026-07-15: `/jobs` переїжджає в platform-api на MT-3 (гейт: ДО CRUD тенантів, бо
-  `pgboss.*` поза RLS); перший admin тенанта — invite-лінк (оператор не знає пароля); `slug` — у MT-1.
+  `docs/multi-tenancy-migration.md`. ✅ MT-0 (ролі БД), ✅ MT-1 (фундамент без RLS),
+  ✅ MT-2 (RLS увімкнено), ✅ MT-3 (`apps/platform-api` + `apps/platform-web`) — зроблені
+  й перевірені 2026-07-16/17 (див. шапку). Лишилась тільки MT-4/беклог (піддомени, invite-флоу,
+  білінг, рівень 3 довідників).
+  Еталонний домен для обкатки — customers (писати вже БЕЗ згадок tenantId). Відкриті питання
+  закриті 2026-07-15…17: `/jobs` переїхав у platform-api на MT-3 (гейт дотримано — ДО CRUD
+  тенантів, бо `pgboss.*` поза RLS); сутність tenant-а = **`Tenant`/`tenants`** (перейменовано
+  з Organization — «організація» лишається вільним доменним словом); **register видалено
+  зовсім** (MT-1); refresh-токен → `tenantId:tokenId:secret`; login перевіряє `tenant.isActive`;
+  slug — у MT-1, логін по slug (ручне поле, MT-3) працює end-to-end у tenant-web; invite
+  першого admin-а — відкладено на MT-4 (тимчасово пароль задає оператор, платформа задає
+  через `apps/platform-web`).
 - RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard (після MT-2, поверх
   готового tenant-контексту).
 - Доменні модулі: customers (еталонний CRUD) → tickets (workflow + події) → billing

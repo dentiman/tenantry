@@ -15,7 +15,10 @@ export class MailerService implements OnModuleDestroy {
       port: configService.get<number>('SMTP_PORT', 1025),
       secure: false,
     });
-    this.from = configService.get<string>('SMTP_FROM', 'SaaS Skeleton <noreply@saas-skeleton.local>');
+    this.from = configService.get<string>(
+      'SMTP_FROM',
+      'SaaS Skeleton <noreply@saas-skeleton.local>',
+    );
   }
 
   async send(to: string, subject: string, html: string): Promise<void> {

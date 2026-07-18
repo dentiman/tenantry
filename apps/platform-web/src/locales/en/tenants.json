@@ -1,0 +1,52 @@
+{
+  "title": "Tenants",
+  "table": {
+    "ariaLabel": "Tenants",
+    "slug": "Slug",
+    "name": "Name",
+    "status": "Status",
+    "created": "Created"
+  },
+  "status": {
+    "active": "Active",
+    "suspended": "Suspended"
+  },
+  "actions": {
+    "menu": "Actions",
+    "suspend": "Suspend",
+    "resume": "Resume",
+    "suspendConfirm": {
+      "heading": "Suspend tenant?",
+      "body": "\"{{name}}\" and all its users will be locked out immediately. You can resume access at any time.",
+      "confirmLabel": "Suspend",
+      "cancelLabel": "Cancel"
+    },
+    "resumeConfirm": {
+      "heading": "Resume tenant?",
+      "body": "\"{{name}}\" and its users will regain access immediately.",
+      "confirmLabel": "Resume",
+      "cancelLabel": "Cancel"
+    }
+  },
+  "create": {
+    "trigger": "New tenant",
+    "heading": "Create tenant",
+    "slug": "Slug",
+    "slugPlaceholder": "acme",
+    "slugHint": "Used to sign in (Organization field) and, later, as a subdomain.",
+    "name": "Tenant name",
+    "namePlaceholder": "Acme Inc.",
+    "adminSectionTitle": "First admin",
+    "adminEmail": "Email",
+    "adminEmailPlaceholder": "admin@acme.com",
+    "adminName": "Name",
+    "adminNamePlaceholder": "Optional",
+    "adminPassword": "Initial password",
+    "adminPasswordHint": "Share this with the tenant admin — there is no invite email yet.",
+    "cancel": "Cancel",
+    "submit": "Create tenant",
+    "submitting": "Creating…"
+  },
+  "loadingLabel": "Loading tenants",
+  "empty": "No tenants found"
+}

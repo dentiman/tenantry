@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '@saas-skeleton/database';
+import { SystemPrismaService } from '@saas-skeleton/database';
 import {
   JobHandler,
   JobHandlerContract,
@@ -18,13 +18,14 @@ const BATCH_SIZE = 100;
  */
 @Injectable()
 @JobHandler(filesCleanupOrphansJob)
-export class CleanupOrphanFilesHandler
-  implements JobHandlerContract<typeof filesCleanupOrphansJob.schema>
-{
+export class CleanupOrphanFilesHandler implements JobHandlerContract<
+  typeof filesCleanupOrphansJob.schema
+> {
   private readonly logger = new Logger(CleanupOrphanFilesHandler.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    // System-scope джоба: крос-tenant, BYPASSRLS (tenant-контексту немає свідомо)
+    private readonly prisma: SystemPrismaService,
     private readonly storage: StorageService,
   ) {}
 

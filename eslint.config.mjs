@@ -49,10 +49,25 @@ export default tseslint.config(
   },
   {
     // React-код: явні типи повернення для компонентів — зайвий шум
-    files: ['apps/web/**/*.{ts,tsx}'],
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/platform-web/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
+    },
+  },
+  {
+    // MT-1 (§6 multi-tenancy-plan.md): голий $transaction обходить tenant-extension —
+    // транзакції в доменному коді ТІЛЬКИ через TenantTransactions.withTenantTx
+    files: ['apps/api/src/**/*.ts', 'apps/worker/src/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='$transaction']",
+          message:
+            'Голий $transaction обходить tenant-контекст (set_config). Використовуй TenantTransactions.withTenantTx з @saas-skeleton/database.',
+        },
+      ],
     },
   },
 );

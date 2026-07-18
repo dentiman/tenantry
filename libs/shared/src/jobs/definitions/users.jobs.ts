@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { defineJob } from '../job-definition';
+import { defineTenantJob } from '../job-definition';
 
-/** Подія реєстрації користувача; у фазі 2.3 її споживатиме notifications */
-export const userRegisteredJob = defineJob(
+/** Подія реєстрації користувача (диспатчиться з адмінського create user); споживає notifications */
+export const userRegisteredJob = defineTenantJob(
   'users.user-registered',
   z.object({
     userId: z.uuid(),

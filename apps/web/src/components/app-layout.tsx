@@ -39,9 +39,6 @@ export function AppLayout() {
           <Link to="/users" className={navLinkClass} activeProps={activeProps}>
             {t('nav.users')}
           </Link>
-          <Link to="/jobs" className={navLinkClass} activeProps={activeProps}>
-            {t('nav.jobs')}
-          </Link>
         </nav>
       </aside>
 

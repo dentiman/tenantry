@@ -9,10 +9,36 @@ datasource db {
   provider = "postgresql"
 }
 
+// MT-1: tenant (перейменовано з Organization 2026-07-16 — «організація» лишається вільним
+// доменним словом для споживачів скелетона). Single-tenant = рівно один рядок (N=1).
+// Політика RLS (MT-2): tenant бачить ЛИШЕ власний рядок (id = current_setting).
+model Tenant {
+  id        String   @id @default(uuid())
+  slug      String   @unique // під логін по slug (MT-3) і піддомени (MT-4)
+  name      String
+  // suspend/resume тенанта: login відмовляє всім юзерам неактивного tenant-а
+  isActive  Boolean  @default(true) @map("is_active")
+  // Дефолтна локаль для нових юзерів тенанта
+  locale    String   @default("en")
+  // Гнучкі налаштування (feature-flags, UI-преференси); типізовані — окремими колонками
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users         User[]
+  refreshTokens RefreshToken[]
+  files         File[]
+  attachments   Attachment[]
+
+  @@map("tenants")
+}
+
 // Base user model for the CRM template
 model User {
   id           String   @id @default(uuid())
-  email        String   @unique
+  // MT-1: заповнюється DB-default-ом current_setting('app.tenant_id') — доменний код його НЕ передає
+  tenantId     String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  email        String
   name         String?
   passwordHash String?  @map("password_hash")
   role         Role     @default(USER)
@@ -24,10 +50,18 @@ model User {
   // Демо-споживач файлової підсистеми (Files v1)
   avatarFileId String?  @map("avatar_file_id")
 
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  // FK НЕ композитний свідомо: onDelete SetNull з композитним FK занулив би і tenant_id
+  // (Prisma не вміє SET NULL з переліком колонок). Крос-tenant захист — RLS на обох таблицях.
   avatarFile    File?          @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   uploadedFiles File[]         @relation("UploadedFiles")
 
+  // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
+  @@unique([tenantId, email])
+  // Опора для композитних FK з інших таблиць
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt])
   @@map("users")
 }
 
@@ -38,14 +72,17 @@ enum Role {
 
 model RefreshToken {
   id        String   @id @default(uuid())
+  tenantId  String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
   userId    String   @map("user_id")
   tokenHash String   @map("token_hash")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: токен не може вказати на юзера чужого tenant-а (FK-перевірки обходять RLS)
+  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([tenantId, userId])
   @@map("refresh_tokens")
 }
 
@@ -55,7 +92,8 @@ model RefreshToken {
 // PENDING старші за поріг прибирає cron files.cleanup-orphans (S3-об'єкт + рядок).
 model File {
   id           String     @id @default(uuid())
-  // Ключ у бакеті: {yyyy}/{mm}/{uuid}[.ext] — НЕ оригінальна назва; префікс під майбутній tenantId
+  tenantId     String     @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  // Ключ у бакеті: {tenantId}/{yyyy}/{mm}/{uuid}[.ext] — НЕ оригінальна назва (MT-1: tenant-префікс)
   key          String     @unique
   filename     String
   mimeType     String     @map("mime_type")
@@ -67,10 +105,16 @@ model File {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // FK не композитний: onDelete SetNull (див. коментар у User.avatarFile)
   uploadedBy  User?        @relation("UploadedFiles", fields: [uploadedById], references: [id], onDelete: SetNull)
   attachments Attachment[]
   avatarOf    User[]       @relation("UserAvatar")
 
+  // Опора для композитних FK (attachments)
+  @@unique([tenantId, id])
+  @@index([tenantId, status, createdAt])
+  // Глобальний індекс для системного cron-у cleanup-orphans (BYPASSRLS, шукає PENDING по всіх тенантах)
   @@index([status, createdAt])
   @@map("files")
 }
@@ -84,19 +128,39 @@ enum FileStatus {
 // Полиморфний (entityType — рядок), тому без FK на сутність; цілісність — відповідальність домену.
 model Attachment {
   id         String   @id @default(uuid())
+  tenantId   String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
   fileId     String   @map("file_id")
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: attachment не може вказати на файл чужого tenant-а
+  file   File   @relation(fields: [tenantId, fileId], references: [tenantId, id], onDelete: Cascade)
 
-  @@unique([fileId, entityType, entityId])
-  @@index([entityType, entityId])
+  @@unique([tenantId, fileId, entityType, entityId])
+  @@index([tenantId, entityType, entityId])
   @@map("attachments")
 }
 
-// Inbox-патерн для ідемпотентності обробки job-ів (див. libs/shared JobInboxService)
+// MT-3: identity CONTROL PLANE (apps/platform-api) — оператори платформи.
+// СВІДОМО окрема від users: інший login-флоу, інший JWT-secret, без tenant_id.
+// Доступ ТІЛЬКИ ролі saas_platform (міграція робить REVOKE від saas_app —
+// tenant-api цю таблицю навіть прочитати не може).
+model PlatformUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String   @map("password_hash")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_users")
+}
+
+// Inbox-патерн для ідемпотентності обробки job-ів (див. libs/shared JobInboxService).
+// Інфра-таблиця: БЕЗ tenant_id і БЕЗ RLS — маркер ідемпотентності глобальний.
 model ProcessedJob {
   id          String   @id // pg-boss job id
   jobName     String   @map("job_name")

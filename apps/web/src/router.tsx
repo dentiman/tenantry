@@ -6,15 +6,13 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { z } from 'zod';
-import { JobQuerySchema, UserQuerySchema } from '@saas-skeleton/contracts';
+import { UserQuerySchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { AppLayout } from './components/app-layout';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
-import { RegisterPage } from './pages/register';
 import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
-import { JobsPage } from './pages/jobs';
 
 const rootRoute = createRootRoute({
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
@@ -46,13 +44,6 @@ const loginRoute = createRoute({
   path: '/login',
   beforeLoad: requireGuest,
   component: LoginPage,
-});
-
-const registerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/register',
-  beforeLoad: requireGuest,
-  component: RegisterPage,
 });
 
 const appRoute = createRoute({
@@ -94,29 +85,9 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
-const JobsSearchSchema = z.object({
-  page: z.coerce.number().int().min(1).optional().catch(undefined),
-  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
-  sortBy: JobQuerySchema.shape.sortBy.catch(undefined),
-  sortOrder: JobQuerySchema.shape.sortOrder.catch(undefined),
-  state: JobQuerySchema.shape.state.catch(undefined),
-  queue: z.string().optional().catch(undefined),
-});
-
-/** TFilters для useDataGridFilters на сторінці jobs — runtime-форму гарантує validateSearch */
-export type JobsSearch = z.infer<typeof JobsSearchSchema>;
-
-const jobsRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/jobs',
-  validateSearch: (search) => JobsSearchSchema.parse(search),
-  component: JobsPage,
-});
-
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  registerRoute,
-  appRoute.addChildren([dashboardRoute, usersRoute, jobsRoute]),
+  appRoute.addChildren([dashboardRoute, usersRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

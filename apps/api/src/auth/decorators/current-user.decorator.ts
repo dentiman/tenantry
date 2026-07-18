@@ -5,6 +5,8 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  /** MT-1: tenant юзера; кладеться при видачі З РЯДКА БД, звіряється guard-ом */
+  tenantId: string;
 }
 
 export const CurrentUser = createParamDecorator(

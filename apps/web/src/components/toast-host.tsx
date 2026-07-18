@@ -1,7 +1,7 @@
 import { Toast } from '@heroui/react';
 import { useRouterState } from '@tanstack/react-router';
 
-const GUEST_PATHS = ['/login', '/register'];
+const GUEST_PATHS = ['/login'];
 
 /** Гостьові сторінки — toast знизу по центру; адмінка — верхній правий кут */
 export function ToastHost() {

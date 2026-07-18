@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { Level } from 'pino';
 import type { LoggerModuleAsyncParams } from 'nestjs-pino';
+import { ClsService } from 'nestjs-cls';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const logLevel = (process.env.LOG_LEVEL ?? (isDevelopment ? 'debug' : 'info')) as Level;
@@ -9,9 +10,15 @@ const logLevel = (process.env.LOG_LEVEL ?? (isDevelopment ? 'debug' : 'info')) a
 const jsonLogPath = join(process.cwd(), 'logs', 'worker.log');
 
 export const loggerConfig: LoggerModuleAsyncParams = {
-  useFactory: () => ({
+  inject: [ClsService],
+  useFactory: (cls: ClsService) => ({
     pinoHttp: {
       level: logLevel,
+      // MT-1: tenantId (з CLS, піднятого реєстратором із payload джоби) у кожен лог-запис
+      mixin: (): Record<string, string> => {
+        const tenantId = cls.isActive() ? cls.get<string | undefined>('tenantId') : undefined;
+        return tenantId ? { tenantId } : {};
+      },
       transport: isDevelopment
         ? {
             targets: [

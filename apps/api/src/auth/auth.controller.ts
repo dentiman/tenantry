@@ -1,7 +1,6 @@
 import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { AuthResponseDto, AuthTokensDto, MeResponseDto } from './dto/auth-response.dto';
@@ -15,13 +14,8 @@ import type { AuthResponse, AuthTokens, MeResponse } from '@saas-skeleton/contra
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Public()
-  @Post('register')
-  @ApiCreatedResponse({ type: AuthResponseDto.Output })
-  async register(@Body() dto: RegisterDto): Promise<AuthResponse> {
-    const { user, tokens } = await this.authService.register(dto);
-    return toAuthResponse(user, tokens);
-  }
+  // MT-1: POST /auth/register видалено зовсім (рішення 2026-07-16) —
+  // юзерів створює tenant-адмін, тенантів — platform-api (MT-3)
 
   @Public()
   @Post('login')

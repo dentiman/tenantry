@@ -1,7 +1,7 @@
 import { Button, Card } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { LoginSchema, type Login } from '@saas-skeleton/contracts';
 import { useAuthLogin } from '../api/generated/api';
@@ -16,7 +16,7 @@ export function LoginPage() {
 
   const form = useForm<Login>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', tenant: '' },
   });
   const {
     control,
@@ -38,8 +38,18 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm p-8">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">{t('login.title')}</h1>
+        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">
+          {t('login.title')}
+        </h1>
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+          {/* MT-3: недовірена підказка «де шукати юзера» (тимчасово ручне поле;
+              піддомени — MT-4). Порожнє → дефолтний tenant інсталяції */}
+          <FormTextField
+            control={control}
+            name="tenant"
+            label={t('login.tenant')}
+            autoComplete="organization"
+          />
           <FormTextField
             control={control}
             name="email"
@@ -61,12 +71,6 @@ export function LoginPage() {
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-muted">
-          {t('login.noAccount')}{' '}
-          <Link to="/register" className="font-medium text-link hover:underline">
-            {t('login.registerLink')}
-          </Link>
-        </p>
       </Card>
     </div>
   );

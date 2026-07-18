@@ -12,6 +12,18 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["web:dev"],
       "port": 5173
+    },
+    {
+      "name": "platform-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["platform:dev"],
+      "port": 3002
+    },
+    {
+      "name": "platform-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["platform:web:dev"],
+      "port": 5174
     }
   ]
 }

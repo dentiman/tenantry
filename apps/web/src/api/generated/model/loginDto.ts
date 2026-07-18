@@ -10,4 +10,6 @@ export interface LoginDto {
   email: string;
   /** @minLength 1 */
   password: string;
+  /** @maxLength 63 */
+  tenant?: string;
 }

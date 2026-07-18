@@ -5,7 +5,7 @@ import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
-import { fieldConflictException } from '../common/errors';
+import { fieldConflictException } from '@saas-skeleton/shared';
 
 /** avatarFile потрібен контролеру для presign мініатюри в UserResponse.avatarUrl */
 export type UserWithAvatar = Prisma.UserGetPayload<{ include: { avatarFile: true } }>;
@@ -80,8 +80,9 @@ export class UsersService {
     this.logger.log(`Creating new user: ${data.email}`);
 
     // Явна перевірка → 409 з fieldErrors по полю email; гонку добиває
-    // unique-констрейнт (P2002 → той самий CONFLICT у AllExceptionsFilter)
-    const existing = await this.prisma.user.findUnique({ where: { email: data.email } });
+    // unique-констрейнт (P2002 → той самий CONFLICT у AllExceptionsFilter).
+    // findFirst, НЕ findUnique: unique тепер (tenant_id, email), скоупить tenant-контекст
+    const existing = await this.prisma.user.findFirst({ where: { email: data.email } });
     if (existing) {
       this.logger.warn(`User creation failed - email already exists: ${data.email}`);
       throw fieldConflictException('email', 'Email already registered');

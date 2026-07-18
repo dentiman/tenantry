@@ -1,10 +1,12 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { extname } from 'node:path';
 import { fileTypeFromBuffer } from 'file-type';
 import { PrismaService } from '@saas-skeleton/database';
 import type { File as PrismaFile } from '@saas-skeleton/database';
-import type { CreateFileUpload, FileDownloadUrlResponse, FileMimeType } from '@saas-skeleton/contracts';
+import type {
+  CreateFileUpload,
+  FileDownloadUrlResponse,
+  FileMimeType,
+} from '@saas-skeleton/contracts';
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import {
   DOWNLOAD_URL_TTL_SECONDS,
@@ -63,7 +65,7 @@ export class FilesService {
     data: CreateFileUpload,
     userId: string,
   ): Promise<{ file: PrismaFile; uploadUrl: string }> {
-    const key = this.buildKey(data.filename);
+    const key = this.storage.buildObjectKey(data.filename);
     const file = await this.prisma.file.create({
       data: {
         key,
@@ -150,16 +152,6 @@ export class FilesService {
     return { url, expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS };
   }
 
-  /** Ключ у бакеті: {yyyy}/{mm}/{uuid}[.ext] — без оригінальної назви; префікс під майбутній tenantId */
-  private buildKey(filename: string): string {
-    const now = new Date();
-    const yyyy = String(now.getUTCFullYear());
-    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const ext = extname(filename).toLowerCase();
-    const safeExt = /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
-    return `${yyyy}/${mm}/${randomUUID()}${safeExt}`;
-  }
-
   private async verifyMagicBytes(file: PrismaFile): Promise<void> {
     const headBytes = await this.storage.readObjectHead(file.key, MAGIC_BYTES_LENGTH);
     const detected = (await fileTypeFromBuffer(headBytes))?.mime;
@@ -167,7 +159,9 @@ export class FilesService {
     const accepted = ACCEPTED_DETECTED_MIMES[file.mimeType as FileMimeType];
 
     const matches =
-      accepted === null ? detected === undefined : detected !== undefined && accepted.includes(detected);
+      accepted === null
+        ? detected === undefined
+        : detected !== undefined && accepted.includes(detected);
     if (matches) {
       return;
     }

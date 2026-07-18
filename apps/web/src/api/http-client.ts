@@ -31,7 +31,7 @@ export async function refreshTokens(): Promise<AuthTokens> {
   return refreshPromise;
 }
 
-const AUTH_URLS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const AUTH_URLS = ['/auth/login', '/auth/refresh'];
 
 axiosInstance.interceptors.response.use(
   (response) => response,

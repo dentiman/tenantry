@@ -22,9 +22,9 @@ const THUMBNAIL_WEBP_QUALITY = 80;
  */
 @Injectable()
 @JobHandler(generateThumbnailJob)
-export class GenerateThumbnailHandler
-  implements JobHandlerContract<typeof generateThumbnailJob.schema>
-{
+export class GenerateThumbnailHandler implements JobHandlerContract<
+  typeof generateThumbnailJob.schema
+> {
   private readonly logger = new Logger(GenerateThumbnailHandler.name);
 
   constructor(

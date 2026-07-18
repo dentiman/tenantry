@@ -13,6 +13,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-saas_skeleton}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # MT-0: ролі saas_migrator/saas_app/saas_platform. Виконується ЛИШЕ на порожньому volume;
+      # для наявного — `pnpm db:roles` (docs/multi-tenancy-migration.md, MT-0)
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
 
   mailpit:
     image: axllent/mailpit:latest

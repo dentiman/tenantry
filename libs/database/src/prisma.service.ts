@@ -2,7 +2,8 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from './generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const DEFAULT_DATABASE_URL = 'postgresql://saas:saas@localhost:5432/saas_skeleton';
+// MT-0: runtime ходить під saas_app (НЕ власник схеми, без BYPASSRLS — RLS діятиме з MT-2)
+const DEFAULT_DATABASE_URL = 'postgresql://saas_app:saas_app@localhost:5432/saas_skeleton';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

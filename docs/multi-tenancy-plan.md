@@ -3,7 +3,9 @@
 > Зафіксовано: 2026-07-15. Переглядає два рішення, зафіксовані 2026-07-11:
 > «Postgres RLS — не вмикаємо» → **RLS стає основою ізоляції**, і «tenant = Organization +
 > Membership» → **User належить рівно одному tenant-у** (§9). Перегляд ініційований користувачем.
-> Пов'язані доки: [architecture-proposal.md](architecture-proposal.md) (§3 — початкові варіанти,
+> Пов'язані доки: [multi-tenancy-architecture.md](multi-tenancy-architecture.md) — довідник
+> ПОТОЧНОГО стану (як воно працює зараз, без історії рішень; починати звідти, якщо не цікавить
+> «чому саме так»), [architecture-proposal.md](architecture-proposal.md) (§3 — початкові варіанти,
 > тепер уточнені тут), [roadmap.md](roadmap.md) (місце в загальному плані),
 > [file-storage.md](file-storage.md) (ключі S3 під tenant-префікс).
 
@@ -37,15 +39,21 @@ auth (видача JWT), platform-api (control plane) і maintenance-джоби.
 | Фільтрація в коді           | **Немає.** Extension НЕ домішує `where: { tenantId }` — він виставляє тільки RLS-контекст (`set_config`). Дубль фільтра відхилено: він розходиться з політикою при помилці й нічого не додає |
 | Заповнення `tenant_id`      | **DB-default** `DEFAULT current_setting('app.tenant_id')::uuid` — база заповнює сама з сесійного контексту. Доменний код tenant-agnostic і на запис                                        |
 | Передача контексту          | `nestjs-cls` (AsyncLocalStorage) → `set_config('app.tenant_id', ..., true)` **transaction-local**. Session-level `SET` заборонений (пул конекшенів → витік між запитами)                    |
-| Джерело tenantId            | **Тільки підписаний JWT** (або константа з env у single-tenant). Ніколи з body/params/хедера                                                                                                |
+| Джерело tenantId            | **Після автентифікації — тільки підписаний JWT** (або константа з env у single-tenant), ніколи з body/params/хедера. **До автентифікації** (login/refresh) — недовірена підказка лише *звужує пошук*: slug у Login-payload / Host; `JWT.tenantId` завжди береться з **рядка юзера в БД**, невірний slug = той самий 401, що й невірний пароль (без оракула існування тенанта) |
 | Модель tenant-а             | **User належить рівно одному tenant-у** (`users.tenant_id NOT NULL`, `@@unique([tenantId, email])`). Membership/Invitations відхилені — див. §9                                            |
 | Топологія                   | **Два plane-и**: `apps/api` (tenant, data plane) + `apps/platform-api` (control plane). Окремі identity, JWT-ключі, DB-ролі. Крос-tenant коду в tenant-api не існує фізично                 |
 | Single- vs multi-tenant     | **Одна кодова база, single-tenant = N=1.** Колонка `tenant_id` є завжди; схема не форкається; код не гілкується на `if (multiTenant)` — це деплой-конфіг                                    |
 | Fail-closed                 | Немає контексту → **нуль рядків** на читанні, **помилка** на записі. RLS-вимикача («пропускати все, якщо контекст порожній») немає — це fail-open і витік з однієї помилки в умові          |
 | Довідники                   | Три рівні таблиць (§8): tenant-scoped (RLS), глобальні (GRANT SELECT, без RLS), глобальні+розширювані (nullable `tenant_id`)                                                                |
 | Моніторинг черг (`/jobs`)   | **Тільки в control plane** (2026-07-15). `pgboss.*` — поза RLS; фільтр по `data->>'tenantId'` у tenant-api відхилено (віддає тенанту деталі реалізації черги, тримається на формі payload, системні джоби все одно випадають). Якщо тенанту колись треба видимість своїх операцій — **доменний вигляд** (`imports`/`exports` зі своїм `status` під RLS), не сирий монітор |
-| Перший admin тенанта        | **Invite-лінк** (2026-07-15): platform-api створює юзера з `passwordHash = null` + одноразовий токен (патерн `refresh_tokens`: `tokenId:secret`, у БД лише argon2-хеш), юзер задає пароль сам. **Оператор платформи ніколи не знає пароля тенанта**; пароль не існує у відкритому вигляді ні в пошті, ні в логах. Генерацію пароля платформою і задання його оператором відхилено |
-| `Organization.slug`         | **Уже в MT-1** (2026-07-15) — одна колонка зараз замість міграції з бекфілом унікальних slug-ів для реальних тенантів на MT-4 (піддомени)                                                    |
+| Перший admin тенанта        | **Переглянуто 2026-07-16: invite-флоу ВІДКЛАДЕНО** (→ MT-4/беклог). Тимчасово — оператор задає початковий пароль при створенні тенанта (уніфіковано з рішенням «Create user: адмін задає початковий») або сідиться програмний тестовий юзер. Invite-механіка (одноразовий токен за патерном `refresh_tokens`, `passwordHash = null`, «оператор не знає пароля») лишається цільовим станом — дизайн у migration-доку, MT-4 |
+| Реєстрація (`POST /auth/register`) | **Прибирається зовсім** (2026-07-16, MT-1). Self-serve реєстрації в tenant-api немає: юзерів створює tenant-адмін (create user), тенантів — platform-api. Публічний register під MT означав би «будь-хто зі slug-ом реєструється в чужу організацію» |
+| Refresh під MT              | Формат токена — **`tenantId:tokenId:secret`** (2026-07-16): тенант на `/auth/refresh` резолвиться з самого токена (для фронта рядок opaque — нічого не зберігає і не змінює). `refresh_tokens` лишається під RLS; звірка — контекст із префікса, далі argon2 як зараз |
+| `tenant.isActive` при вході | **Login перевіряє і `user.isActive`, і `tenant.isActive`** (2026-07-16, MT-1): suspend тенанта відмовляє вхід усім його юзерам. Той самий 401 без деталізації |
+| Резолюція slug → tenantId   | **`SECURITY DEFINER` функція `resolve_tenant(slug) RETURNS uuid`** (2026-07-16, MT-2): `saas_app` має тільки `EXECUTE`, прямого `SELECT` на `tenants` поза власним рядком немає → перелічити тенантів неможливо. Окрему lookup-таблицю без RLS і BYPASSRLS-клієнт у резолвері відхилено |
+| Фронт: вибір тенанта        | Тимчасово (2026-07-16) — **ручне опційне поле slug на формі логіну** (i18n-ключ, у N=1 порожнє). Цільово — піддомени (MT-4). Це єдиний легальний виняток «фронт знає про MT» — прапорець показу поля |
+| `Tenant.slug`         | **Уже в MT-1** (2026-07-15) — одна колонка зараз замість міграції з бекфілом унікальних slug-ів для реальних тенантів на MT-4 (піддомени)                                                    |
+| Назва сутності tenant-а     | **`Tenant` / таблиця `tenants`** (2026-07-16, перейменовано з `Organization`): «організація» — доменне слово, яке споживач скелетона може захотіти для власної бізнес-сутності; інфраструктурна сутність не мусить його займати |
 | Пакування MT                | **`TenancyModule.forRoot({ resolver })` у `libs/database/src/tenant/`** (2026-07-15). Підключабельність дає **межа модуля** (динамічний модуль + інтерфейс `TenantResolver`), а не розташування теки → окрему `libs/tenancy` не заводимо (extension Prisma-залежний; нова ліба = податок трьох місць, правило №1 CLAUDE.md). Режим застосунку = вибір резолвера в корені: `JwtTenantResolver` (MT) / `StaticTenantResolver` (N=1) / без резолвера (worker). platform-api модуль **не імпортує** — див. §6 |
 
 ## 1. Топологія: data plane / control plane
@@ -53,8 +61,9 @@ auth (видача JWT), platform-api (control plane) і maintenance-джоби.
 **Data plane** — `apps/api` + `apps/web` (те, що вже є). Юзер логіниться *в межах свого tenant-а*;
 поняття «інший tenant» на цьому рівні не існує ні в контрактах, ні в коді.
 
-**Control plane** — `apps/platform-api` (+ згодом `apps/platform-web`): створення/suspend тенантів,
-білінг тенантів, агреговані метрики, підтримка, керування глобальними довідниками.
+**Control plane** — `apps/platform-api` + `apps/platform-web` (обидва зроблені, MT-3):
+створення/suspend тенантів, моніторинг черг, надалі — білінг тенантів, керування
+глобальними довідниками.
 
 | | Data plane (`apps/api`) | Control plane (`apps/platform-api`) |
 | --- | --- | --- |
@@ -429,7 +438,7 @@ CREATE POLICY ref_own_write ON product_categories
 `WITH CHECK` не дасть tenant-у створити глобальний (`NULL`) або чужий рядок: спільні дані він
 читає, але зіпсувати не може. Глобальні рядки заводить `platform-api`.
 
-**`organizations`** — сам список тенантів: tenant-api бачить тільки «свій» рядок
+**`tenants`** — сам список тенантів: tenant-api бачить тільки «свій» рядок
 (політика `id = ctx`), platform-api — всі.
 
 **`files`** отримує `tenant_id` + RLS; ключі в бакеті — `{tenantId}/{yyyy}/{mm}/{uuid}.ext`
@@ -450,7 +459,7 @@ CREATE POLICY ref_own_write ON product_categories
 | RLS на `users` | звичайна tenant-таблиця | неможлива (глобальна) — виняток у моделі |
 | Ціна | та сама людина у двох тенантах = два акаунти | складніший auth і політики |
 
-Для CRM/ERP «два акаунти для двох клієнтів» — норма й навіть бажано. `Organization` лишається
+Для CRM/ERP «два акаунти для двох клієнтів» — норма й навіть бажано. `Tenant` лишається
 (це сам tenant + його налаштування), а Membership/Invitations у data plane стають непотрібними:
 **запрошення = створення юзера в tenant-і**.
 
@@ -493,12 +502,12 @@ await prisma.organizationSettings.findFirst();   // ТА САМА одна ст�
 
 | Тип налаштування | Де зберігати |
 | --- | --- |
-| Структурні, типізовані, 1:1 з tenant-ом (назва, дефолтна локаль, ліміти) | **колонки на `Organization`** — він *і є* tenant, один рядок = один tenant |
-| Гнучкі, рідко-запитувані, еволюційні (UI-преференси, feature-flags) | **`Json`-колонка** `Organization.settings` — погано для всього, що фільтруєш/джойниш |
-| Налаштувань багато й вони логічно окремі | **1:1 таблиця `OrganizationSettings { tenantId @unique }`** — читання `findFirst()`, запис `upsert` |
+| Структурні, типізовані, 1:1 з tenant-ом (назва, дефолтна локаль, ліміти) | **колонки на `Tenant`** — він *і є* tenant, один рядок = один tenant |
+| Гнучкі, рідко-запитувані, еволюційні (UI-преференси, feature-flags) | **`Json`-колонка** `Tenant.settings` — погано для всього, що фільтруєш/джойниш |
+| Налаштувань багато й вони логічно окремі | **1:1 таблиця `TenantSettings { tenantId @unique }`** — читання `findFirst()`, запис `upsert` |
 | Користувацькі, довільні ключі | key-value `(tenantId, key, value)` — **не робити**, поки ключі задає розробник (втрата типів задарма) |
 
-Старт: колонки на `Organization` + `Json` для гнучкого хвоста. Виносити в окрему таблицю — коли
+Старт: колонки на `Tenant` + `Json` для гнучкого хвоста. Виносити в окрему таблицю — коли
 налаштувань стане реально багато.
 
 ## 11. Single-tenant і multi-tenant — одна кодова база
@@ -508,14 +517,14 @@ await prisma.organizationSettings.findFirst();   // ТА САМА одна ст�
 
 | | Multi-tenant | Single-tenant |
 | --- | --- | --- |
-| Рядків `Organization` | N | 1 (сідиться, id у env) |
+| Рядків `Tenant` | N | 1 (сідиться, id у env) |
 | Звідки tenantId у контекст | з JWT після логіну | константа з env |
 | `apps/platform-api` | задеплоєний | не деплоїться взагалі |
 | RLS | увімкнено | увімкнено (тривіально матчить один id) |
 | Схема БД, доменний код | **ідентичні** | **ідентичні** |
 
 Правило, яке це тримає: **код ніколи не гілкується на `if (multiTenant)`** — він завжди йде через
-tenant-контекст. Різниця стає суто операційною (скільки рядків `Organization` + чи задеплоєний
+tenant-контекст. Різниця стає суто операційною (скільки рядків `Tenant` + чи задеплоєний
 control plane). Бонус: клієнта можна почати на single-tenant інсталяції й пізніше «підняти»
 в multi-tenant кластер без зміни коду.
 
@@ -570,7 +579,7 @@ control plane). Бонус: клієнта можна почати на single-t
 (він і так наступний у беклозі). RBAC (`@RequirePermissions`) робиться **після** MT-2, поверх
 готового tenant-контексту. Порядок MT-0 → MT-1 → MT-2 жорсткий.
 
-### MT-0 — ролі Postgres
+### ✅ MT-0 — ролі Postgres — завершено 2026-07-16
 
 DB-ролі (`saas_migrator` / `saas_app` / `saas_platform`) + розділення env-URL-ів
 (`DATABASE_URL` / `MIGRATE_DATABASE_URL` / `PLATFORM_DATABASE_URL`); docker-compose, CI і e2e
@@ -578,60 +587,75 @@ DB-ролі (`saas_migrator` / `saas_app` / `saas_platform`) + розділен�
 
 DoD: міграції йдуть під migrator, api/worker — під `saas_app`, e2e зелені.
 
-### MT-1 — фундамент без RLS (схема + контекст)
+### ✅ MT-1 — фундамент без RLS (схема + контекст) — завершено 2026-07-16
 
-1. `libs/database`: модель `Organization` (= tenant + налаштування колонками + `Json settings`);
+1. `libs/database`: модель `Tenant` (= tenant + налаштування колонками + `Json settings`);
    `tenant_id NOT NULL` на `users`, `refresh_tokens`, `files`, `attachments` (expand → backfill
    → contract); `@@unique([tenantId, email])` замість глобального `@unique` на email; композитні
    FK; індекси з префіксом `tenantId`; сід дефолтного tenant-а (well-known id).
 2. `nestjs-cls`: `ClsMiddleware` (найраніше) → `TenantResolutionMiddleware` (env-константа
-   в N=1, під піддомени — MT-4; **потрібен і для `@Public()` роутів**, бо login/register не мають
-   JWT) → `JwtAuthGuard` пише `tenantId` у CLS і звіряє з резолвленим; `tenantId` у JWT-клеймах;
-   `tenantId` у кожен лог-запис (закриває пункт із фази 3 roadmap про correlationId — робити разом).
-3. Prisma extension `forTenant` (поки тільки `set_config`, RLS ще вимкнено) + хелпер `withTenantTx`
+   в N=1, slug-поле — MT-3, піддомени — MT-4; **потрібен і для `@Public()` роутів**, бо login
+   не має JWT) → `JwtAuthGuard` пише `tenantId` у CLS і звіряє з резолвленим; `tenantId`
+   у JWT-клеймах; `tenantId` у кожен лог-запис (закриває пункт із фази 3 roadmap про
+   correlationId — робити разом).
+3. Auth-зміни 2026-07-16: **видалення `POST /auth/register` зовсім** (self-serve реєстрації
+   немає; юзерів створює tenant-адмін, тенантів — platform-api); login перевіряє
+   `tenant.isActive`; refresh-токен → **`tenantId:tokenId:secret`** (резолюція тенанта на
+   refresh — із самого токена); опційне поле `tenant` (slug) у Login-контракті (споживається
+   з MT-3).
+4. Prisma extension `forTenant` (поки тільки `set_config`, RLS ще вимкнено) + хелпер `withTenantTx`
    + `SystemPrismaService` (BYPASSRLS, для maintenance) + ESLint-заборона голого `$transaction`
    у доменних модулях.
-4. Черги: `defineTenantJob` з обов'язковим `tenantId`, авто-домішування в `JobDispatcher.send`,
+5. Черги: `defineTenantJob` з обов'язковим `tenantId`, авто-домішування в `JobDispatcher.send`,
    `cls.run` у `JobWorkerRegistrar`, `set_config` у `JobInboxService.runOnce`, `scope: 'system'`
    для cron-джоб + системний `BYPASSRLS`-клієнт для них.
-5. Storage: ключі `{tenantId}/{yyyy}/{mm}/{uuid}.ext`.
+6. Storage: ключі `{tenantId}/{yyyy}/{mm}/{uuid}.ext`.
 
-DoD: усе працює як раніше (N=1), e2e зелені **без змін у тестах**, `tenantId` видно в логах
+DoD: усе працює як раніше (N=1), e2e зелені (єдина зміна — видалені register-тести), `tenantId` видно в логах
 і в payload джоб, `grep tenantId` по доменних сервісах — порожній.
 
-### MT-2 — увімкнення RLS
+### ✅ MT-2 — увімкнення RLS — завершено 2026-07-16
 
 1. SQL-міграція: `ENABLE`/`FORCE ROW LEVEL SECURITY` + політики `tenant_isolation` на всі
    tenant-таблиці; DB-default `current_setting('app.tenant_id')::uuid` на колонки `tenant_id`.
 2. Прибрати з доменного коду будь-які згадки `tenantId` (якщо просочилися) — перевірка принципу
    з §0 grep-ом.
 3. Тести ізоляції: два тенанти, конкурентний, SQL-smoke, CI-чек `pg_policies` (§12).
-4. Auth-флоу під RLS: резолюція tenant-а до пошуку юзера (курка-яйце — §9; поки один tenant,
-   закривається константою з env; цільово — піддомен).
+4. Auth-флоу під RLS: `SECURITY DEFINER resolve_tenant(slug)` (курка-яйце — §9; поки один
+   tenant, резолюція закривається константою з env; slug-логін — MT-3, піддомени — MT-4).
 
 DoD: SQL-smoke під `saas_app` без контексту дає 0 рядків по всіх tenant-таблицях; крос-tenant
 e2e дає 404; жодного `tenantId` у доменних сервісах.
 
-### MT-3 — control plane
+### ✅ MT-3 — control plane — завершено 2026-07-17
 
 1. `apps/platform-api`: окремий NestJS, `platform_users`, свій JWT-secret, роль `saas_platform`,
    свій OpenAPI-конвеєр (`contracts/platform`).
 2. **Переїзд `/jobs`** із tenant-api (`pgboss.*` поза RLS → крос-tenant витік). **Гейт: зробити
    ДО кроку 3** — другий тенант не має з'явитися раніше, ніж моніторинг залишить tenant-api.
-3. CRUD тенантів: `Organization` + перший admin-user (`passwordHash = null`) + invite-токен
-   + сід дефолтів в одній транзакції; suspend/resume.
+3. CRUD тенантів: `Tenant` + перший admin-user (початковий пароль задає оператор —
+   invite відкладено на MT-4 рішенням 2026-07-16) + сід дефолтів в одній транзакції;
+   suspend/resume.
+3а. `SlugTenantResolver` у tenant-api: поле `tenant` (slug) з Login → `resolve_tenant(slug)`,
+   порожнє → env-fallback; фронт — ручне опційне поле slug (тимчасово, до піддоменів).
 4. Глобальні довідники (рівень 2 з §8): моделі + GRANT-и + керування з platform-api.
 5. Агреговані метрики по тенантах (read-only).
 
-DoD: tenant створюється з platform-api й одразу працює в data plane; перший admin входить за
-invite-лінком (пароль не існує у відкритому вигляді ніде); tenant-api фізично не має жодного
+DoD: tenant створюється з platform-api й одразу працює в data plane; перший admin входить із
+паролем від оператора; логін по slug-у працює; tenant-api фізично не має жодного
 крос-tenant роута; `/jobs` у tenant-api відсутній.
 
 ### MT-4 — відкладене
 
 - **Піддомени** (`acme.app.com` → slug → tenant): цільова резолюція tenant-а при логіні,
   ізоляція cookie.
+- **Invite-флоу першого admin-а** (відкладено з MT-3 рішенням 2026-07-16; дизайн — migration-док
+  §3.1): «оператор ніколи не знає пароля тенанта»; кандидат — вирівняти на invite і create user.
 - **Рівень 3 довідників** (глобальні + tenant-розширювані) — коли з'явиться перший реальний
   каталог такого типу.
 - **Білінг тенантів** у control plane (поверх `PaymentProvider` з фази 4 roadmap).
-- **`apps/platform-web`** — UI control plane (поки достатньо API).
+
+> `apps/platform-web` (UI control plane) виявився не MT-4, а частиною MT-3 — зроблено й
+> перевірено разом із рештою фази 2026-07-17 (клон каркасу `apps/web`; деталі, включно
+> з exports-граблею vite/rollup для subpath-імпортів — migration-док, розділ одразу після
+> «Граблі MT-3»).

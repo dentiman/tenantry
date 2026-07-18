@@ -2,23 +2,43 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
 import { PrismaClient } from '../src/generated/prisma/client';
 
-const DEFAULT_DATABASE_URL = 'postgresql://saas:saas@localhost:5432/saas_skeleton';
+// MT-2: сід — ОПЕРАТОРСЬКА дія (створення tenant-а) → роль saas_platform (BYPASSRLS).
+// Під saas_app упав би на політиках: upsert tenant-а поза власним контекстом заборонений.
+const DEFAULT_PLATFORM_DATABASE_URL =
+  'postgresql://saas_platform:saas_platform@localhost:5432/saas_skeleton';
+
+// MT-1: well-known id дефолтного tenant-а (той самий, що в міграції і StaticTenantResolver).
+// Сід — інфраструктура: явний tenantId тут легальний
+const DEFAULT_TENANT_ID = '00000000-0000-4000-8000-000000000001';
 
 const ADMIN_EMAIL = 'admin@example.com';
 const ADMIN_PASSWORD = 'Admin12345';
+const PLATFORM_ADMIN_EMAIL = 'platform@example.com';
+const PLATFORM_ADMIN_PASSWORD = 'Platform12345';
 
 async function main(): Promise<void> {
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+    connectionString: process.env.PLATFORM_DATABASE_URL ?? DEFAULT_PLATFORM_DATABASE_URL,
   });
   const prisma = new PrismaClient({ adapter });
+
+  const tenant = await prisma.tenant.upsert({
+    where: { id: DEFAULT_TENANT_ID },
+    update: {},
+    create: {
+      id: DEFAULT_TENANT_ID,
+      slug: 'default',
+      name: 'Default Tenant',
+    },
+  });
 
   const passwordHash = await argon2.hash(ADMIN_PASSWORD);
 
   const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
+    where: { tenantId_email: { tenantId: tenant.id, email: ADMIN_EMAIL } },
     update: {},
     create: {
+      tenantId: tenant.id,
       email: ADMIN_EMAIL,
       name: 'Admin',
       passwordHash,
@@ -26,7 +46,23 @@ async function main(): Promise<void> {
     },
   });
 
-  console.log(`Seeded admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`);
+  // MT-3: оператор control plane (окрема identity, вхід у platform-api)
+  const platformAdmin = await prisma.platformUser.upsert({
+    where: { email: PLATFORM_ADMIN_EMAIL },
+    update: {},
+    create: {
+      email: PLATFORM_ADMIN_EMAIL,
+      name: 'Platform Operator',
+      passwordHash: await argon2.hash(PLATFORM_ADMIN_PASSWORD),
+    },
+  });
+
+  console.log(
+    `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`,
+  );
+  console.log(
+    `Seeded platform operator: ${platformAdmin.email} (password: ${PLATFORM_ADMIN_PASSWORD})`,
+  );
   await prisma.$disconnect();
 }
 

@@ -1,11 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@saas-skeleton/database';
-import {
-  JobHandler,
-  JobHandlerContract,
-  JobPayload,
-  welcomeEmailJob,
-} from '@saas-skeleton/shared';
+import { JobHandler, JobHandlerContract, JobPayload, welcomeEmailJob } from '@saas-skeleton/shared';
 import i18n from '../i18n';
 import { MailerService } from '../mail/mailer.service';
 
