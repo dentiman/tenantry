@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '@saas-skeleton/database';
+import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Prisma } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
-import { JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
+import { ActivityRecorder, JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
+import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 
 /** avatarFile потрібен контролеру для presign мініатюри в UserResponse.avatarUrl */
 export type UserWithAvatar = Prisma.UserGetPayload<{ include: { avatarFile: true } }>;
@@ -17,6 +18,8 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jobDispatcher: JobDispatcher,
+    private readonly tenantTx: TenantTransactions,
+    private readonly activities: ActivityRecorder,
   ) {}
 
   async findAll(query: UserQuery): Promise<{
@@ -76,7 +79,7 @@ export class UsersService {
     return user;
   }
 
-  async create(data: CreateUser): Promise<UserWithAvatar> {
+  async create(data: CreateUser, actor: JwtPayload): Promise<UserWithAvatar> {
     this.logger.log(`Creating new user: ${data.email}`);
 
     // Явна перевірка → 409 з fieldErrors по полю email; гонку добиває
@@ -91,26 +94,35 @@ export class UsersService {
     // password не потрапляє в Prisma напряму — зберігається тільки argon2-хеш
     const { password, ...rest } = data;
     const passwordHash = await argon2.hash(password);
-    const user = await this.prisma.user.create({
-      data: { ...rest, passwordHash },
-      include: { avatarFile: true },
-    });
-    this.logger.log(`User created successfully: ${user.email} (ID: ${user.id})`);
 
-    // Та сама подія, що й при самостійній реєстрації; черга — некритичний side effect
-    try {
+    // Атомарно: юзер + активність + постановка fan-out job-а. Або все, або нічого —
+    // welcome-лист без user.created-події не мав би сенсу (тому try/catch «черга
+    // некритична» прибрано: атомарність краща за м'яку деградацію).
+    const user = await this.tenantTx.withTenantTx(async (tx) => {
+      const created = await tx.user.create({
+        data: { ...rest, passwordHash },
+        include: { avatarFile: true },
+      });
+
+      await this.activities.record(tx, {
+        type: 'user.created',
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: {
+          user: { kind: 'user', id: created.id, label: created.name ?? created.email },
+        },
+        links: [{ entityType: 'user', entityId: created.id, role: 'subject' }],
+      });
+
       await this.jobDispatcher.send(
         userRegisteredJob,
-        { userId: user.id, email: user.email },
-        { singletonKey: user.id },
+        { userId: created.id, email: created.email },
+        { singletonKey: created.id, tx },
       );
-    } catch (error) {
-      this.logger.error(
-        `Failed to dispatch ${userRegisteredJob.name} for user ${user.id}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
 
+      return created;
+    });
+
+    this.logger.log(`User created successfully: ${user.email} (ID: ${user.id})`);
     return user;
   }
 

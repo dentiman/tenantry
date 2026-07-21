@@ -33,6 +33,9 @@
     "cancel": "Cancel",
     "confirm": "Delete"
   },
+  "activity": {
+    "action": "View activity"
+  },
   "avatar": {
     "action": "Change avatar",
     "heading": "Change avatar",

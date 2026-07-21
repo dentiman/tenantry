@@ -18,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { StorageService } from '@saas-skeleton/shared';
+import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { UsersService, type UserWithAvatar } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -57,8 +58,8 @@ export class UsersController {
 
   @Post()
   @ApiCreatedResponse({ type: UserResponseDto.Output })
-  async create(@Body() dto: CreateUserDto): Promise<UserResponse> {
-    const user = await this.usersService.create(dto);
+  async create(@Body() dto: CreateUserDto, @CurrentUser() actor: JwtPayload): Promise<UserResponse> {
+    const user = await this.usersService.create(dto, actor);
     return this.toResponse(user);
   }
 

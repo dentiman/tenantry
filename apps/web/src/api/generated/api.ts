@@ -22,6 +22,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActivitiesFindAllParams,
+  ActivityListResponseDtoOutput,
   AuthResponseDtoOutput,
   AuthTokensDtoOutput,
   CreateFileUploadDto,
@@ -1146,6 +1148,122 @@ export function useFilesDownloadUrl<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getFilesDownloadUrlQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const activitiesFindAll = (
+  params: ActivitiesFindAllParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ActivityListResponseDtoOutput>(
+    { url: `/api/activities`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getActivitiesFindAllQueryKey = (params?: ActivitiesFindAllParams) => {
+  return [`/api/activities`, ...(params ? [params] : [])] as const;
+};
+
+export const getActivitiesFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof activitiesFindAll>>,
+  TError = unknown,
+>(
+  params: ActivitiesFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof activitiesFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getActivitiesFindAllQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof activitiesFindAll>>> = ({ signal }) =>
+    activitiesFindAll(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof activitiesFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ActivitiesFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof activitiesFindAll>>
+>;
+export type ActivitiesFindAllQueryError = unknown;
+
+export function useActivitiesFindAll<
+  TData = Awaited<ReturnType<typeof activitiesFindAll>>,
+  TError = unknown,
+>(
+  params: ActivitiesFindAllParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof activitiesFindAll>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof activitiesFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof activitiesFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useActivitiesFindAll<
+  TData = Awaited<ReturnType<typeof activitiesFindAll>>,
+  TError = unknown,
+>(
+  params: ActivitiesFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof activitiesFindAll>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof activitiesFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof activitiesFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useActivitiesFindAll<
+  TData = Awaited<ReturnType<typeof activitiesFindAll>>,
+  TError = unknown,
+>(
+  params: ActivitiesFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof activitiesFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useActivitiesFindAll<
+  TData = Awaited<ReturnType<typeof activitiesFindAll>>,
+  TError = unknown,
+>(
+  params: ActivitiesFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof activitiesFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getActivitiesFindAllQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

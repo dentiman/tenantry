@@ -8,6 +8,7 @@ import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/
 import { useAuthStore } from '../stores/auth.store';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { CreateUserModal } from '../components/create-user-modal';
+import { ActivityDrawer } from '../components/activity/activity-drawer';
 import { formatDate } from '../lib/format';
 import type { UsersSearch } from '../router';
 import { createDataGrid } from '../components/data-grid';
@@ -36,6 +37,8 @@ export function UsersPage() {
   const queryClient = useQueryClient();
   // Юзер, якому міняємо аватар (демо файлової підсистеми); null — модалка закрита
   const [avatarUser, setAvatarUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
+  // Юзер, чий фід активностей відкрито в драйвері; null — драйвер закрито
+  const [activityUser, setActivityUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
 
   const invalidateUsers = (): void => {
     void queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
@@ -106,6 +109,13 @@ export function UsersPage() {
 
   const rowActions: DataGridRowAction<UserListResponseDtoOutputItemsItem>[] = [
     {
+      id: 'activity',
+      label: t('activity.action'),
+      onAction: (u) => {
+        setActivityUser(u);
+      },
+    },
+    {
       id: 'avatar',
       label: t('avatar.action'),
       onAction: (u) => {
@@ -166,6 +176,15 @@ export function UsersPage() {
         user={avatarUser}
         onClose={() => {
           setAvatarUser(null);
+        }}
+      />
+
+      <ActivityDrawer
+        entityType="user"
+        entityId={activityUser?.id ?? null}
+        subtitle={activityUser?.email}
+        onClose={() => {
+          setActivityUser(null);
         }}
       />
     </Grid.Root>

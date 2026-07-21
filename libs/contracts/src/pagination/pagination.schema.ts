@@ -25,6 +25,28 @@ export function listQuerySchema<const Fields extends [string, ...string[]]>(
   });
 }
 
+/**
+ * Курсорна пагінація (поруч із offset-ною, НЕ замість): для нескінченних фідів, де
+ * «page N» безглуздий, а offset пливе на вставках. Курсор — непрозорий токен,
+ * формат — деталь бекенда (base64url keyset).
+ */
+export const CursorQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+
+export function cursorResponseSchema<T extends z.ZodType>(
+  itemSchema: T,
+): z.ZodObject<{
+  items: z.ZodArray<T>;
+  nextCursor: z.ZodNullable<z.ZodString>;
+}> {
+  return z.object({
+    items: z.array(itemSchema),
+    nextCursor: z.string().nullable(), // null = кінець фіда
+  });
+}
+
 export function paginatedResponseSchema<T extends z.ZodType>(
   itemSchema: T,
 ): z.ZodObject<{

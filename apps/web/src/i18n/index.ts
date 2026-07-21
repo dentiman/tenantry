@@ -2,7 +2,14 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
 import { en as zodEn } from 'zod/locales';
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, commonEn, errorsEn, validationEn } from '@saas-skeleton/i18n';
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  activitiesEn,
+  commonEn,
+  errorsEn,
+  validationEn,
+} from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import layoutEn from '../locales/en/layout.json';
@@ -33,6 +40,7 @@ void i18n.use(initReactI18next).init({
       common: commonEn,
       errors: errorsEn,
       validation: validationEn,
+      activities: activitiesEn,
       auth: authEn,
       dashboard: dashboardEn,
       layout: layoutEn,

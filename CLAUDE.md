@@ -30,6 +30,22 @@ tenant `slug=default` + tenant-адмін `admin@example.com`/`Admin12345` + pla
 **MT-2 завершена і перевірена** (2026-07-16): RLS увімкнено — ізоляція тенантів стала enforcement-ом БД. Політики `tenant_isolation` (FOR ALL, USING+WITH CHECK, `(SELECT nullif(current_setting('app.tenant_id', true), ''))` — InitPlan) + ENABLE/FORCE на users/refresh_tokens/files/attachments; `tenants` — політика `own_tenant` БЕЗ FORCE (свідомо: `resolve_tenant(slug)` — SECURITY DEFINER від власника, FORCE осліпив би її); `resolve_tenant()` з `SET search_path`, EXECUTE тільки saas_app (перебір тенантів неможливий). Сід → під `saas_platform` (upsert tenant-а під saas_app падав би на WITH CHECK). Тести: e2e тепер 67 (6 сьютів) — прямі prisma-доступи тестів переведені на `SystemPrismaService` (BYPASSRLS; під saas_app поза CLS вони бачили б 0 рядків), `setup-env.ts` ПЕРЕЗАПИСУЄ `PLATFORM_DATABASE_URL` на тестову БД (інакше тести чистили б dev!); нові `rls.e2e-spec` (fail-closed 0 рядків без контексту, INSERT падає на політиці, transaction-local set_config, авточек `pg_policies` — ловить «забули політику», працює в CI без окремого кроку) і `tenant-isolation.e2e-spec` (list A не бачить B; get/patch/delete чужого ID → 404; JWT tenant-а B у контексті A → 401 від guard-звірки; CLS-конкурентність runWith A/B без перетікання; login юзера B у контексті A → 401). Живий прогін під RLS: login → create user → fan-out → welcome-лист (handler читає юзера крізь tenant-CLS). Доменний код у фазі НЕ змінювався.
 **MT-1 завершена і перевірена** (2026-07-16): мультитенантний фундамент БЕЗ RLS (вмикається у MT-2). `Tenant`/`tenants` + `tenant_id NOT NULL` на users/refresh_tokens/files/attachments (експанд→бекфіл→NOT NULL, композитні FK, tenant-префіксні індекси); `TenancyModule.forRoot({ resolver })` у `libs/database/src/tenant/` (CLS + StaticTenantResolver + middleware на всі роути включно з @Public); PrismaService = tenant-extended клієнт (batch-tx `set_config` на кожну операцію; голий клієнт — токен `PRISMA_BASE`); `tenant_id` заповнює DB-default `nullif(current_setting('app.tenant_id'),'')` + `@default(dbgenerated(...))` у схемі (робить поле опційним у Prisma-типах — доменний код його НЕ передає); транзакції — ТІЛЬКИ `TenantTransactions.withTenantTx` (голий `$transaction` заборонено ESLint-ом, бо обходить extension); черги: `defineTenantJob` (схема примусово + tenantId), dispatcher домішує tenantId з CLS, registrar піднімає CLS з payload, дві cron-джоби — scope system під `SystemPrismaService` (BYPASSRLS); `POST /auth/register` видалено ЗОВСІМ (+web-сторінка, контракти, orval); login перевіряє `tenant.isActive`; refresh-токен `tenantId:tokenId:secret`; JWT += tenantId (з рядка БД); tenantId у кожному лог-записі (pino mixin з CLS). Перевірено: 57 e2e, живий фан-аут create user → payload обох джоб з tenantId → worker CLS → welcome-лист; tenantId НЕ витікає у відповіді API. Граблі, спіймані наживо: (1) **Zod 4 `z.uuid()` — строгий RFC** (version-ніббл): well-known id тенанта мусив стати `00000000-0000-4000-8000-000000000001`; (2) **pg-boss install робить `CREATE SCHEMA IF NOT EXISTS`, а Postgres перевіряє ACL ДО існування** → saas_app потребує `GRANT CREATE ON DATABASE`; (3) дві вимушені правки домену (НЕ tenant-логіка): `users.service` findUnique(email)→findFirst (unique тепер композитний), `files.service` buildKey→`storage.buildObjectKey` (tenant-префікс живе в інфрі).
 **MT-0 завершена і перевірена** (2026-07-16): три ролі Postgres (`saas_migrator` — власник схеми/міграції з CREATEDB під shadow-DB; `saas_app` — runtime api/worker БЕЗ DDL і BYPASSRLS; `saas_platform` — BYPASSRLS під майбутній control plane). Свіжий volume — `docker/postgres/init/01-roles.sql`; наявна БД/CI/тестова — ідемпотентний `pnpm db:roles` (переприсвоює і власників наявних таблиць, включно з pgboss). `MIGRATE_DATABASE_URL` (prisma.config.ts БЕЗ фолбека на DATABASE_URL — міграція під saas_app має впасти, а не пройти тихо); схема pgboss належить saas_app (pg-boss сам мігрує свої таблиці). Перевірено: свіжий init у throwaway-контейнері, db:roles на живій dev-БД, негативний DDL-тест під saas_app, 61 e2e, живі worker (5 хендлерів) і api (login).
+**Activity Log завершений і перевірений** (2026-07-21): журнал бізнес-подій (`docs/activity-log.md`) —
+перша реалізація за спецою. Дві таблиці `activities`+`activity_links` (поліморфні лінки як `attachments`,
+композитний FK, RLS ENABLE/FORCE за шаблоном MT-2), текст НЕ зберігається — `type`(закритий enum)+`payload`,
+рендерить фронт через i18next (i18n-доктрина). `ActivityRecorder` у `libs/shared` (@Global, `record(tx, …)` —
+tx перший обовʼязковий аргумент, tenant_id із DB-default CLS, fail-fast валідація payload по типу).
+**Перший курсорний ендпоінт** `GET /activities` (keyset `(createdAt,id) DESC`, base64url-курсор, `limit+1`).
+Sync-запис: `UsersService.create` переїхав у `withTenantTx` (юзер+активність+fan-out job атомарно; try/catch
+«черга некритична» прибрано; контролер передає `@CurrentUser()`). Async-запис: `WelcomeEmailHandler` пише
+`email.sent` через `inbox.runOnce` ПІСЛЯ `sendMail` (exactly-once відносно job-а, актор=система). Web: `ActivityDrawer`
+(HeroUI `Drawer`, «Load more» з накопиченням у стані) + `ActivityMessage` (`<Trans>`, generic-fallback на невідомий
+тип) + row action «View activity» на `/users`; namespace `activities` у `libs/i18n` (спільний фронтовий — ключі
+вкладені, бо `.` у типах = i18next-роздільник). Граблі: (1) **не мішати скалярний `tenantId` з вкладеним
+`links.create`** у прямому Prisma-сіді тестів — nested write → checked input, скаляр недоступний (два unchecked-виклики);
+(2) `payload as InputJsonValue` — зайва асерція (receiver і так приймає). 69 tenant-e2e (+6: create-records-one,
+feed-by-entity, filter-by-type, cursor-no-dupes, bad-cursor-400, recorder-unit) + 11 platform-e2e; lint/typecheck/build
+чисті. Живий прогін: create user → `user.created` одразу + `email.sent` після воркера + лист у Mailpit.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -42,10 +58,9 @@ tenant `slug=default` + tenant-адмін `admin@example.com`/`Admin12345` + pla
 5 застосунків, схема БД, RLS, механіка контексту, auth обох plane-ів, черги, наскрізний
 приклад, контракт для нового доменного модуля, обґрунтування ключових рішень і MT-4/беклог
 з дизайном ще не реалізованих шматків — invite-флоу, піддомени, довідники, білінг),
-`docs/activity-log.md` (журнал бізнес-подій: СПРОЄКТОВАНО, НЕ реалізовано — специфікація
-завдання на один хід: activities+activity_links, код типу+payload замість тексту, рендер
-через i18next на фронті, sync-запис у withTenantTx / async через inbox, перший курсорний
-ендпоінт),
+`docs/activity-log.md` (журнал бізнес-подій: РЕАЛІЗОВАНО й перевірено 2026-07-21 —
+activities+activity_links, код типу+payload замість тексту, рендер через i18next на фронті,
+sync-запис у withTenantTx / async через inbox, перший курсорний ендпоінт),
 `docs/commands.md` (довідник усіх команд `package.json` з прикладами й описом, включно
 з посиланнями на профільні доки — напр. `db:roles` → `docs/multi-tenancy-architecture.md`;
 там же — мінімальний впорядкований набір JetBrains Run Configurations для dev),

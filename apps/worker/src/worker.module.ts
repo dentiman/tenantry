@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
-import { JobsModule, StorageModule } from '@saas-skeleton/shared';
+import { ActivitiesModule, JobsModule, StorageModule } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensHandler } from './handlers/cleanup-expired-tokens.handler';
 import { CleanupOrphanFilesHandler } from './handlers/cleanup-orphan-files.handler';
@@ -23,6 +23,7 @@ import { MailerService } from './mail/mailer.service';
     PrismaModule,
     JobsModule.forWorker(),
     StorageModule,
+    ActivitiesModule,
   ],
   providers: [
     CleanupExpiredTokensHandler,
