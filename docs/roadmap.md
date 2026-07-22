@@ -128,6 +128,12 @@ i18next (web + worker); JSON у репо (`libs/i18n` + `apps/*/locales`); ст�
 3. `billing` — Plan/Subscription/Invoice, інтерфейс `PaymentProvider`, fake-провайдер → Stripe-адаптер,
    webhooks через чергу (ідемпотентність по `event_id UNIQUE`).
 4. `audit-log` — запис чутливих операцій через events.
+5. **Налаштування тенанта (System Settings)** — секційні налаштування на сутності `Tenant`,
+   редаговані з обох plane-ів (tenant-адмін через `/system-settings/:section`, оператор через
+   tenant-CRUD) + `GET /system-settings/bootstrap` для «гарячих» налаштувань фронта. Перша
+   вертикаль — `general` (name + currency). Повний дизайн, безпека і сховище (колонка vs
+   `settings Json` — рішення per-field у момент появи поля) — [tenant-settings.md](tenant-settings.md).
+   RBAC-звуження редактора до ADMIN — разом із фазою RBAC (Фаза 3, п. 4).
 
 ## Фаза 5 — operational maturity
 
