@@ -1,0 +1,271 @@
+# CI/CD: build образів → deploy у Docker Swarm через docker context over SSH.
+#
+# Транспорт: раннер створює docker-context на manager по SSH; `docker stack deploy`
+# читає stack-файл ЛОКАЛЬНО, інтерполює ${...} з оточення job-а й шле spec на manager.
+# НА СЕРВЕР НЕ КОПІЮЮТЬСЯ ФАЙЛИ (ні stack, ні .env, ні config.json).
+#
+# SSH між раннером і manager-ом УЖЕ налаштований (ключ/known_hosts на рівні раннера) —
+# у CI ключ НЕ інжектимо. Job-и деплою приземляються на цей раннер через runner-теги
+# (deploy_dev / deploy_prod — скоригуй під імена ваших раннерів).
+#
+# Registry: предефайнені CI_REGISTRY_USER / CI_REGISTRY_PASSWORD (job-token) — як в accounting.
+# (На single-node тестовому проді job-token для --with-registry-auth достатній: manager сам
+#  пулить образи під час job-а. Для мультиноди/HA — завести Deploy Token read_registry.)
+#
+# --- CI/CD Variables (серверні — «як є», ті самі, що в accounting; не в репо) ---
+#   DEPLOY_USER_DEV / _PROD    ssh-юзер manager-а
+#   DEPLOY_HOST_DEV / _PROD    хост/IP manager-а
+#   DEPLOY_PORT_DEV / _PROD    ssh-порт (дефолт 22)
+#   → з них будується docker-context: host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT
+#
+# Прикладні секрети/конфіг стеку (JWT, S3, SMTP, пароль БД) — у КОМІТНУТОМУ docker/deploy.env
+# (тестовий прод, свідомо в репо). Ключі сховища — docker/seaweedfs/s3.prod.json (теж у репо).
+# Для справжнього проду ці два файли винести в CI Variables і розігнорувати назад.
+
+stages:
+  - build
+  - deploy_dev
+  - deploy_prod
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  API_IMAGE_BASE:          "$CI_REGISTRY_IMAGE/api"
+  PLATFORM_API_IMAGE_BASE: "$CI_REGISTRY_IMAGE/platform-api"
+  WORKER_IMAGE_BASE:       "$CI_REGISTRY_IMAGE/worker"
+  WEB_IMAGE_BASE:          "$CI_REGISTRY_IMAGE/web"
+  PLATFORM_WEB_IMAGE_BASE: "$CI_REGISTRY_IMAGE/platform-web"
+  TOOLS_IMAGE_BASE:        "$CI_REGISTRY_IMAGE/tools"
+
+# ===========================================================================
+# BUILD — усі образи паралельно (dind + BuildKit). Тег = $CI_COMMIT_SHA (+latest на default).
+# ===========================================================================
+.build_base:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_BUILDKIT: "1"
+  tags: [deploy_dev]      # ТИМЧАСОВО: усе (в т.ч. prod) під deploy_dev-раннерами
+  rules:
+    - if: $CI_COMMIT_BRANCH
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build_api:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.node --build-arg APP=api -t "$API_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$API_IMAGE_BASE:$CI_COMMIT_SHA"
+    - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$API_IMAGE_BASE:$CI_COMMIT_SHA" "$API_IMAGE_BASE:latest" && docker push "$API_IMAGE_BASE:latest"; fi
+    - echo "API_IMAGE=$API_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+build_platform_api:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.node --build-arg APP=platform-api -t "$PLATFORM_API_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$PLATFORM_API_IMAGE_BASE:$CI_COMMIT_SHA"
+    - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$PLATFORM_API_IMAGE_BASE:$CI_COMMIT_SHA" "$PLATFORM_API_IMAGE_BASE:latest" && docker push "$PLATFORM_API_IMAGE_BASE:latest"; fi
+    - echo "PLATFORM_API_IMAGE=$PLATFORM_API_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+build_worker:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.node --build-arg APP=worker -t "$WORKER_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$WORKER_IMAGE_BASE:$CI_COMMIT_SHA"
+    - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$WORKER_IMAGE_BASE:$CI_COMMIT_SHA" "$WORKER_IMAGE_BASE:latest" && docker push "$WORKER_IMAGE_BASE:latest"; fi
+    - echo "WORKER_IMAGE=$WORKER_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+build_web:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.web --build-arg APP=web -t "$WEB_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$WEB_IMAGE_BASE:$CI_COMMIT_SHA"
+    - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$WEB_IMAGE_BASE:$CI_COMMIT_SHA" "$WEB_IMAGE_BASE:latest" && docker push "$WEB_IMAGE_BASE:latest"; fi
+    - echo "WEB_IMAGE=$WEB_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+build_platform_web:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.web --build-arg APP=platform-web -t "$PLATFORM_WEB_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$PLATFORM_WEB_IMAGE_BASE:$CI_COMMIT_SHA"
+    - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$PLATFORM_WEB_IMAGE_BASE:$CI_COMMIT_SHA" "$PLATFORM_WEB_IMAGE_BASE:latest" && docker push "$PLATFORM_WEB_IMAGE_BASE:latest"; fi
+    - echo "PLATFORM_WEB_IMAGE=$PLATFORM_WEB_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+build_tools:
+  extends: .build_base
+  script:
+    - docker build -f Dockerfile.tools -t "$TOOLS_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker push "$TOOLS_IMAGE_BASE:$CI_COMMIT_SHA"
+    - echo "TOOLS_IMAGE=$TOOLS_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env
+
+# ===========================================================================
+# DEPLOY — docker context over SSH. Спільна логіка; середовища відрізняються variables.
+# ===========================================================================
+.deploy_base:
+  image: docker:27
+  needs:
+    - { job: build_api, artifacts: true }
+    - { job: build_platform_api, artifacts: true }
+    - { job: build_worker, artifacts: true }
+    - { job: build_web, artifacts: true }
+    - { job: build_platform_web, artifacts: true }
+  before_script:
+    # SSH раннер↔manager уже налаштований → ключ не інжектимо. Лише ssh-клієнт + context.
+    - apk add --no-cache openssh-client
+    - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
+    # login у реєстр — предефайнений job-token (роздається нодам через --with-registry-auth)
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    # прикладні секрети з комітнутого файлу → у оточення job-а (для інтерполяції ${...} у стеку)
+    - set -a; . ./docker/deploy.env; set +a
+  script:
+    - |
+      echo "Deploy → context=swarm  stack=$STACK_NAME  images: $API_IMAGE / $WORKER_IMAGE"
+      DOCKER_CONTEXT=swarm docker stack deploy \
+        --with-registry-auth --detach=true --prune \
+        -c docker/docker-compose.stack.yml "$STACK_NAME"
+    - DOCKER_CONTEXT=swarm docker stack ps "$STACK_NAME" --filter desired-state=running
+
+deploy_dev:
+  extends: .deploy_base
+  stage: deploy_dev
+  tags: [deploy_dev]
+  environment: { name: dev }
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH == "dev"'
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+    SAAS_DATA_DIR: /srv/saas-dev/data
+    # прикладні секрети — з docker/deploy.env (source у before_script)
+
+deploy_prod:
+  extends: .deploy_base
+  stage: deploy_prod
+  tags: [deploy_dev]
+  environment: { name: production }
+  rules:
+    # ТИМЧАСОВО manual: поки деплоїмо тільки dev-стек. Прибрати when:manual, коли піде реальний prod.
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  variables:
+    STACK_NAME: saas-prod
+    DEPLOY_USER: $DEPLOY_USER_PROD
+    DEPLOY_HOST: $DEPLOY_HOST_PROD
+    DEPLOY_PORT: $DEPLOY_PORT_PROD
+    SAAS_DATA_DIR: /srv/saas-prod/data
+    # прикладні секрети — з docker/deploy.env (source у before_script)
+
+# ===========================================================================
+# ONE-SHOT (manual): db:roles → ДО першого деплою; seed → демо-дані; dump → бекап БД.
+# Виконуються на manager через context (docker run/exec по overlay-мережі стеку).
+# ===========================================================================
+.tools_base:
+  image: docker:27
+  when: manual
+  tags: [deploy_dev]
+  needs:
+    - { job: build_tools, artifacts: true }
+  before_script:
+    - apk add --no-cache openssh-client
+    - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    - set -a; . ./docker/deploy.env; set +a
+
+db_roles_prod:
+  extends: .tools_base
+  stage: deploy_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  variables:
+    STACK_NAME: saas-prod
+    DEPLOY_USER: $DEPLOY_USER_PROD
+    DEPLOY_HOST: $DEPLOY_HOST_PROD
+    DEPLOY_PORT: $DEPLOY_PORT_PROD
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
+        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" pnpm db:roles
+
+seed_prod:
+  extends: .tools_base
+  stage: deploy_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  variables:
+    STACK_NAME: saas-prod
+    DEPLOY_USER: $DEPLOY_USER_PROD
+    DEPLOY_HOST: $DEPLOY_HOST_PROD
+    DEPLOY_PORT: $DEPLOY_PORT_PROD
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" pnpm db:seed
+
+db_roles_dev:
+  extends: .tools_base
+  stage: deploy_prod          # остання стадія → гарантовано ПІСЛЯ deploy_dev (мережа стека вже є)
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
+        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" pnpm db:roles
+
+seed_dev:
+  extends: .tools_base
+  stage: deploy_prod
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" pnpm db:seed
+
+dump_db_prod:
+  image: docker:27
+  stage: deploy_prod
+  when: manual
+  tags: [deploy_dev]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  variables:
+    STACK_NAME: saas-prod
+    DEPLOY_USER: $DEPLOY_USER_PROD
+    DEPLOY_HOST: $DEPLOY_HOST_PROD
+    DEPLOY_PORT: $DEPLOY_PORT_PROD
+  before_script:
+    - apk add --no-cache openssh-client
+    - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
+  script:
+    - |
+      CID=$(DOCKER_CONTEXT=swarm docker ps --filter "name=${STACK_NAME}_postgres" --format '{{.ID}}' | head -1)
+      DUMP="saas_dump_$(date +%Y%m%d_%H%M%S).sql"
+      DOCKER_CONTEXT=swarm docker exec "$CID" pg_dump -U saas -d saas_skeleton > "$DUMP"
+      ls -lh "$DUMP"
+  artifacts:
+    name: "saas_db_dump_prod"
+    paths: ["*.sql"]
+    expire_in: 7 days
+    when: always

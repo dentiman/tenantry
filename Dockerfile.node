@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1.7
+# Спільний multi-stage образ для NestJS-бекендів монорепо: api | platform-api | worker.
+# Build context = КОРІНЬ репо (потрібні workspace-ліби й lockfile). Вибір апки — ARG APP.
+#
+#   docker build -f Dockerfile.node --build-arg APP=api          -t <reg>/api:<tag> .
+#   docker build -f Dockerfile.node --build-arg APP=platform-api -t <reg>/platform-api:<tag> .
+#   docker build -f Dockerfile.node --build-arg APP=worker       -t <reg>/worker:<tag> .
+#
+# База — bookworm-slim (glibc), НЕ alpine: через нативні argon2 (api/platform-api) і
+# sharp (worker); Node 24 обовʼязковий (pg-boss v12 / file-type v22 — ESM-only, require(esm)).
+
+FROM node:24-bookworm-slim AS base
+WORKDIR /usr/src/app
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# ---------------------------------------------------------------------------
+# builder: повний install → prisma generate (клієнт бандлиться webpack-ом у dist)
+#          → nest build обраної апки (webpack-бандл apps/${APP}/dist/main.js)
+# ---------------------------------------------------------------------------
+FROM base AS builder
+ARG APP
+COPY . .
+RUN npm pkg delete scripts.prepare
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    HUSKY=0 pnpm install --frozen-lockfile
+RUN pnpm --filter @saas-skeleton/database db:generate
+RUN pnpm --filter @saas-skeleton/${APP} build
+
+# ---------------------------------------------------------------------------
+# prod-deps: лише runtime-залежності (bundle тримає їх external → мусять бути в node_modules).
+#            shamefully-hoist (.npmrc) робить node_modules плоским → у runtime копіюємо тільки корінь.
+# ---------------------------------------------------------------------------
+FROM base AS prod-deps
+COPY . .
+RUN npm pkg delete scripts.prepare
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    HUSKY=0 pnpm install --prod --frozen-lockfile
+
+# ---------------------------------------------------------------------------
+# runtime: тонкий образ. non-root. Дефолтний CMD — просто старт (platform-api/worker).
+#          api у стеку override-ить entrypoint (спершу prisma migrate deploy).
+# ---------------------------------------------------------------------------
+FROM node:24-bookworm-slim AS runtime
+ARG APP
+ENV NODE_ENV=production
+ENV APP=${APP}
+WORKDIR /usr/src/app
+RUN groupadd -r app && useradd -r -g app -u 1001 appuser
+
+COPY --from=prod-deps --chown=appuser:app /usr/src/app/node_modules ./node_modules
+COPY --from=builder   --chown=appuser:app /usr/src/app/apps/${APP}/dist ./apps/${APP}/dist
+# Схема + міграції + config для entrypoint-міграцій (реально використовує лише api)
+COPY --from=builder   --chown=appuser:app /usr/src/app/libs/database/prisma ./libs/database/prisma
+COPY --from=builder   --chown=appuser:app /usr/src/app/libs/database/prisma.config.ts ./libs/database/prisma.config.ts
+COPY --chown=appuser:app docker/entrypoint-api.sh ./docker/entrypoint-api.sh
+RUN chmod +x docker/entrypoint-api.sh
+
+USER appuser
+CMD ["sh", "-c", "node apps/$APP/dist/main.js"]

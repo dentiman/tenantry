@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1.7
+# Параметризований образ для React/Vite-фронтів: web | platform-web.
+# Build context = КОРІНЬ репо. Вибір апки — ARG APP.
+#
+#   docker build -f Dockerfile.web --build-arg APP=web          -t <reg>/web:<tag> .
+#   docker build -f Dockerfile.web --build-arg APP=platform-web -t <reg>/platform-web:<tag> .
+#
+# Рантайм — nginx: віддає SPA + проксить /api/* на бекенд (адреса через env API_UPSTREAM).
+# API_BASE_URL/config.json НЕ потрібні: фронт ходить на відносний /api (baseURL '/').
+
+FROM node:24-bookworm-slim AS base
+WORKDIR /usr/src/app
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# ---------------------------------------------------------------------------
+# builder: install + vite build обраного фронта → apps/${APP}/dist (статика)
+# ---------------------------------------------------------------------------
+FROM base AS builder
+ARG APP
+COPY . .
+RUN npm pkg delete scripts.prepare
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    HUSKY=0 pnpm install --frozen-lockfile
+RUN pnpm --filter @saas-skeleton/${APP} build
+
+# ---------------------------------------------------------------------------
+# runtime: nginx. Офіційний entrypoint робить envsubst шаблонів із /etc/nginx/templates
+#          при старті → підставляє ${API_UPSTREAM} (nginx-змінні $host/$uri не чіпає).
+# ---------------------------------------------------------------------------
+FROM nginx:alpine AS runtime
+ARG APP
+COPY docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY --from=builder /usr/src/app/apps/${APP}/dist /usr/share/nginx/html
+EXPOSE 80

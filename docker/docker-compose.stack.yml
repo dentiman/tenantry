@@ -1,0 +1,238 @@
+# Docker Swarm stack — усі сервіси saas-skeleton на ОДНІЙ manager-ноді (single-node старт).
+# Деплой (через docker context, БЕЗ файлів на сервері):
+#   DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-compose.stack.yml saas
+#
+# Змінні ${...} інтерполюються КЛІЄНТСЬКИ (на раннері) з оточення CI перед відправкою на manager:
+#   образи:  API_IMAGE PLATFORM_API_IMAGE WORKER_IMAGE WEB_IMAGE PLATFORM_WEB_IMAGE
+#   секрети: JWT_SECRET PLATFORM_JWT_SECRET S3_ACCESS_KEY S3_SECRET_KEY S3_ENDPOINT
+#            S3_CORS_ALLOWED_ORIGINS SMTP_HOST SMTP_FROM POSTGRES_PASSWORD
+#
+# Стан (postgres/seaweedfs) прибито до manager (Варіант B): volume local+bind у /srv →
+# бекап = весь сервер. Режим IP:port БЕЗ проксі: web/platform-web/seaweedfs — mode:host на 0.0.0.0
+# (браузер б'є їх напряму за <node-ip>:порт, S3 — теж напряму за presigned URL, БЕЗ TLS);
+# api/platform-api лишаються на 127.0.0.1 (браузер ходить до них через nginx-проксі web по overlay).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Спільний deploy для ВСІХ сервісів: single-node, прибито до manager, 1 репліка.
+x-deploy: &deploy-pinned
+  replicas: 1
+  placement:
+    constraints:
+      - node.role == manager
+      # За кількох нод розкоментуй і зафіксуй конкретну storage-ноду:
+      # - node.hostname == DOCKER-PROD-01
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+
+# Rolling update для STATELESS-апок: піднімай новий таск ДО зупинки старого + автооткат.
+x-update-stateless: &update-stateless
+  parallelism: 1
+  delay: 10s
+  order: start-first
+  failure_action: rollback
+
+# Для STATEFUL (postgres/seaweedfs): stop-first — двом інстансам НЕ можна ділити один volume.
+x-update-stateful: &update-stateful
+  parallelism: 1
+  order: stop-first
+
+# DB-URL-и: паролі ролей фіксовані в ensure-roles.ts (postgres внутрішній, порт не публікується).
+x-db-env: &db-env
+  DATABASE_URL: postgresql://saas_app:saas_app@postgres:5432/saas_skeleton
+  MIGRATE_DATABASE_URL: postgresql://saas_migrator:saas_migrator@postgres:5432/saas_skeleton
+  PLATFORM_DATABASE_URL: postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton
+
+x-s3-env: &s3-env
+  S3_ENDPOINT: ${S3_ENDPOINT}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  S3_BUCKET: ${S3_BUCKET:-saas-files}
+  S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+  S3_CORS_ALLOWED_ORIGINS: ${S3_CORS_ALLOWED_ORIGINS}
+
+services:
+  # ------------------------------------------------------------------ postgres
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-saas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-saas}
+      POSTGRES_DB: ${POSTGRES_DB:-saas_skeleton}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [saas_net]
+    logging: *logging
+    # Порт НЕ публікуємо — доступ лише зсередини overlay (postgres:5432)
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateful
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-saas} -d ${POSTGRES_DB:-saas_skeleton}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------------------------------------------------------------------ seaweedfs (S3)
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.39
+    command: 'server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=1024'
+    volumes:
+      - seaweedfs-data:/data
+    configs:
+      - source: s3_config
+        target: /etc/seaweedfs/s3.json
+    networks: [saas_net]
+    logging: *logging
+    ports:
+      # Браузер ходить сюди за presigned URL через зовнішній reverse-proxy (зберігати Host — SigV4!)
+      - target: 8333
+        published: 8503
+        host_ip: 0.0.0.0        # IP:port без проксі — браузер б'є S3 напряму за presigned URL
+        mode: host
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateful
+
+  # ------------------------------------------------------------------ api (listen :3001 → published :8501)
+  api:
+    image: ${API_IMAGE}
+    # Override: спершу міграції (saas_migrator), потім старт (saas_app)
+    entrypoint: ["/usr/src/app/docker/entrypoint-api.sh"]
+    environment:
+      <<: [*db-env, *s3-env]
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
+    networks: [saas_net]
+    logging: *logging
+    ports:
+      - target: 3001
+        published: 8501
+        host_ip: 127.0.0.1
+        mode: host
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateless
+      rollback_config:
+        parallelism: 1
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ------------------------------------------------------------------ platform-api (listen :3002 → published :8502)
+  platform-api:
+    image: ${PLATFORM_API_IMAGE}
+    environment:
+      <<: *db-env
+      NODE_ENV: production
+      PLATFORM_PORT: 3002
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET}
+    networks: [saas_net]
+    logging: *logging
+    ports:
+      - target: 3002
+        published: 8502
+        host_ip: 127.0.0.1
+        mode: host
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateless
+      rollback_config:
+        parallelism: 1
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ------------------------------------------------------------------ worker (без HTTP)
+  worker:
+    image: ${WORKER_IMAGE}
+    environment:
+      <<: [*db-env, *s3-env]
+      NODE_ENV: production
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM}
+    networks: [saas_net]
+    logging: *logging
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateless
+      rollback_config:
+        parallelism: 1
+    # healthcheck немає: воркер без HTTP (живе на poll-циклах pg-boss); стан — через docker service ps
+
+  # ------------------------------------------------------------------ web (published :8511)
+  web:
+    image: ${WEB_IMAGE}
+    environment:
+      API_UPSTREAM: http://api:3001
+    networks: [saas_net]
+    logging: *logging
+    ports:
+      - target: 80
+        published: 8511
+        host_ip: 0.0.0.0        # IP:port без проксі — браузер відкриває web напряму
+        mode: host
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateless
+      rollback_config:
+        parallelism: 1
+
+  # ------------------------------------------------------------------ platform-web (published :8512)
+  platform-web:
+    image: ${PLATFORM_WEB_IMAGE}
+    environment:
+      API_UPSTREAM: http://platform-api:3002
+    networks: [saas_net]
+    logging: *logging
+    ports:
+      - target: 80
+        published: 8512
+        host_ip: 0.0.0.0        # IP:port без проксі — браузер відкриває platform-web напряму
+        mode: host
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateless
+      rollback_config:
+        parallelism: 1
+
+networks:
+  saas_net:
+    driver: overlay
+    attachable: true   # щоб one-shot db:roles/db:seed (docker run) могли під'єднатись
+
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${SAAS_DATA_DIR:-/srv/saas-skeleton/data}/postgres
+  seaweedfs-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${SAAS_DATA_DIR:-/srv/saas-skeleton/data}/seaweedfs
+
+configs:
+  s3_config:
+    # Читається на раннері (client-side), відправляється в swarm як config-обʼєкт.
+    # У CI генерується перед деплоєм із CI-змінної (файл gitignored).
+    file: ./docker/seaweedfs/s3.prod.json

@@ -1,0 +1,30 @@
+# Build-контекст для всіх образів (context = корінь репо).
+# Не тягнемо в контекст важке/секретне — pnpm install у образі відновить залежності.
+**/node_modules
+**/dist
+**/.turbo
+.turbo
+.git
+.github
+.gitlab-ci.yml
+**/logs
+apps/api/logs
+apps/platform-api/logs
+# .env* НЕ копіюємо в образ — конфіг іде через env стеку/CI
+.env
+.env.*
+!.env.example
+!.env.production.example
+# deploy-секрети читаються раннером при деплої, у самі образи не потрібні
+docker/deploy.env
+# Локальні секрети сховища (генеруються в CI / лежать на хості)
+docker/seaweedfs/s3.json
+docker/seaweedfs/s3.prod.json
+# Артефакти генерації (регенеруються в build-стадії)
+libs/database/src/generated
+**/*.log
+.idea
+.vscode
+coverage
+test-results
+playwright-report

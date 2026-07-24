@@ -1,0 +1,51 @@
+# nginx для React/Vite SPA (web / platform-web).
+# ${API_UPSTREAM} підставляється envsubst-ом офіційного nginx-образу при старті
+# (web → http://api:3001, platform-web → http://platform-api:3002 — задається env стеку).
+# Бекенд має глобальний префікс 'api' → /api/* проксимо БЕЗ зрізання префікса.
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Embedded-DNS Docker → сервісне імʼя бекенда резолвиться динамічно (IP міняється на redeploy)
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/xml text/javascript
+               application/javascript application/json application/xml+rss image/svg+xml;
+
+    add_header X-Frame-Options        "SAMEORIGIN"                      always;
+    add_header X-Content-Type-Options "nosniff"                         always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+
+    # /api/* → бекенд. Змінна в proxy_pass змушує nginx резолвити ім'я в рантаймі
+    # через resolver вище (інакше IP кешується на час старту й ламається після redeploy).
+    location /api/ {
+        set $backend "${API_UPSTREAM}";
+        proxy_pass $backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout    60s;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    60s;
+    }
+
+    # Незмінні хешовані ассети Vite — довгий кеш
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA-fallback: усі не-файлові шляхи → index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

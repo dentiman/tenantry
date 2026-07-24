@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1.7
+# Образ операційних one-shot-команд БД (повний install: tsx, prisma, pg, argon2).
+# Build context = КОРІНЬ репо.
+#
+# Запускається з ЯВНОЮ командою через overlay-мережу стеку, напр.:
+#   # ролі (одноразово, ДО першого деплою api) — потрібен суперюзер:
+#   docker run --rm --network <stack>_saas_net \
+#     -e POSTGRES_ADMIN_URL=postgresql://saas:saas@postgres:5432/postgres \
+#     -e DATABASE_URL=postgresql://saas_app:saas_app@postgres:5432/saas_skeleton \
+#     <tools-image> pnpm db:roles
+#   # сід дефолтних ідентичностей (під saas_platform — BYPASSRLS):
+#   docker run --rm --network <stack>_saas_net \
+#     -e PLATFORM_DATABASE_URL=postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton \
+#     <tools-image> pnpm db:seed
+
+FROM node:24-bookworm-slim AS tools
+WORKDIR /usr/src/app
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+COPY . .
+RUN npm pkg delete scripts.prepare
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    HUSKY=0 pnpm install --frozen-lockfile
+RUN pnpm --filter @saas-skeleton/database db:generate
+
+# Дефолт — сід; реальну команду задають при docker run (db:roles / db:seed / db:migrate:deploy)
+CMD ["pnpm", "db:seed"]
