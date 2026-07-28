@@ -116,7 +116,9 @@ build_tools:
     - { job: build_platform_web, artifacts: true }
   before_script:
     # SSH раннер↔manager уже налаштований → ключ не інжектимо. Лише ssh-клієнт + context.
-    - apk add --no-cache openssh-client
+    # shell-executor: хост уже має docker+ssh (apk не потрібен). Context ідемпотентний — стан
+    # раннера персистентний між job-ами, тож перестворюємо, щоб не падати на «вже існує».
+    - docker context rm -f swarm 2>/dev/null || true
     - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
     # login у реєстр — предефайнений job-token (роздається нодам через --with-registry-auth)
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
@@ -173,7 +175,9 @@ deploy_prod:
   needs:
     - { job: build_tools, artifacts: true }
   before_script:
-    - apk add --no-cache openssh-client
+    # shell-executor: хост уже має docker+ssh (apk не потрібен). Context ідемпотентний — стан
+    # раннера персистентний між job-ами, тож перестворюємо, щоб не падати на «вже існує».
+    - docker context rm -f swarm 2>/dev/null || true
     - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
     - set -a; . ./docker/deploy.env; set +a
@@ -256,7 +260,9 @@ dump_db_prod:
     DEPLOY_HOST: $DEPLOY_HOST_PROD
     DEPLOY_PORT: $DEPLOY_PORT_PROD
   before_script:
-    - apk add --no-cache openssh-client
+    # shell-executor: хост уже має docker+ssh (apk не потрібен). Context ідемпотентний — стан
+    # раннера персистентний між job-ами, тож перестворюємо, щоб не падати на «вже існує».
+    - docker context rm -f swarm 2>/dev/null || true
     - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
   script:
     - |
