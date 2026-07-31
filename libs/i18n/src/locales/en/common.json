@@ -16,6 +16,10 @@
     "summary_other": "{{count}} selected",
     "clear": "Clear"
   },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "dropzone": {
     "prompt": "Drop a file here or click to browse",
     "invalidType": "This file type is not allowed",

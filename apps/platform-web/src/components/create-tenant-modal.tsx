@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateTenantSchema, type CreateTenant } from '@saas-skeleton/contracts/platform';
 import { getTenantsFindAllQueryKey, useTenantsCreate } from '../api/generated/api';
-import { applyServerError, FormTextField } from './form';
+import { applyServerError, FormPasswordField, FormTextField } from './form';
 
 export function CreateTenantModal() {
   const { t } = useTranslation('tenants');
@@ -101,11 +101,10 @@ export function CreateTenantModal() {
                       placeholder={t('create.adminNamePlaceholder')}
                     />
                     <div>
-                      <FormTextField
+                      <FormPasswordField
                         control={control}
                         name="admin.password"
                         label={t('create.adminPassword')}
-                        type="password"
                         autoComplete="new-password"
                       />
                       <p className="mt-1 text-xs text-muted">{t('create.adminPasswordHint')}</p>

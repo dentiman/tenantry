@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateUserSchema, type CreateUser } from '@saas-skeleton/contracts';
 import { getUsersFindAllQueryKey, useUsersCreate } from '../api/generated/api';
-import { applyServerError, FormSelect, FormTextField } from './form';
+import { applyServerError, FormPasswordField, FormSelect, FormTextField } from './form';
 
 export function CreateUserModal() {
   const { t } = useTranslation('users');
@@ -75,11 +75,10 @@ export function CreateUserModal() {
                   placeholder={t('create.namePlaceholder')}
                 />
                 <FormSelect control={control} name="role" label={t('create.role')} options={roleOptions} />
-                <FormTextField
+                <FormPasswordField
                   control={control}
                   name="password"
                   label={t('create.password')}
-                  type="password"
                   autoComplete="new-password"
                 />
                 {errors.root?.server && (

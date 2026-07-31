@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { LoginSchema, type Login } from '@saas-skeleton/contracts';
 import { useAuthLogin } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
-import { applyServerError, FormTextField } from '../components/form';
+import { applyServerError, FormPasswordField, FormTextField } from '../components/form';
 
 export function LoginPage() {
   const { t } = useTranslation('auth');
@@ -57,11 +57,10 @@ export function LoginPage() {
             type="email"
             autoComplete="email"
           />
-          <FormTextField
+          <FormPasswordField
             control={control}
             name="password"
             label={t('login.password')}
-            type="password"
             autoComplete="current-password"
           />
           {errors.root?.server && (
