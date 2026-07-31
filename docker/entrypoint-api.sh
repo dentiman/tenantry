@@ -11,7 +11,8 @@ set -eu
 
 echo "[entrypoint-api] prisma migrate deploy (saas_migrator)…"
 cd /usr/src/app/libs/database
-node /usr/src/app/node_modules/.bin/prisma migrate deploy
+# .bin/prisma — це shell-шим (pnpm+shamefully-hoist), запускаємо НАПРЯМУ (не через node)
+/usr/src/app/node_modules/.bin/prisma migrate deploy
 cd /usr/src/app
 
 echo "[entrypoint-api] starting api…"
