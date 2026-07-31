@@ -42,6 +42,16 @@ x-update-stateful: &update-stateful
   parallelism: 1
   order: stop-first
 
+# Для сервісів з host-mode портом (web/platform-web): start-first НЕМОЖЛИВИЙ — новий таск
+# не забіндить порт, який ще тримає старий на тій самій ноді, і зависне в Pending НАЗАВЖДИ
+# ("host-mode port already in use on 1 node"), а сервіс тихо лишиться на старому образі.
+# Ціна stop-first — кілька секунд недоступності на рестарт nginx.
+x-update-hostport: &update-hostport
+  parallelism: 1
+  delay: 10s
+  order: stop-first
+  failure_action: rollback
+
 # DB-URL-и: паролі ролей фіксовані в ensure-roles.ts (postgres внутрішній, порт не публікується).
 x-db-env: &db-env
   DATABASE_URL: postgresql://saas_app:saas_app@postgres:5432/saas_skeleton
@@ -180,7 +190,7 @@ services:
         mode: host              # bind 0.0.0.0 — браузер відкриває web напряму
     deploy:
       <<: *deploy-pinned
-      update_config: *update-stateless
+      update_config: *update-hostport
       rollback_config:
         parallelism: 1
 
@@ -197,7 +207,7 @@ services:
         mode: host              # bind 0.0.0.0 — браузер відкриває platform-web напряму
     deploy:
       <<: *deploy-pinned
-      update_config: *update-stateless
+      update_config: *update-hostport
       rollback_config:
         parallelism: 1
 
