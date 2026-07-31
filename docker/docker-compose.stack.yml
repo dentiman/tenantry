@@ -223,5 +223,6 @@ volumes:
 configs:
   s3_config:
     # Читається на раннері (client-side), відправляється в swarm як config-обʼєкт.
-    # У CI генерується перед деплоєм із CI-змінної (файл gitignored).
-    file: ./docker/seaweedfs/s3.prod.json
+    # Шлях ВІДНОСНО теки цього stack-файлу (docker/), а НЕ від кореня репо —
+    # docker stack deploy резолвить configs.file від директорії compose-файлу.
+    file: ./seaweedfs/s3.prod.json
