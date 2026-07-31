@@ -185,6 +185,9 @@ deploy_prod:
 db_roles_prod:
   extends: .tools_base
   stage: deploy_prod
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_prod }
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
@@ -203,6 +206,9 @@ db_roles_prod:
 seed_prod:
   extends: .tools_base
   stage: deploy_prod
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_prod }
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
@@ -219,7 +225,10 @@ seed_prod:
 
 db_roles_dev:
   extends: .tools_base
-  stage: deploy_prod          # остання стадія → гарантовано ПІСЛЯ deploy_dev (мережа стека вже є)
+  stage: deploy_prod
+  needs:                       # мусить чекати deploy_dev — інакше мережі saas-dev_saas_net ще нема
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_dev }
   variables:
     STACK_NAME: saas-dev
     DEPLOY_USER: $DEPLOY_USER_DEV
@@ -235,6 +244,9 @@ db_roles_dev:
 seed_dev:
   extends: .tools_base
   stage: deploy_prod
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_dev }
   variables:
     STACK_NAME: saas-dev
     DEPLOY_USER: $DEPLOY_USER_DEV
