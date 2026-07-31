@@ -47,7 +47,8 @@ ARG APP
 ENV NODE_ENV=production
 ENV APP=${APP}
 WORKDIR /usr/src/app
-RUN groupadd -r app && useradd -r -g app -u 1001 appuser
+RUN groupadd -r app && useradd -r -g app -u 1001 appuser \
+    && mkdir -p /usr/src/app/logs && chown appuser:app /usr/src/app/logs
 
 COPY --from=prod-deps --chown=appuser:app /usr/src/app/node_modules ./node_modules
 COPY --from=builder   --chown=appuser:app /usr/src/app/apps/${APP}/dist ./apps/${APP}/dist
