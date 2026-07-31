@@ -94,8 +94,7 @@ services:
       # Браузер ходить сюди за presigned URL через зовнішній reverse-proxy (зберігати Host — SigV4!)
       - target: 8333
         published: 8503
-        host_ip: 0.0.0.0        # IP:port без проксі — браузер б'є S3 напряму за presigned URL
-        mode: host
+        mode: host              # bind 0.0.0.0 (host_ip не підтримує схема stack deploy) — S3 напряму браузеру
     deploy:
       <<: *deploy-pinned
       update_config: *update-stateful
@@ -114,11 +113,7 @@ services:
       JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
     networks: [saas_net]
     logging: *logging
-    ports:
-      - target: 3001
-        published: 8501
-        host_ip: 127.0.0.1
-        mode: host
+    # порт не публікуємо — api доступний по overlay (web nginx проксить /api → api:3001)
     deploy:
       <<: *deploy-pinned
       update_config: *update-stateless
@@ -141,11 +136,7 @@ services:
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET}
     networks: [saas_net]
     logging: *logging
-    ports:
-      - target: 3002
-        published: 8502
-        host_ip: 127.0.0.1
-        mode: host
+    # порт не публікуємо — platform-api по overlay (platform-web nginx проксить /api → platform-api:3002)
     deploy:
       <<: *deploy-pinned
       update_config: *update-stateless
@@ -186,8 +177,7 @@ services:
     ports:
       - target: 80
         published: 8511
-        host_ip: 0.0.0.0        # IP:port без проксі — браузер відкриває web напряму
-        mode: host
+        mode: host              # bind 0.0.0.0 — браузер відкриває web напряму
     deploy:
       <<: *deploy-pinned
       update_config: *update-stateless
@@ -204,8 +194,7 @@ services:
     ports:
       - target: 80
         published: 8512
-        host_ip: 0.0.0.0        # IP:port без проксі — браузер відкриває platform-web напряму
-        mode: host
+        mode: host              # bind 0.0.0.0 — браузер відкриває platform-web напряму
     deploy:
       <<: *deploy-pinned
       update_config: *update-stateless
