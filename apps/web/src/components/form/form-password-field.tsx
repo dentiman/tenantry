@@ -63,7 +63,9 @@ export function FormPasswordField<T extends FieldValues>({
           onBlur={field.onBlur}
           ref={field.ref}
         />
-        <InputGroup.Suffix className="pe-0">
+        {/* border-s-0 — прибирає вертикальний роздільник між інпутом і кнопкою:
+            .input-group__suffix малює border-left завширшки --border-width-field (у нас 1px) */}
+        <InputGroup.Suffix className="pe-0 border-s-0">
           <Button
             isIconOnly
             aria-label={isVisible ? t('password.hide') : t('password.show')}
