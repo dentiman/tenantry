@@ -137,8 +137,8 @@ deploy_dev:
   stage: deploy_dev
   tags: [deploy_dev]
   environment: { name: dev }
-#  rules:
-#    - if: '$CI_COMMIT_BRANCH == "dev"'
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
   variables:
     STACK_NAME: saas-dev
     DEPLOY_USER: $DEPLOY_USER_DEV
