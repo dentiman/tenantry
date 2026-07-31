@@ -198,10 +198,14 @@ db_roles_prod:
     DEPLOY_PORT: $DEPLOY_PORT_PROD
   script:
     - |
-      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
-        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
-        "$TOOLS_IMAGE" pnpm db:roles
+      for i in $(seq 1 30); do
+        DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+          -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
+          -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+          "$TOOLS_IMAGE" pnpm db:roles && exit 0
+        echo "[db_roles] postgres ще не готовий (спроба $i/30) — чекаю 5с…"; sleep 5
+      done
+      echo "[db_roles] не вдалося за 30 спроб — перевір: docker service ps saas-prod_postgres"; exit 1
 
 seed_prod:
   extends: .tools_base
@@ -236,10 +240,14 @@ db_roles_dev:
     DEPLOY_PORT: $DEPLOY_PORT_DEV
   script:
     - |
-      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
-        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
-        "$TOOLS_IMAGE" pnpm db:roles
+      for i in $(seq 1 30); do
+        DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+          -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
+          -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+          "$TOOLS_IMAGE" pnpm db:roles && exit 0
+        echo "[db_roles] postgres ще не готовий (спроба $i/30) — чекаю 5с…"; sleep 5
+      done
+      echo "[db_roles] не вдалося за 30 спроб — перевір: docker service ps saas-dev_postgres"; exit 1
 
 seed_dev:
   extends: .tools_base
