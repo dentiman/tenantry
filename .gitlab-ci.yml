@@ -52,6 +52,17 @@ variables:
     - if: $CI_COMMIT_BRANCH
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  # shell-executor: `docker build` іде на локальному демоні раннера, і нічого звідти не зникає —
+  # 20G том забивається за кілька пайплайнів, після чого build падає з ENOSPC ще на `pnpm install`.
+  # Головний пожирач — НЕ образи, а BuildKit-кеш: на 2026-07-31 образи займали 2GB, кеш — 19.7GB
+  # (у демона немає ліміту `builder.gc.defaultKeepStorage`), тому самого `image prune` мало.
+  # Образи вже в registry — локально тримаємо лише поточний SHA (+latest); кеш лишаємо за добу,
+  # щоб не втрачати швидкість збірки. Обмежено namespace-ом $CI_REGISTRY_IMAGE — сусідні проєкти
+  # на тому ж раннері не чіпаємо.
+  after_script:
+    - docker images "$CI_REGISTRY_IMAGE/*" --format '{{.Repository}}:{{.Tag}}' | grep -v '<none>' | grep -v ":$CI_COMMIT_SHA$" | grep -v ':latest$' | xargs -r docker rmi || true
+    - docker image prune -f || true
+    - docker builder prune -f --filter "until=24h" || true
   artifacts:
     reports:
       dotenv: build.env

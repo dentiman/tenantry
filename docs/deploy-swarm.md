@@ -33,6 +33,11 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 > ⚠️ Усе на **http** — не змішувати зі https (mixed-content блокується браузером). Для справжнього
 > проду — повернути `host_ip: 127.0.0.1` + зовнішній reverse-proxy з TLS (для S3 зберігати Host).
 
+> **Наступне доповнення стеку (RT-0):** сервіс `valkey` (Socket.IO Redis Streams adapter +
+> presence leases) — порт НЕ публікується, лише overlay; `docker/nginx/default.conf.template`
+> отримує `location /socket.io/` з Upgrade-заголовками. Транспорт — websocket-only, тому
+> sticky sessions цій топології не потрібні. Деталі — [realtime.md](realtime.md).
+
 ## 2. Зафіксовані рішення
 
 | Питання | Рішення |

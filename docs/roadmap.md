@@ -1,157 +1,138 @@
 # Roadmap
 
-Стан на 2026-07-12. Рішення з обґрунтуваннями — в [architecture-proposal.md](architecture-proposal.md).
+Стан на **2026-08-02**. Рішення з обґрунтуваннями — в [architecture-proposal.md](architecture-proposal.md);
+профільні деталі — у документах, на які посилається кожен рядок.
 
-## ✅ Фаза 1 — фундамент (завершена 2026-07-11)
+Документ описує **куди йдемо**. Історія «як робили» живе в шапці `CLAUDE.md` і в профільних
+доках — тут завершені віхи лишені одним рядком, щоб було видно базу, на яку спирається план.
 
-- Монорепо pnpm + Turborepo; ESLint 9 strict + Prettier + Husky; CI (GitHub Actions з Postgres-сервісом).
-- `libs/contracts` (Zod 4), `libs/database` (Prisma 7 + міграція init + seed).
-- `apps/api`: auth (порт fibo-admin: JWT + refresh rotation + theft detection) + users CRUD,
-  Pino, PrismaExceptionFilter, Swagger `/api/docs`.
-- Конвеєр: `openapi:generate` → orval → typed TanStack Query hooks.
-- `apps/web`: login/register (RHF + Zod), guards, dashboard, users (пошук/пагінація/create/delete),
-  axios із single-flight refresh.
-- Перевірено: 40 e2e-тестів, lint/typecheck чисті, живий флоу через dev-проксі.
+---
 
-## Фаза 2 — черги + зміцнення auth
+## 1. Зроблено
 
-1. ✅ **pg-boss + `apps/worker`** (завершено 2026-07-11). `libs/shared`: `defineJob` (Zod-схема payload-а),
-   абстрактний `JobDispatcher` (pg-boss замінюваний), `@JobHandler()` + автореєстрація через DiscoveryService,
-   cron через pg-boss schedule, `JobInboxService` (processed_jobs, exactly-once для DB-ефектів),
-   транзакційна постановка через `fromPrisma(tx)`. Живі приклади: cron `auth.cleanup-expired-tokens`
-   і `users.user-registered` (диспатч з API при реєстрації). Перевірено живим флоу API → worker.
-2. **Auth-безпека**: reuse-detection ротованих токенів (`revokedAt` замість delete рядка);
-   refresh → httpOnly + Secure + SameSite cookie (прибрати з localStorage).
-3. ✅ **`notifications`-модуль** — перший споживач черги (email через Mailpit у dev). Fan-out
-   подія → `notifications.welcome-email`; моніторинг черг в адмінці (`/jobs`: список із
-   `pgboss.job` + зведення; історія — стандартний 7-денний retention pg-boss, рішення
-   користувача). Реальна відправка через Mailpit — завершено разом з I18N-3 (2026-07-12,
-   деталі нижче): `WelcomeEmailHandler` більше не заглушка.
+| Віха                     | Дата       | Що дала                                                                                                                            | Док                                                    |
+| ------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Фаза 1 — фундамент**   | 2026-07-11 | Монорепо pnpm+Turborepo, ESLint/Prettier/Husky, CI; `libs/contracts` (Zod 4), `libs/database` (Prisma 7); auth + users end-to-end; конвеєр Zod → OpenAPI → orval → typed hooks; `apps/web` | `architecture-proposal.md`                             |
+| **Фаза 2.1 — черги**     | 2026-07-11 | pg-boss v12 за власним `JobDispatcher`, `libs/shared` (`defineJob`, `@JobHandler`, `JobInboxService`), `apps/worker`, cron, транзакційний dispatch | `architecture-proposal.md`                             |
+| **Фаза 2.2 — помилки**   | 2026-07-12 | Наскрізний `ApiError`-envelope: `AllExceptionsFilter` → toast / fieldErrors у формах                                               | `error-handling.md`                                    |
+| **I18N-1…3**             | 2026-07-12 | `libs/i18n` + react-i18next, коди помилок замість тексту з бекенда, `users.locale` і реальний welcome-лист локаллю юзера           | `i18n-plan.md`                                         |
+| **DataGrid**             | 2026-07-13 | `createDataGrid` — фільтри/сортування/пагінація/selection декларативно; `/users`, `/jobs`                                          | `CLAUDE.md`                                            |
+| **Files v1**             | 2026-07-14 | S3-сумісне сховище, двофазний presigned-upload, magic-bytes валідація, thumbnail у воркері, cron-очистка                            | `file-storage.md`                                      |
+| **MT-0…MT-3**            | 2026-07-16…17 | Три ролі БД → tenant-фундамент → **RLS як основний enforcement** → control plane `apps/platform-api` + `apps/platform-web`      | `multi-tenancy-architecture.md`                        |
+| **`pnpm db:reset`**      | 2026-07-17 | Один деструктивний dev-скрипт + зафіксовані seed-ідентичності                                                                       | `database-seed.md`                                     |
+| **Activity Log**         | 2026-07-21 | Журнал бізнес-подій (`type`+`payload`, рендер через i18next), перший курсорний ендпоінт, sync/async-запис                          | `activity-log.md`                                      |
+| **Деплой у Swarm + CI**  | 2026-07-24…31 | GitLab CI: build 6 образів → `docker stack deploy` через docker-context по SSH (нуль файлів на сервері); dev-стек `saas-dev` живий на 172.18.13.101; manual `db_roles`/`seed`/`dump` | `deploy-swarm.md`                                      |
 
-## Фаза 3 — мультитенантність та RBAC
+Проєктні документи без реалізації (готові до роботи): [realtime.md](realtime.md),
+[tenant-settings.md](tenant-settings.md), беклог MT-4 у `multi-tenancy-architecture.md`.
 
-> **Переглянуто 2026-07-15, реалізовано MT-0…MT-3.** Архітектура — [multi-tenancy-architecture.md](multi-tenancy-architecture.md)
-> (єдиний довідник: як воно працює, обґрунтування рішень, MT-4/беклог). Два рішення від 2026-07-11
-> переглянуті на запит користувача: **RLS з «не вмикаємо» став основою ізоляції**, а
-> «Organization + Membership» — **`users.tenant_id NOT NULL`** (User належить одному tenant-у).
-> Головний принцип: мультитенантність **невидима для бізнес-коду** — ні `where: { tenantId }`,
-> ні передачі tenantId у `create`; усе робить інфраструктура (CLS + extension + RLS + DB-default).
+---
 
-1. ✅ **MT-0** (2026-07-16) — DB-ролі (`saas_migrator`/`saas_app`/`saas_platform`) + розділення
-   env-URL-ів. ✅ **MT-1** (2026-07-16) — фундамент без RLS: `Tenant`, `tenant_id` на
-   tenant-таблицях, `TenancyModule` (nestjs-cls + extension `set_config`, не `where`),
-   `withTenantTx`; черги — tenantId у payload + `cls.run` у воркері; register видалено;
-   refresh `tenantId:tokenId:secret`. Деталі і спіймані граблі — CLAUDE.md шапка + migration-док.
-2. ✅ **MT-2** (2026-07-16) — RLS увімкнено: політики `USING`+`WITH CHECK` (+FORCE, крім
-   `tenants` — там SECURITY DEFINER `resolve_tenant`), тести ізоляції (два тенанти /
-   CLS-конкурентний / SQL-smoke fail-closed / авточек `pg_policies` у e2e). 67 e2e зелені,
-   живий фан-аут під RLS. Доменний код не змінювався.
-3. ✅ **MT-3** (2026-07-17) — control plane: `apps/platform-api` (:3002, `platform_users`,
-   окремий `PLATFORM_JWT_SECRET`, роль `saas_platform`); гейт дотримано — `/jobs` переїхав
-   ПЕРЕД CRUD тенантів (з tenant-api і web видалено); CRUD тенантів (create+перший admin
-   атомарно, suspend/resume); slug-login end-to-end (`SlugTenantResolver` + поле на формі).
-   63+11 e2e, живий прогін: create tenant → slug-login → ізоляція. Глобальні довідники —
-   відкладено до першого реального довідника (та сама логіка, що рівень 3).
-   ✅ **`apps/platform-web`** (2026-07-17) — клон каркасу `apps/web` (Vite/TanStack/HeroUI/orval):
-   сторінки Tenants (CRUD + suspend/resume через AlertDialog) і Jobs (моніторинг, той самий
-   `createDataGrid`, що був у tenant-web). Живий прогін у браузері: login → create tenant
-   з форми → suspend/resume → сесія переживає F5 → jobs-таблиця з реальними даними.
-4. **RBAC** (після MT-2, поверх готового tenant-контексту): мапа role → permissions
-   у `libs/contracts`, `@RequirePermissions('tickets:write')` + guard.
-5. Наскрізний correlationId у чергах (зафіксовано 2026-07-12, робити разом із nestjs-cls
-   у MT-1): зараз `req.id` з pino-http НЕ доїжджає до воркера — payload містить лише
-   бізнес-дані, кореляція рветься на межі черги. План: `JobDispatcher.send` бере requestId
-   з cls-контексту і кладе службовим полем поруч із payload (pg-boss окремого metadata
-   не має), `JobWorkerRegistrar` знімає його в `JobContext` + child-логер — логи воркера
-   зв'язуються з API-запитом. Лог-конверт довкола хендлера (started/completed/failed)
-   уже зроблено у фазі 2. Див. також Observability у фазі 5.
+## 2. Наступні кроки (у порядку пріоритету)
 
-Single-tenant форки скелетона це не ускладнює: колонка `tenant_id` є завжди, single-tenant —
-це просто **N=1** (один рядок `Tenant`, id з env, control plane не деплоїться). Схема БД
-і доменний код у обох режимах ідентичні; `if (multiTenant)` у коді немає.
+### 2.1. Realtime (RT-0 → RT-3) — [realtime.md](realtime.md)
 
-## Фаза i18n — мультиязичність (зафіксовано 2026-07-12; виконати ДО фази 4)
+Найближча вертикаль. Деплой уже відомий, тому документ переглянуто під Swarm
+(§ «Що змінив відомий деплой» у `realtime.md`): транспорт **websocket-only** (sticky sessions не
+потрібні), Valkey — окремий сервіс стеку, `wss` — разом із TLS-проксі, не раніше.
 
-Кросс-катинг фаза, можна паралельно з фазою 3. Повний план і зафіксовані рішення —
-[i18n-plan.md](i18n-plan.md). Коротко: бекенд — коди, текст рендерить споживач;
-i18next (web + worker); JSON у репо (`libs/i18n` + `apps/*/locales`); стартово тільки `en`.
+1. **RT-0 — інфраструктурний spike (гейт).** Valkey у dev-compose і в swarm-стеку, Socket.IO +
+   Redis Streams adapter, `/socket.io` у nginx-шаблоні й Vite dev-proxy. Довести cross-instance
+   emit на `docker service scale saas-dev_api=2`, пережити рестарт Valkey.
+2. **RT-1 — безпечний gateway.** Zod-контракти подій, socket-auth (той самий сервіс перевірки JWT,
+   що й HTTP-guard), tenant/user rooms, CLS на кожну подію, graceful shutdown, singleton-клієнт на фронті.
+3. **RT-2 — presence.** Leases у Valkey + Lua + sweeper, `GET /api/presence` (snapshot+revision),
+   `presence.changed.v1`, online-badge на `/users`.
+4. **RT-3 — in-app notifications.** Довговічна таблиця + RLS, REST list/unread/read, bell UI,
+   `notification.created.v1`, міст із воркера через `realtime.dispatch`.
 
-1. ✅ **I18N-1** (завершено 2026-07-12). `libs/i18n` (спільні `common`/`errors`/`validation`,
-   стаби errors/validation — заповнить I18N-2) + `apps/web/src/i18n` (react-i18next, детекція
-   localStorage `saas_locale` → `navigator.language` → `en`, типізація ключів через
-   `typeof import()` в `resources.d.ts`). Фічеві namespace-и `apps/web/src/locales/en/`
-   (auth/users/jobs/dashboard/layout). Усі рядки адмінки винесені в ключі, включно з
-   job-станами й ролями користувача (мапінг enum → переклад, не сирий рядок) і `Trans`
-   для тексту з розміткою (підтвердження видалення користувача). `Intl.DateTimeFormat`-хелпери
-   (`lib/format.ts`) замінили прямі `toLocaleDateString`/`toLocaleString`. Перевірено живим
-   флоу (логін → dashboard/users/jobs, діалог видалення), lint/typecheck/build чисті.
-2. ✅ **I18N-2** (завершено 2026-07-12). `FieldErrorSchema` + опційні `code`/`params`
-   (`libs/contracts`); `AllExceptionsFilter` кладе Zod issue `code` у fieldErrors
-   VALIDATION_ERROR, `code: 'already_exists'` для P2002; `fieldConflictException(field, msg, code?)`
-   з тим самим дефолтом. `errors.json` (`libs/i18n`) заповнено: `codes.*` (усі 8 ApiErrorCode),
-   `toast.*` (заголовки), `fieldErrors.*` (Zod issue codes + `already_exists`), `network`/`generic`
-   (фронтові синтезовані повідомлення). Веб: `z.config(zodEn())` локалізує вбудовані Zod-повідомлення
-   (`apps/web/src/i18n`); `parseApiError` перекладає network/generic на джерелі; toast (`error-toast.ts`)
-   перекладає заголовок і опис по `code`; `applyServerError` перекладає `fieldError.code`
-   з fallback на англійський `message`, коли ключа немає (відкрита множина кодів). Кастомних
-   Zod-повідомлень у contracts немає — п. 3 з i18n-plan.md (переписати на ключі) виявився зайвим.
-   Перевірено: 47 e2e зелені (виправлено точне порівняння fieldErrors під новий `code`),
-   lint/typecheck/build чисті, живий флоу — дубль email у create-user-modal показує перекладене
-   «Already exists» під полем (мережа підтверджує `code: 'already_exists'` у відповіді).
-3. ✅ **I18N-3** (завершено 2026-07-12). `users.locale TEXT DEFAULT 'en'` (Prisma-міграція
-   `add_user_locale`); `UserLocaleSchema = z.enum(['en'])` у `libs/contracts` (свідомо ОКРЕМА
-   від `SUPPORTED_LOCALES` з `libs/i18n` — contracts лишається залежним лише від zod; I18N-4
-   додає нову мову в обидва місця) — `UserSchema.locale` (response), `CreateUserSchema.locale`
-   (опційний, дефолт `'en'`; `UpdateUserSchema` успадковує); `users.mapper.ts` віддає поле.
-   `apps/worker`: плейн `i18next` (без react-i18next) з локальним `src/locales/en/notifications.json`
-   — НЕ через `libs/i18n` (нема поки що спільного контенту з web, наскрізна залежність була б
-   передчасною абстракцією). `MailerService` (nodemailer) + Mailpit-сервіс у `docker-compose.yml`
-   (SMTP 1025, UI 8025, дефолти в `MailerService` через `ConfigService`, override — `SMTP_HOST`/
-   `SMTP_PORT`/`SMTP_FROM`). `WelcomeEmailHandler` читає `locale`+`name` свіжими з БД по `userId`
-   (не з job payload), рендерить subject/body через `i18n.t(..., { lng: locale })`, шле реальний
-   лист — заглушка та коментар «природно ідемпотентна» прибрані (тепер at-least-once side effect,
-   задокументовано в коді чому це прийнятно для welcome-листа).
-   **Свідомо НЕ зроблено** (щоб не городити мертвий код): фронтова пріоритетність
-   `profile.locale` над `localStorage` і будь-яка UI-форма вибору locale — з `SUPPORTED_LOCALES
-   = ['en']` це неспостережувана поведінка (locale завжди `'en'`); реальний сенс з'явиться
-   разом з мовним перемикачем в I18N-4. `RegisterSchema` теж без `locale` — немає відправника.
-   Перевірено: 47 e2e зелені, lint/typecheck/build (усіх 7 пакетів) чисті, живий флоу —
-   реєстрація через API → `users.user-registered` → `notifications.welcome-email` → лист у
-   Mailpit («Welcome to SaaS Skeleton!», тіло з `{{name}}`-інтерполяцією з `notifications.json`,
-   HTML не задвоєно екранований).
-4. **I18N-4** (відкладено): друга мова, language switcher, TMS (Tolgee — кандидат).
+### 2.2. Налаштування тенанта (System Settings) — [tenant-settings.md](tenant-settings.md)
 
-## Фаза 4 — доменні модулі (еталони для форків)
+Перша вертикаль — секція `general` (name + currency), редагована з обох plane-ів, плюс
+`GET /system-settings/bootstrap` для «гарячих» налаштувань фронта. Звуження редактора до ADMIN —
+разом із RBAC.
 
-1. `customers` — зразковий CRUD: список із фільтрами/сортуванням у URL (TanStack Router search params).
-2. `tickets` — статусний workflow (open → in_progress → resolved), коментарі, події → черга.
-3. `billing` — Plan/Subscription/Invoice, інтерфейс `PaymentProvider`, fake-провайдер → Stripe-адаптер,
+### 2.3. RBAC
+
+Мапа role → permissions у `libs/contracts`, `@RequirePermissions('tickets:write')` + guard.
+Ставиться поверх готового tenant-контексту; блокує «правильне» закриття доступів у
+system-settings і доменних модулях.
+
+### 2.4. Доменні модулі (еталони для форків)
+
+1. `customers` — зразковий CRUD (пишеться вже **без згадок tenantId**: MT невидима для домену).
+2. `tickets` — статусний workflow, коментарі, події → черга; перший реальний споживач activities.
+3. `billing` — Plan/Subscription/Invoice, інтерфейс `PaymentProvider`, fake-провайдер → Stripe,
    webhooks через чергу (ідемпотентність по `event_id UNIQUE`).
-4. `audit-log` — запис чутливих операцій через events.
-5. **Налаштування тенанта (System Settings)** — секційні налаштування на сутності `Tenant`,
-   редаговані з обох plane-ів (tenant-адмін через `/system-settings/:section`, оператор через
-   tenant-CRUD) + `GET /system-settings/bootstrap` для «гарячих» налаштувань фронта. Перша
-   вертикаль — `general` (name + currency). Повний дизайн, безпека і сховище (колонка vs
-   `settings Json` — рішення per-field у момент появи поля) — [tenant-settings.md](tenant-settings.md).
-   RBAC-звуження редактора до ADMIN — разом із фазою RBAC (Фаза 3, п. 4).
 
-## Фаза 5 — operational maturity
+`audit-log` окремим модулем не робимо — його роль виконує Activity Log; за потреби «чутливих»
+подій розширюємо закритий enum типів.
 
-- **Observability (зафіксовано 2026-07-12, імплементація — після вибору способу деплою).**
-  Два незалежні інструменти, не конкуренти:
-  - **Error tracking — Sentry** (або self-hosted GlitchTip, SDK-сумісний): групування 5xx за stack
-    trace, алерти, прив'язка до релізів. Deployment-агностичний — умовна ініціалізація по
-    `SENTRY_DSN` у `main.ts` api і worker + `Sentry.captureException` у гілці ≥500
-    `AllExceptionsFilter` (tag `requestId`). Можна підключати будь-коли, не чекаючи деплою.
-  - **Агрегація логів — Grafana Loki + Alloy**: збирає stdout усіх контейнерів, пошук у Grafana
-    (у т.ч. по `requestId` із Sentry-issue — зв'язка через наявний requestId у кожному записі;
-    для логів воркера кореляція з'явиться після correlationId у чергах — фаза 3, п. 5).
-    Залежить від деплою: Docker Compose на VM → Alloy-контейнер у compose; Kubernetes → DaemonSet.
-    Код готовий без змін — JSON у stdout уже є.
-  - **Підготовчий фікс логера**: прод-режим — тільки stdout; `rotating-file-stream` у `cwd/logs` —
-    антипатерн у контейнері (ефемерна FS, колектор не бачить), зробити opt-in через env
-    (`LOG_FILE`) для сценарію «гола VM без оркестрації».
-- OpenTelemetry (traces; латентність базово вже в логах — `responseTime` від pino-http),
-  `@nestjs/terminus` health для api і worker.
-- Тести фронтенда (Vitest) для критичних флоу; уніфікація api-тестів на Vitest (зараз Jest).
-- Env-валідація через Zod при старті (fail-fast), rate limiting, helmet.
+### 2.5. Безпека auth
+
+- reuse-detection ротованих refresh-токенів: `revokedAt` замість видалення рядка (зараз повторне
+  використання дає 401, але не відкликає інші сесії);
+- refresh у httpOnly + Secure + SameSite cookie замість localStorage (потребує TLS — робити разом
+  із п. 2.7);
+- звузити `app.enableCors()` до allowlist (зараз широкий; той самий allowlist піде в
+  `REALTIME_ALLOWED_ORIGINS`).
+
+### 2.6. Operational maturity
+
+- **Error tracking — Sentry або self-hosted GlitchTip** (SDK-сумісний): умовна ініціалізація по
+  `SENTRY_DSN` у `main.ts` api/platform-api/worker + `captureException` у гілці ≥500
+  `AllExceptionsFilter` (tag `requestId`). Deployment-агностично, можна робити будь-коли.
+- **Агрегація логів — Grafana Loki + Alloy** як сервіс того самого swarm-стеку (збирає stdout
+  контейнерів; пошук по `requestId`). JSON у stdout уже є — коду не змінюємо.
+- **Фікс логера під контейнер:** зараз pino пише файли в `cwd/logs`, і `Dockerfile.node` спеціально
+  створює цю теку для non-root юзера — це обхід симптому. У прод-режимі має лишатись **тільки
+  stdout**, файловий sink — opt-in через `LOG_FILE` (сценарій «гола VM без оркестрації»).
+- **Наскрізний correlationId у чергах:** `req.id` з pino-http не доїжджає до воркера.
+  `JobDispatcher.send` бере requestId з CLS і кладе службовим полем поруч із payload,
+  `JobWorkerRegistrar` знімає його в `JobContext` + child-логер.
+- **`@nestjs/terminus`** health для обох api і воркера (зараз health — саморобний, у воркера немає
+  зовсім, стан видно лише через `docker service ps`).
+- **Env-валідація через Zod при старті** (fail-fast), rate limiting, helmet.
+- **Тести:** Vitest для критичних фронтових флоу; уніфікація api-тестів Jest → Vitest (заодно
+  прибере моки pg-boss/file-type через `moduleNameMapper`).
+
+### 2.7. Дозрівання деплою до справжнього проду — [deploy-swarm.md](deploy-swarm.md)
+
+Зараз працює **тестовий прод**: усе по http на IP:port, прикладні секрети свідомо в репо.
+Що змінити перед реальним продом:
+
+- `docker/deploy.env` і `docker/seaweedfs/s3.prod.json` → CI Variables (Protected+Masked),
+  повернути в `.gitignore`;
+- reverse-proxy з TLS перед стеком: web/platform-web/S3 назад на `127.0.0.1`, для S3 **зберігати
+  Host** (він у SigV4-підписі), для `/socket.io` — `Upgrade`/`Connection` і idle timeout більший
+  за `pingInterval + pingTimeout`;
+- окремі prod-раннери і тег `deploy_prod` (зараз усе, включно з prod-job-ами, під `deploy_dev`);
+- Deploy Token (`read_registry`) замість job-token — потрібен, щойно нод стане більше однієї;
+- `deploy_prod` зняти з `when: manual`, коли піде реальний прод;
+- регулярний бекап: `dump_db_prod` за розкладом + снапшот `${SAAS_DATA_DIR}` (postgres + seaweedfs
+  бекапити узгоджено).
+
+### 2.8. Беклог MT-4 — [multi-tenancy-architecture.md](multi-tenancy-architecture.md)
+
+Invite-флоу першого адміна тенанта (зараз пароль задає оператор), піддомени як спосіб резолву
+тенанта, глобальні довідники рівня 3, білінг-специфіка платформи. Робиться на вимогу, не в чергу.
+
+---
+
+## 3. Свідомо поза скоупом
+
+Прибрано з roadmap 2026-08-02 — щоб план відображав реальні наміри, а не всі колись згадані опції.
+Повернути можна будь-коли, історія в git.
+
+| Пункт                                    | Чому не робимо                                                                                                       |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Kubernetes / Helm / DaemonSet-колектори  | Спосіб деплою зафіксовано — **Docker Swarm** single-node з ростом до кількох нод. Гілки «якщо K8s» більше не тримаємо |
+| OpenTelemetry (traces)                   | Латентність уже є в pino-логах (`responseTime`), Sentry + Loki покривають діагностику. Трасування — надлишок для поточного масштабу |
+| ClamAV / антивірус для завантажень       | Валідація — allowlist MIME + magic bytes; сканування вмісту не входить у скелетон                                     |
+| I18N-4: друга мова, language switcher, TMS (Tolgee) | Стартово тільки `en`. Механіка i18n готова; повертаємось до цього, коли зʼявиться реальна друга мова        |
+| Membership / Invitations як окремі сутності | Скасовано на MT-1: `users.tenant_id NOT NULL`, юзер належить одному тенанту                                       |
+| Окремий `audit-log`-модуль               | Перекривається Activity Log (`docs/activity-log.md`)                                                                  |
+
+Single-tenant форк скелетона додаткової роботи не потребує: `tenant_id` є завжди, single-tenant —
+це **N=1** тієї самої схеми (один рядок `Tenant`, control plane просто не деплоїться). `if (multiTenant)`
+у коді немає.

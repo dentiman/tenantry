@@ -46,6 +46,19 @@ Sync-запис: `UsersService.create` переїхав у `withTenantTx` (юз�
 (2) `payload as InputJsonValue` — зайва асерція (receiver і так приймає). 69 tenant-e2e (+6: create-records-one,
 feed-by-entity, filter-by-type, cursor-no-dupes, bad-cursor-400, recorder-unit) + 11 platform-e2e; lint/typecheck/build
 чисті. Живий прогін: create user → `user.created` одразу + `email.sent` після воркера + лист у Mailpit.
+**Деплой завершений і перевірений** (2026-07-24…31): GitLab CI → Docker Swarm. Build 6 образів
+(`Dockerfile.node` × api/platform-api/worker, `Dockerfile.web` × web/platform-web, `Dockerfile.tools`)
+→ `docker stack deploy` через **docker-context по SSH** — на сервер не копіюється жоден файл
+(stack читається на раннері, `${...}` інтерполюються з оточення job-а). Стеки `saas-dev` (гілка
+`dev`, живий на 172.18.13.101) і `saas-prod` (`main`, manual). Тестовий прод: усе по **http на
+IP:port** без reverse-proxy (web :8511, platform-web :8512, S3 :8503 — `mode: host`; api/platform-api
+портів НЕ публікують — nginx у контейнері web проксить `/api` по overlay), прикладні секрети
+свідомо в комітнутому `docker/deploy.env`. Міграції — в entrypoint api (`saas_migrator` →
+старт під `saas_app`); `db_roles`/`seed`/`dump` — manual one-shot джоби через `Dockerfile.tools`.
+Граблі: `host_ip` не підтримується схемою stack deploy; `configs.file` резолвиться відносно теки
+compose-файлу; для сервісів із host-портом `start-first` НЕМОЖЛИВИЙ (новий таск вічно Pending —
+тільки `stop-first`); shell-executor раннера не чистить BuildKit-кеш сам (19.7GB за кілька
+пайплайнів → ENOSPC; додано `after_script` з prune). Деталі — `docs/deploy-swarm.md`.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -64,6 +77,11 @@ sync-запис у withTenantTx / async через inbox, перший курс�
 `docs/commands.md` (довідник усіх команд `package.json` з прикладами й описом, включно
 з посиланнями на профільні доки — напр. `db:roles` → `docs/multi-tenancy-architecture.md`;
 там же — мінімальний впорядкований набір JetBrains Run Configurations для dev),
+`docs/deploy-swarm.md` (РЕАЛІЗОВАНО 2026-07-24…31: GitLab CI → Docker Swarm через
+docker-context по SSH; топологія стеку, образи, one-shot db-джоби, рунбук),
+`docs/realtime.md` + `docs/realtime-questions.md` (Socket.IO/presence/notifications —
+дизайн, переглянутий 2026-08-02 під Swarm; ще не реалізовано),
+`docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
 `README.md` (quickstart).
 
 ## Команди
@@ -295,6 +313,8 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                     |
+| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. Дизайн — `docs/realtime.md`, реалізація попереду (RT-0…RT-3)                                                                                                                                                                                                                                                                                                                    |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                               |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
@@ -320,4 +340,6 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 - RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard (після MT-2, поверх
   готового tenant-контексту).
 - Доменні модулі: customers (еталонний CRUD) → tickets (workflow + події) → billing
-  (PaymentProvider інтерфейс + fake-провайдер → Stripe) → notifications → audit-log.
+  (PaymentProvider інтерфейс + fake-провайдер → Stripe). Окремого `audit-log` НЕ робимо —
+  його роль виконує Activity Log; in-app notifications — це RT-3 у `docs/realtime.md`.
+- Realtime (RT-0…RT-3) і System Settings — найближчі вертикалі, див. `docs/roadmap.md`.

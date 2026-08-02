@@ -1,6 +1,8 @@
 # Realtime-підсистема: Socket.IO, presence і notifications
 
 > Статус: архітектурне рішення, ще не реалізовано. Дата: 2026-07-22.
+> **Переглянуто 2026-08-02** під відомий деплой (Docker Swarm + GitLab CI, див.
+> [deploy-swarm.md](deploy-swarm.md)) — зведення змін у § «Що змінив відомий деплой».
 >
 > Перший вертикальний сценарій — online presence користувачів tenant CRM. Наступний
 > сценарій — in-app notifications. Наявні email jobs у `libs/shared/src/jobs/definitions/notifications.jobs.ts`
@@ -19,12 +21,77 @@
 | Tenant isolation            | `tenantId` тільки з перевіреного tenant JWT; room-и й ключі ізольовані по tenant             |
 | Notifications               | PostgreSQL — source of truth; socket event — best-effort wake-up hint                        |
 | Розміщення gateway          | Спочатку в кожній репліці `apps/api`; межа модуля дозволяє винести в `apps/realtime` пізніше |
-| Load balancer               | WebSocket upgrade + cookie-based sticky sessions, бо лишаємо polling fallback                |
+| **Транспорт Socket.IO**     | **`transports: ['websocket']`** — без polling fallback, тому sticky sessions не потрібні (2026-08-02) |
+| Load balancer               | nginx у контейнері `web` (`/api` + `/socket.io` → `api:3001` по overlay). Affinity не потрібна, поки транспорт — тільки WebSocket |
+| TLS                         | Тестовий прод — `ws://` по http на IP:port. `wss` стає обовʼязковим разом із TLS-проксі (розділ 2.7 roadmap) |
+| Деплой Valkey               | Сервіс swarm-стеку `valkey` (порт НЕ публікується, лише overlay), у dev — сервіс `docker-compose.yml` |
 | Control plane               | Не підключаємо. Якщо знадобиться — окремий gateway/auth/key prefix у `platform-api`          |
 
 Redis/Valkey тут не замінює pg-boss. pg-boss лишається механізмом довговічних фонових
 робіт із retry та транзакційним dispatch. Valkey обслуговує короткоживучий fan-out,
 connection recovery і presence leases.
+
+## Що змінив відомий деплой (2026-08-02)
+
+Документ писався до деплою — «reverse proxy з TLS і cookie-affinity» був гіпотезою. Реальна
+цільова інфраструктура ([deploy-swarm.md](deploy-swarm.md)): **Docker Swarm, одна manager-нода**,
+усі сервіси `replicas: 1`, `api` **взагалі не публікує порт** — браузер ходить на nginx у
+контейнері `web` (`mode: host`, `0.0.0.0:8511`), а той проксить `/api` на `api:3001` по overlay.
+Зовнішнього reverse-proxy і TLS немає: тестовий прод — http на IP:port.
+
+| Було в дизайні                              | Стало                                                                                                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| polling fallback + cookie-based sticky      | **`transports: ['websocket']`.** Docker VIP балансує **по TCP-зʼєднанню**, cookie-affinity у цій схемі просто немає де взяти; websocket-only знімає вимогу повністю |
+| «Proxy має…» (гіпотетичний edge)            | Конкретний файл: `docker/nginx/default.conf.template` — окремий `location /socket.io/` (див. нижче)                                          |
+| production socket лише `wss`                | У тестовому проді — `ws://` (усе по http, mixed-content не виникає). `wss` — обовʼязково разом із TLS-проксі, не раніше                      |
+| «додається Valkey у compose»                | Два конкретні місця: `docker/docker-compose.yml` (dev) і `docker/docker-compose.stack.yml` (swarm), env — у `docker/deploy.env`               |
+| RT-0: «підняти дві репліки на різних портах» | `docker service scale saas-dev_api=2` на живому dev-стеку — api без published-порту, конфлікту немає                                          |
+
+**Чому adapter потрібен уже при `replicas: 1`** (інакше спокуса «поки одна нода — обійдемось мапою в памʼяті»):
+
+1. `x-update-stateless` для `api` — `order: start-first`: під час кожного деплою **два таски `api`
+   співіснують** десятки секунд. Без adapter-а половина клієнтів опиниться в іншому процесі й
+   presence розʼїдеться саме тоді, коли всі перепідключаються.
+2. `worker` — **окремий контейнер без HTTP**. Notification, створена джобою, не має способу
+   потрапити в socket без брокера (стрім `realtime.dispatch`, § «Майбутній Notification-модуль»).
+3. `docker service scale api=N` має лишатись операційним рішенням, а не міграцією архітектури.
+
+**Що додати в інфраструктуру (обсяг RT-0):**
+
+- сервіс `valkey` у dev-compose і в стеку: `valkey/valkey:8-alpine`, порт **не публікується**,
+  `--maxmemory` + `--maxmemory-policy noeviction`, `--requirepass`, персистентність не потрібна
+  (presence ефемерна, adapter-стрім bounded); у стеку — `x-update-stateful` (`stop-first`),
+  бо інстанс один;
+- `x-realtime-env` anchor: `REDIS_URL`, `REALTIME_KEY_PREFIX`, `REALTIME_ALLOWED_ORIGINS`,
+  `REALTIME_LEASE_TTL_MS`, `REALTIME_HEARTBEAT_MS`, `REALTIME_RECOVERY_MS` → у сервіси `api` і
+  (для `realtime.dispatch`) `worker`;
+- `REDIS_PASSWORD` і `REALTIME_ALLOWED_ORIGINS` у `docker/deploy.env` — origin збігається з уже
+  наявним `S3_CORS_ALLOWED_ORIGINS` (`http://<node-ip>:8511`);
+- `location /socket.io/` у `docker/nginx/default.conf.template` — той самий `resolver`/`set
+  $backend` патерн, що й `/api/`, плюс:
+
+  ```nginx
+  location /socket.io/ {
+      set $backend "${API_UPSTREAM}";
+      proxy_pass $backend;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade    $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header Host       $host;
+      proxy_buffering off;
+      proxy_read_timeout 300s;   # > pingInterval + pingTimeout
+      proxy_send_timeout 300s;
+  }
+  ```
+
+- `apps/web/vite.config.ts` — правило `/socket.io` з `ws: true` для dev;
+- health/readiness: `api` уже має healthcheck на `/api/health`; graceful shutdown має **встигнути
+  звільнити leases** до того, як swarm уб'є старий таск (`stop_grace_period`, дефолт 10 с —
+  перевірити на RT-1).
+
+**Що НЕ змінилось:** вибір Socket.IO + Redis Streams adapter, модель presence-leases,
+snapshot+delta з revision, ізоляція тенантів, auth-цикл `auth.expiring.v1` / `auth.update.v1`,
+межа з pg-boss.
 
 ## Чому Socket.IO
 
@@ -36,7 +103,7 @@ connection recovery і presence leases.
 | SSE                                | Простий server → browser stream                                                                       | Односпрямований; `EventSource` незручний із access token у пам'яті; гірша база для майбутніх інтерактивних сценаріїв                                               |
 | PostgreSQL `LISTEN/NOTIFY` adapter | Немає нового сервісу                                                                                  | Немає connection state recovery; великі/binary payload-и йдуть через додаткову таблицю; presence все одно потребує TTL store; realtime churn навантажує основну БД |
 | Classic/sharded Redis adapter      | Зрілий multi-node broadcast                                                                           | Немає connection state recovery; при розриві з Redis міжнодові пакети губляться                                                                                    |
-| **Redis Streams adapter**          | Multi-node rooms, bounded stream, connection recovery, відновлення після тимчасового розриву з broker | Додає один Redis-compatible сервіс і все одно потребує sticky sessions для polling                                                                                 |
+| **Redis Streams adapter**          | Multi-node rooms, bounded stream, connection recovery, відновлення після тимчасового розриву з broker | Додає один Redis-compatible сервіс у стек (sticky sessions відпали разом із polling — див. «Що змінив відомий деплой»)                                             |
 
 Socket.IO за замовчуванням гарантує порядок подій, але delivery — **at most once**.
 Connection state recovery зменшує кількість пропусків при коротких розривах, але не
@@ -51,29 +118,37 @@ fork-friendly open-source інфраструктуру. Назви env і клі
 
 ## Топологія
 
+Поточна цільова топологія — swarm-стек `saas-dev`/`saas-prod` на одній ноді. Балансувальник —
+nginx усередині контейнера `web`; зовнішнього edge поки немає (додасться разом із TLS).
+
 ```text
-                                   ┌──────────────────────┐
-Browser A ──┐                      │ Valkey / managed     │
-            ├─ TLS reverse proxy ──┤ Redis-compatible     │
-Browser B ──┘       │              │                      │
-                    │              │ Socket.IO stream     │
-             sticky │              │ presence leases      │
-             cookie │              │ recovery sessions    │
-          ┌─────────┴─────────┐    └──────┬───────────────┘
-          │ load balancer     │           │
-          └──────┬──────┬─────┘           │
-                 │      │                 │
-          ┌──────▼───┐ ┌▼─────────┐       │
-          │ API #1   │ │ API #2   │◀──────┘
-          │ REST +   │ │ REST +   │  Redis Streams adapter
-          │ gateway  │ │ gateway  │
-          └──────┬───┘ └───┬──────┘
-                 └────┬────┘
-                      ▼
-                PostgreSQL 17
-                durable domain state,
-                future notifications, RLS
+                     swarm node (mode: host 0.0.0.0:8511)
+Browser A ──┐   ┌──────────────────────┐        ┌──────────────────────┐
+            ├──▶│ web (nginx)          │        │ valkey               │
+Browser B ──┘   │  /  → SPA            │        │  Socket.IO stream    │
+   http/ws      │  /api      → api     │        │  presence leases     │
+                │  /socket.io → api    │        │  recovery sessions   │
+                └───────┬──────────────┘        └──────┬───────────────┘
+                        │ overlay saas_net              │
+             ┌──────────┴──────────┐                    │
+             │ Docker DNS VIP      │                    │
+             └────┬───────────┬────┘                    │
+                  │           │                         │
+           ┌──────▼───┐  ┌────▼─────┐                   │
+           │ api #1   │  │ api #2   │◀──────────────────┘
+           │ REST +   │  │ (scale / │   Redis Streams adapter
+           │ gateway  │  │ deploy)  │
+           └──────┬───┘  └────┬─────┘        ┌──────────┐
+                  └─────┬─────┘              │ worker   │─▶ realtime.dispatch
+                        ▼                    └────┬─────┘   (стрім у valkey)
+                  PostgreSQL 17 ◀─────────────────┘
+                  durable domain state,
+                  future notifications, RLS
 ```
+
+`api #2` існує постійно під час rolling update (`order: start-first`) і за потреби —
+через `docker service scale`. TLS-проксі перед `web` зʼявиться на етапі 2.7 roadmap;
+тоді ж `ws://` стане `wss://`.
 
 Gateway запускається разом із кожною tenant API реплікою на тому самому HTTP server і
 public origin. Окремий `apps/realtime` зараз не потрібен: він змусив би дублювати auth,
@@ -252,22 +327,29 @@ query refetch завжди читає PostgreSQL. Не треба викорис
 
 ### Development / self-hosted
 
-До dev compose додається Valkey, доступний apps лише по внутрішній/localhost мережі. У
-self-hosted production він не публікується назовні. Presence ефемерний, але bounded
-Socket.IO stream і короткі recovery sessions займають пам'ять, тому потрібні memory
-limit, `maxLen` і алерти. Для цього workload бажана `noeviction`: тиха eviction presence
-ключів гірша за явну degraded помилку.
+Valkey додається у два місця: `docker/docker-compose.yml` (dev — порт на localhost, як
+postgres/mailpit) і `docker/docker-compose.stack.yml` (swarm — **порт не публікується взагалі**,
+доступ лише по overlay `saas_net`). Presence ефемерний, але bounded Socket.IO stream і короткі
+recovery sessions займають пам'ять, тому потрібні memory limit, `maxLen` і алерти. Для цього
+workload бажана `noeviction`: тиха eviction presence ключів гірша за явну degraded помилку.
+Персистентність (RDB/AOF) не потрібна — після рестарту стан відбудовується heartbeat-ами.
 
-Орієнтовні env:
+Env (dev — `.env`; swarm — `docker/deploy.env` → інтерполяція в стек, як `S3_*`):
 
 ```dotenv
+# dev
 REDIS_URL=redis://:password@localhost:6379
+# swarm: REDIS_URL=redis://:${REDIS_PASSWORD}@valkey:6379
 REALTIME_KEY_PREFIX=saas:rt
-REALTIME_ALLOWED_ORIGINS=https://crm.example.com
+# тестовий прод — http-origin ноди, той самий, що S3_CORS_ALLOWED_ORIGINS
+REALTIME_ALLOWED_ORIGINS=http://172.18.13.101:8511
 REALTIME_LEASE_TTL_MS=60000
 REALTIME_HEARTBEAT_MS=20000
 REALTIME_RECOVERY_MS=120000
 ```
+
+`REDIS_URL` потрібен і `api` (adapter + leases), і `worker` (публікація в `realtime.dispatch`
+для notifications з RT-3); до RT-3 воркеру він не потрібен.
 
 Redis/Valkey є trusted internal infrastructure: private network, ACL з окремим user,
 пароль, TLS між hosts, без public port. Event payload-и не містять токенів або секретів;
@@ -286,21 +368,26 @@ presence/realtime, але не REST, auth, PostgreSQL чи pg-boss. Після �
 
 ### Reverse proxy / load balancer
 
-Обраний режим лишає Socket.IO polling fallback, тому multi-node deployment **вимагає
-cookie-based session affinity**. Redis adapter не зберігає Engine.IO session конкретної
-API-ноди. Альтернатива — `transports: ['websocket']`, тоді sticky sessions не потрібні,
-але CRM втратить fallback для корпоративних proxy; це не default.
+**Рішення 2026-08-02: `transports: ['websocket']`** — polling fallback вимкнено, тому
+session affinity не потрібна взагалі. Причина не смакова: у swarm-стеку балансує Docker VIP
+за overlay-адресою `api`, і він розподіляє **TCP-зʼєднання**, не HTTP-сесії; cookie-affinity
+там нема кому виставляти. З polling кожен HTTP-poll міг би приземлятися в інший таск `api`,
+а Redis adapter Engine.IO-сесію не переносить. Ціна — клієнти за корпоративними проксі, які
+ріжуть WebSocket, лишаться без realtime (REST працює як завжди).
 
-Proxy має:
+Nginx у контейнері `web` (`docker/nginx/default.conf.template`) — єдиний проксі на шляху:
+`location /socket.io/` з `Upgrade`/`Connection: upgrade`, `proxy_buffering off`,
+`proxy_read_timeout` більший за `pingInterval + pingTimeout`, і той самий динамічний
+`resolver 127.0.0.11` + `set $backend`, що вже використовує `/api/` (інакше IP бекенда
+залипне після redeploy). Конкретний блок — у § «Що змінив відомий деплой».
 
-- передавати `Upgrade` / `Connection` headers для `/socket.io`;
-- не кешувати endpoint;
-- мати idle timeout більший за `pingInterval + pingTimeout`;
-- проксувати `/api` і `/socket.io` на той самий tenant API pool;
-- термінувати TLS; production socket працює лише через `wss`;
-- виставляти affinity cookie як `Secure`, `HttpOnly`, `SameSite=Lax` для same-origin CRM.
+Vite dev proxy отримує окреме правило `/socket.io` з `ws: true`.
 
-Vite dev proxy також отримує окреме правило `/socket.io` з `ws: true`.
+Коли перед стеком зʼявиться TLS-проксі (розділ 2.7 roadmap): термінувати TLS, socket стає
+`wss://`, ті самі Upgrade-заголовки й idle timeout — на edge. Повертати polling+sticky
+доведеться тільки якщо реально знадобиться fallback: тоді edge має виставляти affinity cookie
+(`Secure`, `HttpOnly`, `SameSite=Lax`), а `api` — перейти на `endpoint_mode: dnsrr`, бо через
+VIP sticky неможлива.
 
 ## Failure modes
 
@@ -309,7 +396,7 @@ Vite dev proxy також отримує окреме правило `/socket.io
 | Закрита остання вкладка      | Normal disconnect → immediate lease release → offline delta                                               |
 | Втрачена мережа              | Socket.IO reconnect; offline лише після lease timeout, щоб не миготіти на короткому розриві               |
 | Crash API-ноди               | Її leases expire; інші ноди sweeper-ом публікують offline, якщо інших leases немає                        |
-| Rolling deploy               | Readiness off, drain, release leases; clients reconnect до живих реплік                                   |
+| Rolling deploy (`start-first`) | Новий таск `api` стартує ДО зупинки старого — обидва в adapter-і, presence не розʼїжджається; старий на SIGTERM звільняє leases і закриває sockets, клієнти реконектяться в новий (з jitter). `stop_grace_period` має покривати drain |
 | Тимчасово недоступний Valkey | REST лишається доступним; UI показує presence `unknown/stale`, не «всі offline»                           |
 | Пропущена presence delta     | Revision gap → `GET /presence` resync                                                                     |
 | Пропущена notification delta | REST refetch повертає durable notification з PostgreSQL                                                   |
@@ -335,12 +422,16 @@ Tenant/user ID не додаються як metric labels через висок�
 
 ### RT-0 — інфраструктурний spike
 
-1. Додати Valkey у dev/prod Compose, env validation і health/metrics.
-2. Додати Socket.IO server/client та Redis Streams adapter.
-3. Підняти дві tenant API репліки на різних портах і перевірити cross-node room emit,
-   sticky routing, Redis restart і connection recovery.
+1. Valkey у `docker/docker-compose.yml` (dev) і `docker/docker-compose.stack.yml` (swarm:
+   без published-порту, `noeviction`, `requirepass`, `stop-first`); `REDIS_PASSWORD` +
+   `REALTIME_*` у `docker/deploy.env`; env-валідація при старті і health/metrics.
+2. Socket.IO server (`transports: ['websocket']`) + клієнт + Redis Streams adapter.
+3. `location /socket.io/` у nginx-шаблоні та правило `ws: true` у Vite dev-proxy.
+4. Перевірка на **живому dev-стеку**: `docker service scale saas-dev_api=2` → два клієнти
+   приземляються в різні таски (VIP), room emit доходить в обидва; далі — рестарт Valkey,
+   connection recovery, і `docker service update --force saas-dev_api` (rolling `start-first`).
 
-Spike є гейтом: не починати presence UI, доки дві ноди не обмінюються event-ами.
+Spike є гейтом: не починати presence UI, доки два таски `api` не обмінюються event-ами.
 
 ### RT-1 — secure gateway
 
@@ -369,7 +460,8 @@ retention, event type/payload schemas, bell UI, transactional creation, worker b
 
 ## Перевірки й acceptance criteria
 
-Мінімальний integration suite запускає дві API репліки та одну Valkey instance:
+Мінімальний integration suite запускає два процеси `api` та одну Valkey instance (локально —
+два порти; на dev-стеку — `docker service scale saas-dev_api=2`):
 
 1. User A на API #1 бачить User B, підключеного до API #2, online.
 2. Tenant A ніколи не отримує snapshot/delta tenant B.
@@ -382,6 +474,8 @@ retention, event type/payload schemas, bell UI, transactional creation, worker b
 9. E2E автоматично перевіряє cross-tenant isolation і RLS для майбутніх notification rows.
 10. Load test визначає фактичний connections-per-node і Redis memory budget; числовий
     production limit не фіксуємо без вимірювання на цільовій інфраструктурі.
+11. Rolling deploy (`docker service update --force`) не лишає «привидів» online після drain
+    і не дає presence-flicker клієнтам, які перепідключилися в новий таск.
 
 Після контрактів/контролера: `pnpm openapi:generate` + `pnpm web:codegen`. Після
 cross-package змін: `pnpm lint`, `pnpm typecheck`, `pnpm build`; presence/auth/multi-node
