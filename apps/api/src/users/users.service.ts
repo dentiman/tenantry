@@ -4,12 +4,35 @@ import type { Prisma } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import { ActivityRecorder, JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 
 /** avatarFile потрібен контролеру для presign мініатюри в UserResponse.avatarUrl */
 export type UserWithAvatar = Prisma.UserGetPayload<{ include: { avatarFile: true } }>;
+
+/**
+ * phone і phoneCountry — одна неподільна пара, і тримається вона ТУТ, а не крос-полевим
+ * refine у контракті (той зробив би зі схеми ZodEffects і зламав .omit()/.partial(),
+ * якими UpdateUserSchema виводиться з CreateUserSchema).
+ *
+ * Правила: телефон стерли → країну теж; країну не прислали → виводимо з самого номера
+ * (для +380 однозначно; для +1 клієнт має прислати явно — інакше буде US);
+ * телефон у патчі відсутній → пари не чіпаємо взагалі, навіть якщо прислали саму країну.
+ */
+function normalizePhonePair(data: {
+  phone?: string | null;
+  phoneCountry?: string | null;
+}): { phone?: string | null; phoneCountry?: string | null } {
+  if (data.phone === undefined) return {};
+  if (data.phone === null) return { phone: null, phoneCountry: null };
+
+  return {
+    phone: data.phone,
+    phoneCountry: data.phoneCountry ?? parsePhoneNumberFromString(data.phone)?.country ?? null,
+  };
+}
 
 @Injectable()
 export class UsersService {
@@ -94,13 +117,14 @@ export class UsersService {
     // password не потрапляє в Prisma напряму — зберігається тільки argon2-хеш
     const { password, ...rest } = data;
     const passwordHash = await argon2.hash(password);
+    const phonePatch = normalizePhonePair(rest);
 
     // Атомарно: юзер + активність + постановка fan-out job-а. Або все, або нічого —
     // welcome-лист без user.created-події не мав би сенсу (тому try/catch «черга
     // некритична» прибрано: атомарність краща за м'яку деградацію).
     const user = await this.tenantTx.withTenantTx(async (tx) => {
       const created = await tx.user.create({
-        data: { ...rest, passwordHash },
+        data: { ...rest, ...phonePatch, passwordHash },
         include: { avatarFile: true },
       });
 
@@ -133,7 +157,7 @@ export class UsersService {
     }
     const user = await this.prisma.user.update({
       where: { id },
-      data,
+      data: { ...data, ...normalizePhonePair(data) },
       include: { avatarFile: true },
     });
     this.logger.log(`User updated successfully: ${user.email} (ID: ${user.id})`);

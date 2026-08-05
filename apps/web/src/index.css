@@ -54,7 +54,8 @@
 /* Попапи — той самий радіус, що в полів (8px); діалоги лишаються 12px */
 .popover,
 .dropdown__popover,
-.select__popover {
+.select__popover,
+.autocomplete__popover {
   border-radius: var(--radius-lg);
 }
 
@@ -65,7 +66,8 @@
    перші три тіні — стокові значення світлої теми HeroUI */
 [data-theme='light'] .popover,
 [data-theme='light'] .dropdown__popover,
-[data-theme='light'] .select__popover {
+[data-theme='light'] .select__popover,
+[data-theme='light'] .autocomplete__popover {
   /* box-shadow напряму: перевизначати --overlay-shadow на елементі марно —
      токен --shadow-overlay уже підставлений на :root і успадковується готовим */
   box-shadow:

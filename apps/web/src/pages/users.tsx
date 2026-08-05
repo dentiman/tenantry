@@ -10,6 +10,9 @@ import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { CreateUserModal } from '../components/create-user-modal';
 import { ActivityDrawer } from '../components/activity/activity-drawer';
 import { formatDate } from '../lib/format';
+import { CountryFlag } from '../components/form/phone/country-flag';
+import { isSupportedCountry } from '../components/form/phone/countries';
+import { formatForDisplay } from '../components/form/phone/phone-format';
 import type { UsersSearch } from '../router';
 import { createDataGrid } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
@@ -78,6 +81,20 @@ export function UsersPage() {
       header: t('table.name'),
       sortable: true,
       cell: (u) => u.name ?? '—',
+    },
+    {
+      id: 'phone',
+      header: t('table.phone'),
+      cell: (u) => {
+        const formatted = formatForDisplay(u.phone);
+        if (!formatted) return '—';
+        return (
+          <span className="flex items-center gap-2 tabular-nums">
+            {isSupportedCountry(u.phoneCountry) && <CountryFlag country={u.phoneCountry} />}
+            {formatted}
+          </span>
+        );
+      },
     },
     {
       id: 'role',

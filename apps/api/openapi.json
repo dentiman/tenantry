@@ -671,6 +671,14 @@
                   "en"
                 ]
               },
+              "phone": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneCountry": {
+                "type": "string",
+                "nullable": true
+              },
               "avatarFileId": {
                 "type": "string",
                 "format": "uuid",
@@ -700,6 +708,8 @@
               "role",
               "isActive",
               "locale",
+              "phone",
+              "phoneCountry",
               "avatarFileId",
               "avatarUrl",
               "createdAt",
@@ -791,6 +801,14 @@
               "en"
             ]
           },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneCountry": {
+            "type": "string",
+            "nullable": true
+          },
           "avatarFileId": {
             "type": "string",
             "format": "uuid",
@@ -820,6 +838,8 @@
           "role",
           "isActive",
           "locale",
+          "phone",
+          "phoneCountry",
           "avatarFileId",
           "avatarUrl",
           "createdAt",
@@ -865,6 +885,14 @@
                     "en"
                   ]
                 },
+                "phone": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "phoneCountry": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "avatarFileId": {
                   "type": "string",
                   "format": "uuid",
@@ -894,6 +922,8 @@
                 "role",
                 "isActive",
                 "locale",
+                "phone",
+                "phoneCountry",
                 "avatarFileId",
                 "avatarUrl",
                 "createdAt",
@@ -957,6 +987,14 @@
               "en"
             ]
           },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneCountry": {
+            "type": "string",
+            "nullable": true
+          },
           "avatarFileId": {
             "type": "string",
             "format": "uuid",
@@ -986,6 +1024,8 @@
           "role",
           "isActive",
           "locale",
+          "phone",
+          "phoneCountry",
           "avatarFileId",
           "avatarUrl",
           "createdAt",
@@ -1017,6 +1057,15 @@
             "enum": [
               "en"
             ]
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9]\\d{7,14}$",
+            "nullable": true
+          },
+          "phoneCountry": {
+            "type": "string",
+            "nullable": true
           },
           "password": {
             "type": "string",
@@ -1053,6 +1102,15 @@
             "enum": [
               "en"
             ]
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9]\\d{7,14}$",
+            "nullable": true
+          },
+          "phoneCountry": {
+            "type": "string",
+            "nullable": true
           },
           "avatarFileId": {
             "type": "string",

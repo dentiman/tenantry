@@ -96,7 +96,10 @@ describe('Activities API (e2e)', () => {
     });
 
     expect(activities).toHaveLength(1);
-    const activity = activities[0];
+    const [activity] = activities;
+    // Явне звуження: під noUncheckedIndexedAccess доступ за індексом дає `| undefined`,
+    // а toHaveLength вище для TS нічого не доводить
+    if (!activity) throw new Error('Expected a recorded user.created activity');
     expect(activity.actorType).toBe('user');
     expect(activity.actorLabel).toBe(adminEmail);
     expect(activity.actorId).toEqual(expect.any(String));

@@ -91,6 +91,78 @@ describe('Users API (e2e)', () => {
     );
   });
 
+  it('stores the phone in E.164 and derives the country when it is not sent', async () => {
+    const payload = createUserPayload(`${Date.now()}-phone`);
+    const headers = await createAuthHeaders(`${Date.now()}-phone-admin`);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({ ...payload, phone: '+380671234567' })
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ phone: '+380671234567', phoneCountry: 'UA' }),
+    );
+  });
+
+  it('keeps the country sent by the client (+1 is ambiguous between US and CA)', async () => {
+    const payload = createUserPayload(`${Date.now()}-phone-ca`);
+    const headers = await createAuthHeaders(`${Date.now()}-phone-ca-admin`);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      // Той самий номер libphonenumber сам віддав би як US — тут перевіряється,
+      // що явний вибір користувача не перезаписується здогадкою
+      .send({ ...payload, phone: '+14165550123', phoneCountry: 'CA' })
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ phone: '+14165550123', phoneCountry: 'CA' }),
+    );
+  });
+
+  it('rejects a phone number that is not valid for its country', async () => {
+    const payload = createUserPayload(`${Date.now()}-phone-bad`);
+    const headers = await createAuthHeaders(`${Date.now()}-phone-bad-admin`);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      // Правильний код країни, але закоротка національна частина
+      .send({ ...payload, phone: '+38067123' })
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        code: 'VALIDATION_ERROR',
+        fieldErrors: expect.arrayContaining([expect.objectContaining({ field: 'phone' })]),
+      }),
+    );
+  });
+
+  it('clears the country together with the phone', async () => {
+    const payload = createUserPayload(`${Date.now()}-phone-clear`);
+    const headers = await createAuthHeaders(`${Date.now()}-phone-clear-admin`);
+
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({ ...payload, phone: '+380671234567' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/users/${created.body.id as string}`)
+      .set(headers)
+      .send({ phone: null })
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ phone: null, phoneCountry: null }),
+    );
+  });
+
   it('rejects create without password', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-no-password-admin`);
     const { password: _password, ...withoutPassword } = createUserPayload(

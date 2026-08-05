@@ -47,6 +47,11 @@ model User {
   isActive     Boolean  @default(true) @map("is_active")
   // I18N-3: локаль для server-rendered тексту (email); UI-перемикач мови — I18N-4
   locale       String   @default("en")
+  // Телефон завжди в E.164 (валідує PhoneNumberSchema в contracts). phoneCountry потрібен
+  // окремо, бо за кодом країни номер не відновлюється однозначно: +1 — це US, CA і десяток
+  // карибських країн, і без збереженого вибору UI показав би не той прапор при редагуванні
+  phone        String?
+  phoneCountry String?  @map("phone_country") @db.Char(2)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   // Демо-споживач файлової підсистеми (Files v1)

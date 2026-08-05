@@ -15,6 +15,8 @@ export function toUserResponse(user: PrismaUser, avatarUrl: string | null = null
     isActive: user.isActive,
     // Prisma зберігає locale як звичайний string; валідність гарантує вхідний Zod-контракт
     locale: user.locale as UserResponse['locale'],
+    phone: user.phone,
+    phoneCountry: user.phoneCountry,
     avatarFileId: user.avatarFileId,
     avatarUrl,
     createdAt: user.createdAt.toISOString(),

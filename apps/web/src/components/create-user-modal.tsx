@@ -6,7 +6,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateUserSchema, type CreateUser } from '@saas-skeleton/contracts';
 import { getUsersFindAllQueryKey, useUsersCreate } from '../api/generated/api';
-import { applyServerError, FormPasswordField, FormSelect, FormTextField } from './form';
+import {
+  applyServerError,
+  FormPasswordField,
+  FormPhoneField,
+  FormSelect,
+  FormTextField,
+} from './form';
 
 export function CreateUserModal() {
   const { t } = useTranslation('users');
@@ -21,12 +27,21 @@ export function CreateUserModal() {
 
   const form = useForm<CreateUser>({
     resolver: zodResolver(CreateUserSchema),
-    defaultValues: { email: '', name: '', role: 'USER', password: '' },
+    // Повні defaultValues — вимога applyServerError: він звіряє імена полів із getValues
+    defaultValues: {
+      email: '',
+      name: '',
+      role: 'USER',
+      phone: null,
+      phoneCountry: null,
+      password: '',
+    },
   });
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isSubmitting, errors },
   } = form;
 
@@ -75,6 +90,20 @@ export function CreateUserModal() {
                   placeholder={t('create.namePlaceholder')}
                 />
                 <FormSelect control={control} name="role" label={t('create.role')} options={roleOptions} />
+                <FormPhoneField
+                  control={control}
+                  name="phone"
+                  label={t('create.phone')}
+                  // placeholder свідомо не задаємо: поле саме показує приклад номера
+                  // обраної країни, і він змінюється разом із прапором
+
+                  countryValue={form.watch('phoneCountry')}
+                  // Пара phone/phoneCountry зшивається тут: поле володіє номером,
+                  // форма — вибраною країною (сервер бере її як є, не переґадуючи з +1)
+                  onCountryChange={(code) => {
+                    setValue('phoneCountry', code, { shouldDirty: true });
+                  }}
+                />
                 <FormPasswordField
                   control={control}
                   name="password"

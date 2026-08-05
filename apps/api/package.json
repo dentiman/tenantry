@@ -26,6 +26,7 @@
     "@saas-skeleton/shared": "workspace:*",
     "argon2": "^0.44.0",
     "file-type": "^22.0.1",
+    "libphonenumber-js": "^1.13.10",
     "nestjs-cls": "^6.2.1",
     "nestjs-pino": "^4.5.0",
     "nestjs-zod": "^5.4.0",

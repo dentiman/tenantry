@@ -15,6 +15,13 @@ export interface CreateUserDto {
   role?: CreateUserDtoRole;
   locale?: CreateUserDtoLocale;
   /**
+   * @nullable
+   * @pattern ^\+[1-9]\d{7,14}$
+   */
+  phone?: string | null;
+  /** @nullable */
+  phoneCountry?: string | null;
+  /**
    * @minLength 8
    * @maxLength 128
    */
