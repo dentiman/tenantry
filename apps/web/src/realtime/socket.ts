@@ -26,7 +26,7 @@ export function getSocket(): AppSocket {
   socket ??= io(TENANT_NAMESPACE, {
     path: REALTIME_PATH,
     // Той самий транспорт, що на сервері: polling вимкнено, тому sticky sessions
-    // не потрібні (див. docs/realtime.md § «Reverse proxy / load balancer»)
+    // не потрібні (див. docs/realtime-internals.md § «Інфраструктура»)
     transports: ['websocket'],
     // Підключаємось не на імпорті модуля, а коли зʼявився токен
     autoConnect: false,

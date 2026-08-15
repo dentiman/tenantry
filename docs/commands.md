@@ -23,7 +23,7 @@
 ## Docker (інфраструктура)
 
 Піднімає Postgres 17, Mailpit (SMTP-заглушка для email у dev), Valkey (брокер Socket.IO
-і сховище presence-leases, RT-0) і SeaweedFS (S3-сумісне
+і сховище presence-leases) і SeaweedFS (S3-сумісне
 сховище файлів). Конфігурація — [docker/docker-compose.yml](../docker/docker-compose.yml).
 
 ### `pnpm docker:up`

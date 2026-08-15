@@ -80,14 +80,14 @@ pino-http — лічильник від 1 на КОЖНОМУ процесі, т
 `X-Request-Id`): цей id тепер їде `correlationId`-ом у довговічні job-рядки. Перевірено живим
 прогоном + 16 нових e2e (маніфест, boot-assert розсинхрону, inbox). Деталі —
 `docs/event-driven-architecture.md`.
-**RT-0/RT-1/RT-2 завершені і перевірені** (2026-08-15): realtime-шар. Valkey 8 (сервіс
-compose + стеку, порт у стеку НЕ публікується, `noeviction`, без персистентності) як брокер
+**Realtime завершений і перевірений** (2026-08-15): Valkey 8 (сервіс compose + стеку, порт у
+стеку НЕ публікується, `noeviction`, без персистентності) як брокер
 `@socket.io/redis-streams-adapter` і сховище presence-leases. Socket.IO **websocket-only**
 (`transports: ['websocket']` — sticky sessions не потрібні, Docker VIP балансує по TCP),
 namespace `/tenant`, `location /socket.io/` у nginx-шаблоні + `ws: true` у Vite-проксі.
 Gateway (`apps/api/src/realtime/`) живе в кожній репліці api на тому самому HTTP-сервері;
 handshake бере токен із Socket.IO `auth` і перевіряє його **тим самим `AccessTokenService`,
-що й `JwtAuthGuard`** (RT-1: правила auth не мають розходитись між транспортами), далі —
+що й `JwtAuthGuard`** (правила auth не мають розходитись між транспортами), далі —
 `isActive` юзера і тенанта в явному `TenantContextService.runWith` (HTTP-middleware CLS для
 сокета не піднімає). Цикл довгого зʼєднання: `auth.expiring.v1` → фронт викликає ТОЙ САМИЙ
 single-flight `refreshTokens()` → `auth.update.v1` з ack; новий токен з іншим sub/tenantId/role
@@ -97,14 +97,15 @@ single-flight `refreshTokens()` → `auth.update.v1` з ack; новий токе
 атомарні переходи, hash tag `{tenantId}` = один slot), `nodeId` — boot UUID (НЕ hostname:
 під `start-first` два таски api співіснують), heartbeat batch-ом на тенант, sweeper на
 КОЖНІЙ ноді без лідера (ідемпотентність дає `SREM`, який повертає 1 рівно раз), drain
-leases на `SIGTERM` (додано `app.enableShutdownHooks()`). Snapshot — `GET /api/presence`
-(`onlineUserIds`+`revision`+`generatedAt`), delta — `presence.changed.v1`; фронт тримає
-snapshot у TanStack Query, а socket його ПАТЧИТЬ за правилом трьох ревізій
-(`<=` ігнор, `+1` застосувати, `>+1` → resync). Недоступний брокер → **503, а не порожній
-список** (порожній читався б як «всі offline»); `PresenceDot` при `isUnknown` не рендериться,
-тост придушено `meta.silentError`. Клієнт — singleton ПОЗА React-деревом (StrictMode
-створив би другий socket), `socket.disconnect()` на `pagehide` (щоб закриття вкладки
-читалось як навмисне і lease віддавався одразу, а не догорав по TTL, як при зниклій мережі).
+leases на `SIGTERM` (додано `app.enableShutdownHooks()`). Lease звільняється МИТТЄВО лише на
+`client namespace disconnect`; `transport close`/`ping timeout` невідрізнювані від зниклої
+мережі — там догорає по TTL (бюджет offline = `leaseTtl + sweepInterval` = 65 с на дефолтах).
+Snapshot — `GET /api/presence` (`onlineUserIds`+`revision`+`generatedAt`), delta —
+`presence.changed.v1`; фронт тримає snapshot у TanStack Query, а socket його ПАТЧИТЬ за
+правилом трьох ревізій (`<=` ігнор, `+1` застосувати, `>+1` → resync). Недоступний брокер →
+**503, а не порожній список** (порожній читався б як «всі offline»); `PresenceDot` при
+`isUnknown` не рендериться, тост придушено `meta.silentError`. Клієнт — singleton ПОЗА
+React-деревом (StrictMode створив би другий socket), `socket.disconnect()` на `pagehide`.
 Граблі: (1) **приватний метод не можна називати `handleDisconnect`** — Nest шукає хук на
 інстансі за іменем (`private` у TS не заважає), підписує сам і кличе з одним аргументом:
 приходили ДВА виклики (перший із `reason === undefined`), перший знімав сокет із обліку,
@@ -116,7 +117,8 @@ dev-машині часто зайнятий іншим проєктом → `RE
 TTL 50 мс). CI отримав сервіс `valkey`. Перевірено живим прогоном на ДВОХ процесах api
 (:3001 і :3011) проти однієї Valkey — cross-instance emit 10/10 — і в браузері: бейдж на
 `/users` перемкнувся online→offline від дельти з іншого інстанса без перезавантаження.
-Деталі — `docs/realtime.md`. RT-3 (in-app notifications = EDA-4) — попереду.
+Огляд — `docs/realtime.md`, механіка — `docs/realtime-internals.md`. Лишились in-app
+сповіщення (вони ж EDA-4) — realtime стане звичайним підписником у `MESSAGE_TOPOLOGY`.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -142,9 +144,10 @@ docker-context по SSH; топологія стеку, образи, one-shot d
 класифікація помилок, гроші/email/зовнішні системи/realtime як підписники, наскрізний приклад
 оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-2…4 — попереду)
 + `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
-`docs/realtime.md` + `docs/realtime-questions.md` (Socket.IO/presence/notifications —
-RT-0…RT-2 РЕАЛІЗОВАНО й перевірено 2026-08-15: Valkey, websocket-only gateway, presence
-на leases; § «Що реалізовано» містить уточнення бюджету offline-детекції і граблі; RT-3 попереду),
+`docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15: огляд, стек, межа з
+event-driven шаром, зафіксовані рішення, що лишилось) + `docs/realtime-internals.md`
+(механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
++ `docs/realtime-questions.md` (чек-лист розуміння),
 `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
 `README.md` (quickstart).
 
@@ -152,7 +155,7 @@ RT-0…RT-2 РЕАЛІЗОВАНО й перевірено 2026-08-15: Valkey, w
 
 ```bash
 pnpm docker:up            # PostgreSQL 17 + Mailpit + Valkey + SeaweedFS (OrbStack, не Docker Desktop)
-                          # Valkey (RT-0): брокер Socket.IO + presence-leases; :6379 (REDIS_PORT якщо
+                          # Valkey: брокер Socket.IO + presence-leases; :6379 (REDIS_PORT якщо
                           # порт зайнятий іншим проєктом — тоді й REDIS_URL у .env)
                           # Mailpit UI: http://localhost:8025 (SMTP :1025 — дефолти MailerService)
                           # SeaweedFS S3: http://localhost:8333 (креденшели — docker/seaweedfs/s3.json,
@@ -196,7 +199,7 @@ pnpm db:reset             # ДЕСТРУКТИВНО (dev-only, відмовля
 
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, files (presigned upload/download),
-                activities, realtime (RT-0…RT-2: Socket.IO-gateway namespace /tenant + presence),
+                activities, realtime (Socket.IO-gateway namespace /tenant + presence),
                 health (jobs-моніторинг переїхав у platform-api на MT-3).
                 Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
 apps/platform-api  NestJS 11 (MT-3, control plane, :3002): platform-auth (platform_users, окремий
@@ -422,7 +425,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                     |
-| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **RT-0…RT-2 реалізовано й перевірено 2026-08-15**, лишилась RT-3 (in-app notifications = EDA-4). Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Чому НЕ Postgres-адаптер» |
+| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**, лишились in-app сповіщення (вони ж EDA-4). Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення» |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                               |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
@@ -453,6 +456,6 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
   (PaymentProvider інтерфейс + fake-провайдер → Stripe). Пишуться вже на шарі `messaging`:
   billing — це EDA-3, еталон події з 5 підписниками (`invoice.paid.v1`, `ledger_entries`,
   claim-before-send для листів, relay-підписник). Окремого `audit-log` НЕ робимо —
-  його роль виконує Activity Log; in-app notifications — це RT-3 у `docs/realtime.md`.
-- ✅ Realtime RT-0…RT-2 (Valkey + gateway + presence) — зроблено 2026-08-15; лишилась **RT-3**
-  (in-app notifications, вона ж EDA-4). System Settings — наступна вертикаль, див. `docs/roadmap.md`.
+  його роль виконує Activity Log; in-app notifications — `docs/realtime.md` § «Що лишилось зробити».
+- ✅ Realtime (Valkey + gateway + presence) — зроблено 2026-08-15; лишились **in-app
+  сповіщення** (вони ж EDA-4). System Settings — наступна вертикаль, див. `docs/roadmap.md`.

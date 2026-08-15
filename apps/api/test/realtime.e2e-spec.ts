@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-// RT-0…RT-2: гейтвей і presence (docs/realtime.md § «Перевірки й acceptance criteria»).
+// Гейтвей і presence (docs/realtime-internals.md § «Тести»).
 // Тести піднімають СПРАВЖНІЙ HTTP-сервер (`app.listen(0)`) і ходять справжнім
 // socket.io-клієнтом: підміняти транспорт тут немає сенсу — саме він і є предметом.
 // Valkey потрібен живий (як Postgres): Lua-скрипти присутності — не та логіка,

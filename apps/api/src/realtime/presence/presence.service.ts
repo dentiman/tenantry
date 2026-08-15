@@ -17,7 +17,7 @@ import { PresenceStore, type PresenceTransition } from './presence.store';
 type LocalPresence = Map<string, Map<string, Set<string>>>;
 
 /**
- * Presence як розподілена задача (docs/realtime.md § «Presence v1»).
+ * Presence як розподілена задача (docs/realtime-internals.md § «Presence: життєвий цикл»).
  *
  * Бізнес-визначення: юзер `online`, якщо існує хоч ОДНЕ живе socket-зʼєднання цього
  * юзера в цьому тенанті. Дві вкладки — один online user; закриття однієї з двох

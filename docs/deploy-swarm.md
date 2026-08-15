@@ -34,7 +34,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 > ⚠️ Усе на **http** — не змішувати зі https (mixed-content блокується браузером). Для справжнього
 > проду — повернути `host_ip: 127.0.0.1` + зовнішній reverse-proxy з TLS (для S3 зберігати Host).
 
-> **Realtime у стеку (RT-0, зроблено 2026-08-15):** сервіс `valkey` — Redis Streams adapter
+> **Realtime у стеку:** сервіс `valkey` — Redis Streams adapter
 > Socket.IO і сховище presence-leases. Порт НЕ публікується (лише overlay `valkey:6379`),
 > персистентності немає (presence ефемерна, стан відбудовується heartbeat-ами), тому й
 > volume не потрібен — але `update_config` усе одно `stop-first`, бо інстанс один.
@@ -45,7 +45,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 >
 > `api` отримав `stop_grace_period: 30s` — на SIGTERM він **віддає свої presence-leases**,
 > інакше кожен rolling deploy лишав би «привидів» online на хвилину, рівно тоді, коли всі
-> клієнти перепідключаються. Деталі — [realtime.md](realtime.md).
+> клієнти перепідключаються. Деталі — [realtime-internals.md](realtime-internals.md).
 
 ## 2. Зафіксовані рішення
 

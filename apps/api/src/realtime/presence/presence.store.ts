@@ -78,7 +78,7 @@ type PresenceRedis = Redis & PresenceCommands;
  * після рестарту — у Postgres це був би чистий churn на primary заради стану,
  * який відбудовується heartbeat-ами за один інтервал.
  *
- * Модель leases (docs/realtime.md § «Distributed leases»): у Valkey живе не вкладка,
+ * Модель leases (docs/realtime-internals.md § «Presence: дані у Valkey»): живе не вкладка,
  * а пара `(user, apiNode)`. Юзер із 5 вкладками на 2 нодах — це 2 записи, а не 5.
  */
 @Injectable()

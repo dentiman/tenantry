@@ -26,7 +26,7 @@ interface AuthTimers {
  * Тільки для них lease звільняється миттєво. Усе інше (`transport close`,
  * `ping timeout`, `transport error`) — невідрізнюване «мережа зникла / ноутбук
  * заснув»: там lease догорає по TTL, інакше кожен тунель у метро миготів би
- * offline→online (docs/realtime.md § «Failure modes»).
+ * offline→online (docs/realtime-internals.md § «Режими відмов»).
  */
 const INTENTIONAL_DISCONNECTS = new Set([
   'client namespace disconnect',

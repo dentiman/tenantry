@@ -2,8 +2,8 @@
 
 **Статус:** **EDA-0 і EDA-1 реалізовані й перевірені живим прогоном (2026-08-04).**
 EDA-2 (екран DLQ у `/jobs`), EDA-3 (billing) і EDA-4 (realtime-підписник) — попереду.
-Транспорт для EDA-4 уже є: RT-0…RT-2 (Socket.IO-гейтвей + Valkey) реалізовані 2026-08-15,
-лишився сам підписник `/realtime` і стрім `realtime.dispatch` — див. §3.12 і `realtime.md`.
+Транспорт для EDA-4 уже є: Socket.IO-гейтвей і Valkey працюють (`realtime.md`), лишився
+сам підписник `/realtime` і стрім `realtime.dispatch` — див. §3.12.
 Вхідний сценарій — `docs/event-driven-scenario.md`. **Дата дизайну:** 2026-08-02.
 
 Розділ 2 («Діагноз») свідомо збережений у теперішньому часі — він описує стан ДО EDA-1
@@ -600,12 +600,12 @@ Provisioning поза монорепо не отримує доступу до `
 
 Крок «нотифікація в браузер» не потребує нічого нового в цьому документі: `/realtime`
 підписник пише в `realtime.dispatch` Redis Stream із `docs/realtime.md`, одна репліка api
-робить `emit`, adapter розносить. До реалізації RT-3 підписника просто немає в маніфесті.
+робить `emit`, adapter розносить. Поки модуля сповіщень немає — підписника немає і в маніфесті.
 
-Половина цього вже стоїть: Valkey, Socket.IO-adapter і `RealtimeEmitter` працюють із
-2026-08-15 (RT-2), тому EDA-4 зводиться до двох речей — стріму `realtime.dispatch` із
-читачем в `apps/api` і рядка `'realtime'` у списку споживачів `MESSAGE_TOPOLOGY`.
-Воркеру для цього знадобиться `REDIS_URL` (у swarm-стеку його поки має лише `api`).
+Половина цього вже стоїть: Valkey, Socket.IO-adapter і `RealtimeEmitter` працюють, тому
+EDA-4 зводиться до двох речей — стріму `realtime.dispatch` із читачем в `apps/api` і рядка
+`'realtime'` у списку споживачів `MESSAGE_TOPOLOGY`. Воркеру для цього знадобиться
+`REDIS_URL` (у swarm-стеку його поки має лише `api`).
 
 Важливо (уже написано в `realtime.md`, повторюю як правило): **pg-boss не є live-транспортом.**
 Його polling/retry семантика — для робіт. Субсекундний fan-out у браузер — Socket.IO.
@@ -740,10 +740,11 @@ inbox-ключем, своєю чергою, своїм DLQ. Жоден не з�
 | ✅ **EDA-1** — єдиний конвеєр | `defineEvent`/`defineCommand`, конверт, `MESSAGE_TOPOLOGY`, `MessagePublisher.publish(tx, …)`, `@MessageSubscriber`, boot-assert маніфесту, `runOnce(envelope, consumerId)`, `MessageContext`; переведення **всіх** наявних job-ів (thumbnail, 2 cron) на той самий конвеєр + міграція `users.user-registered` | Так — `UserRegisteredHandler` зник, у системі лишився один шлях виконання асинхронної роботи |
 | **EDA-2** — спостережуваність | DLQ-вкладка й replay у `/jobs`; фільтр за `correlationId`; лаг і глибина по черзі | Так — без цього EDA-1 працює наосліп |
 | **EDA-3** — billing як еталон | `invoice.paid` з 5 підписниками, `ledger_entries` + звірка балансу, `sent_emails` claim-before-send, relay-підписник, ланцюг `invoice-posted` | Це вже доменний модуль 2.4 із roadmap |
-| **EDA-4** — realtime-підписник | `/realtime` → `realtime.dispatch` | Разом із RT-3 |
+| **EDA-4** — realtime-підписник | `/realtime` → `realtime.dispatch` | Разом з in-app сповіщеннями |
 
 **Місце в roadmap:** EDA-0 і EDA-1 зроблені — billing (2.4) тепер можна писати одразу на
-цьому шарі. EDA-2 — наступний. EDA-3 = 2.4.3 (billing) на новому шарі. EDA-4 = частина RT-3.
+цьому шарі. EDA-2 — наступний. EDA-3 = 2.4.3 (billing) на новому шарі. EDA-4 = частина
+модуля in-app сповіщень (`realtime.md` § «Що лишилось зробити»).
 
 ### Прибирання після міграції (одноразово, вручну)
 

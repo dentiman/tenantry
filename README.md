@@ -121,7 +121,7 @@ API інжектить `MessagePublisher` і викликає `publish(tx, def, 
 (публікується при створенні юзера адміном → підписник `welcome-email`).
 Деталі й обґрунтування — [docs/event-driven-architecture.md](docs/event-driven-architecture.md).
 
-## Realtime і presence (RT-2 — готово)
+## Realtime і presence
 
 Socket.IO-гейтвей живе в кожній репліці `apps/api` (namespace `/tenant`, той самий HTTP-сервер
 і origin, що REST). Транспорт — **тільки WebSocket**: polling вимкнено, тому session affinity
@@ -143,14 +143,14 @@ online user). У памʼяті ноди — рахунок вкладок, у V
 правилом ревізій (дубль — ігнор, `+1` — застосувати, розрив — resync). Відмова брокера не
 чіпає REST: endpoint віддає 503, а UI показує «невідомо» замість брехливого «всі offline».
 
-Демо — online-badge на `/users`. Деталі, граблі й наступна фаза (RT-3, in-app notifications) —
-[docs/realtime.md](docs/realtime.md).
+Демо — online-badge на `/users`. Огляд і зафіксовані рішення — [docs/realtime.md](docs/realtime.md),
+механіка (ключі, Lua, конфіг, режими відмов) — [docs/realtime-internals.md](docs/realtime-internals.md).
 
 ## Далі за roadmap
 
-Мультитенантність (MT-0…MT-3) і realtime-фундамент (RT-0…RT-2) вже реалізовані й перевірені —
-див. [docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md) і
-[docs/realtime.md](docs/realtime.md). Лишилось: RT-3 (in-app notifications), EDA-2 (екран DLQ),
-RBAC/permissions, refresh-токени в httpOnly cookie, справжня reuse-detection ротованих токенів,
-MT-4/беклог (піддомени, invite-флоу, білінг), доменні модулі (customers, tickets, billing).
-Деталі — у docs/roadmap.md.
+Мультитенантність і realtime вже реалізовані й перевірені — див.
+[docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md) і
+[docs/realtime.md](docs/realtime.md). Лишилось: in-app сповіщення, екран DLQ,
+RBAC/permissions, refresh-токени в httpOnly cookie, справжня reuse-detection ротованих
+токенів, беклог мультитенантності (піддомени, invite-флоу, білінг), доменні модулі
+(customers, tickets, billing). Деталі — у docs/roadmap.md.
