@@ -3,7 +3,7 @@ import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Prisma } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
-import { ActivityRecorder, JobDispatcher, userRegisteredJob } from '@saas-skeleton/shared';
+import { ActivityRecorder, MessagePublisher, userRegisteredEvent } from '@saas-skeleton/shared';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
@@ -40,7 +40,7 @@ export class UsersService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jobDispatcher: JobDispatcher,
+    private readonly messages: MessagePublisher,
     private readonly tenantTx: TenantTransactions,
     private readonly activities: ActivityRecorder,
   ) {}
@@ -119,9 +119,9 @@ export class UsersService {
     const passwordHash = await argon2.hash(password);
     const phonePatch = normalizePhonePair(rest);
 
-    // Атомарно: юзер + активність + постановка fan-out job-а. Або все, або нічого —
-    // welcome-лист без user.created-події не мав би сенсу (тому try/catch «черга
-    // некритична» прибрано: атомарність краща за м'яку деградацію).
+    // Атомарно: юзер + активність + публікація події (по job-у в чергу КОЖНОГО
+    // підписника з MESSAGE_TOPOLOGY). Або все, або нічого — welcome-лист без
+    // user.created не мав би сенсу.
     const user = await this.tenantTx.withTenantTx(async (tx) => {
       const created = await tx.user.create({
         data: { ...rest, ...phonePatch, passwordHash },
@@ -137,10 +137,15 @@ export class UsersService {
         links: [{ entityType: 'user', entityId: created.id, role: 'subject' }],
       });
 
-      await this.jobDispatcher.send(
-        userRegisteredJob,
+      // Продюсер НЕ знає підписників: fan-out робить publish за маніфестом
+      await this.messages.publish(
+        tx,
+        userRegisteredEvent,
         { userId: created.id, email: created.email },
-        { singletonKey: created.id, tx },
+        {
+          singletonKey: created.id,
+          actor: { type: 'user', id: actor.sub, label: actor.email },
+        },
       );
 
       return created;

@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SystemPrismaService } from '@saas-skeleton/database';
 import {
-  JobHandler,
-  JobHandlerContract,
+  MessageSubscriber,
+  MessageSubscriberContract,
   StorageService,
-  filesCleanupOrphansJob,
+  cleanupOrphanFilesCommand,
 } from '@saas-skeleton/shared';
 
 /** PENDING старші за цей поріг вважаються покинутими (upload не завершили) */
@@ -17,14 +17,14 @@ const BATCH_SIZE = 100;
  * рядок лишиться і наступний запуск дочистить; зворотний порядок дав би object leak.
  */
 @Injectable()
-@JobHandler(filesCleanupOrphansJob)
-export class CleanupOrphanFilesHandler implements JobHandlerContract<
-  typeof filesCleanupOrphansJob.schema
-> {
-  private readonly logger = new Logger(CleanupOrphanFilesHandler.name);
+@MessageSubscriber({ definition: cleanupOrphanFilesCommand, id: 'orphan-cleaner' })
+export class CleanupOrphanFilesSubscriber
+  implements MessageSubscriberContract<typeof cleanupOrphanFilesCommand.schema>
+{
+  private readonly logger = new Logger(CleanupOrphanFilesSubscriber.name);
 
   constructor(
-    // System-scope джоба: крос-tenant, BYPASSRLS (tenant-контексту немає свідомо)
+    // System-scope: крос-tenant, BYPASSRLS (tenant-контексту немає свідомо)
     private readonly prisma: SystemPrismaService,
     private readonly storage: StorageService,
   ) {}

@@ -2,40 +2,40 @@ import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import { PrismaService } from '@saas-skeleton/database';
 import {
-  JobHandler,
-  JobHandlerContract,
-  JobPayload,
+  MessageData,
+  MessageSubscriber,
+  MessageSubscriberContract,
   StorageService,
-  generateThumbnailJob,
+  generateThumbnailCommand,
 } from '@saas-skeleton/shared';
 
-type GenerateThumbnailPayload = JobPayload<typeof generateThumbnailJob>;
+type GenerateThumbnail = MessageData<typeof generateThumbnailCommand>;
 
 const THUMBNAIL_SIZE_PX = 256;
 const THUMBNAIL_WEBP_QUALITY = 80;
 
 /**
  * Мініатюра зображення після complete. Стан файлу читається свіжим із БД
- * (файл могли видалити між диспатчем і обробкою). Ідемпотентний без inbox:
+ * (файл могли видалити між публікацією й обробкою). Ідемпотентний без inbox:
  * повторний запуск або перезапише той самий thumbnail-ключ, або вийде раніше,
  * якщо thumbnailKey уже записаний.
  */
 @Injectable()
-@JobHandler(generateThumbnailJob)
-export class GenerateThumbnailHandler implements JobHandlerContract<
-  typeof generateThumbnailJob.schema
-> {
-  private readonly logger = new Logger(GenerateThumbnailHandler.name);
+@MessageSubscriber({ definition: generateThumbnailCommand, id: 'thumbnailer' })
+export class GenerateThumbnailSubscriber
+  implements MessageSubscriberContract<typeof generateThumbnailCommand.schema>
+{
+  private readonly logger = new Logger(GenerateThumbnailSubscriber.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
 
-  async handle(payload: GenerateThumbnailPayload): Promise<void> {
-    const file = await this.prisma.file.findUnique({ where: { id: payload.fileId } });
+  async handle(data: GenerateThumbnail): Promise<void> {
+    const file = await this.prisma.file.findUnique({ where: { id: data.fileId } });
     if (file?.status !== 'READY') {
-      this.logger.warn(`Skipping thumbnail: file ${payload.fileId} missing or not READY`);
+      this.logger.warn(`Skipping thumbnail: file ${data.fileId} missing or not READY`);
       return;
     }
     if (file.thumbnailKey) {

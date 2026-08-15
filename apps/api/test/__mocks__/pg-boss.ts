@@ -14,10 +14,17 @@ export class PgBoss {
   stop(): Promise<void> {
     return Promise.resolve();
   }
+  /** Порожній масив = черги ще немає → PgBossService піде шляхом createQueue */
+  getQueues(): Promise<unknown[]> {
+    return Promise.resolve([]);
+  }
   getQueue(): Promise<null> {
     return Promise.resolve(null);
   }
   createQueue(): Promise<void> {
+    return Promise.resolve();
+  }
+  updateQueue(): Promise<void> {
     return Promise.resolve();
   }
   send(): Promise<string> {

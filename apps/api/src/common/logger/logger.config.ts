@@ -1,6 +1,8 @@
 import type { LoggerModuleAsyncParams } from 'nestjs-pino';
 import { ClsService } from 'nestjs-cls';
 import { multistream } from 'pino';
+import type { IncomingMessage } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { createStream } from 'rotating-file-stream';
 import {
   isDevelopment,
@@ -26,6 +28,21 @@ const createRotatingStream = (): ReturnType<typeof createStream> | null => {
 
 const rotatingStream = createRotatingStream();
 
+/**
+ * Дефолт pino-http — лічильник, що починається з 1 на КОЖНОМУ процесі: після рестарту
+ * і на другій репліці id повторюються. Для ApiError.requestId це було терпимо, але цей
+ * же id тепер їде як correlationId у конверті повідомлення (EDA-1) і осідає в
+ * довговічних job-рядках — там колізії роблять кореляцію ланцюга безглуздою.
+ *
+ * Вхідний X-Request-Id поважаємо: якщо перед API стоїть проксі/шлюз зі своїм
+ * трейс-id, ланцюг лишається наскрізним.
+ */
+const genReqId = (req: IncomingMessage): string => {
+  const incoming = req.headers['x-request-id'];
+  const header = Array.isArray(incoming) ? incoming[0] : incoming;
+  return header && header.length > 0 ? header : randomUUID();
+};
+
 export const loggerConfig: LoggerModuleAsyncParams = {
   inject: [ClsService],
   useFactory: (cls: ClsService) => {
@@ -39,6 +56,7 @@ export const loggerConfig: LoggerModuleAsyncParams = {
         ? // Development: use transport targets (pretty console + files)
           {
             level: logLevel,
+            genReqId,
             mixin: tenantMixin,
             serializers: customSerializers,
             redact: redactPaths,
@@ -90,6 +108,7 @@ export const loggerConfig: LoggerModuleAsyncParams = {
         : // Production: use multistream with rotating file
           {
             level: logLevel,
+            genReqId,
             mixin: tenantMixin,
             serializers: customSerializers,
             redact: redactPaths,

@@ -1,4 +1,4 @@
 export * from './errors';
-export * from './jobs';
+export * from './messaging';
 export * from './storage';
 export * from './activities';

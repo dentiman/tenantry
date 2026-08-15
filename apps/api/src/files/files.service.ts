@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { fileTypeFromBuffer } from 'file-type';
-import { PrismaService } from '@saas-skeleton/database';
+import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { File as PrismaFile } from '@saas-skeleton/database';
 import type {
   CreateFileUpload,
@@ -10,9 +10,9 @@ import type {
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import {
   DOWNLOAD_URL_TTL_SECONDS,
-  JobDispatcher,
+  MessagePublisher,
   StorageService,
-  generateThumbnailJob,
+  generateThumbnailCommand,
 } from '@saas-skeleton/shared';
 
 /** Скільки байтів вистачає file-type для визначення типу (магічні числа — на початку файлу) */
@@ -54,7 +54,8 @@ export class FilesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
-    private readonly jobDispatcher: JobDispatcher,
+    private readonly messages: MessagePublisher,
+    private readonly tenantTx: TenantTransactions,
   ) {}
 
   /**
@@ -101,28 +102,27 @@ export class FilesService {
 
     await this.verifyMagicBytes(file);
 
-    const ready = await this.prisma.file.update({
-      where: { id: file.id },
-      data: { status: 'READY' },
-    });
-    this.logger.log(`Upload completed: ${file.id} (${file.mimeType})`);
+    // READY і команда на мініатюру — атомарно. try/catch «некритичний side effect»
+    // прибрано: раніше файл міг стати READY, а команда — загубитися, і мініатюри
+    // не було б ніколи. Тепер або обидва, або нічого (і complete можна повторити).
+    const ready = await this.tenantTx.withTenantTx(async (tx) => {
+      const updated = await tx.file.update({
+        where: { id: file.id },
+        data: { status: 'READY' },
+      });
 
-    if (isImageMime(file.mimeType)) {
-      // Некритичний side effect — падіння диспатчу не має ламати complete
-      try {
-        await this.jobDispatcher.send(
-          generateThumbnailJob,
+      if (isImageMime(file.mimeType)) {
+        await this.messages.publish(
+          tx,
+          generateThumbnailCommand,
           { fileId: file.id },
           { singletonKey: file.id },
         );
-      } catch (error) {
-        this.logger.error(
-          `Failed to dispatch ${generateThumbnailJob.name} for file ${file.id}`,
-          error instanceof Error ? error.stack : String(error),
-        );
       }
-    }
+      return updated;
+    });
 
+    this.logger.log(`Upload completed: ${file.id} (${file.mimeType})`);
     return ready;
   }
 
