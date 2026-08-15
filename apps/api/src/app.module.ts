@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { loggerConfig } from './common/logger';
 
 @Module({
@@ -33,6 +34,7 @@ import { loggerConfig } from './common/logger';
     UsersModule,
     FilesModule,
     ActivitiesModule,
+    RealtimeModule,
   ],
   controllers: [HealthController],
 })

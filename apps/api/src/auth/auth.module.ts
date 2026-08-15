@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AccessTokenService } from './access-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
@@ -21,11 +22,14 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccessTokenService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
   ],
-  exports: [AuthService],
+  // AccessTokenService експортується для RealtimeModule: socket-middleware перевіряє
+  // токен ТИМ САМИМ кодом, що HTTP-guard
+  exports: [AuthService, AccessTokenService],
 })
 export class AuthModule {}

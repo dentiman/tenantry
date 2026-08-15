@@ -15,6 +15,9 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
 
   app.enableCors();
+  // RT-1: без цього SIGTERM від swarm убив би процес до того, як presence встигне
+  // віддати свої leases — і кожен rolling deploy лишав би «привидів» online
+  app.enableShutdownHooks();
   configureApp(app);
 
   const openApiDoc = SwaggerModule.createDocument(

@@ -15,6 +15,9 @@ jobs:
       POSTGRES_ADMIN_URL: postgresql://saas:saas@localhost:5432/postgres
       JWT_SECRET: ci-only-secret-not-for-production-min-32-chars
       PLATFORM_JWT_SECRET: ci-only-platform-secret-not-for-production-32chars
+      # RT-0: presence і Socket.IO adapter живуть у Valkey. E2E ходять до нього
+      # по-справжньому — Lua-скрипти присутності не мають сенсу проти фейка
+      REDIS_URL: redis://localhost:6379
     services:
       postgres:
         image: postgres:17-alpine
@@ -26,6 +29,18 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U saas"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      # Без пароля свідомо: `services` у GitHub Actions не вміє передавати аргументи
+      # серверу (`options` — це прапорці `docker create`), а сам сервіс ефемерний і
+      # доступний лише job-у. У dev/проді пароль обовʼязковий — див. docker-compose.
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10

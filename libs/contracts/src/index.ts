@@ -6,3 +6,4 @@ export * from './activity';
 export * from './file';
 export * from './auth';
 export * from './job';
+export * from './realtime';

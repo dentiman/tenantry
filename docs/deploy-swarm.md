@@ -22,6 +22,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | `web` | `Dockerfile.web` APP=web (nginx) | 8511                        | — |
 | `platform-web` | `Dockerfile.web` APP=platform-web (nginx) | 8512                        | — |
 | `postgres` | postgres:17-alpine | — (лише overlay)            | bind-volume |
+| `valkey` | valkey/valkey:8-alpine | — (лише overlay)            | — (ефемерний) |
 | `seaweedfs` | chrislusf/seaweedfs:4.39 | 8503                        | bind-volume |
 
 **Режим IP:port БЕЗ проксі** (тестовий прод): браузер ходить напряму на `<node-ip>:порт` по
@@ -33,10 +34,18 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 > ⚠️ Усе на **http** — не змішувати зі https (mixed-content блокується браузером). Для справжнього
 > проду — повернути `host_ip: 127.0.0.1` + зовнішній reverse-proxy з TLS (для S3 зберігати Host).
 
-> **Наступне доповнення стеку (RT-0):** сервіс `valkey` (Socket.IO Redis Streams adapter +
-> presence leases) — порт НЕ публікується, лише overlay; `docker/nginx/default.conf.template`
-> отримує `location /socket.io/` з Upgrade-заголовками. Транспорт — websocket-only, тому
-> sticky sessions цій топології не потрібні. Деталі — [realtime.md](realtime.md).
+> **Realtime у стеку (RT-0, зроблено 2026-08-15):** сервіс `valkey` — Redis Streams adapter
+> Socket.IO і сховище presence-leases. Порт НЕ публікується (лише overlay `valkey:6379`),
+> персистентності немає (presence ефемерна, стан відбудовується heartbeat-ами), тому й
+> volume не потрібен — але `update_config` усе одно `stop-first`, бо інстанс один.
+> `docker/nginx/default.conf.template` отримав `location /socket.io/` з `Upgrade`-заголовками,
+> `proxy_buffering off` і `proxy_read_timeout 300s` (> `pingInterval + pingTimeout`).
+> Транспорт — websocket-only, тому sticky sessions цій топології не потрібні: Docker VIP
+> балансує по TCP-зʼєднанню, і cookie-affinity там нема кому виставляти.
+>
+> `api` отримав `stop_grace_period: 30s` — на SIGTERM він **віддає свої presence-leases**,
+> інакше кожен rolling deploy лишав би «привидів» online на хвилину, рівно тоді, коли всі
+> клієнти перепідключаються. Деталі — [realtime.md](realtime.md).
 
 ## 2. Зафіксовані рішення
 
@@ -135,8 +144,12 @@ DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-c
 
 **Прикладні секрети/конфіг — у РЕПО (тестовий прод, свідомо комітяться):**
 - `docker/deploy.env` — `POSTGRES_PASSWORD`, `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `S3_ENDPOINT`,
-  `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_CORS_ALLOWED_ORIGINS`, `SMTP_HOST`, `SMTP_FROM` (+ опційні
-  override з дефолтами). deploy-job робить `set -a; . ./docker/deploy.env; set +a`.
+  `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_CORS_ALLOWED_ORIGINS`, `SMTP_HOST`, `SMTP_FROM`,
+  `REDIS_PASSWORD`, `REALTIME_ALLOWED_ORIGINS` (+ опційні override з дефолтами).
+  deploy-job робить `set -a; . ./docker/deploy.env; set +a`.
+  **`REALTIME_ALLOWED_ORIGINS` = той самий origin, що `S3_CORS_ALLOWED_ORIGINS`**
+  (`http://<node-ip>:8511`): гейтвей звіряє його через Socket.IO `allowRequest`, бо
+  browser CORS захищає HTTP-транспорт, але НЕ WebSocket.
 - `docker/seaweedfs/s3.prod.json` — ключі сховища (мають збігатися з `S3_ACCESS_KEY`/`S3_SECRET_KEY`).
 
 > **Для СПРАВЖНЬОГО проду:** обидва файли винести в CI Variables (Protected+Masked) і
@@ -165,9 +178,17 @@ DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-c
 5. Запустити **manual `db_roles_prod`** (створює `saas_migrator`/`saas_app`/`saas_platform`) →
    api рестартне (restart_policy) і міграції пройдуть. За потреби демо-дані — **manual `seed_prod`**.
 6. **Доступ (IP:port без проксі):** у `docker/deploy.env` замінити `CHANGE_ME_NODE_IP` на IP ноди
-   (`S3_ENDPOINT=http://<node-ip>:8503`, `S3_CORS_ALLOWED_ORIGINS=http://<node-ip>:8511`). Відкрити
+   (`S3_ENDPOINT=http://<node-ip>:8503`, `S3_CORS_ALLOWED_ORIGINS=http://<node-ip>:8511`,
+   `REALTIME_ALLOWED_ORIGINS=http://<node-ip>:8511`). Відкрити
    у браузері `http://<node-ip>:8511` (web) / `:8512` (platform-web). Усе по http (без TLS/проксі).
-7. Бекап — `dump_db_prod` (артефакт) та/або снапшот `${SAAS_DATA_DIR}`.
+7. **Димовий тест realtime:** відкрити `/users` двома браузерами під різними юзерами — обидва
+   мають бачити один одного online. Далі `docker service scale saas-dev_api=2` (порт `api` не
+   публікується, конфлікту немає) і `docker service update --force saas-dev_api`: під час
+   rolling update presence не має розʼїжджатись і не має лишати «привидів» після drain.
+   Якщо socket не піднімається — дивитись `location /socket.io/` у nginx і
+   `REALTIME_ALLOWED_ORIGINS` (гейтвей відхиляє чужий Origin у `allowRequest`).
+8. Бекап — `dump_db_prod` (артефакт) та/або снапшот `${SAAS_DATA_DIR}`
+   (`valkey` бекапити не треба — presence ефемерна).
 
 > Порядок «deploy → db_roles» на найпершому запуску має цей нюанс через bootstrap ролей. Далі
 > (ролі вже є) деплої безшовні: entrypoint-міграції відпрацьовують до старту.

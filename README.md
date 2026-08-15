@@ -10,6 +10,7 @@
 | Шар         | Технології                                                                                                                                                                  |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backend     | NestJS 11, Prisma 7 (adapter-pg), PostgreSQL 17, nestjs-zod v5, Pino                                                                                                        |
+| Realtime    | Socket.IO 4 (websocket-only, namespace `/tenant`) + Valkey 8 як Redis Streams adapter і сховище presence-leases                                                              |
 | Contracts   | Zod 4 — єдине джерело правди типів API (`libs/contracts`)                                                                                                                   |
 | API-конвеєр | `@nestjs/swagger` → `openapi.json` → orval → typed TanStack Query hooks                                                                                                     |
 | Frontend    | React 19, Vite 7, TanStack Router + Query v5, Zustand, Tailwind CSS 4, react-hook-form                                                                                      |
@@ -22,7 +23,8 @@
 ```bash
 cp .env.example .env
 pnpm install
-pnpm docker:up            # PostgreSQL 17 у Docker (свіжий volume сам створює ролі БД)
+pnpm docker:up            # PostgreSQL 17 + Mailpit + Valkey + SeaweedFS у Docker
+                          # (свіжий Postgres-volume сам створює ролі БД)
 pnpm db:roles             # ТІЛЬКИ якщо Postgres-volume існував до MT-0: ідемпотентно створює
                           # ролі saas_migrator/saas_app/saas_platform і гранти (інакше пропустити)
 pnpm db:generate          # Prisma client
@@ -33,7 +35,7 @@ pnpm api:dev              # Tenant API на http://localhost:3001 (Swagger: /api
 pnpm platform:dev         # Control plane API на http://localhost:3002 (Swagger: /api/docs;
                           # окремий JWT-secret, роль saas_platform — BYPASSRLS)
 pnpm worker:dev           # Worker: споживачі черги pg-boss + cron (окремий процес)
-pnpm web:dev              # Tenant web на http://localhost:5173 (проксі /api → 3001)
+pnpm web:dev              # Tenant web на http://localhost:5173 (проксі /api і /socket.io → 3001)
 pnpm platform:web:dev     # Platform web на http://localhost:5174 (проксі /api → 3002)
 ```
 
@@ -61,7 +63,7 @@ libs/
               # (nestjs-cls) + tenant-extension для set_config, SystemPrismaService (BYPASSRLS)
   shared/     # Повідомлення: defineEvent/defineCommand, MESSAGE_TOPOLOGY, MessagePublisher,
               # @MessageSubscriber, inbox-ідемпотентність; сховище (StorageService)
-docker/       # docker-compose: postgres, mailpit, seaweedfs
+docker/       # docker-compose: postgres, mailpit, valkey (realtime), seaweedfs
 docs/         # архітектурна пропозиція та рішення; docs/multi-tenancy-architecture.md — довідник
               # поточної мультитенантної архітектури
 ```
@@ -92,13 +94,14 @@ pnpm web:codegen        # apps/web/src/api/generated (orval)
 ```bash
 pnpm lint         # ESLint (strict type-checked, 0 warnings)
 pnpm typecheck    # tsc по всіх пакетах (turbo)
-pnpm api:test:e2e      # Jest + supertest проти реальної БД, tenant-api (63 тести; окрема БД
+pnpm api:test:e2e      # Jest + supertest проти реальної БД, tenant-api (96 тестів; окрема БД
                        # saas_skeleton_test, створюється і мігрується автоматично — dev-дані
-                       # і seed не чіпаються)
+                       # і seed не чіпаються). Realtime-тести ходять до живої Valkey —
+                       # ізоляція через окремий REALTIME_KEY_PREFIX, не окреме сховище
 pnpm platform:test:e2e # те саме для control plane (11 тестів)
 ```
 
-CI (GitHub Actions): lint → typecheck → build → міграції → e2e з PostgreSQL-сервісом.
+CI (GitHub Actions): lint → typecheck → build → міграції → e2e з сервісами PostgreSQL і Valkey.
 
 ## Асинхронні повідомлення (EDA-1 — готово)
 
@@ -118,10 +121,36 @@ API інжектить `MessagePublisher` і викликає `publish(tx, def, 
 (публікується при створенні юзера адміном → підписник `welcome-email`).
 Деталі й обґрунтування — [docs/event-driven-architecture.md](docs/event-driven-architecture.md).
 
+## Realtime і presence (RT-2 — готово)
+
+Socket.IO-гейтвей живе в кожній репліці `apps/api` (namespace `/tenant`, той самий HTTP-сервер
+і origin, що REST). Транспорт — **тільки WebSocket**: polling вимкнено, тому session affinity
+не потрібна взагалі. Multi-node fan-out — `@socket.io/redis-streams-adapter` поверх Valkey;
+adapter потрібен навіть на одній репліці, бо `order: start-first` під час деплою тримає два
+таски `api` одночасно.
+
+Handshake бере токен із Socket.IO `auth` і перевіряє його **тим самим `AccessTokenService`,
+що й HTTP-guard**, потім звіряє `isActive` юзера й тенанта в явному `TenantContextService.runWith`.
+Access-токен живе 15 хвилин, а socket — годинами, тому сервер шле `auth.expiring.v1`, а
+клієнт відповідає `auth.update.v1` через ТОЙ САМИЙ single-flight `refreshTokens()`, що й
+axios-інтерсептор — без перепідключення.
+
+Presence: юзер `online`, якщо є хоч одне живе зʼєднання в цьому тенанті (дві вкладки — один
+online user). У памʼяті ноди — рахунок вкладок, у Valkey — lease пари `(user, apiNode)`, що
+продовжується heartbeat-ом і прибирається ідемпотентним sweeper-ом без вибору лідера.
+Повний стан завжди читається з `GET /api/presence` (`onlineUserIds` + `revision`), а socket
+надсилає лише delta `presence.changed.v1`, яку фронт застосовує до кешу TanStack Query за
+правилом ревізій (дубль — ігнор, `+1` — застосувати, розрив — resync). Відмова брокера не
+чіпає REST: endpoint віддає 503, а UI показує «невідомо» замість брехливого «всі offline».
+
+Демо — online-badge на `/users`. Деталі, граблі й наступна фаза (RT-3, in-app notifications) —
+[docs/realtime.md](docs/realtime.md).
+
 ## Далі за roadmap
 
-Мультитенантність (MT-0…MT-3) вже реалізована й перевірена — див.
-[docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md). Лишилось: RBAC/permissions,
-refresh-токени в httpOnly cookie, справжня reuse-detection ротованих токенів, MT-4/беклог
-(піддомени, invite-флоу, білінг), доменні модулі (customers, tickets, billing). Деталі — у
-docs/roadmap.md.
+Мультитенантність (MT-0…MT-3) і realtime-фундамент (RT-0…RT-2) вже реалізовані й перевірені —
+див. [docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md) і
+[docs/realtime.md](docs/realtime.md). Лишилось: RT-3 (in-app notifications), EDA-2 (екран DLQ),
+RBAC/permissions, refresh-токени в httpOnly cookie, справжня reuse-detection ротованих токенів,
+MT-4/беклог (піддомени, invite-флоу, білінг), доменні модулі (customers, tickets, billing).
+Деталі — у docs/roadmap.md.

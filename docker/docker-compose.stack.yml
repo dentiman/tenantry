@@ -58,6 +58,16 @@ x-db-env: &db-env
   MIGRATE_DATABASE_URL: postgresql://saas_migrator:saas_migrator@postgres:5432/saas_skeleton
   PLATFORM_DATABASE_URL: postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton
 
+# RT-0: realtime-шар. REDIS_URL потрібен api (adapter + presence-leases); воркеру він
+# знадобиться лише на RT-3 (публікація в стрім realtime.dispatch) — зараз не додаємо.
+x-realtime-env: &realtime-env
+  REDIS_URL: redis://:${REDIS_PASSWORD}@valkey:6379
+  REALTIME_KEY_PREFIX: ${REALTIME_KEY_PREFIX:-saas:rt}
+  REALTIME_ALLOWED_ORIGINS: ${REALTIME_ALLOWED_ORIGINS}
+  REALTIME_LEASE_TTL_MS: ${REALTIME_LEASE_TTL_MS:-60000}
+  REALTIME_HEARTBEAT_MS: ${REALTIME_HEARTBEAT_MS:-20000}
+  REALTIME_RECOVERY_MS: ${REALTIME_RECOVERY_MS:-120000}
+
 x-s3-env: &s3-env
   S3_ENDPOINT: ${S3_ENDPOINT}
   S3_REGION: ${S3_REGION:-us-east-1}
@@ -109,13 +119,44 @@ services:
       <<: *deploy-pinned
       update_config: *update-stateful
 
+  # ------------------------------------------------------------------ valkey (realtime broker)
+  # RT-0. Порт НЕ публікується — доступ лише по overlay (valkey:6379).
+  # Персистентності немає (presence ефемерна) → volume не потрібен, а отже
+  # stop-first тут не через спільний volume, а тому що інстанс один.
+  valkey:
+    image: valkey/valkey:8-alpine
+    command:
+      - valkey-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-256mb}
+      - --maxmemory-policy
+      - noeviction
+      - --appendonly
+      - 'no'
+      - --save
+      - ''
+    environment:
+      VALKEY_PASSWORD: ${REDIS_PASSWORD}
+    networks: [saas_net]
+    logging: *logging
+    deploy:
+      <<: *deploy-pinned
+      update_config: *update-stateful
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ------------------------------------------------------------------ api (listen :3001 → published :8501)
   api:
     image: ${API_IMAGE}
     # Override: спершу міграції (saas_migrator), потім старт (saas_app)
     entrypoint: ["/usr/src/app/docker/entrypoint-api.sh"]
     environment:
-      <<: [*db-env, *s3-env]
+      <<: [*db-env, *s3-env, *realtime-env]
       NODE_ENV: production
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
@@ -123,6 +164,9 @@ services:
       JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
     networks: [saas_net]
     logging: *logging
+    # RT-1: на SIGTERM api звільняє presence-leases і закриває sockets. Дефолтних 10 с
+    # вистачає, але запас робить drain передбачуваним при повільному Valkey.
+    stop_grace_period: 30s
     # порт не публікуємо — api доступний по overlay (web nginx проксить /api → api:3001)
     deploy:
       <<: *deploy-pinned

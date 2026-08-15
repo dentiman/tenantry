@@ -1,12 +1,70 @@
 # Realtime-підсистема: Socket.IO, presence і notifications
 
-> Статус: архітектурне рішення, ще не реалізовано. Дата: 2026-07-22.
-> **Переглянуто 2026-08-02** під відомий деплой (Docker Swarm + GitLab CI, див.
+> Статус: **RT-0, RT-1 і RT-2 реалізовані й перевірені 2026-08-15** (зведення — § «Що
+> реалізовано»); RT-3 (in-app notifications) — попереду. Дизайн: 2026-07-22,
+> **переглянуто 2026-08-02** під відомий деплой (Docker Swarm + GitLab CI, див.
 > [deploy-swarm.md](deploy-swarm.md)) — зведення змін у § «Що змінив відомий деплой».
 >
-> Перший вертикальний сценарій — online presence користувачів tenant CRM. Наступний
-> сценарій — in-app notifications. Наявний welcome-лист (підписник `welcome-email` події
-> `users.user-registered.v1`) не є in-app Notification-модулем: таблиці повідомлень, REST API, unread state і UI поки немає.
+> Перший вертикальний сценарій — online presence користувачів tenant CRM — працює
+> end-to-end. Наступний сценарій — in-app notifications. Наявний welcome-лист (підписник
+> `welcome-email` події `users.user-registered.v1`) не є in-app Notification-модулем:
+> таблиці повідомлень, REST API, unread state і UI поки немає.
+
+## Що реалізовано (2026-08-15)
+
+Дизайн нижче лишився чинним — реалізація не переглянула жодного зафіксованого рішення.
+Тут — де що лежить і чим фактичний код відрізняється від тексту.
+
+| Шар             | Файли                                                                                                                                                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Контракти       | `libs/contracts/src/realtime/` — Zod-схеми подій і snapshot-у + typed event maps (`ServerToClientEvents`/`ClientToServerEvents`)                                                                                                                |
+| Gateway         | `apps/api/src/realtime/`: `realtime.gateway.ts` (namespace `/tenant`, rooms, цикл auth), `socket-auth.service.ts`, `realtime-io.adapter.ts` (websocket-only + Redis Streams), `realtime.emitter.ts`, `realtime.config.ts` (валідація env на старті) |
+| Presence        | `apps/api/src/realtime/presence/`: `presence.lua.ts` (5 атомарних скриптів), `presence.store.ts`, `presence.service.ts` (локальна мапа + heartbeat + sweeper + drain), `presence.controller.ts` (`GET /api/presence`)                            |
+| Спільна auth    | `apps/api/src/auth/access-token.service.ts` — ОДНА перевірка access-токена для HTTP-guard і socket-middleware                                                                                                                                   |
+| Фронт           | `apps/web/src/realtime/`: `socket.ts` (singleton поза React-деревом), `presence-sync.ts` (delta → TanStack Query з revision-логікою), `use-presence.ts`; `components/presence-dot.tsx`; бейдж у колонці avatar на `/users`                       |
+| Інфраструктура  | сервіс `valkey` у `docker/docker-compose.yml` і `docker/docker-compose.stack.yml`, `x-realtime-env`, `location /socket.io/` у nginx-шаблоні, `ws: true` у Vite-проксі, сервіс `valkey` у GitHub Actions                                          |
+| Тести           | `apps/api/test/realtime.e2e-spec.ts` — 11 тестів (handshake, дві вкладки, ревізії, крос-tenant ізоляція snapshot-у і delta, детермінований lease expiry)                                                                                        |
+
+**Живий прогін** (2026-08-15, два процеси `api` на :3001 і :3011 проти однієї Valkey):
+cross-instance emit, дві вкладки, закриття останньої вкладки, snapshot-ізоляція — 10/10;
+у браузері бейдж на `/users` перемкнувся online→offline від дельти з _іншого_ інстанса
+без перезавантаження сторінки.
+
+### Уточнення, які дала реалізація
+
+- **Бюджет offline-детекції — 65 с, а не 45–60 с.** При дефолтах `LEASE_TTL=60000` і
+  `SWEEP=5000` найгірший випадок = `leaseTtl + sweepInterval`. Дефолти лишені як
+  зафіксовані в цьому документі; щоб вкластись у ціль, потрібні `REALTIME_LEASE_TTL_MS=40000`
+  + `REALTIME_HEARTBEAT_MS=15000` (конфіг це дозволяє й перевіряє інваріант
+  `heartbeat * 2 ≤ leaseTtl` на старті).
+- **Розрив ≠ розрив.** Lease віддається МИТТЄВО лише на `client namespace disconnect`
+  (навмисне закриття). `transport close` / `ping timeout` невідрізнювані від зниклої
+  мережі, тому там lease догорає по TTL — і швидкий reconnect не дає флікера. Щоб
+  закриття вкладки читалось як навмисне, фронт явно робить `socket.disconnect()` на
+  `pagehide`.
+- **`GET /presence` при недоступному брокері віддає 503, а не порожній список.** Порожній
+  список фронт відрендерив би як «всі offline» — застосунок стверджував би те, чого не
+  знає. `PresenceDot` при `isUnknown` не рендериться взагалі; тост придушено через
+  `meta.silentError` у TanStack Query.
+- **Sweeper обходить усі тенанти з індексу** `{prefix}:presence:tenants` (SET поза
+  hash-тегом), а не лише локальні: якщо впала нода з єдиним юзером тенанта, локально
+  про цей тенант не знає ніхто.
+
+### Граблі, спіймані живим прогоном
+
+1. **Приватний метод не можна називати `handleDisconnect`.** Nest шукає хук на інстансі
+   за іменем (`if (instance.handleDisconnect)`) — `private` у TS на це не впливає, —
+   підписує його САМ і викликає з одним аргументом. На кожен розрив приходили два
+   виклики: спершу Nest-івський із `reason === undefined`, потім наш зі справжньою
+   причиною. Перший знімав сокет із локального обліку, другий уже не знаходив його —
+   **lease не звільнявся ніколи**, і юзер лишався online після закриття вкладки.
+   Симптом виглядав як «баг presence», причина була в іменуванні.
+2. **`blockTimeInMs` адаптера = час виходу процесу.** Дефолтні 5 с блокуючого XREAD
+   додаються до кожного `SIGTERM` (а в тестах давали «Jest did not exit»). Знижено до
+   1 с: у простої це один зайвий round-trip на секунду, зате drain при `stop-first`
+   на 4 секунди коротший.
+3. **Порт 6379 на dev-машині часто вже зайнятий** іншим проєктом. `docker-compose.yml`
+   приймає `REDIS_PORT`; тоді `REDIS_URL` у `.env` має вказувати на той самий порт.
 
 ## Рішення коротко
 
@@ -115,6 +173,41 @@ Valkey обраний як self-hosted Redis-compatible broker: він вико�
 fork-friendly open-source інфраструктуру. Назви env і клієнтський npm-пакет можуть
 залишатися `REDIS_URL` / `redis`, бо це назва протоколу та екосистемного API, а не
 жорстка прив'язка до конкретного server image.
+
+### Чому НЕ Postgres-адаптер (перегляд рішення, 2026-08-15)
+
+Спокуса очевидна: `@socket.io/postgres-adapter` прибрав би цілий сервіс зі стеку, а це
+скелетон для форків — кожна runtime-залежність множиться на кожен форк. Плюси реальні:
+`NOTIFY` доставляється **на COMMIT**, тобто лягає рівно на нашу доктрину `publish(tx, …)`
+(для RT-3 це нульове вікно між `INSERT notification` і emit), а міст `worker → socket`
+став би тривіальним — воркер робив би `NOTIFY` у своїй транзакції, без окремого стріму
+`realtime.dispatch`.
+
+Рішення все одно на користь Valkey, і вирішує **не fan-out, а presence**:
+
+1. **Адаптер не вирішує presence взагалі.** Він покриває лише розсилку. Leases усе одно
+   потребують TTL-сховища: довелося б завести `presence_leases` (щонайменше UNLOGGED),
+   heartbeat-UPDATE кожні 20 с на кожного онлайн-юзера, власний sweeper і атомарність
+   через advisory lock замість Lua — тобто НАШ код замість готового примітиву плюс
+   постійний dead-tuple churn на primary. Заміна адаптера в Socket.IO — це один рядок
+   (`io.adapter(...)`), а от presence прибита до сховища; якщо воно все одно потрібне,
+   економія від Postgres-адаптера дорівнює нулю.
+2. **Черга NOTIFY — глобальний ресурс кластера.** Залиплий LISTEN-консюмер роздуває її, і
+   `NOTIFY` починає валитись/блокуватись у **всіх** транзакціях БД; коміти з `NOTIFY`
+   до того ж серіалізуються на спільному локу черги. Це прямо суперечить вимозі з
+   § «Failure modes»: відмова realtime не має чіпати REST/auth.
+3. **Немає connection state recovery** — офіційно не підтримується. Для нас це не
+   фундамент (snapshot+revision resync є в будь-якому разі), але кількість resync-ів
+   зросла б на кожному короткому розриві.
+4. **Немає bounded stream і видимості лагу**: ні `maxLen`, ні offset — метрики «глибина
+   черги / лаг доставки» з § «Спостережуваність» узяти нізвідки.
+5. **DDL у нашій БД під роллю без DDL-прав.** Адаптер створює `socket_io_attachments`
+   (payload > 8000 байт). Це повторення граблі pg-boss із MT-0 (`GRANT CREATE ON DATABASE`
+   для `saas_app`) — ще один виняток у рольовій моделі.
+
+**Коли Postgres-адаптер виграв би:** форк, якому потрібні лише notifications і НЕ потрібна
+presence. Там немає TTL-сховища, payload-и крихітні, транзакційність `NOTIFY` — чистий
+виграш, і другий сервіс справді зайвий.
 
 ## Топологія
 
@@ -420,7 +513,7 @@ Tenant/user ID не додаються як metric labels через висок�
 
 ## План реалізації
 
-### RT-0 — інфраструктурний spike
+### RT-0 — інфраструктурний spike ✅ (2026-08-15)
 
 1. Valkey у `docker/docker-compose.yml` (dev) і `docker/docker-compose.stack.yml` (swarm:
    без published-порту, `noeviction`, `requirepass`, `stop-first`); `REDIS_PASSWORD` +
@@ -433,7 +526,7 @@ Tenant/user ID не додаються як metric labels через висок�
 
 Spike є гейтом: не починати presence UI, доки два таски `api` не обмінюються event-ами.
 
-### RT-1 — secure gateway
+### RT-1 — secure gateway ✅ (2026-08-15)
 
 1. `libs/contracts/src/realtime`: Zod payload-и та typed event maps.
 2. `apps/api/src/realtime`: adapter lifecycle, gateway, socket auth/error filter,
@@ -443,7 +536,7 @@ Spike є гейтом: не починати presence UI, доки два тас
 4. `apps/web/src/realtime`: singleton client поза React tree, auth refresh/update,
    reconnect/resync integration. React StrictMode не повинен створювати два sockets.
 
-### RT-2 — presence vertical slice
+### RT-2 — presence vertical slice ✅ (2026-08-15)
 
 1. Lease store + Lua scripts + sweeper.
 2. Zod contract і `GET /api/presence` за стандартним DTO → Service → Mapper → Controller.
@@ -451,7 +544,7 @@ Spike є гейтом: не починати presence UI, доки два тас
 4. Online badge на `/users`; UI text через i18next.
 5. OpenAPI/orval artifacts, tests і документація.
 
-### RT-3 — in-app notifications
+### RT-3 — in-app notifications — попереду
 
 Окреме бізнесове рішення: модель/міграція/RLS, REST list/unread/read API, permissions,
 retention, event type/payload schemas, bell UI, transactional creation, worker bridge та

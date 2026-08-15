@@ -46,6 +46,7 @@ export * from './loginDto';
 export * from './meResponseDtoOutput';
 export * from './meResponseDtoOutputLocale';
 export * from './meResponseDtoOutputRole';
+export * from './presenceSnapshotDtoOutput';
 export * from './queueStatsResponseDtoOutput';
 export * from './queueStatsResponseDtoOutputQueuesItem';
 export * from './refreshDto';

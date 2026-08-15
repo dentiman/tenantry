@@ -22,30 +22,30 @@
 | **`pnpm db:reset`**      | 2026-07-17 | Один деструктивний dev-скрипт + зафіксовані seed-ідентичності                                                                       | `database-seed.md`                                     |
 | **Activity Log**         | 2026-07-21 | Журнал бізнес-подій (`type`+`payload`, рендер через i18next), перший курсорний ендпоінт, sync/async-запис                          | `activity-log.md`                                      |
 | **Деплой у Swarm + CI**  | 2026-07-24…31 | GitLab CI: build 6 образів → `docker stack deploy` через docker-context по SSH (нуль файлів на сервері); dev-стек `saas-dev` живий на 172.18.13.101; manual `db_roles`/`seed`/`dump` | `deploy-swarm.md`                                      |
+| **RT-0…RT-2**            | 2026-08-15 | Realtime: Valkey + Socket.IO (websocket-only, Redis Streams adapter), безпечний gateway із спільною перевіркою JWT і tenant-CLS, presence на distributed leases + Lua, `GET /api/presence` (snapshot+revision), online-badge на `/users` | `realtime.md`                                          |
 | **EDA-0 + EDA-1**        | 2026-08-04 | Єдиний конвеєр асинхронних повідомлень замість `libs/shared/src/jobs/`: подія/команда, конверт (`messageId`/`correlationId`/`causationId`/`actor`), маніфест `MESSAGE_TOPOLOGY` із fan-out-ом на публікації, inbox по бізнес-факту, спільна DLQ, boot-assert топології | `event-driven-architecture.md`                         |
 
-Проєктні документи без реалізації (готові до роботи): [realtime.md](realtime.md),
+Проєктні документи без реалізації (готові до роботи):
 [tenant-settings.md](tenant-settings.md), беклог MT-4 у `multi-tenancy-architecture.md`,
-фази EDA-2…EDA-4 у [event-driven-architecture.md](event-driven-architecture.md).
+фази EDA-2…EDA-4 у [event-driven-architecture.md](event-driven-architecture.md),
+RT-3 у [realtime.md](realtime.md).
 
 ---
 
 ## 2. Наступні кроки (у порядку пріоритету)
 
-### 2.1. Realtime (RT-0 → RT-3) — [realtime.md](realtime.md)
+### 2.1. Realtime — лишилась RT-3 — [realtime.md](realtime.md)
 
-Найближча вертикаль. Деплой уже відомий, тому документ переглянуто під Swarm
-(§ «Що змінив відомий деплой» у `realtime.md`): транспорт **websocket-only** (sticky sessions не
-потрібні), Valkey — окремий сервіс стеку, `wss` — разом із TLS-проксі, не раніше.
+**RT-0, RT-1 і RT-2 зроблені й перевірені 2026-08-15** (деталі, уточнення бюджету
+offline-детекції і граблі — § «Що реалізовано» в `realtime.md`). Транспорт
+**websocket-only** (sticky sessions не потрібні), Valkey — окремий сервіс стеку,
+`wss` — разом із TLS-проксі, не раніше.
 
-1. **RT-0 — інфраструктурний spike (гейт).** Valkey у dev-compose і в swarm-стеку, Socket.IO +
-   Redis Streams adapter, `/socket.io` у nginx-шаблоні й Vite dev-proxy. Довести cross-instance
-   emit на `docker service scale saas-dev_api=2`, пережити рестарт Valkey.
-2. **RT-1 — безпечний gateway.** Zod-контракти подій, socket-auth (той самий сервіс перевірки JWT,
-   що й HTTP-guard), tenant/user rooms, CLS на кожну подію, graceful shutdown, singleton-клієнт на фронті.
-3. **RT-2 — presence.** Leases у Valkey + Lua + sweeper, `GET /api/presence` (snapshot+revision),
-   `presence.changed.v1`, online-badge на `/users`.
-4. **RT-3 — in-app notifications.** Довговічна таблиця + RLS, REST list/unread/read, bell UI,
+Що лишилось перевірити на живому стеку (локально доведено на двох процесах `api`):
+`docker service scale saas-dev_api=2` і rolling `docker service update --force` на
+`saas-dev`, плюс рестарт Valkey під навантаженням.
+
+1. **RT-3 — in-app notifications.** Довговічна таблиця + RLS, REST list/unread/read, bell UI,
    `notification.created.v1`, міст із воркера через `realtime.dispatch`. Це водночас **EDA-4**:
    realtime — просто ще один підписник у `MESSAGE_TOPOLOGY`, окремого механізму не заводимо
    ([event-driven-architecture.md](event-driven-architecture.md) §3.12).

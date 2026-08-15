@@ -7,6 +7,8 @@ import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import { isGlobalApiError, parseApiError } from './api/api-error';
 import { showApiErrorToast } from './lib/error-toast';
+import { initSocket } from './realtime/socket';
+import { initPresenceSync } from './realtime/presence-sync';
 import './i18n';
 import './index.css';
 
@@ -20,7 +22,16 @@ function handleGlobalError(error: unknown): void {
 }
 
 const queryClient = new QueryClient({
-  queryCache: new QueryCache({ onError: handleGlobalError }),
+  // meta.silentError — опт-аут із глобального тоста для запитів, чия відмова є
+  // легальним станом UI, а не подією для юзера (presence: «невідомо» замість тоста)
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      if (query.meta?.silentError === true) {
+        return;
+      }
+      handleGlobalError(error);
+    },
+  }),
   mutationCache: new MutationCache({ onError: handleGlobalError }),
   defaultOptions: {
     queries: {
@@ -33,6 +44,12 @@ const queryClient = new QueryClient({
 async function bootstrap(): Promise<void> {
   // Сесія відновлюється до першого рендера — guards бачать актуальний стан
   await initAuth();
+
+  // Realtime піднімається ПОЗА React-деревом і до першого рендера: підписки не
+  // мають залежати від монтування компонентів, а StrictMode не має права
+  // створити другий socket
+  initSocket();
+  initPresenceSync(queryClient);
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {

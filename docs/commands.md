@@ -22,7 +22,8 @@
 
 ## Docker (інфраструктура)
 
-Піднімає Postgres 17, Mailpit (SMTP-заглушка для email у dev) і SeaweedFS (S3-сумісне
+Піднімає Postgres 17, Mailpit (SMTP-заглушка для email у dev), Valkey (брокер Socket.IO
+і сховище presence-leases, RT-0) і SeaweedFS (S3-сумісне
 сховище файлів). Конфігурація — [docker/docker-compose.yml](../docker/docker-compose.yml).
 
 ### `pnpm docker:up`
@@ -292,9 +293,11 @@ pnpm api:test:e2e
 # → pnpm --filter @saas-skeleton/api test:e2e  (Jest + supertest)
 ```
 
-63 e2e-тести tenant-api (rls, tenant-isolation, slug-login) — **вимагає Postgres**.
+96 e2e-тестів tenant-api (rls, tenant-isolation, slug-login, messaging, realtime) —
+**вимагає Postgres і Valkey** (обидва піднімає `pnpm docker:up`).
 `globalSetup` сам створює окрему БД `saas_skeleton_test`, ставить ролі (`db:roles`) і
-міграції — dev-дані не чіпає.
+міграції — dev-дані не чіпає. Presence живе не в БД, тому ізоляцію їй дає окремий
+префікс ключів на кожен jest-worker (`setup-env.ts`), а не окреме сховище.
 
 ### `pnpm platform:test:e2e`
 
@@ -331,7 +334,7 @@ Configurations для PHPStorm/WebStorm — мінімальний набір, �
 
 | # | Run Configuration      | Скрипт                | Навіщо саме тут |
 | - | ----------------------- | ---------------------- | --------------- |
-| 01 | `01 pnpm docker:up`     | `docker:up`            | Postgres + Mailpit + SeaweedFS — без них усе інше падає на конекшені |
+| 01 | `01 pnpm docker:up`     | `docker:up`            | Postgres + Mailpit + Valkey + SeaweedFS — без них усе інше падає на конекшені |
 | 02 | `02 pnpm db:roles`      | `db:roles`             | ролі `saas_migrator`/`saas_app`/`saas_platform` — без них `db:migrate:dev` (крок 04) падає, бо `MIGRATE_DATABASE_URL` іде під `saas_migrator`, якого ще нема |
 | 03 | `03 pnpm db:generate`   | `db:generate`          | Prisma Client — застосунки не збілдяться без згенерованих типів |
 | 04 | `04 pnpm db:migrate:dev`| `db:migrate:dev`       | схема БД — застосунки впадуть на першому запиті без таблиць |

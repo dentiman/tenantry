@@ -9,6 +9,8 @@ import { useAuthStore } from '../stores/auth.store';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { CreateUserModal } from '../components/create-user-modal';
 import { ActivityDrawer } from '../components/activity/activity-drawer';
+import { PresenceDot } from '../components/presence-dot';
+import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '../lib/format';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
@@ -38,6 +40,9 @@ export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  // Presence — окремий запит: він НЕ залежить від пагінації користувачів і не
+  // інвалідується разом із нею (склад сторінки змінюється частіше за присутність)
+  const presence = usePresence();
   // Юзер, якому міняємо аватар (демо файлової підсистеми); null — модалка закрита
   const [avatarUser, setAvatarUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
   // Юзер, чий фід активностей відкрито в драйвері; null — драйвер закрито
@@ -62,10 +67,17 @@ export function UsersPage() {
       id: 'avatar',
       header: t('table.avatar'),
       cell: (u) => (
-        <Avatar size="sm">
-          {u.avatarUrl && <Avatar.Image alt={u.email} src={u.avatarUrl} />}
-          <Avatar.Fallback>{(u.name ?? u.email).slice(0, 2).toUpperCase()}</Avatar.Fallback>
-        </Avatar>
+        <span className="relative inline-flex">
+          <Avatar size="sm">
+            {u.avatarUrl && <Avatar.Image alt={u.email} src={u.avatarUrl} />}
+            <Avatar.Fallback>{(u.name ?? u.email).slice(0, 2).toUpperCase()}</Avatar.Fallback>
+          </Avatar>
+          <PresenceDot
+            isOnline={presence.isOnline(u.id)}
+            isUnknown={presence.isUnknown}
+            labels={{ online: t('presence.online'), offline: t('presence.offline') }}
+          />
+        </span>
       ),
     },
     {

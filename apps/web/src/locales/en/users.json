@@ -59,5 +59,9 @@
     "cancel": "Cancel",
     "submit": "Create user",
     "submitting": "Creating…"
+  },
+  "presence": {
+    "online": "Online",
+    "offline": "Offline"
   }
 }
