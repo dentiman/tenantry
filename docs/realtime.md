@@ -5,8 +5,8 @@
 > [deploy-swarm.md](deploy-swarm.md)) — зведення змін у § «Що змінив відомий деплой».
 >
 > Перший вертикальний сценарій — online presence користувачів tenant CRM. Наступний
-> сценарій — in-app notifications. Наявні email jobs у `libs/shared/src/jobs/definitions/notifications.jobs.ts`
-> не є in-app Notification-модулем: таблиці повідомлень, REST API, unread state і UI поки немає.
+> сценарій — in-app notifications. Наявний welcome-лист (підписник `welcome-email` події
+> `users.user-registered.v1`) не є in-app Notification-модулем: таблиці повідомлень, REST API, unread state і UI поки немає.
 
 ## Рішення коротко
 

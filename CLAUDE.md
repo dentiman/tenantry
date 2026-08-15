@@ -3,7 +3,7 @@
 Форк-скелетон для мультитенантних CRM/ERP-систем (білінг, кастомери, тікети, черги).
 Базові патерни портовані з `/Users/dentiman/dev/projects/fibo-admin` і розширені.
 **Фаза 1 завершена і перевірена** (2026-07-11): монорепо, auth + users end-to-end, конвеєр контрактів, CI.
-**Фаза 2.1 завершена і перевірена** (2026-07-11): pg-boss + `libs/shared` (JobDispatcher/@JobHandler) + `apps/worker`.
+**Фаза 2.1 завершена і перевірена** (2026-07-11): pg-boss + `libs/shared` (JobDispatcher/@JobHandler) + `apps/worker` (шар замінено на `messaging/` в EDA-1, див. нижче).
 **Фаза 2.2 завершена і перевірена** (2026-07-12): наскрізна обробка помилок — ApiError envelope + AllExceptionsFilter + toast + fieldErrors у форми.
 **I18N-1 завершена і перевірена** (2026-07-12): `libs/i18n` + react-i18next в адмінці, усі рядки UI винесені в ключі.
 **I18N-2 завершена і перевірена** (2026-07-12): FieldError.code + переклад toast/fieldErrors/Zod-повідомлень на фронті.
@@ -59,6 +59,27 @@ IP:port** без reverse-proxy (web :8511, platform-web :8512, S3 :8503 — `mod
 compose-файлу; для сервісів із host-портом `start-first` НЕМОЖЛИВИЙ (новий таск вічно Pending —
 тільки `stop-first`); shell-executor раннера не чистить BuildKit-кеш сам (19.7GB за кілька
 пайплайнів → ENOSPC; додано `after_script` з prune). Деталі — `docs/deploy-swarm.md`.
+**EDA-0/EDA-1 завершені і перевірені** (2026-08-04): шар черг перебудований у єдиний конвеєр
+повідомлень — `libs/shared/src/jobs/` ВИДАЛЕНО цілком, натомість `libs/shared/src/messaging/`.
+Два примітиви (`defineEvent` з обовʼязковою `.vN` у типі імені / `defineCommand`) поверх ОДНОГО
+рантайму: спільний конверт (`messageId`, `correlationId`, `causationId`, `actor`, `tenantId`),
+спільний runner, inbox, спільна `dlq`. **Fan-out робить `publish`, а не хендлер**: список
+підписників живе в статичному маніфесті `MESSAGE_TOPOLOGY`, один `publish(tx, …)` → по job-у в
+чергу кожного споживача (`{message}/{consumer}`) у ТІЙ САМІЙ транзакції, послідовно й fail-fast
+(рідний `boss.publish` ковтає часткову відмову через `Promise.allSettled` — тому не він).
+Розсинхрон маніфесту і класів `@MessageSubscriber` = **краш при старті воркера**, не тихо
+недоставлені повідомлення. Ідемпотентність переїхала з job-а на бізнес-факт:
+`runOnce(envelope, consumerId, fn)`, ключ `messageId:consumerId`. `UserRegisteredHandler`
+(рукописний fan-out) видалений цілком; thumbnail і 2 cron лишилися командами, але переїхали на
+той самий конвеєр — другого шляху виконання асинхронної роботи в системі не лишилося.
+Граблі: (1) **роздільник черги `/`, а не `#`** — pg-boss `assertQueueName` приймає лише
+алфавітно-цифрові, `_`, `-`, `.`, `/`; `#` валив старт воркера, а мок pg-boss у e2e цього не
+ловить (валідація імені тепер є і в маніфесті); (2) **політику черги `updateQueue` змінити не
+дає** (`Omit<Queue, 'name'|'partition'|'policy'>`) — при drift лише warn; (3) дефолт `req.id` у
+pino-http — лічильник від 1 на КОЖНОМУ процесі, тому доданий `genReqId` (uuid + повага до
+`X-Request-Id`): цей id тепер їде `correlationId`-ом у довговічні job-рядки. Перевірено живим
+прогоном + 16 нових e2e (маніфест, boot-assert розсинхрону, inbox). Деталі —
+`docs/event-driven-architecture.md`.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -79,6 +100,11 @@ sync-запис у withTenantTx / async через inbox, перший курс�
 там же — мінімальний впорядкований набір JetBrains Run Configurations для dev),
 `docs/deploy-swarm.md` (РЕАЛІЗОВАНО 2026-07-24…31: GitLab CI → Docker Swarm через
 docker-context по SSH; топологія стеку, образи, one-shot db-джоби, рунбук),
+`docs/event-driven-architecture.md` (асинхронний шар — єдиний довідник: діагноз 10 розривів
+старого jobs-шару, цільовий конвеєр подій/команд, конверт, маніфест підписок, DLQ і
+класифікація помилок, гроші/email/зовнішні системи/realtime як підписники, наскрізний приклад
+оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-2…4 — попереду)
++ `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
 `docs/realtime.md` + `docs/realtime-questions.md` (Socket.IO/presence/notifications —
 дизайн, переглянутий 2026-08-02 під Swarm; ще не реалізовано),
 `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
@@ -108,7 +134,8 @@ pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .en
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm platform:web:codegen # orval: apps/platform-api/openapi.json → apps/platform-web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 63 тести tenant-api (rls, tenant-isolation, slug-login); ВИМАГАЄ Postgres.
+pnpm api:test:e2e         # 85 тестів tenant-api (rls, tenant-isolation, slug-login, messaging);
+                          # ВИМАГАЄ Postgres.
                           # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
                           # і мігрує під saas_migrator; тести ходять під saas_app) — dev-дані не чіпає
 pnpm platform:test:e2e    # 11 тестів control plane (operator auth, tenants CRUD, jobs, cross-plane 401)
@@ -135,8 +162,9 @@ apps/platform-api  NestJS 11 (MT-3, control plane, :3002): platform-auth (platfo
                 jobs (моніторинг черг — переїхав СЮДИ з tenant-api: pgboss.* поза RLS).
                 SystemPrismaModule (saas_platform, BYPASSRLS); TenancyModule НЕ імпортує (§6 плану).
                 Контракти — @saas-skeleton/contracts/platform (subpath), свій openapi.json
-apps/worker     NestJS 11 без HTTP (createApplicationContext). Хендлери job-ів + cron через pg-boss,
-                MailerService (nodemailer → Mailpit), плейн i18next для email-контенту
+apps/worker     NestJS 11 без HTTP (createApplicationContext). Підписники повідомлень
+                (`src/subscribers/`) + cron через pg-boss, MailerService (nodemailer → Mailpit),
+                плейн i18next для email-контенту
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system),
                 react-i18next
@@ -151,8 +179,10 @@ libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/P
                 TenantTransactions.withTenantTx, tenant-extension (set_config); SystemPrismaService (BYPASSRLS)
 libs/i18n       Спільні i18next-ресурси для web (common/errors/validation); worker НЕ споживає —
                 свій контент локально (apps/worker/src/locales), спільного поки немає
-libs/shared     Черги: defineJob (Zod payload), JobDispatcher (абстракція, pg-boss замінюваний),
-                @JobHandler() + DiscoveryService-автореєстрація, JobInboxService (processed_jobs).
+libs/shared     Повідомлення (`messaging/`, EDA-1): defineEvent/defineCommand (Zod payload),
+                MESSAGE_TOPOLOGY (маніфест підписок), MessagePublisher.publish(tx, …) —
+                транзакційний fan-out, @MessageSubscriber + DiscoveryService-автореєстрація,
+                конверт, MessageInboxService (processed_jobs), спільна dlq, PgBossService.
                 Сховище: StorageService (@aws-sdk/client-s3: presign PUT/GET, head/get/put/delete,
                 ensureBucket+CORS на старті) + StorageModule (@Global)
 docker/         compose (name: saas-skeleton — namespaced volume, НЕ прибирати name!): Postgres 17,
@@ -193,23 +223,59 @@ HeroUI `toast.danger` (глобальні QueryCache/MutationCache onError у ma
 401 → refresh-інтерсептор; 4xx у формах — `applyServerError(error, form)`: fieldErrors → setError по
 імені поля (звірка з getValues, тому форми МУСЯТЬ мати повні defaultValues), решта → errors.root.server.
 
-**Черги (фаза 2.1):** job = `defineJob(name, zodSchema, { cron?, retry* })` у `libs/shared/src/jobs/definitions/`.
-API: `JobsModule.forApi()` (global) → інжект `JobDispatcher` → `send(def, payload, { singletonKey?, tx? })`
-(`tx` = Prisma-транзакція, транзакційна постановка через `fromPrisma`). Worker: `JobsModule.forWorker()` +
-`@Injectable() @JobHandler(def) class X implements JobHandlerContract` — реєструється автоматично, cron теж.
-Ідемпотентність: `JobInboxService.runOnce(context, fn)` — вставка в processed_jobs + fn в одній транзакції.
-Fan-out еталон: подія `users.user-registered` (диспатчиться і з register, і з адмінського create,
-singletonKey=userId) → її хендлер через inbox+tx ставить `notifications.welcome-email`.
-Історія job-ів — стандартний retention pg-boss ~7 днів (рішення користувача, окремої таблиці немає).
-Моніторинг — сторінка /jobs в адмінці (фільтри state/queue в URL, автооновлення 5s).
+**Асинхронні повідомлення (EDA-0/EDA-1, `libs/shared/src/messaging/`):** ЄДИНИЙ шлях виконання
+асинхронної роботи — другого немає. Два примітиви, один рантайм:
+`defineEvent('x.y.v1', schema)` — факт, 0..N підписників, версія в імені **на рівні типу**
+(`` `${string}.v${number}` ``); `defineCommand('x.y', schema)` — наказ, РІВНО один споживач, без
+версії. Обидва беруть `{ scope: 'tenant' | 'system' }` (system = cron/крос-tenant, БД через
+`SystemPrismaService`); `tenantId` у схемі НЕ оголошується — він у конверті.
 
-**Email (I18N-3, `apps/worker`):** `WelcomeEmailHandler` — реальна відправка (не заглушка): читає
-`locale`+`name` СВІЖИМИ з БД по `payload.userId` (не з payload — стан міг змінитися між диспатчем
+- **Продюсер** (`MessagingModule.forProducer()` у api/platform-api) → інжект `MessagePublisher` →
+  `publish(tx, def, data, { actor?, singletonKey?, startAfterSeconds?, priority? })`. **`tx` —
+  перший обовʼязковий аргумент** (те саме правило, що в `ActivityRecorder.record`): опублікувати
+  повідомлення поза транзакцією доменної зміни фізично неможливо.
+- **Fan-out робить publish, а не хендлер.** `MESSAGE_TOPOLOGY` (`topology.ts`) — єдине місце, де
+  видно всю асинхронну топологію: повідомлення → його споживачі (`{ id, retryLimit?, policy? }`)
+  → `cron?`. Один `publish` = по `INSERT` у чергу кожного споживача в тій самій транзакції,
+  послідовно і fail-fast. Черга на споживача — `{message}/{consumer}` (роздільник `/`: pg-boss
+  приймає лише `[a-zA-Z0-9_\-./]`). Додати підписника = рядок у маніфесті + новий клас; жоден
+  наявний файл не редагується.
+- **Споживач** (`MessagingModule.forWorker()`): `@Injectable() @MessageSubscriber({ definition, id })
+  class X implements MessageSubscriberContract<typeof def.schema>` із `handle(data, envelope)`.
+  Знаходиться через DiscoveryService; **розсинхрон із маніфестом валить старт воркера** в обидва
+  боки (оголошений споживач без класу → job-и копичились би в нечитаній черзі; клас без
+  оголошення → мертвий код).
+- **Конверт** (`message-envelope.ts`, однаковий для подій і команд): `messageId` (ключ
+  ідемпотентності бізнес-факту), `name`, `occurredAt`, `tenantId`, `actor` (та сама форма, що
+  `ActivityActor` — реальна людина доїжджає до підписника), `correlationId` (на HTTP-вході =
+  pino `req.id`, він же `ApiError.requestId`), `causationId`. CLS не перетинає межу процесу —
+  registrar відновлює з конверта і tenant-контекст (RLS), і ланцюг (похідна публікація всередині
+  споживача успадковує correlation/causation автоматично).
+- **Ідемпотентність — по бізнес-факту, не по job-у:** `MessageInboxService.runOnce(envelope,
+  consumerId, fn)`, ключ `messageId:consumerId` у `processed_jobs`. Захищає не лише від ретраю
+  job-а, а й від повторної ПУБЛІКАЦІЇ того самого факту; суфікс consumerId — щоб підписники не
+  блокували один одного. Маркери чистить cron `maintenance.cleanup-processed-jobs` (30 днів —
+  свідомо більше за retention pg-boss).
+- **Помилки:** `NonRetryableMessageError` (невалідний конверт, порушене бізнес-правило) → одразу
+  у спільну `dlq`, не спалюючи retry-ліміт; решта (БД/SMTP/мережа) ретраїться з backoff. DLQ
+  одна на всю систему.
+- Еталон fan-out-у: `users.user-registered.v1` → підписник `welcome-email` (0 проміжних хопів;
+  рукописний `UserRegisteredHandler` видалено). Команди: `files.generate-thumbnail`,
+  `auth.cleanup-expired-tokens`, `files.cleanup-orphans`, `maintenance.cleanup-processed-jobs`.
+
+Історія job-ів — стандартний retention pg-boss ~7 днів (рішення користувача, окремої таблиці немає).
+Моніторинг — сторінка /jobs у platform-web (фільтри state/queue в URL, автооновлення 5s);
+екран DLQ і replay — EDA-2, ще попереду.
+
+**Email (I18N-3, `apps/worker`):** `WelcomeEmailSubscriber` — реальна відправка (не заглушка): читає
+`locale`+`name` СВІЖИМИ з БД по `data.userId` (не з payload — стан міг змінитися між публікацією
 і обробкою), рендерить subject/body через плейн `i18next` (`apps/worker/src/i18n`,
 `{ lng: locale }`) з `apps/worker/src/locales/en/notifications.json`, шле через `MailerService`
 (nodemailer, дефолти на Mailpit). Це at-least-once side effect (не exactly-once як БД-ефекти
-через `JobInboxService`) — pg-boss retry після падіння ПІСЛЯ успішного sendMail надішле лист
-повторно; прийнятно для welcome-листа, для платіжних/юридичних листів треба окремий idempotency-шар.
+через `MessageInboxService`) — pg-boss retry після падіння ПІСЛЯ успішного sendMail надішле лист
+повторно; прийнятно для welcome-листа, для платіжних/юридичних листів треба claim-before-send
+(`docs/event-driven-architecture.md` §3.10). Активність `email.sent` пишеться ПІСЛЯ `sendMail`
+через inbox, актором із конверта (реальний адмін, не система).
 
 **Файли (Files v1, зафіксовані рішення):** S3 API = абстракція сховища (окремого StorageDriver
 немає, аналогічно pg-boss): dev — SeaweedFS з compose, прод — будь-який S3 через env `S3_*`.
@@ -282,7 +348,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
    (б) Jest його не вантажить (потрібні Node ≥24.9 + experimental-vm-modules) → у e2e
    він замокан через `moduleNameMapper` (`apps/api/test/__mocks__/pg-boss.ts`); зникне з міграцією на Vitest.
 9. **pg-boss send-опції**: не передавати ключі зі значенням `undefined` — його attorney-валідація
-   падає (`priority must be an integer`). Опції збирати умовно (див. PgBossJobDispatcher).
+   падає (`priority must be an integer`). Опції збирати умовно (див. `MessagePublisher.publish`).
 10. **@aws-sdk/client-s3 + presigned PUT**: обов'язково `requestChecksumCalculation: 'WHEN_REQUIRED'`
     (+ response-аналог) у конфігу S3Client — інакше SDK вшиває в presigned URL CRC32-чексуму
     ПОРОЖНЬОГО payload (`x-amz-checksum-crc32=AAAAAA==`), сховище валідує її проти реального тіла
@@ -305,7 +371,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Питання           | Рішення                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено). ✅ Реалізовано у фазі 2.1 за власним інтерфейсом `JobDispatcher`; транзакційна постановка — `send(..., { tx })` через `fromPrisma`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено; Kafka/NATS/RabbitMQ свідомо поза скоупом). Фаза 2.1 — `JobDispatcher`; **EDA-1 (2026-08-04) замінила його на `messaging/`**: подія/команда, конверт, маніфест підписок, спільна DLQ. Транзакційна постановка через `fromPrisma` лишається — `publish(tx, …)` у тій самій БД, що й дані, і це вже повноцінний transactional outbox (окрема `domain_events` + relay НЕ потрібні). Власний publisher, а не рідний `boss.publish` — той ковтає часткову відмову fan-out-у. Event sourcing, saga-двигун, schema registry — поза скоупом (`docs/event-driven-architecture.md` §7)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Мультитенантність | **MT-0…MT-3 реалізовано й перевірено 2026-07-16/17** (деталі — `docs/multi-tenancy-architecture.md`; лишилась тільки MT-4/беклог). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и, ОБИДВА з UI: `apps/api`+`apps/web` (tenant) і `apps/platform-api`+`apps/platform-web` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк |
 | Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Zod               | v4 (закрито у фазі 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -320,7 +386,9 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
 
 - ✅ pg-boss + `apps/worker` — зроблено (2.1). ✅ notifications (welcome-email через Mailpit,
-  локалізовано) — зроблено (I18N-3).
+  локалізовано) — зроблено (I18N-3). ✅ EDA-0/EDA-1 (єдиний конвеєр повідомлень) — зроблено
+  2026-08-04; **EDA-2** (вкладка DLQ + replay у `/jobs`, фільтр за correlationId, лаг/глибина
+  черг) — наступний: без нього конвеєр працює наосліп. Деталі — `docs/event-driven-architecture.md`.
 - **Безпека auth**: (а) reuse-detection ротованих refresh-токенів — зараз повторне використання
   ротованого токена дає 401, але НЕ відкликає інші сесії (рядок видалено; треба `revokedAt`
   замість delete); (б) refresh у httpOnly cookie замість localStorage.
@@ -340,6 +408,8 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 - RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard (після MT-2, поверх
   готового tenant-контексту).
 - Доменні модулі: customers (еталонний CRUD) → tickets (workflow + події) → billing
-  (PaymentProvider інтерфейс + fake-провайдер → Stripe). Окремого `audit-log` НЕ робимо —
+  (PaymentProvider інтерфейс + fake-провайдер → Stripe). Пишуться вже на шарі `messaging`:
+  billing — це EDA-3, еталон події з 5 підписниками (`invoice.paid.v1`, `ledger_entries`,
+  claim-before-send для листів, relay-підписник). Окремого `audit-log` НЕ робимо —
   його роль виконує Activity Log; in-app notifications — це RT-3 у `docs/realtime.md`.
 - Realtime (RT-0…RT-3) і System Settings — найближчі вертикалі, див. `docs/roadmap.md`.

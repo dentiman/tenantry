@@ -96,8 +96,8 @@ docs/
 
 **Структура (фаза 2):**
 
-- `apps/worker` — окремий NestJS-процес лише з handlers (масштабується незалежно від API).
-- Черга схована за власним інтерфейсом (`JobDispatcher` / `@JobHandler()` у `libs/shared`) — доменний код не знає про pg-boss, форк може замінити на BullMQ.
+- `apps/worker` — окремий NestJS-процес лише з підписниками (масштабується незалежно від API).
+- Черга схована за власним шаром (`MessagePublisher` / `@MessageSubscriber` у `libs/shared/src/messaging/`; до EDA-1 — `JobDispatcher`/`@JobHandler`) — доменний код не знає про pg-boss, форк може замінити транспорт. Актуальний дизайн шару — [event-driven-architecture.md](event-driven-architecture.md).
 - Cron — через pg-boss schedule (безпечно при кількох репліках).
 - Внутрішні події між модулями — `EventEmitter2` (in-process); контракт подій у `libs/contracts`.
 

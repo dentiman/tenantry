@@ -113,7 +113,7 @@
 75. Чому in-app notification не може існувати лише як socket-подія? Сформулюй через delivery guarantees.
 76. Чому socket-подія несе тільки `{ notificationId, occurredAt }`, а не весь вміст повідомлення?
 77. Що таке transactional outbox? Яку конкретну проблему він вирішує порівняно з «INSERT, потім emit»?
-78. Чому в нас це може бути `JobDispatcher.send(..., { tx })`, а не окрема outbox-таблиця? Де межа цього підходу?
+78. Чому в нас це може бути `MessagePublisher.publish(tx, ...)`, а не окрема outbox-таблиця? Де межа цього підходу?
 79. Worker створює notification. Чому він не може зробити Socket.IO emit сам? Що таке `realtime.dispatch` стрім і навіщо він?
 80. Подія `notification.created.v1` доставилась двічі. Чому це безпечно?
 81. Чому текст повідомлення не зберігається в БД (як і в `activities`)? Як це пов'язано з i18n-доктриною проєкту?

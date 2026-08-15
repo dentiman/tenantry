@@ -187,9 +187,15 @@ pnpm worker:dev
 # → pnpm --filter @saas-skeleton/worker dev  (NestJS без HTTP, createApplicationContext)
 ```
 
-Обробники джобів `pg-boss` (`@JobHandler`) + cron-задачі + реальна відправка email через
-Mailpit (`MailerService`/nodemailer). Черги — розділ [«Черги»](../CLAUDE.md) у CLAUDE.md
-(еталон: `users.user-registered` → fan-out → `notifications.welcome-email`).
+Підписники повідомлень `pg-boss` (`@MessageSubscriber`, `apps/worker/src/subscribers/`) +
+cron-задачі + реальна відправка email через Mailpit (`MailerService`/nodemailer). Асинхронний
+шар — [event-driven-architecture.md](event-driven-architecture.md) і розділ
+[«Асинхронні повідомлення»](../CLAUDE.md) у CLAUDE.md (еталон: подія `users.user-registered.v1`
+→ fan-out на публікації → підписник `welcome-email`).
+
+Старт воркера **падає**, якщо набір класів `@MessageSubscriber` не збігається з
+`MESSAGE_TOPOLOGY` — це гейт, а не помилка конфігурації: оголошений споживач без класу означав
+би job-и в нечитаній черзі, клас без оголошення — мертвий код.
 
 ### `pnpm web:dev` / `pnpm web:build`
 

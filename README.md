@@ -59,7 +59,8 @@ libs/
   contracts/  # Zod-схеми + z.infer типи (залежить лише від zod; platform-контракти — subpath /platform)
   database/   # Prisma schema, migrations, seed, PrismaService/PrismaModule; src/tenant/ — TenancyModule
               # (nestjs-cls) + tenant-extension для set_config, SystemPrismaService (BYPASSRLS)
-  shared/     # Черги: defineJob, JobDispatcher, @JobHandler, inbox-ідемпотентність
+  shared/     # Повідомлення: defineEvent/defineCommand, MESSAGE_TOPOLOGY, MessagePublisher,
+              # @MessageSubscriber, inbox-ідемпотентність; сховище (StorageService)
 docker/       # docker-compose: postgres, mailpit, seaweedfs
 docs/         # архітектурна пропозиція та рішення; docs/multi-tenancy-architecture.md — довідник
               # поточної мультитенантної архітектури
@@ -99,13 +100,23 @@ pnpm platform:test:e2e # те саме для control plane (11 тестів)
 
 CI (GitHub Actions): lint → typecheck → build → міграції → e2e з PostgreSQL-сервісом.
 
-## Черги (фаза 2.1 — готово)
+## Асинхронні повідомлення (EDA-1 — готово)
 
-Job = `defineJob(name, zodSchema, { cron?, retry* })` у `libs/shared`. API інжектить `JobDispatcher`
-і викликає `send()` (опційно транзакційно через `{ tx }`); worker позначає класи `@JobHandler(def)` —
-вони реєструються автоматично, разом із cron-розкладами. Ідемпотентність — `JobInboxService`
-(таблиця `processed_jobs`). Живі приклади: `auth.cleanup-expired-tokens` (cron),
-`users.user-registered` (диспатч при створенні юзера адміном → welcome-email).
+Асинхронна робота описується двома примітивами в `libs/shared/src/messaging/`:
+`defineEvent('users.user-registered.v1', schema)` — факт із 0..N підписниками (версія в імені
+обовʼязкова) і `defineCommand('files.generate-thumbnail', schema)` — наказ рівно одному
+споживачеві. Хто на що підписаний, видно в одному місці — маніфесті `MESSAGE_TOPOLOGY`.
+
+API інжектить `MessagePublisher` і викликає `publish(tx, def, data)` — **транзакція першим
+аргументом**: один виклик кладе job у чергу кожного підписника з маніфесту в тій самій
+транзакції, що й доменна зміна. Worker позначає класи `@MessageSubscriber({ definition, id })`;
+вони знаходяться автоматично, разом із cron-розкладами, а розсинхрон із маніфестом валить
+старт. Ідемпотентність — `MessageInboxService.runOnce(envelope, consumerId, fn)` по ключу
+`messageId:consumerId` (таблиця `processed_jobs`). Провалені повідомлення йдуть у спільну `dlq`.
+
+Живі приклади: `auth.cleanup-expired-tokens` (cron-команда), `users.user-registered.v1`
+(публікується при створенні юзера адміном → підписник `welcome-email`).
+Деталі й обґрунтування — [docs/event-driven-architecture.md](docs/event-driven-architecture.md).
 
 ## Далі за roadmap
 

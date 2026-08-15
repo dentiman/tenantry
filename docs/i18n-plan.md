@@ -93,8 +93,9 @@ create user показує перекладений текст поля.
    Swagger — на відміну від error-схем із I18N-2).
 2. `apps/worker`: плейн `i18next` (без react-i18next, без `libs/i18n` — див. ревізію архітектури
    словників вище) з локальним `src/locales/en/notifications.json`. `MailerService` (nodemailer)
-   + сервіс Mailpit у `docker-compose.yml`. `WelcomeEmailHandler` читає `locale`+`name` СВІЖИМИ
-   з БД по `payload.userId` (не з job payload — стан міг змінитися між диспатчем і обробкою),
+   + сервіс Mailpit у `docker-compose.yml`. `WelcomeEmailSubscriber` (до EDA-1 —
+   `WelcomeEmailHandler`) читає `locale`+`name` СВІЖИМИ з БД по `data.userId` (не з payload —
+   стан міг змінитися між публікацією і обробкою),
    рендерить через `i18n.t(key, { lng: locale, ...params })`, шле реальний лист.
 3. **Свідомо не зроблено** (кожен пункт — уникнення мертвого коду, не забута робота):
    - `apps/web` пріоритетність `profile.locale` над `localStorage` — з `SUPPORTED_LOCALES = ['en']`

@@ -18,6 +18,13 @@
 система) після обробки; лист у Mailpit; курсор перевірено e2e (5 подій, 2 стор.+хвіст,
 без дублів/пропусків). 69 tenant-e2e (+6 нових), RLS-авточек підхопив обидві таблиці.
 
+> **Оновлено після EDA-1 (2026-08-04):** асинхронний запис не змінився по суті, але переїхав
+> на конвеєр повідомлень — `WelcomeEmailHandler` → `WelcomeEmailSubscriber`,
+> `JobInboxService.runOnce(context, fn)` → `MessageInboxService.runOnce(envelope, consumerId, fn)`.
+> Виграш для фіду: **актор їде в конверті події**, тому `email.sent` тепер пишеться від імені
+> адміна, який створив користувача, а не від безликої системи. Межа «Activity Log vs domain
+> events» описана в [event-driven-architecture.md](event-driven-architecture.md) §3.13.
+
 ## Зафіксовані рішення
 
 | Питання             | Рішення                                                                                                                                                  |
@@ -28,10 +35,10 @@
 | `actorId` без FK    | Свідомо: активність — снапшот, юзера можуть видалити (users.remove — hard delete), фід мусить лишатись читабельним. `actorLabel` — снапшот на момент події |
 | Мутабельність       | **Append-only**: жодних update/delete через API. Retention-cron — беклог (не «на виріст», а коли з'явиться реальний обсяг)                                |
 | Запис (sync)        | В ту саму транзакцію, що й доменна зміна (`withTenantTx`) — фід ніколи не бреше                                                                            |
-| Запис (async)       | У worker-і через `JobInboxService.runOnce` **після** side effect-у — активність успадковує гарантію «не гірше, ніж сам ефект»                             |
+| Запис (async)       | У worker-і через `MessageInboxService.runOnce` **після** side effect-у — активність успадковує гарантію «не гірше, ніж сам ефект»                             |
 | Читання             | `GET /activities` — **курсорна** пагінація (перший курсорний ендпоінт: фід нескінченний, «page 47» безглуздий, offset пливе на вставках)                  |
 | `role` лінка        | Nullable-колонка з першого дня (бекфілити семантику заднім числом неможливо), заповнюється лише при неоднозначності. Словник: `subject`/`target`/`source`/`context`, валідація — на рівні Zod-схеми типу події, не колонки |
-| Розміщення recorder | `libs/shared/src/activities/` (спільний для api і worker, як jobs) — нова shared-ліба НЕ потрібна, гачок «три місця» не спрацьовує                        |
+| Розміщення recorder | `libs/shared/src/activities/` (спільний для api і worker, як messaging) — нова shared-ліба НЕ потрібна, гачок «три місця» не спрацьовує                        |
 
 ## Компоненти
 
@@ -42,13 +49,13 @@
 │                        └──▶ jobDispatcher.send(…, { tx })     │       │
 │  ActivitiesController: GET /activities (курсор, фільтр по сутності)   │
 └───────────────┬───────────────────────────────────────────────┼───────┘
-                │ pg-boss (users.user-registered → welcome-email)│
+                │ pg-boss (users.user-registered.v1/welcome-email)│
                 ▼                                                ▼
 ┌──────────────────────  WORKER (apps/worker)  ─────┐   ┌──────────────────┐
-│  WelcomeEmailHandler:                             │   │  Postgres        │
+│  WelcomeEmailSubscriber:                          │   │  Postgres        │
 │    sendMail (at-least-once)                       │──▶│  activities      │
 │    inbox.runOnce → ActivityRecorder.record(tx, …) │   │  activity_links  │
-│    (exactly-once відносно job-а)                  │   │  (RLS, як усі)   │
+│    (exactly-once по messageId:consumerId)         │   │  (RLS, як усі)   │
 └───────────────────────────────────────────────────┘   └────────┬─────────┘
                                                                  │
 ┌────────────────────────  WEB (apps/web)  ───────────────────────┴──────┐
@@ -64,7 +71,8 @@
 - `libs/database/prisma/` — моделі `Activity`/`ActivityLink` + міграція (таблиці + RLS).
 - `libs/shared/src/activities/` — `ActivityRecorder` + `ActivitiesModule` (@Global).
 - `apps/api/src/activities/` — DTO → Service → Mapper → Controller (стандартні шари).
-- `apps/worker/src/handlers/welcome-email.handler.ts` — доповнюється записом `email.sent`.
+- `apps/worker/src/subscribers/welcome-email.subscriber.ts` (на момент написання —
+  `handlers/welcome-email.handler.ts`) — доповнюється записом `email.sent`.
 - `apps/web/src/components/activity/` + `libs/i18n` namespace `activities`.
 
 ## Модель даних
@@ -326,14 +334,16 @@ activity_links: { activity_id: a1, entity_type: 'user', entity_id: 'u1', role: '
 Факт настає у worker-і: HTTP-запиту давно немає, актор — система. Ланцюжок наявний:
 
 ```
-create user (api, tx) ─▶ users.user-registered ─▶ notifications.welcome-email ─▶ sendMail
+create user (api, tx) ─▶ users.user-registered.v1 ─▶ підписник welcome-email ─▶ sendMail
                                                                                     │
                                                                      activity 'email.sent'
 ```
 
-`WelcomeEmailHandler` доповнюється (реальні сигнатури: `handle(payload, context)`,
+`WelcomeEmailHandler` доповнюється (сигнатури на момент написання: `handle(payload, context)`,
 `inbox.runOnce(context, fn)` — runOnce всередині вже йде через `withTenantTx`,
-CLS піднятий registrar-ом із payload.tenantId):
+CLS піднятий registrar-ом із payload.tenantId; після EDA-1 це `handle(data, envelope)` і
+`inbox.runOnce(envelope, consumerId, fn)` — актуальний код у
+`apps/worker/src/subscribers/welcome-email.subscriber.ts`):
 
 ```ts
 async handle(payload: WelcomeEmailPayload, context: JobContext): Promise<void> {
@@ -500,7 +510,8 @@ const rows = await this.prisma.activity.findMany({
    (`GET /activities`, Swagger-метадані, operationId `activitiesFindAll`).
 5. **Інтеграція sync**: `UsersService.create` → `withTenantTx` (+ `@CurrentUser()` у
    контролері, `send(..., { tx })`, прибрати try/catch навколо диспатчу).
-6. **Інтеграція async**: `WelcomeEmailHandler` + `inbox.runOnce` після `sendMail`.
+6. **Інтеграція async**: `WelcomeEmailHandler` + `inbox.runOnce` після `sendMail`
+   (після EDA-1 — `WelcomeEmailSubscriber`).
 7. **Конвеєр**: `openapi:generate` → `web:codegen` (обидва артефакти комітяться).
 8. **Web**: `ActivityDrawer` + `ActivityMessage` + row action на `/users`;
    namespace `activities` у `libs/i18n`.

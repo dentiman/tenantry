@@ -309,44 +309,57 @@ tenant-застосунках. `apps/platform-api` під цю заборону 
 
 ## 8. Черги: tenant-scope і system-scope
 
+> Оновлено після **EDA-1** (2026-08-04): шар черг переїхав із `libs/shared/src/jobs/` у
+> `libs/shared/src/messaging/`. Механіка tenant-контексту не змінилася — змінилося, **де** він
+> їде: був службовим полем у payload, став полем конверта. Повний опис шару —
+> [event-driven-architecture.md](event-driven-architecture.md).
+
 `pgboss.*` — інфраструктурна схема поза `public`, без RLS. Ізоляція тут — **не БД-рівнева**,
-а конвенція, зашита у два типи джоб ([libs/shared/src/jobs/job-definition.ts](../libs/shared/src/jobs/job-definition.ts)):
+а конвенція, зашита у scope повідомлення
+([libs/shared/src/messaging/message-definition.ts](../libs/shared/src/messaging/message-definition.ts)):
 
 ```ts
-defineTenantJob('users.user-registered', z.object({ userId: z.uuid(), email: z.email() }));
-// → схема ПРИМУСОВО домішує { tenantId: z.uuid() }; scope: 'tenant'
+defineEvent('users.user-registered.v1', z.object({ userId: z.uuid(), email: z.email() }));
+// → scope: 'tenant' за замовчуванням
 
-defineJob('files.cleanup-orphans', z.object({}), { cron: '30 3 * * *' });
-// → scope: 'system' за замовчуванням
+defineCommand('files.cleanup-orphans', z.object({}), { scope: 'system' });
+// → крос-tenant (cron/maintenance)
 ```
 
-Оголосити tenant-джобу без `tenantId` у payload **неможливо** — `defineTenantJob` розширює
-Zod-схему автоматично. `defineJob` (для system) `tenantId` не додає взагалі.
+`tenantId` у Zod-схемі **не оголошується взагалі** — на відміну від старого `defineTenantJob`,
+який домішував його в payload. Він переїхав у конверт (`MessageEnvelope.tenantId`, `uuid |
+null`), тому доменні дані лишаються суто доменними, а інфраструктурне поле не змішується
+з бізнесовим.
 
-**Постановка** (`PgBossJobDispatcher.send`, `apps/api`/`apps/worker`): для `scope: 'tenant'`
-диспатчер бере `tenantId` з `TenantContextService.requireTenantId()`, якщо доменний код його
-не передав явно (а він ніколи не передає). Немає контексту → `requireTenantId()` кидає —
-постановка падає гучно, а не йде «в нікуди» без tenant-а.
+**Публікація** (`MessagePublisher.publish`, `apps/api`): для `scope: 'tenant'` publisher бере
+`tenantId` з `TenantContextService.requireTenantId()` і кладе в конверт. Немає контексту →
+`requireTenantId()` кидає — публікація падає гучно, а не йде «в нікуди» без tenant-а.
 
-**Обробка** (`JobWorkerRegistrar.runJob`, `apps/worker`) — тут CLS доводиться **відновлювати**,
-бо AsyncLocalStorage не перетинає межу процесу:
+**Обробка** (`MessageWorkerRegistrar.runJob`, `apps/worker`) — тут CLS доводиться
+**відновлювати**, бо AsyncLocalStorage не перетинає межу процесу:
 
 ```ts
-if (definition.options.scope === 'tenant') {
-  await this.tenantContext.runWith(payload.tenantId, () => handler.handle(payload, context));
+if (entry.definition.scope === 'tenant') {
+  await this.tenantContext.runWith(envelope.tenantId, () => handler.handle(data, envelope));
 } else {
-  await this.tenantContext.runWithout(() => handler.handle(payload, context));
+  await this.tenantContext.runWithout(() => handler.handle(data, envelope));
 }
 ```
 
-Хендлер про це не знає — усередині нього `PrismaService` поводиться так само, як в API: той
-самий tenant-extended клієнт, той самий `set_config` на кожній операції. `JobInboxService.runOnce`
-(exactly-once ефекти) іде через `withTenantTx`, тож бізнес-записи всередині inbox-транзакції
-теж отримують tenant-контекст; сам маркер `processed_jobs` — інфра-таблиця без `tenant_id`.
+Підписник про це не знає — усередині нього `PrismaService` поводиться так само, як в API: той
+самий tenant-extended клієнт, той самий `set_config` на кожній операції.
+`MessageInboxService.runOnce` (exactly-once ефекти) іде через `withTenantTx`, тож бізнес-записи
+всередині inbox-транзакції теж отримують tenant-контекст; сам маркер `processed_jobs` —
+інфра-таблиця без `tenant_id`.
 
-**Дві system-джоби зараз**: `auth.cleanup-expired-tokens`, `files.cleanup-orphans` — обидві
-cron, обидві крос-tenant за природою (чистять по всіх tenant-ах одразу), обидві ходять через
-`SystemPrismaService` (BYPASSRLS) у своїх хендлерах — не через звичайний `PrismaService`.
+Разом із tenant-контекстом із конверта піднімається і **контекст ланцюга**
+(`correlationId`/`causationId`), тому публікація, зроблена всередині підписника, успадковує їх
+автоматично — кореляція не рветься на межі процесу так само, як не рветься tenant.
+
+**Три system-повідомлення зараз**: `auth.cleanup-expired-tokens`, `files.cleanup-orphans`,
+`maintenance.cleanup-processed-jobs` — усі cron, усі крос-tenant за природою (чистять по всіх
+tenant-ах одразу), усі ходять через `SystemPrismaService` (BYPASSRLS) у своїх підписниках — не
+через звичайний `PrismaService`.
 
 **`/jobs`-моніторинг живе тільки в `apps/platform-api`.** Read-only endpoint читає
 `pgboss.job` сирим SQL (`$queryRaw`) — таблиця поза RLS, тож будь-який фільтр у tenant-api
@@ -411,26 +424,29 @@ tsconfig `paths`/явний alias і на `package.json` не дивляться
    → extension: [set_config('app.tenant_id', 'T', true), INSERT]
    → DB-default заповнює tenant_id='T'; WITH CHECK підтверджує (бо контекст='T')
 
-4. UsersService диспатчить users.user-registered (defineTenantJob):
-   jobDispatcher.send(userRegisteredJob, { userId, email })
-   → PgBossJobDispatcher домішує tenantId з CLS: { userId, email, tenantId: 'T' }
-   → payload летить у pgboss.job (JSON, поза RLS, але з tenantId усередині)
+4. UsersService публікує подію users.user-registered.v1 — у ТІЙ САМІЙ транзакції, що й крок 3:
+   messages.publish(tx, userRegisteredEvent, { userId, email }, { actor })
+   → MessagePublisher бере tenantId='T' з CLS і кладе в КОНВЕРТ (не в payload):
+     { messageId, name, tenantId: 'T', actor, correlationId, causationId: null, data: {...} }
+   → topologyFor() дає список підписників → по job-у в чергу кожного
+     ('users.user-registered.v1/welcome-email'), усі в цій же транзакції
 
 5. apps/worker (окремий процес — CLS тут ІНШИЙ, попередній контекст не існує):
-   JobWorkerRegistrar.runJob бачить scope='tenant', читає payload.tenantId='T'
-   → tenantContext.runWith('T', () => handler.handle(payload))
+   MessageWorkerRegistrar.runJob бачить scope='tenant', читає envelope.tenantId='T'
+   → tenantContext.runWith('T', () => handler.handle(data, envelope))
+     (і паралельно піднімає контекст ланцюга з correlationId/causationId)
 
-6. UserRegisteredHandler усередині runWith('T', ...):
-   jobInbox.runOnce(ctx, async (tx) => {
-     await jobDispatcher.send(welcomeEmailJob, { userId, email }, { tx })
-   })
-   → withTenantTx: set_config('app.tenant_id', 'T', true) першим стейтментом → INSERT processed_jobs
-     + постановка notifications.welcome-email у ТІЙ САМІЙ транзакції (атомарно)
-
-7. WelcomeEmailHandler (інша джоба, той самий механізм відновлення CLS):
-   читає User.findUnique({ id: userId }) — СВІЖИЙ locale/name з БД, під тим самим tenant-контекстом T
-   → рендерить і шле лист через MailerService
+6. WelcomeEmailSubscriber усередині runWith('T', ...):
+   читає User.findUnique({ id: userId }) — СВІЖИЙ locale/name з БД, під тим самим
+   tenant-контекстом T → рендерить і шле лист через MailerService
+   → inbox.runOnce(envelope, 'welcome-email', tx => activities.record(tx, 'email.sent', ...))
+   → withTenantTx: set_config('app.tenant_id', 'T', true) першим стейтментом → INSERT
+     processed_jobs (ключ messageId:welcome-email) + активність у ТІЙ САМІЙ транзакції
 ```
+
+Проміжного хопа тут більше немає: до EDA-1 крок 4 ставив джобу, її хендлер робив fan-out
+руками і ставив другу джобу, і лише вона слала лист. Тепер fan-out відбувається на публікації,
+а `UserRegisteredHandler` видалено.
 
 На кожному кроці, де tenant «стрибає» (HTTP → job payload → CLS відновлення), він явно
 видимий рівно в одному місці інфраструктурного коду — ніде в доменному `UsersService` чи
@@ -447,8 +463,9 @@ tsconfig `paths`/явний alias і на `package.json` не дивляться
 - Створювати рядки без `tenantId` у `data` (DB-default заповнить).
 - Транзакції на кілька таблиць — через `TenantTransactions.withTenantTx` (не «немає
   транзакцій», а «не голий `$transaction`»).
-- Диспатчити tenant-джоби через `defineTenantJob` + `JobDispatcher.send(...)` без `tenantId`
-  у payload.
+- Публікувати tenant-повідомлення через `defineEvent`/`defineCommand` (scope за замовчуванням
+  `tenant`) + `MessagePublisher.publish(tx, ...)` без `tenantId` у payload — його кладе в конверт
+  publisher.
 
 **Заборонено (і чому):**
 

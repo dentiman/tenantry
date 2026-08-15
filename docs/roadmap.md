@@ -1,6 +1,6 @@
 # Roadmap
 
-Стан на **2026-08-02**. Рішення з обґрунтуваннями — в [architecture-proposal.md](architecture-proposal.md);
+Стан на **2026-08-15**. Рішення з обґрунтуваннями — в [architecture-proposal.md](architecture-proposal.md);
 профільні деталі — у документах, на які посилається кожен рядок.
 
 Документ описує **куди йдемо**. Історія «як робили» живе в шапці `CLAUDE.md` і в профільних
@@ -13,7 +13,7 @@
 | Віха                     | Дата       | Що дала                                                                                                                            | Док                                                    |
 | ------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | **Фаза 1 — фундамент**   | 2026-07-11 | Монорепо pnpm+Turborepo, ESLint/Prettier/Husky, CI; `libs/contracts` (Zod 4), `libs/database` (Prisma 7); auth + users end-to-end; конвеєр Zod → OpenAPI → orval → typed hooks; `apps/web` | `architecture-proposal.md`                             |
-| **Фаза 2.1 — черги**     | 2026-07-11 | pg-boss v12 за власним `JobDispatcher`, `libs/shared` (`defineJob`, `@JobHandler`, `JobInboxService`), `apps/worker`, cron, транзакційний dispatch | `architecture-proposal.md`                             |
+| **Фаза 2.1 — черги**     | 2026-07-11 | pg-boss v12 за власним `JobDispatcher`, `libs/shared` (`defineJob`, `@JobHandler`, `JobInboxService`), `apps/worker`, cron, транзакційний dispatch (замінено на EDA-1) | `architecture-proposal.md`                             |
 | **Фаза 2.2 — помилки**   | 2026-07-12 | Наскрізний `ApiError`-envelope: `AllExceptionsFilter` → toast / fieldErrors у формах                                               | `error-handling.md`                                    |
 | **I18N-1…3**             | 2026-07-12 | `libs/i18n` + react-i18next, коди помилок замість тексту з бекенда, `users.locale` і реальний welcome-лист локаллю юзера           | `i18n-plan.md`                                         |
 | **DataGrid**             | 2026-07-13 | `createDataGrid` — фільтри/сортування/пагінація/selection декларативно; `/users`, `/jobs`                                          | `CLAUDE.md`                                            |
@@ -22,9 +22,11 @@
 | **`pnpm db:reset`**      | 2026-07-17 | Один деструктивний dev-скрипт + зафіксовані seed-ідентичності                                                                       | `database-seed.md`                                     |
 | **Activity Log**         | 2026-07-21 | Журнал бізнес-подій (`type`+`payload`, рендер через i18next), перший курсорний ендпоінт, sync/async-запис                          | `activity-log.md`                                      |
 | **Деплой у Swarm + CI**  | 2026-07-24…31 | GitLab CI: build 6 образів → `docker stack deploy` через docker-context по SSH (нуль файлів на сервері); dev-стек `saas-dev` живий на 172.18.13.101; manual `db_roles`/`seed`/`dump` | `deploy-swarm.md`                                      |
+| **EDA-0 + EDA-1**        | 2026-08-04 | Єдиний конвеєр асинхронних повідомлень замість `libs/shared/src/jobs/`: подія/команда, конверт (`messageId`/`correlationId`/`causationId`/`actor`), маніфест `MESSAGE_TOPOLOGY` із fan-out-ом на публікації, inbox по бізнес-факту, спільна DLQ, boot-assert топології | `event-driven-architecture.md`                         |
 
 Проєктні документи без реалізації (готові до роботи): [realtime.md](realtime.md),
-[tenant-settings.md](tenant-settings.md), беклог MT-4 у `multi-tenancy-architecture.md`.
+[tenant-settings.md](tenant-settings.md), беклог MT-4 у `multi-tenancy-architecture.md`,
+фази EDA-2…EDA-4 у [event-driven-architecture.md](event-driven-architecture.md).
 
 ---
 
@@ -44,7 +46,9 @@
 3. **RT-2 — presence.** Leases у Valkey + Lua + sweeper, `GET /api/presence` (snapshot+revision),
    `presence.changed.v1`, online-badge на `/users`.
 4. **RT-3 — in-app notifications.** Довговічна таблиця + RLS, REST list/unread/read, bell UI,
-   `notification.created.v1`, міст із воркера через `realtime.dispatch`.
+   `notification.created.v1`, міст із воркера через `realtime.dispatch`. Це водночас **EDA-4**:
+   realtime — просто ще один підписник у `MESSAGE_TOPOLOGY`, окремого механізму не заводимо
+   ([event-driven-architecture.md](event-driven-architecture.md) §3.12).
 
 ### 2.2. Налаштування тенанта (System Settings) — [tenant-settings.md](tenant-settings.md)
 
@@ -60,10 +64,16 @@ system-settings і доменних модулях.
 
 ### 2.4. Доменні модулі (еталони для форків)
 
+Усі три пишуться вже на шарі `messaging` (EDA-1): асинхронна робота — тільки через
+`defineEvent`/`defineCommand` + рядок у `MESSAGE_TOPOLOGY`, другого шляху немає.
+
 1. `customers` — зразковий CRUD (пишеться вже **без згадок tenantId**: MT невидима для домену).
 2. `tickets` — статусний workflow, коментарі, події → черга; перший реальний споживач activities.
-3. `billing` — Plan/Subscription/Invoice, інтерфейс `PaymentProvider`, fake-провайдер → Stripe,
-   webhooks через чергу (ідемпотентність по `event_id UNIQUE`).
+3. `billing` = **EDA-3**, еталон події з багатьма підписниками
+   ([event-driven-architecture.md](event-driven-architecture.md) §3.9, §4): Plan/Subscription/Invoice,
+   інтерфейс `PaymentProvider`, fake-провайдер → Stripe, webhooks через чергу (ідемпотентність по
+   `event_id UNIQUE`); `invoice.paid.v1` → облік (`ledger_entries` + звірка балансу), баланс
+   кастомера, лист (claim-before-send), provisioning як relay-підписник, realtime.
 
 `audit-log` окремим модулем не робимо — його роль виконує Activity Log; за потреби «чутливих»
 подій розширюємо закритий enum типів.
@@ -79,6 +89,11 @@ system-settings і доменних модулях.
 
 ### 2.6. Operational maturity
 
+- **EDA-2 — спостережуваність асинхронного шару** ([event-driven-architecture.md](event-driven-architecture.md) §6).
+  Вкладка DLQ у `/jobs` (перегляд конверта, причина відмови, replay у рідну чергу), фільтр за
+  `correlationId` (весь ланцюг однієї HTTP-операції одним запитом), лаг і глибина по черзі.
+  Сам док позиціонує це як **наступний крок після EDA-1**: конвеєр уже кладе провалені
+  повідомлення в спільну `dlq`, але дивитися на неї поки нічим.
 - **Error tracking — Sentry або self-hosted GlitchTip** (SDK-сумісний): умовна ініціалізація по
   `SENTRY_DSN` у `main.ts` api/platform-api/worker + `captureException` у гілці ≥500
   `AllExceptionsFilter` (tag `requestId`). Deployment-агностично, можна робити будь-коли.
@@ -87,9 +102,11 @@ system-settings і доменних модулях.
 - **Фікс логера під контейнер:** зараз pino пише файли в `cwd/logs`, і `Dockerfile.node` спеціально
   створює цю теку для non-root юзера — це обхід симптому. У прод-режимі має лишатись **тільки
   stdout**, файловий sink — opt-in через `LOG_FILE` (сценарій «гола VM без оркестрації»).
-- **Наскрізний correlationId у чергах:** `req.id` з pino-http не доїжджає до воркера.
-  `JobDispatcher.send` бере requestId з CLS і кладе службовим полем поруч із payload,
-  `JobWorkerRegistrar` знімає його в `JobContext` + child-логер.
+- ~~**Наскрізний correlationId у чергах**~~ — **зроблено в EDA-1**: `correlationId` живе в
+  конверті повідомлення (на HTTP-вході = pino `req.id`, він же `ApiError.requestId`),
+  `MessageWorkerRegistrar` піднімає його в CLS + child-логер, похідні публікації успадковують
+  його разом із `causationId`. Заодно `genReqId`: uuid замість pino-лічильника, який починався
+  з 1 на кожному процесі.
 - **`@nestjs/terminus`** health для обох api і воркера (зараз health — саморобний, у воркера немає
   зовсім, стан видно лише через `docker service ps`).
 - **Env-валідація через Zod при старті** (fail-fast), rate limiting, helmet.

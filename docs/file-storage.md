@@ -56,8 +56,9 @@ NestJS** — браузер вантажить і читає їх напряму
 - `libs/contracts/src/file/` — Zod-схеми: allowlist MIME (`ALLOWED_FILE_MIME_TYPES`),
   ліміт `FILE_MAX_SIZE_BYTES` (25 MB), схеми запитів/відповідей.
 - `apps/api/src/files/` — DTO → `FilesService` → `files.mapper` → `FilesController`.
-- `libs/shared/src/jobs/definitions/files.jobs.ts` — визначення обох job-ів.
-- `apps/worker/src/handlers/generate-thumbnail.handler.ts`, `cleanup-orphan-files.handler.ts`.
+- `libs/shared/src/messaging/definitions/files.messages.ts` — визначення обох команд
+  (після EDA-1; до неї — `jobs/definitions/files.jobs.ts`).
+- `apps/worker/src/subscribers/generate-thumbnail.subscriber.ts`, `cleanup-orphan-files.subscriber.ts`.
 - `apps/web/src/components/file-upload/` — хук і dropzone; `change-avatar-modal.tsx` — демо.
 
 ## Модель даних
