@@ -117,8 +117,43 @@ dev-машині часто зайнятий іншим проєктом → `RE
 TTL 50 мс). CI отримав сервіс `valkey`. Перевірено живим прогоном на ДВОХ процесах api
 (:3001 і :3011) проти однієї Valkey — cross-instance emit 10/10 — і в браузері: бейдж на
 `/users` перемкнувся online→offline від дельти з іншого інстанса без перезавантаження.
-Огляд — `docs/realtime.md`, механіка — `docs/realtime-internals.md`. Лишились in-app
-сповіщення (вони ж EDA-4) — realtime стане звичайним підписником у `MESSAGE_TOPOLOGY`.
+Огляд — `docs/realtime.md`, механіка — `docs/realtime-internals.md`.
+**In-app сповіщення (EDA-4) завершені і перевірені** (2026-08-16): персональний інбокс за
+`docs/notifications.md` (V1 «інбокс»). Три таблиці — `notifications` (мутабельний рядок:
+`read_at`/`archived_at`/колапс, на відміну від append-only `activities`),
+`notification_states` (`seen_at` + `revision`), `notification_preferences`; усі три з
+RLS ENABLE/FORCE за шаблоном MT-2. Текст НЕ зберігається (`type`+`payload`, як activities),
+фронт САМ будає посилання на сутність із `{kind,id}` через реєстр `entity-routes.ts` і
+вкладає його в текст (`<b>` — акцент, `<a>` — сутність). **Колапс — частковий унікальний
+індекс** `(tenant_id, recipient_id, group_key) WHERE group_key IS NOT NULL AND read_at IS
+NULL AND archived_at IS NULL` + `INSERT … ON CONFLICT` (Prisma-upsert частковий індекс як
+арбітр не бере): доки не прочитано — `group_count++`, прочитав — наступна подія починає
+нову групу. Бейдж рахує `newCount` (непрочитані з `updated_at > seen_at`), а не
+`unreadCount` — інакше там вічно висіло б «47». **Емісія — after-commit хук у
+`withTenantTx`** (`WeakMap` по обʼєкту `tx`, не CLS): до коміту клієнт побачив би стан
+«до», а через pg-boss це були б секунди polling-у — тому підписника `realtime` у
+`MESSAGE_TOPOLOGY` НЕМАЄ (переглянуто §3.12 EDA). **Міст воркер→браузер — headless
+Socket.IO `Server`** без `listen()` на тому самому Valkey-адаптері (`realtime.dispatch`
+не заводили); імена room-ів і ключів стріму переїхали в `libs/contracts` — їх формують
+два процеси. Адресацію («кому») робить домен через `recipientsByRole`, а «не собі» і
+преференси — recorder (властивості інбокса, не домену). UI: дзвінок із бейджем + Drawer
++ **тост у стилі macOS**. Тост і рядок у центрі — **один компонент** `NotificationCard`
+(⋯ і × у правому верхньому куті; × у тості ховає, × у центрі архівує; `role="button"`
+лише в тості — у центрі всередині є лінк на сутність). Черга тостів окрема, **зверху
+справа під дзвінком**, зміщена вниз на висоту хедера; тости API-помилок переїхали
+**вниз-праворуч** — два регіони, щоб подія і невдала дія не витісняли одна одну.
+Попередній тост закривається явно, при відкритій панелі не показується, тільки на живу
+подію — не на resync; стан панелі — Zustand `notification-ui.store`, бо його читає код
+поза React.
+**Сирий SQL — ТІЛЬКИ колапс**
+(частковий індекс недосяжний з Prisma-API); `notification_states`/`_preferences` ідуть
+звичайним `prisma.upsert` із явним `tenantId` (композитний PK — інакше не скласти `where`;
+для інфра-сервісу це легально, як у `PresenceController`). Спроба писати їх сирим SQL
+відкинута: Prisma дає рівно той самий `INSERT … ON CONFLICT … SET revision = revision + $n`
+(перевірено логом Postgres) — атомарність та сама, типізації більше.
+Перевірено живим прогоном (api+worker+web): бейдж без
+перезавантаження, welcome із воркера в сокет, sync прочитаного між вкладками,
+`summary.revision` == revision із події, лист у Mailpit; 124 tenant-e2e (+21) і 11 platform-e2e.
 Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
 `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
 `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -142,12 +177,20 @@ docker-context по SSH; топологія стеку, образи, one-shot d
 `docs/event-driven-architecture.md` (асинхронний шар — єдиний довідник: діагноз 10 розривів
 старого jobs-шару, цільовий конвеєр подій/команд, конверт, маніфест підписок, DLQ і
 класифікація помилок, гроші/email/зовнішні системи/realtime як підписники, наскрізний приклад
-оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-2…4 — попереду)
+оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-4 — 2026-08-16
+(§3.12 переглянуто: realtime НЕ підписник), EDA-2 і EDA-3 — попереду)
 + `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
 `docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15: огляд, стек, межа з
 event-driven шаром, зафіксовані рішення, що лишилось) + `docs/realtime-internals.md`
 (механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
 + `docs/realtime-questions.md` (чек-лист розуміння),
+`docs/notifications.md` (in-app сповіщення / Notification Center — РЕАЛІЗОВАНО й перевірено
+2026-08-16: скоуп V1 «інбокс», модель даних, контракти, recorder, socket-протокол, REST,
+UI, тести, таблиця «що змінилось під час реалізації»; нагадування — окремий наступний хід.
+Містить **перегляд плану EDA §3.12**: realtime НЕ став підписником у `MESSAGE_TOPOLOGY`,
+міст воркер→браузер — headless Socket.IO Server, стрім `realtime.dispatch` не заводили.
+Синхронізовано з `docs/roadmap.md`, `docs/realtime.md`,
+`docs/event-driven-architecture.md` §3.12 і `docs/realtime-questions.md` (п. 76, 79)),
 `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
 `docs/frontend-ui-known-issues.md` (журнал проблем UI-бібліотеки і обходів — щоб обхід був
 один і названий, а не костиль на кожному місці використання; UI-1: HeroUI v3.2.2
@@ -181,7 +224,8 @@ pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .en
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm platform:web:codegen # orval: apps/platform-api/openapi.json → apps/platform-web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 96 тестів tenant-api (rls, tenant-isolation, slug-login, messaging, realtime);
+pnpm api:test:e2e         # 124 тести tenant-api (rls, tenant-isolation, slug-login, messaging,
+                          # realtime, notifications);
                           # ВИМАГАЄ Postgres І Valkey (presence-тести ходять до живих Lua-скриптів;
                           # ізоляція — окремий REALTIME_KEY_PREFIX на jest-worker, не окреме сховище).
                           # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
@@ -203,7 +247,9 @@ pnpm db:reset             # ДЕСТРУКТИВНО (dev-only, відмовля
 
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, files (presigned upload/download),
-                activities, realtime (Socket.IO-gateway namespace /tenant + presence),
+                activities, notifications (персональний інбокс: курсорний список, summary,
+                стани, преференси), realtime (Socket.IO-gateway namespace /tenant + presence
+                + емісія сповіщень в особистий room),
                 health (jobs-моніторинг переїхав у platform-api на MT-3).
                 Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
 apps/platform-api  NestJS 11 (MT-3, control plane, :3002): platform-auth (platform_users, окремий
@@ -233,7 +279,11 @@ libs/shared     Повідомлення (`messaging/`, EDA-1): defineEvent/defi
                 транзакційний fan-out, @MessageSubscriber + DiscoveryService-автореєстрація,
                 конверт, MessageInboxService (processed_jobs), спільна dlq, PgBossService.
                 Сховище: StorageService (@aws-sdk/client-s3: presign PUT/GET, head/get/put/delete,
-                ensureBucket+CORS на старті) + StorageModule (@Global)
+                ensureBucket+CORS на старті) + StorageModule (@Global).
+                Сповіщення (`notifications/`): NotificationRecorder.notify(tx, …) + recipientsByRole,
+                NotificationStateService (revision/seen/summary), NotificationDispatcherRegistry
+                (транспорт реєструє процес: api — RealtimeEmitter, worker — headless Server),
+                спільний мапер (той самий рядок їде і в REST, і в socket)
 docker/         compose (name: saas-skeleton — namespaced volume, НЕ прибирати name!): Postgres 17,
                 Mailpit (SMTP :1025, UI :8025), SeaweedFS (S3 :8333, creds — seaweedfs/s3.json).
                 docker-compose.prod.yml (перевірений димовим прогоном): self-hosted прод на одному
@@ -429,7 +479,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                     |
-| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**, лишились in-app сповіщення (вони ж EDA-4). Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення» |
+| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**; in-app сповіщення поверх того самого транспорту — 2026-08-16 (`docs/notifications.md`), realtime підписником у `MESSAGE_TOPOLOGY` НЕ став: емісія after-commit у процесі, що записав рядок. Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення» |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                               |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
@@ -460,6 +510,8 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
   (PaymentProvider інтерфейс + fake-провайдер → Stripe). Пишуться вже на шарі `messaging`:
   billing — це EDA-3, еталон події з 5 підписниками (`invoice.paid.v1`, `ledger_entries`,
   claim-before-send для листів, relay-підписник). Окремого `audit-log` НЕ робимо —
-  його роль виконує Activity Log; in-app notifications — `docs/realtime.md` § «Що лишилось зробити».
-- ✅ Realtime (Valkey + gateway + presence) — зроблено 2026-08-15; лишились **in-app
-  сповіщення** (вони ж EDA-4). System Settings — наступна вертикаль, див. `docs/roadmap.md`.
+  його роль виконує Activity Log; in-app notifications — `docs/notifications.md`.
+- ✅ Realtime (Valkey + gateway + presence) — зроблено 2026-08-15; ✅ in-app сповіщення
+  (EDA-4) — зроблено 2026-08-16. Наступне за roadmap: **заплановані сповіщення**
+  (нагадування — власна таблиця + cron, вони ж розблоковують email як канал),
+  далі System Settings, див. `docs/roadmap.md`.

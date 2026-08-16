@@ -7,6 +7,7 @@ import {
   MessageInboxService,
   MessageSubscriber,
   MessageSubscriberContract,
+  NotificationRecorder,
   userRegisteredEvent,
 } from '@saas-skeleton/shared';
 import i18n from '../i18n';
@@ -43,12 +44,15 @@ export class WelcomeEmailSubscriber
     private readonly mailer: MailerService,
     private readonly inbox: MessageInboxService,
     private readonly activities: ActivityRecorder,
+    private readonly notifications: NotificationRecorder,
   ) {}
 
   async handle(data: UserRegistered, envelope: MessageEnvelope): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: data.userId },
-      select: { locale: true, name: true },
+      // tenant.name — для in-app сповіщення «Welcome to X»; читається тим самим
+      // запитом, що локаль, а не окремим
+      select: { locale: true, name: true, tenant: { select: { name: true } } },
     });
     const locale = user?.locale ?? 'en';
     const name = user?.name ?? data.email;
@@ -70,6 +74,20 @@ export class WelcomeEmailSubscriber
           email: data.email,
         },
         links: [{ entityType: 'user', entityId: data.userId, role: 'target' }],
+      });
+
+      // In-app вітання — у ту саму транзакцію inbox-у, що й активність, тому
+      // ретрай job-а його НЕ продублює (exactly-once відносно бізнес-факту,
+      // на відміну від самого листа).
+      //
+      // Актор — система, а не envelope.actor (як в активності вище): «Ласкаво
+      // просимо» надсилає застосунок, а не адмін, який завів акаунт. Хто завів —
+      // видно в його власному фіді активностей
+      await this.notifications.notify(tx, {
+        type: 'user.welcome',
+        recipientIds: [data.userId],
+        actor: { type: 'system' },
+        payload: { tenant: user?.tenant.name ?? '' },
       });
     });
     this.logger.debug(`Message ${envelope.messageId}: email.sent activity ${result}`);

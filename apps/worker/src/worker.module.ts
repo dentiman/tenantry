@@ -2,7 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
-import { ActivitiesModule, MessagingModule, StorageModule } from '@saas-skeleton/shared';
+import {
+  ActivitiesModule,
+  MessagingModule,
+  NotificationsModule,
+  StorageModule,
+} from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
@@ -10,6 +15,7 @@ import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-
 import { GenerateThumbnailSubscriber } from './subscribers/generate-thumbnail.subscriber';
 import { WelcomeEmailSubscriber } from './subscribers/welcome-email.subscriber';
 import { MailerService } from './mail/mailer.service';
+import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
 
 @Module({
   imports: [
@@ -24,8 +30,10 @@ import { MailerService } from './mail/mailer.service';
     MessagingModule.forWorker(),
     StorageModule,
     ActivitiesModule,
+    NotificationsModule,
   ],
   providers: [
+    WorkerRealtimeEmitter,
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,
     CleanupProcessedJobsSubscriber,

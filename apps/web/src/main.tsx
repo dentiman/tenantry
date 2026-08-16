@@ -9,6 +9,7 @@ import { isGlobalApiError, parseApiError } from './api/api-error';
 import { showApiErrorToast } from './lib/error-toast';
 import { initSocket } from './realtime/socket';
 import { initPresenceSync } from './realtime/presence-sync';
+import { initNotificationSync } from './realtime/notification-sync';
 import './i18n';
 import './index.css';
 
@@ -50,6 +51,7 @@ async function bootstrap(): Promise<void> {
   // створити другий socket
   initSocket();
   initPresenceSync(queryClient);
+  initNotificationSync(queryClient);
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {

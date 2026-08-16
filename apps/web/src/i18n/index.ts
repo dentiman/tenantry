@@ -8,6 +8,7 @@ import {
   activitiesEn,
   commonEn,
   errorsEn,
+  notificationsEn,
   validationEn,
 } from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
@@ -41,6 +42,7 @@ void i18n.use(initReactI18next).init({
       errors: errorsEn,
       validation: validationEn,
       activities: activitiesEn,
+      notifications: notificationsEn,
       auth: authEn,
       dashboard: dashboardEn,
       layout: layoutEn,

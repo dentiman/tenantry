@@ -5,7 +5,11 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-streams-adapter';
 import type { Redis } from 'ioredis';
 import type { ServerOptions } from 'socket.io';
-import { REALTIME_PATH } from '@saas-skeleton/contracts';
+import {
+  REALTIME_PATH,
+  realtimeSessionKeyPrefix,
+  realtimeStreamName,
+} from '@saas-skeleton/contracts';
 import type { RealtimeConfig } from './realtime.config';
 
 /**
@@ -72,8 +76,9 @@ export class RealtimeIoAdapter extends IoAdapter {
             }
           : undefined,
       adapter: createAdapter(this.redis, {
-        streamName: `${this.config.keyPrefix}:sio:stream`,
-        sessionKeyPrefix: `${this.config.keyPrefix}:sio:session:`,
+        // Імена — з contracts: у той самий стрім пише headless-емітер воркера
+        streamName: realtimeStreamName(this.config.keyPrefix),
+        sessionKeyPrefix: realtimeSessionKeyPrefix(this.config.keyPrefix),
         // Стрім обмежений: presence-трафік не має права зʼїсти памʼять брокера
         maxLen: 10_000,
         // Дефолт — 5 с. Стільки ж триває вихід процесу: `quit` чекає на вже

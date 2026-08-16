@@ -3,14 +3,12 @@ export const REALTIME_CONFIG = Symbol('REALTIME_CONFIG');
 export const REALTIME_REDIS = Symbol('REALTIME_REDIS');
 
 /**
- * Room-и. Префікс tenant-а обовʼязковий: `user:{userId}` без нього дав би одному
- * і тому самому імені room-у в різних тенантах — а adapter розносить broadcast
- * по імені, не звіряючись із tenant-контекстом. У назвах немає email/імені:
- * room-и видно в adapter-трафіку і в дампах Valkey.
+ * `tenantRoom`/`userRoom` переїхали в `@saas-skeleton/contracts` (realtime.schema):
+ * імена room-ів формує тепер і воркер (headless-емітер сповіщень), а дві копії
+ * тихо розійшлися б і перестали доставляти. Реекспорт залишений, щоб решта
+ * realtime-теки імпортувала їх звідси, як і раніше.
  */
-export const tenantRoom = (tenantId: string): string => `tenant:${tenantId}`;
-export const userRoom = (tenantId: string, userId: string): string =>
-  `tenant:${tenantId}:user:${userId}`;
+export { tenantRoom, userRoom } from '@saas-skeleton/contracts';
 
 /** За скільки до `exp` сервер просить клієнта оновити access-токен */
 export const AUTH_EXPIRY_WARNING_MS = 60_000;

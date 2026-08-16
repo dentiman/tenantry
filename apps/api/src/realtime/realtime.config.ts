@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { REALTIME_DEFAULT_KEY_PREFIX } from '@saas-skeleton/contracts';
 
 /**
  * Конфіг realtime-шару. Дефолти = docker-compose dev (той самий підхід, що в
@@ -10,7 +11,8 @@ import { z } from 'zod';
  */
 
 const DEFAULT_REDIS_URL = 'redis://:saas-realtime@localhost:6379';
-const DEFAULT_KEY_PREFIX = 'saas:rt';
+// Спільна з воркером константа: розійшовшись, процеси писали б у різні стріми
+const DEFAULT_KEY_PREFIX = REALTIME_DEFAULT_KEY_PREFIX;
 const DEFAULT_ALLOWED_ORIGINS = 'http://localhost:5173';
 const DEFAULT_LEASE_TTL_MS = 60_000;
 const DEFAULT_HEARTBEAT_MS = 20_000;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NotificationResponseSchema } from '../notification/notification.schema';
 
 /**
  * Контракти realtime-шару (docs/realtime.md). Тут — і REST-схема snapshot-у, і схеми
@@ -15,6 +16,28 @@ export const REALTIME_PATH = '/socket.io';
 export const TENANT_NAMESPACE = '/tenant';
 
 /**
+ * Room-и. Теж протокол, а не конфіг застосунку: імена формує і `apps/api` (гейтвей,
+ * емісія), і `apps/worker` (headless-емітер сповіщень) — розійшовшись, вони тихо
+ * перестали б доставляти.
+ *
+ * Префікс тенанта обовʼязковий: `user:{userId}` без нього дав би одне ім'я room-у
+ * різним тенантам, а adapter розносить broadcast ПО ІМЕНІ, не звіряючись із
+ * tenant-контекстом. PII в іменах немає — room-и видно в трафіку адаптера.
+ */
+export const tenantRoom = (tenantId: string): string => `tenant:${tenantId}`;
+export const userRoom = (tenantId: string, userId: string): string =>
+  `tenant:${tenantId}:user:${userId}`;
+
+/**
+ * Ключі Redis Streams-адаптера. Теж протокол: `apps/api` і `apps/worker` мусять
+ * писати В ОДИН стрім, інакше емісія з воркера просто нікуди не доїде — тихо,
+ * без жодної помилки. Тому імена рахуються тут, а не складаються рядками на місці.
+ */
+export const REALTIME_DEFAULT_KEY_PREFIX = 'saas:rt';
+export const realtimeStreamName = (keyPrefix: string): string => `${keyPrefix}:sio:stream`;
+export const realtimeSessionKeyPrefix = (keyPrefix: string): string => `${keyPrefix}:sio:session:`;
+
+/**
  * Імена подій із версією в суфіксі — та сама доктрина, що в messaging (`defineEvent`):
  * зміна форми payload-у = нове імʼя, а не тихо інша структура під старим.
  */
@@ -23,6 +46,8 @@ export const REALTIME_EVENTS = {
   authExpiring: 'auth.expiring.v1',
   authUpdate: 'auth.update.v1',
   resyncRequired: 'realtime.resync-required.v1',
+  notificationCreated: 'notification.created.v1',
+  notificationChanged: 'notification.changed.v1',
 } as const;
 
 // ---------------------------------------------------------------- presence
@@ -49,6 +74,41 @@ export const PresenceSnapshotSchema = z.object({
   onlineUserIds: z.array(z.uuid()),
   revision: z.number().int().nonnegative(),
   generatedAt: z.iso.datetime(),
+});
+
+// ---------------------------------------------------------------- notifications
+
+/**
+ * Нове сповіщення в особистий room отримувача.
+ *
+ * Везе ПОВНИЙ рядок, а не тільки id (уточнення до раннього начерку EDA §3.12):
+ * джерелом правди лишається REST, тому правило «жоден стан не живе тільки в сокеті»
+ * дотримане — `revision` дає resync при будь-якій втраті. А ходити в REST за вмістом,
+ * який сервер уже тримає в руках, — зайвий roundtrip і мигання порожнього рядка.
+ */
+export const NotificationCreatedSchema = z.object({
+  notification: NotificationResponseSchema,
+  unreadCount: z.number().int().nonnegative(),
+  newCount: z.number().int().nonnegative(),
+  revision: z.number().int().nonnegative(),
+  occurredAt: z.iso.datetime(),
+});
+
+/**
+ * Зміна стану інбокса. Летить в УСІ вкладки й на всі пристрої юзера, включно з тим,
+ * де дію зробили: прочитав на ноуті — бейдж згас на телефоні.
+ */
+export const NotificationChangedSchema = z.object({
+  change: z.enum(['read', 'unread', 'archived', 'seen']),
+  scope: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('ids'), ids: z.array(z.uuid()).min(1) }),
+    // mark-all-read: перелік id був би на сотні рядків і нічого не додавав би
+    z.object({ kind: z.literal('all') }),
+  ]),
+  unreadCount: z.number().int().nonnegative(),
+  newCount: z.number().int().nonnegative(),
+  revision: z.number().int().nonnegative(),
+  occurredAt: z.iso.datetime(),
 });
 
 // ---------------------------------------------------------------- auth cycle

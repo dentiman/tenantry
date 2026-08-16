@@ -146,11 +146,30 @@ online user). У памʼяті ноди — рахунок вкладок, у V
 Демо — online-badge на `/users`. Огляд і зафіксовані рішення — [docs/realtime.md](docs/realtime.md),
 механіка (ключі, Lua, конфіг, режими відмов) — [docs/realtime-internals.md](docs/realtime-internals.md).
 
+## In-app сповіщення (готово)
+
+Персональний інбокс поверх того самого realtime-транспорту: дзвінок із бейджем, панель
+(непрочитані / усі / архів), налаштування на тип сповіщення. Текст **не зберігається** —
+бекенд пише `type` + `payload` з референсами `{kind, id}`, а фронт рендерить через i18next і
+сам будує посилання на сутність усередині повідомлення (реєстр `entity-routes.ts`).
+
+Однотипні події схлопуються в одну картку, доки її не прочитали (частковий унікальний індекс
++ `INSERT … ON CONFLICT`), тож «створено 5 юзерів» — один рядок, а не пʼять. Бейдж рахує
+**нові з моменту останнього відкриття панелі**, а не всі непрочитані — інакше він назавжди
+застряг би на великому числі.
+
+Емісія в браузер — after-commit у процесі, що записав рядок (**не** через pg-boss: черга не є
+live-транспортом). Сповіщення, народжені у воркері, доїжджають через headless Socket.IO-сервер
+на тому самому Valkey-адаптері. Спливна картка (тост) і рядок у центрі — **один компонент**.
+
+Деталі, зафіксовані рішення і тести — [docs/notifications.md](docs/notifications.md).
+
 ## Далі за roadmap
 
-Мультитенантність і realtime вже реалізовані й перевірені — див.
-[docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md) і
-[docs/realtime.md](docs/realtime.md). Лишилось: in-app сповіщення, екран DLQ,
+Мультитенантність, realtime і in-app сповіщення вже реалізовані й перевірені — див.
+[docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md),
+[docs/realtime.md](docs/realtime.md) і [docs/notifications.md](docs/notifications.md).
+Лишилось: заплановані сповіщення (нагадування) і email як другий канал, екран DLQ,
 RBAC/permissions, refresh-токени в httpOnly cookie, справжня reuse-detection ротованих
 токенів, беклог мультитенантності (піддомени, invite-флоу, білінг), доменні модулі
 (customers, tickets, billing). Деталі — у docs/roadmap.md.

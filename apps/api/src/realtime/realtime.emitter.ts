@@ -1,7 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
-import type { PresenceChanged, ResyncReason, ServerToClientEvents } from '@saas-skeleton/contracts';
-import { tenantRoom } from './realtime.constants';
+import type {
+  NotificationChanged,
+  NotificationCreated,
+  PresenceChanged,
+  ResyncReason,
+  ServerToClientEvents,
+} from '@saas-skeleton/contracts';
+import {
+  NotificationDispatcherRegistry,
+  type NotificationDispatcher,
+} from '@saas-skeleton/shared';
+import { tenantRoom, userRoom } from './realtime.constants';
 import type { TenantNamespace } from './realtime.types';
 
 /**
@@ -14,9 +24,15 @@ import type { TenantNamespace } from './realtime.types';
  * підключених до ІНШОЇ репліки api.
  */
 @Injectable()
-export class RealtimeEmitter {
+export class RealtimeEmitter implements NotificationDispatcher {
   private readonly logger = new Logger(RealtimeEmitter.name);
   private namespace: TenantNamespace | null = null;
+
+  constructor(dispatcherRegistry: NotificationDispatcherRegistry) {
+    // Інбокс живе в libs/shared і про socket.io не знає — транспорт віддається
+    // йому тут (той самий прийом пізньої реєстрації, що з namespace нижче)
+    dispatcherRegistry.register(this);
+  }
 
   register(namespace: TenantNamespace): void {
     this.namespace = namespace;
@@ -44,5 +60,15 @@ export class RealtimeEmitter {
       reason,
       occurredAt: new Date().toISOString(),
     });
+  }
+
+  // ---- NotificationDispatcher: в особистий room, тобто в усі вкладки юзера ----
+
+  created(tenantId: string, recipientId: string, payload: NotificationCreated): void {
+    this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationCreated, payload);
+  }
+
+  changed(tenantId: string, recipientId: string, payload: NotificationChanged): void {
+    this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationChanged, payload);
   }
 }

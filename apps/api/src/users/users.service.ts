@@ -3,7 +3,14 @@ import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Prisma } from '@saas-skeleton/database';
 import type { CreateUser, UpdateUser, UserQuery } from '@saas-skeleton/contracts';
 import { IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
-import { ActivityRecorder, MessagePublisher, userRegisteredEvent } from '@saas-skeleton/shared';
+import {
+  ActivityRecorder,
+  MessagePublisher,
+  NotificationRecorder,
+  recipientsByRole,
+  userRegisteredEvent,
+} from '@saas-skeleton/shared';
+import { Role } from '@saas-skeleton/database';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
@@ -43,6 +50,7 @@ export class UsersService {
     private readonly messages: MessagePublisher,
     private readonly tenantTx: TenantTransactions,
     private readonly activities: ActivityRecorder,
+    private readonly notifications: NotificationRecorder,
   ) {}
 
   async findAll(query: UserQuery): Promise<{
@@ -137,6 +145,21 @@ export class UsersService {
         links: [{ entityType: 'user', entityId: created.id, role: 'subject' }],
       });
 
+      // Кого це стосується, вирішує домен (docs/notifications.md): поява юзера —
+      // подія для адмінів воркспейсу. Автор дії відсіюється в recorder-і.
+      // groupKey: адмін, який заводить команду підряд, отримає ОДИН рядок
+      // «створено N юзерів», а не п'ять однакових
+      await this.notifications.notify(tx, {
+        type: 'user.created',
+        recipientIds: await recipientsByRole(tx, Role.ADMIN, [actor.sub]),
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: {
+          user: { kind: 'user', id: created.id, label: created.name ?? created.email },
+        },
+        target: { kind: 'user', id: created.id },
+        groupKey: 'user.created',
+      });
+
       // Продюсер НЕ знає підписників: fan-out робить publish за маніфестом
       await this.messages.publish(
         tx,
@@ -194,6 +217,16 @@ export class UsersService {
         // Ні пароля, ні хеша, ні довжини — у журналі лише факт і його учасники
         payload: { user: { kind: 'user', id: user.id, label: user.name ?? user.email } },
         links: [{ entityType: 'user', entityId: user.id, role: 'subject' }],
+      });
+
+      // Сповіщення про безпеку — самому юзеру. Тип немутабельний: людина мусить
+      // дізнатись про зміну свого пароля незалежно від налаштувань. Якщо адмін
+      // змінив пароль СОБІ, recorder відсіє його як автора дії
+      await this.notifications.notify(tx, {
+        type: 'user.password_changed',
+        recipientIds: [user.id],
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: {},
       });
 
       this.logger.log(

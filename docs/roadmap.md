@@ -24,28 +24,36 @@
 | **Деплой у Swarm + CI**  | 2026-07-24…31 | GitLab CI: build 6 образів → `docker stack deploy` через docker-context по SSH (нуль файлів на сервері); dev-стек `saas-dev` живий на 172.18.13.101; manual `db_roles`/`seed`/`dump` | `deploy-swarm.md`                                      |
 | **EDA-0 + EDA-1**        | 2026-08-04 | Єдиний конвеєр асинхронних повідомлень замість `libs/shared/src/jobs/`: подія/команда, конверт (`messageId`/`correlationId`/`causationId`/`actor`), маніфест `MESSAGE_TOPOLOGY` із fan-out-ом на публікації, inbox по бізнес-факту, спільна DLQ, boot-assert топології | `event-driven-architecture.md`                         |
 | **Realtime**             | 2026-08-15 | Socket.IO-гейтвей (websocket-only) + Valkey як Redis Streams adapter; socket-auth спільна з HTTP, tenant-ізоляція, presence на distributed leases (`GET /api/presence` + delta з ревізіями), online-badge на `/users` | `realtime.md`, `realtime-internals.md`                 |
+| **In-app сповіщення (EDA-4)** | 2026-08-16 | Персональний інбокс: 3 таблиці з RLS, колапс через частковий унікальний індекс, `unread/read/archived` + `seenAt` для бейджа, преференси на тип, курсорний REST + socket-дельти за патерном presence, after-commit хук у `withTenantTx`, headless-міст із воркера, bell + панель у UI | `notifications.md`                                     |
 
 Проєктні документи без реалізації (готові до роботи):
 [tenant-settings.md](tenant-settings.md), беклог MT-4 у `multi-tenancy-architecture.md`,
-фази EDA-2…EDA-4 у [event-driven-architecture.md](event-driven-architecture.md).
+фази EDA-2 і EDA-3 у [event-driven-architecture.md](event-driven-architecture.md),
+заплановані сповіщення в [notifications.md](notifications.md) (§ «Обмеження V1 / беклог»).
 
 ---
 
 ## 2. Наступні кроки (у порядку пріоритету)
 
-### 2.1. In-app сповіщення — [realtime.md](realtime.md)
+### 2.1. Заплановані сповіщення (нагадування) — [notifications.md](notifications.md)
 
-Realtime-транспорт уже працює (гейтвей, presence, ізоляція, деплой — див. `realtime.md`),
-тому це доменна робота поверх готового шару, а не інфраструктурна. Вона ж **EDA-4**:
-realtime стає звичайним підписником у `MESSAGE_TOPOLOGY`, окремого механізму не заводимо
-([event-driven-architecture.md](event-driven-architecture.md) §3.12).
+V1 інбокса **зроблено 2026-08-16** (див. таблицю вище). Наступний крок — те, заради чого
+CRM-домени й потребують сповіщень: **нагадування** «дедлайн завтра», «зустріч за 30 хв»,
+«підписка спливає». Це не «ще один тип сповіщення», а окремий життєвий цикл: момент
+відправки в майбутньому, і його треба вміти **скасувати або перепланувати**, коли факт
+змінився (тікет закрили — нагадування слати не можна).
 
-Обсяг: таблиця `notifications` (tenant-скоуп + RLS), REST список/лічильник непрочитаних/
-позначити прочитаним, закритий перелік типів і структурований payload (текст рендерить
-фронт через i18next, як `activities`), підписник `realtime` + міст із воркера через стрім
-`realtime.dispatch`, подія `notification.created.v1` з одним лише ідентифікатором, bell-меню
-в UI. Плюс операційний хвіст realtime — масштабування і rolling update на живому стеку,
-навантажувальний профіль, метрики (перелік — у `realtime-internals.md`).
+Обсяг: таблиця `scheduled_notifications` (власний стан, tenant-скоуп + RLS) + cron-сканер,
+який матеріалізує дозрілі рядки в `notifications` наявним recorder-ом; API створення/
+скасування для доменів; «прострочено» як дзеркальний випадок того самого дедлайну.
+Таблиця `notifications` при цьому лишається як є — вона свідомо містить **тільки
+доставлені** рядки, без `status`/`scheduledAt`.
+
+Той самий відкладений тригер розблоковує **email як другий канал** («не прочитано за N
+хвилин і юзер офлайн → лист»): схема преференсів уже несе `channel`, доставки бракує.
+
+Операційний хвіст realtime (лишився з попередньої віхи): масштабування і rolling update на
+живому стеку, навантажувальний профіль, метрики — перелік у `realtime-internals.md`.
 
 ### 2.2. Налаштування тенанта (System Settings) — [tenant-settings.md](tenant-settings.md)
 

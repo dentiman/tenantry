@@ -2,6 +2,7 @@ import { Dropdown } from '@heroui/react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
+import { NotificationBell } from './notifications/notification-bell';
 import { ThemeSwitcher } from './theme-switcher';
 import { UserIdentity } from './user-identity';
 
@@ -43,6 +44,7 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-border bg-surface px-6">
+          <NotificationBell />
           <ThemeSwitcher />
           <Dropdown>
             <Dropdown.Trigger

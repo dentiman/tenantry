@@ -18,7 +18,10 @@
 
 ## UI-1. Форм-контроли `Switch` і `Checkbox` не перемикаються
 
-**Статус:** відкрита. Обхід у коді: `data-grid/cell-switch.tsx`, `data-grid/data-grid.tsx` (`SelectionCheckbox`).
+**Статус:** відкрита. Обхід у коді: `data-grid/cell-switch.tsx`, `data-grid/data-grid.tsx`
+(`SelectionCheckbox`). Споживачі поза гріда́ми беруть той самий `CellSwitch` — напр.
+налаштування сповіщень (`notifications/notification-preferences.tsx`): обхід лишається
+один і названий, а не переписується на кожному місці.
 
 ### Симптом
 

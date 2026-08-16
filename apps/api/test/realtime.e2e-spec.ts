@@ -14,7 +14,11 @@ import request from 'supertest';
 import { io as ioClient, type Socket as ClientSocket } from 'socket.io-client';
 import * as argon2 from 'argon2';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
-import type { PresenceChanged } from '@saas-skeleton/contracts';
+import type {
+  NotificationChanged,
+  NotificationCreated,
+  PresenceChanged,
+} from '@saas-skeleton/contracts';
 import { SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -259,6 +263,123 @@ describe('Realtime gateway + presence (e2e)', () => {
       await sleep(300);
 
       expect(seen.map((p) => p.userId)).not.toContain(b.userId);
+    });
+  });
+
+  /**
+   * Доставка in-app сповіщень (docs/notifications.md). Перевіряється саме те, чого
+   * не видно з HTTP-тестів: емісія йде в ОСОБИСТИЙ room, тобто в усі вкладки
+   * отримувача і в жодну чужу, і відбувається вона ПІСЛЯ коміту — подія вже несе
+   * лічильники, які збігаються з тим, що віддасть REST.
+   */
+  describe('доставка сповіщень', () => {
+    const waitForNotification = (socket: ClientSocket): Promise<NotificationCreated> =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('notification.created.v1 not received'));
+        }, 3_000);
+        socket.once(REALTIME_EVENTS.notificationCreated, (payload: NotificationCreated) => {
+          clearTimeout(timer);
+          resolve(payload);
+        });
+      });
+
+    it('доїжджає в усі вкладки отримувача і не доїжджає до автора дії', async () => {
+      const observerEmail = uniqueEmail('rt-notify-observer');
+      const observer = await createAndLoginTestUser(app, sysPrisma, {
+        email: observerEmail,
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      const author = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-notify-author'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+
+      // Дві вкладки того самого юзера — обидві мають отримати подію
+      const tabA = await connect(observer.tokens.accessToken);
+      const tabB = await connect(observer.tokens.accessToken);
+      const authorSocket = await connect(author.tokens.accessToken);
+
+      const authorSeen: NotificationCreated[] = [];
+      authorSocket.on(REALTIME_EVENTS.notificationCreated, (payload: NotificationCreated) => {
+        authorSeen.push(payload);
+      });
+
+      const received = Promise.all([waitForNotification(tabA), waitForNotification(tabB)]);
+
+      await request(app.getHttpServer())
+        .post('/api/users')
+        .set('Authorization', `Bearer ${author.tokens.accessToken}`)
+        .send({
+          email: uniqueEmail('rt-notify-member'),
+          password: 'Password123',
+          name: 'RT Member',
+        })
+        .expect(201);
+
+      const [first, second] = await received;
+      expect(first.notification.type).toBe('user.created');
+      expect(first.unreadCount).toBe(1);
+      expect(first.revision).toBeGreaterThan(0);
+      expect(second.notification.id).toBe(first.notification.id);
+
+      // Автор дії не отримує сповіщення про власну дію — ні в БД, ні в сокет
+      await sleep(200);
+      expect(authorSeen).toHaveLength(0);
+
+      // Подія прийшла ПІСЛЯ коміту: REST бачить рівно те саме
+      const summaryResponse = await request(app.getHttpServer())
+        .get('/api/notifications/summary')
+        .set('Authorization', `Bearer ${observer.tokens.accessToken}`)
+        .expect(200);
+      expect((summaryResponse.body as { revision: number }).revision).toBe(first.revision);
+
+      await sysPrisma.notification.deleteMany();
+      await sysPrisma.notificationState.deleteMany();
+    });
+
+    it('прочитання в одній вкладці приходить дельтою в іншу', async () => {
+      const observer = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-notify-sync'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      const notification = await sysPrisma.notification.create({
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          recipientId: observer.user.id,
+          type: 'user.welcome',
+          actorType: 'system',
+          payload: { tenant: 'RT' },
+        },
+      });
+
+      const tabA = await connect(observer.tokens.accessToken);
+      const changed = new Promise<NotificationChanged>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('notification.changed.v1 not received'));
+        }, 3_000);
+        tabA.once(REALTIME_EVENTS.notificationChanged, (payload: NotificationChanged) => {
+          clearTimeout(timer);
+          resolve(payload);
+        });
+      });
+
+      // Дію робить «інша вкладка» — звичайний HTTP-запит із тим самим токеном
+      await request(app.getHttpServer())
+        .patch(`/api/notifications/${notification.id}`)
+        .set('Authorization', `Bearer ${observer.tokens.accessToken}`)
+        .send({ read: true })
+        .expect(200);
+
+      const payload = await changed;
+      expect(payload.change).toBe('read');
+      expect(payload.unreadCount).toBe(0);
+
+      await sysPrisma.notification.deleteMany();
+      await sysPrisma.notificationState.deleteMany();
     });
   });
 

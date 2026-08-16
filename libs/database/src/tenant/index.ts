@@ -9,6 +9,6 @@ export {
   type TenantResolution,
 } from './tenant-resolver';
 export { TenantResolutionMiddleware } from './tenant-resolution.middleware';
-export { TenantTransactions } from './tenant-transactions.service';
+export { TenantTransactions, type AfterCommitHook } from './tenant-transactions.service';
 export { withTenantContext } from './prisma-tenant.extension';
 export { PRISMA_BASE } from './tokens';

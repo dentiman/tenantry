@@ -1,9 +1,10 @@
 # Event-Driven архітектура: аналіз наявного шару черг і цільовий дизайн
 
 **Статус:** **EDA-0 і EDA-1 реалізовані й перевірені живим прогоном (2026-08-04).**
-EDA-2 (екран DLQ у `/jobs`), EDA-3 (billing) і EDA-4 (realtime-підписник) — попереду.
-Транспорт для EDA-4 уже є: Socket.IO-гейтвей і Valkey працюють (`realtime.md`), лишився
-сам підписник `/realtime` і стрім `realtime.dispatch` — див. §3.12.
+**EDA-4 (in-app сповіщення) реалізовано 2026-08-16** — і по ходу переосмислено: realtime
+**не став підписником** і власного стріму не отримав, доставка в браузер лишилася поза цим
+шаром (§3.12, [notifications.md](notifications.md)). Попереду — EDA-2 (екран DLQ у `/jobs`)
+і EDA-3 (billing).
 Вхідний сценарій — `docs/event-driven-scenario.md`. **Дата дизайну:** 2026-08-02.
 
 Розділ 2 («Діагноз») свідомо збережений у теперішньому часі — він описує стан ДО EDA-1
@@ -206,14 +207,18 @@ realtime, але:
                                                │ у ТІЙ САМІЙ транзакції
        ┌───────────────────┬───────────────────┼───────────────────┬───────────────────┐
        ▼                   ▼                   ▼                   ▼                   ▼
- …v1/accounting    …v1/customer-balance  …v1/invoice-email   …v1/provisioning    …v1/realtime
+ …v1/accounting    …v1/customer-balance  …v1/invoice-email   …v1/provisioning  …v1/in-app-notify
        │                   │                   │                   │                   │
-   inbox+tx            inbox+tx            claim+send          relay HTTP         Redis Stream
-   ledger entry        UPDATE +=           SMTP                idempotency-key    realtime.dispatch
+   inbox+tx            inbox+tx            claim+send          relay HTTP          inbox+tx
+   ledger entry        UPDATE +=           SMTP                idempotency-key    notifications
        │                                                                                │
        └─ publish billing.invoice-posted.v1  (ланцюг, а не «порядок підписників»)       ▼
-                                                                              Socket.IO → CRM
+                                                                        after-commit emit → CRM
 ```
+
+П'ятий підписник — не «realtime-підписник»: черга переносить **довговічну роботу**
+(рядок в інбоксі менеджера кастомера), а socket-емісія відбувається after-commit усередині
+того самого споживача, поза цим шаром. Чому саме так — §3.12.
 
 ### 3.0. Що це таке фізично в Postgres (читати першим)
 
@@ -237,7 +242,7 @@ BEGIN;
     ('billing.invoice-paid.v1/customer-balance', {envelope}, 'customer:c'),
     ('billing.invoice-paid.v1/invoice-email',    {envelope}, NULL),
     ('billing.invoice-paid.v1/provisioning',     {envelope}, NULL),
-    ('billing.invoice-paid.v1/realtime',         {envelope}, NULL);
+    ('billing.invoice-paid.v1/in-app-notify',    {envelope}, NULL);
 COMMIT;
 ```
 
@@ -333,7 +338,7 @@ export const MESSAGE_TOPOLOGY = {
   'users.user-registered.v1':  { kind: 'event',   consumers: ['welcome-email'] },
   'billing.invoice-paid.v1':   { kind: 'event',   consumers: ['accounting', 'customer-balance',
                                                               'invoice-email', 'provisioning',
-                                                              'realtime'] },
+                                                              'in-app-notify'] },
   // команди: рівно 1 споживач
   'files.generate-thumbnail':  { kind: 'command', consumers: ['thumbnailer'] },
   // cron: команда без продюсера, розклад тут-таки
@@ -596,19 +601,39 @@ Provisioning поза монорепо не отримує доступу до `
 
 Спільна БД між сервісами — заборонена. Це не «оптимізація», це стирання межі сервісу.
 
-### 3.12. Realtime — теж просто підписник
+### 3.12. Realtime — НЕ підписник
 
-Крок «нотифікація в браузер» не потребує нічого нового в цьому документі: `/realtime`
-підписник пише в `realtime.dispatch` Redis Stream із `docs/realtime.md`, одна репліка api
-робить `emit`, adapter розносить. Поки модуля сповіщень немає — підписника немає і в маніфесті.
+> **Переглянуто 2026-08-16** при фіксації скоупу in-app сповіщень
+> ([notifications.md](notifications.md)). Ранній начерк цього параграфа передбачав
+> підписника `/realtime` у маніфесті і власний Redis Stream `realtime.dispatch`. Обидва
+> скасовано — нижче чинна версія й причини. Реалізовано не було нічого, тому міграції
+> немає.
 
-Половина цього вже стоїть: Valkey, Socket.IO-adapter і `RealtimeEmitter` працюють, тому
-EDA-4 зводиться до двох речей — стріму `realtime.dispatch` із читачем в `apps/api` і рядка
-`'realtime'` у списку споживачів `MESSAGE_TOPOLOGY`. Воркеру для цього знадобиться
-`REDIS_URL` (у swarm-стеку його поки має лише `api`).
+Крок «нотифікація в браузер» не потребує нічого нового в цьому документі — і саме тому
+його **не треба класти в конвеєр повідомлень**. Правило, з якого все випливає, уже
+сформульоване тут і в `realtime.md`: **pg-boss не є live-транспортом.** Його polling і
+retry-семантика розраховані на роботу, яку не можна загубити; емісія в браузер — це
+навпаки, робота, яку не шкода загубити, але не можна затримати.
 
-Важливо (уже написано в `realtime.md`, повторюю як правило): **pg-boss не є live-транспортом.**
-Його polling/retry семантика — для робіт. Субсекундний fan-out у браузер — Socket.IO.
+Тому доменна транзакція пише сповіщення в Postgres, а socket-емісія відбувається
+**after-commit у тому самому процесі**, що записав рядок (механізм — хук у
+`withTenantTx`, див. `notifications.md`). Пропустити її крізь чергу означало б додати
+секунди polling-у до дії, яка має бути миттєвою, заради гарантій, які тут не потрібні:
+втрачена socket-подія нічого не втрачає, бо джерелом правди лишається REST + Postgres,
+а клієнт має resync за ревізією.
+
+Наслідки для цього документа:
+
+- рядка `'realtime'` у `MESSAGE_TOPOLOGY` не буде — модуль сповіщень **не додає другого
+  шляху асинхронної роботи**, він взагалі не користується цим шаром для доставки в браузер;
+- стрім `realtime.dispatch` не заводимо. Воркеру, який теж породжує сповіщення (welcome,
+  а далі нагадування), потрібна емісія — вона робиться headless Socket.IO `Server`-ом на
+  тому самому Valkey-адаптері, що розносить події між репліками api. Власний стрім був би
+  переписуванням транспорту, який уже працює. `REDIS_URL` воркеру потрібен в обох
+  варіантах (у swarm-стеку його поки має лише `api`);
+- зв'язок із конвеєром лишається там, де він доречний: **факт**, що породжує сповіщення,
+  і далі їде подією (`users.user-registered.v1` → підписник `welcome-email`, який у своєму
+  inbox-і пише і лист, і рядок в інбоксі). Черга переносить роботу, socket — сигнал.
 
 ### 3.13. Activity Log і domain events — не змішувати
 
@@ -698,7 +723,7 @@ export const invoicePaidEvent = defineEvent('billing.invoice-paid.v1', z.object(
 
 // libs/shared/src/events/subscriptions.ts
 'billing.invoice-paid.v1': ['accounting', 'customer-balance', 'invoice-email',
-                            'provisioning', 'realtime'],
+                            'provisioning', 'in-app-notify'],
 ```
 
 П'ять класів у `apps/worker/src/subscribers/billing/`, кожен — 20–40 рядків, кожен зі своїм
@@ -740,11 +765,13 @@ inbox-ключем, своєю чергою, своїм DLQ. Жоден не з�
 | ✅ **EDA-1** — єдиний конвеєр | `defineEvent`/`defineCommand`, конверт, `MESSAGE_TOPOLOGY`, `MessagePublisher.publish(tx, …)`, `@MessageSubscriber`, boot-assert маніфесту, `runOnce(envelope, consumerId)`, `MessageContext`; переведення **всіх** наявних job-ів (thumbnail, 2 cron) на той самий конвеєр + міграція `users.user-registered` | Так — `UserRegisteredHandler` зник, у системі лишився один шлях виконання асинхронної роботи |
 | **EDA-2** — спостережуваність | DLQ-вкладка й replay у `/jobs`; фільтр за `correlationId`; лаг і глибина по черзі | Так — без цього EDA-1 працює наосліп |
 | **EDA-3** — billing як еталон | `invoice.paid` з 5 підписниками, `ledger_entries` + звірка балансу, `sent_emails` claim-before-send, relay-підписник, ланцюг `invoice-posted` | Це вже доменний модуль 2.4 із roadmap |
-| **EDA-4** — realtime-підписник | `/realtime` → `realtime.dispatch` | Разом з in-app сповіщеннями |
+| ✅ **EDA-4** — in-app сповіщення | Доменний модуль (`notifications.md`, зроблено 2026-08-16). Для цього шару — **нуль нової механіки**: підписника `realtime` немає, стріму `realtime.dispatch` немає (§3.12). Єдина точка дотику — факт, що породжує сповіщення, і далі їде звичайною подією | Так — перша фіча, яку юзер бачить у шапці |
 
-**Місце в roadmap:** EDA-0 і EDA-1 зроблені — billing (2.4) тепер можна писати одразу на
-цьому шарі. EDA-2 — наступний. EDA-3 = 2.4.3 (billing) на новому шарі. EDA-4 = частина
-модуля in-app сповіщень (`realtime.md` § «Що лишилось зробити»).
+**Місце в roadmap:** EDA-0, EDA-1 і EDA-4 зроблені — billing (2.4) тепер можна писати
+одразу на цьому шарі. Лишились EDA-2 (спостережуваність) і EDA-3 = 2.4.3 (billing).
+EDA-4 виявився найдешевшим для цього шару: після перегляду §3.12 він його майже не
+торкнувся — сповіщення їдуть звичайною подією, а доставка в браузер живе поза чергами
+([notifications.md](notifications.md)).
 
 ### Прибирання після міграції (одноразово, вручну)
 
@@ -774,6 +801,8 @@ inbox-ключем, своєю чергою, своїм DLQ. Жоден не з�
 
 - `docs/event-driven-scenario.md` — вхідний сценарій оплати інвойса
 - `docs/activity-log.md` — Activity Log (§3.13 — межа між ним і подіями)
-- `docs/realtime.md` — Socket.IO, `realtime.dispatch`, Notification-модуль (§3.12)
+- `docs/realtime.md` — Socket.IO, presence, межа з цим шаром (§3.12)
+- `docs/notifications.md` — in-app сповіщення (EDA-4): чому доставка в браузер лишається
+  поза конвеєром повідомлень
 - `docs/multi-tenancy-architecture.md` — CLS, RLS, tenant-scope джоб
 - `libs/shared/src/jobs/` — наявний шар, який цей документ розширює

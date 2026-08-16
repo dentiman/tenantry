@@ -19,7 +19,9 @@
     "@saas-skeleton/contracts": "workspace:*",
     "@saas-skeleton/database": "workspace:*",
     "@saas-skeleton/shared": "workspace:*",
+    "@socket.io/redis-streams-adapter": "^0.3.1",
     "i18next": "^26.3.6",
+    "ioredis": "^5.11.1",
     "nestjs-cls": "^6.2.1",
     "nestjs-pino": "^4.5.0",
     "nodemailer": "^9.0.3",
@@ -31,6 +33,7 @@
     "rotating-file-stream": "^3.2.8",
     "rxjs": "^7.8.0",
     "sharp": "^0.35.3",
+    "socket.io": "^4.8.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

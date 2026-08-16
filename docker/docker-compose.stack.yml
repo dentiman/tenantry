@@ -58,11 +58,17 @@ x-db-env: &db-env
   MIGRATE_DATABASE_URL: postgresql://saas_migrator:saas_migrator@postgres:5432/saas_skeleton
   PLATFORM_DATABASE_URL: postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton
 
-# RT-0: realtime-шар. REDIS_URL потрібен api (adapter + presence-leases); воркеру він
-# знадобиться лише на RT-3 (публікація в стрім realtime.dispatch) — зараз не додаємо.
-x-realtime-env: &realtime-env
+# Доступ до брокера. Потрібен ОБОМ процесам, але з різних причин: api тримає на
+# ньому adapter і presence-leases, воркер — лише headless-емітер сповіщень
+# (docs/notifications.md § «Міст із воркера»). Префікс мусить збігатися: з нього
+# рахується ім'я стріму, і розійшовшись, процеси писали б у різні (тихо, без помилки).
+x-realtime-broker-env: &realtime-broker-env
   REDIS_URL: redis://:${REDIS_PASSWORD}@valkey:6379
   REALTIME_KEY_PREFIX: ${REALTIME_KEY_PREFIX:-saas:rt}
+
+# RT-0: решта realtime-конфігу — суто api-шна (гейтвей, presence)
+x-realtime-env: &realtime-env
+  <<: *realtime-broker-env
   REALTIME_ALLOWED_ORIGINS: ${REALTIME_ALLOWED_ORIGINS}
   REALTIME_LEASE_TTL_MS: ${REALTIME_LEASE_TTL_MS:-60000}
   REALTIME_HEARTBEAT_MS: ${REALTIME_HEARTBEAT_MS:-20000}
@@ -207,7 +213,7 @@ services:
   worker:
     image: ${WORKER_IMAGE}
     environment:
-      <<: [*db-env, *s3-env]
+      <<: [*db-env, *s3-env, *realtime-broker-env]
       NODE_ENV: production
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}

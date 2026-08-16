@@ -1,0 +1,53 @@
+{
+  "title": "Notifications",
+  "open": "Open notifications",
+  "unreadBadge": "{{count}} new notifications",
+  "filter": {
+    "unread": "Unread",
+    "all": "All",
+    "archived": "Archived"
+  },
+  "empty": {
+    "unread": "You're all caught up",
+    "all": "No notifications yet",
+    "archived": "Nothing archived"
+  },
+  "loading": "Loading notifications",
+  "loadMore": "Load more",
+  "loadError": "Could not load notifications",
+  "dismiss": "Dismiss",
+  "groupCount": "{{count}} events in this notification",
+  "markAllRead": "Mark all as read",
+  "markRead": "Mark as read",
+  "markUnread": "Mark as unread",
+  "archive": "Archive",
+  "unarchive": "Restore",
+  "rowActions": "Notification actions",
+  "settings": {
+    "open": "Notification settings",
+    "title": "Notification settings",
+    "back": "Back to notifications",
+    "always": "Always on",
+    "category": {
+      "workspace": "Workspace",
+      "security": "Security"
+    },
+    "label": {
+      "user": {
+        "created": "New users in the workspace",
+        "password_changed": "Password changes",
+        "welcome": "Welcome message"
+      }
+    }
+  },
+  "type": {
+    "user": {
+      "created_one": "<b>{{actor}}</b> added user <a>{{user}}</a>",
+      "created_other": "<b>{{actor}}</b> added {{count}} users, latest <a>{{user}}</a>",
+      "password_changed": "<b>{{actor}}</b> changed your password",
+      "welcome": "Welcome to <b>{{tenant}}</b>"
+    }
+  },
+  "unknown": "You have a new notification",
+  "system": "System"
+}

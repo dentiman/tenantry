@@ -5,6 +5,7 @@ import { PrismaModule, SlugTenantResolver, TenancyModule } from '@saas-skeleton/
 import {
   ActivitiesModule as SharedActivitiesModule,
   MessagingModule,
+  NotificationsModule as SharedNotificationsModule,
   StorageModule,
 } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
@@ -12,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { loggerConfig } from './common/logger';
 
@@ -30,10 +32,12 @@ import { loggerConfig } from './common/logger';
     MessagingModule.forProducer(),
     StorageModule,
     SharedActivitiesModule,
+    SharedNotificationsModule,
     AuthModule,
     UsersModule,
     FilesModule,
     ActivitiesModule,
+    NotificationsModule,
     RealtimeModule,
   ],
   controllers: [HealthController],
