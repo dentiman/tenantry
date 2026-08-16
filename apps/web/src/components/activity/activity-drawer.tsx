@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Drawer, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { useActivitiesFindAll } from '../../api/generated/api';
@@ -28,35 +28,37 @@ export function ActivityDrawer({ entityType, entityId, subtitle, onClose }: Acti
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [entries, setEntries] = useState<Activity[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  // Гарантія «мержимо кожну сторінку рівно раз» (StrictMode подвоює ефекти)
-  const mergedKeys = useRef<Set<string>>(new Set());
 
   const { data, isFetching, isError } = useActivitiesFindAll(
     { entityType, entityId: entityId ?? '', cursor },
     { query: { enabled: isOpen } },
   );
 
-  // Скидання накопичення при зміні сутності (нове відкриття драйвера)
+  // Скидання накопичення при зміні сутності І при кожному новому відкритті:
+  // компонент живе в дереві постійно (видимість керується isOpen), тому без
+  // isOpen у залежностях повторний перегляд того самого юзера показував би
+  // накопичене з минулого разу — без подій, що сталися між відкриттями
   useEffect(() => {
     setCursor(undefined);
     setEntries([]);
     setNextCursor(null);
-    mergedKeys.current = new Set();
-  }, [entityId, entityType]);
+  }, [entityId, entityType, isOpen]);
 
-  // Мерж сторінки, коли вона приходить (по ключу сутність+курсор — раз на курсор).
-  // data скоупиться queryKey-ем: при зміні сутності/курсора без keepPreviousData
-  // воно undefined до нового фетчу, тому стара сторінка не протікає в новий фід.
+  // Перша сторінка ЗАМІНЮЄ накопичене, наступні — дописуються з дедупом по id.
+  // Заміна принципова: свіжий фетч тієї ж сторінки (refetch, повторне відкриття)
+  // мусить витіснити стару версію, а не бути проігнорованим як «уже змержена».
+  // Дедуп заразом робить ефект ідемпотентним — StrictMode подвоює виклики.
   useEffect(() => {
     if (!data || entityId === null) {
       return;
     }
-    const key = `${entityId}:${cursor ?? ''}`;
-    if (mergedKeys.current.has(key)) {
-      return;
-    }
-    mergedKeys.current.add(key);
-    setEntries((prev) => [...prev, ...data.items]);
+    setEntries((prev) => {
+      if (cursor === undefined) {
+        return data.items;
+      }
+      const seen = new Set(prev.map((entry) => entry.id));
+      return [...prev, ...data.items.filter((entry) => !seen.has(entry.id))];
+    });
     setNextCursor(data.nextCursor);
   }, [data, cursor, entityId]);
 

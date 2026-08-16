@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
 import { SystemPrismaService } from '@saas-skeleton/database';
-import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
+import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
 
 describe('Users API (e2e)', () => {
   let app: INestApplication;
@@ -500,5 +500,173 @@ describe('Users API (e2e)', () => {
       }),
     );
     expect(Array.isArray(response.body.fieldErrors)).toBe(true);
+  });
+
+  describe('password change', () => {
+    it('replaces the password, revokes every refresh session and records the activity', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-pwd-admin`);
+      const target = await createAndLoginTestUser(app, prisma, {
+        email: `pwd-target-${String(Date.now())}@example.com`,
+        password: 'OldPass12345',
+      });
+
+      // Логін вище видав рефреш — саме його зміна пароля мусить відкликати
+      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(1);
+
+      await request(app.getHttpServer())
+        .post(`/api/users/${target.user.id}/password`)
+        .set(headers)
+        .send({ password: 'BrandNewPass123' })
+        .expect(204);
+
+      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(0);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: target.user.email, password: 'OldPass12345' })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: target.user.email, password: 'BrandNewPass123' })
+        .expect(200);
+
+      const feed = await request(app.getHttpServer())
+        .get('/api/activities')
+        .set(headers)
+        .query({ entityType: 'user', entityId: target.user.id, type: 'user.password_changed' })
+        .expect(200);
+
+      expect(feed.body.items).toHaveLength(1);
+      // Актор — адмін, що натиснув, а не цільовий юзер
+      expect(feed.body.items[0]).toEqual(
+        expect.objectContaining({ type: 'user.password_changed', actorType: 'user' }),
+      );
+      // Журнал не має знати ні пароля, ні його хеша
+      expect(JSON.stringify(feed.body.items[0].payload)).not.toContain('BrandNewPass123');
+    });
+
+    it('returns 400 for a password shorter than the contract allows', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-pwd-short-admin`);
+      const user = await prisma.user.create({
+        data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-pwd-short`) },
+      });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/users/${user.id}/password`)
+        .set(headers)
+        .send({ password: 'short' })
+        .expect(400);
+
+      expect(response.body).toEqual(expect.objectContaining({ code: 'VALIDATION_ERROR' }));
+    });
+
+    it('returns 404 for password change on a non-existing user', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-pwd-404-admin`);
+      await request(app.getHttpServer())
+        .post('/api/users/00000000-0000-4000-8000-000000000999/password')
+        .set(headers)
+        .send({ password: 'BrandNewPass123' })
+        .expect(404);
+    });
+  });
+
+  describe('enable / disable', () => {
+    it('disables a user, kills the sessions and blocks the next login', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-disable-admin`);
+      const target = await createAndLoginTestUser(app, prisma, {
+        email: `disable-target-${String(Date.now())}@example.com`,
+        password: 'TargetPass123',
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/api/users/${target.user.id}/status`)
+        .set(headers)
+        .send({ isActive: false })
+        .expect(200);
+
+      expect(response.body).toEqual(expect.objectContaining({ id: target.user.id, isActive: false }));
+      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(0);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: target.user.email, password: 'TargetPass123' })
+        .expect(401);
+
+      const feed = await request(app.getHttpServer())
+        .get('/api/activities')
+        .set(headers)
+        .query({ entityType: 'user', entityId: target.user.id, type: 'user.disabled' })
+        .expect(200);
+      expect(feed.body.items).toHaveLength(1);
+    });
+
+    it('enables a user back and records a separate activity type', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-enable-admin`);
+      const user = await createTestUser(prisma, {
+        email: `enable-target-${String(Date.now())}@example.com`,
+        password: 'TargetPass123',
+        isActive: false,
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/api/users/${user.id}/status`)
+        .set(headers)
+        .send({ isActive: true })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: user.email, password: 'TargetPass123' })
+        .expect(200);
+
+      const feed = await request(app.getHttpServer())
+        .get('/api/activities')
+        .set(headers)
+        .query({ entityType: 'user', entityId: user.id, type: 'user.enabled' })
+        .expect(200);
+      expect(feed.body.items).toHaveLength(1);
+    });
+
+    it('does not record an activity when the status is already the requested one', async () => {
+      const headers = await createAuthHeaders(`${Date.now()}-noop-admin`);
+      const user = await prisma.user.create({
+        data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-noop`) },
+      });
+
+      // Юзер уже активний — повторне вмикання мусить бути no-op БЕЗ запису у фід
+      await request(app.getHttpServer())
+        .patch(`/api/users/${user.id}/status`)
+        .set(headers)
+        .send({ isActive: true })
+        .expect(200);
+
+      const feed = await request(app.getHttpServer())
+        .get('/api/activities')
+        .set(headers)
+        .query({ entityType: 'user', entityId: user.id })
+        .expect(200);
+      expect(feed.body.items).toHaveLength(0);
+    });
+
+    it('refuses to change the status of the caller themselves', async () => {
+      const actor = await createAndLoginTestUser(app, prisma, {
+        email: `self-status-${String(Date.now())}@example.com`,
+        password: 'SelfPass12345',
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/api/users/${actor.user.id}/status`)
+        .set({ Authorization: `Bearer ${actor.tokens.accessToken}` })
+        .send({ isActive: false })
+        .expect(400);
+
+      expect(response.body.fieldErrors).toEqual([
+        expect.objectContaining({ field: 'isActive', code: 'self_status_change' }),
+      ]);
+      // Прапорець мусить лишитись недоторканим
+      const unchanged = await prisma.user.findUnique({ where: { id: actor.user.id } });
+      expect(unchanged?.isActive).toBe(true);
+    });
   });
 });

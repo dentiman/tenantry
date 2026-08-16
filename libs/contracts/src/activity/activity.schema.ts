@@ -20,7 +20,17 @@ export const ActivityLinkRoleSchema = z.enum(['subject', 'target', 'source', 'co
 export type ActivityLinkRole = z.infer<typeof ActivityLinkRoleSchema>;
 
 /** Закритий перелік типів — єдине місце додавання нового типу події */
-export const ACTIVITY_TYPES = ['user.created', 'email.sent'] as const;
+export const ACTIVITY_TYPES = [
+  'user.created',
+  // Зміна пароля і вмикання/вимикання — три ОКРЕМІ типи, а не один
+  // 'user.updated' із діффом: журнал читають люди, і «хто вимкнув доступ»
+  // мусить фільтруватися одним type, не розбором payload-у.
+  // Пароль у payload не потрапляє НІКОЛИ — ні новий, ні хеш, ні його довжина
+  'user.password_changed',
+  'user.enabled',
+  'user.disabled',
+  'email.sent',
+] as const;
 export const ActivityTypeSchema = z.enum(ACTIVITY_TYPES);
 export type ActivityType = z.infer<typeof ActivityTypeSchema>;
 
@@ -31,6 +41,15 @@ export type ActivityType = z.infer<typeof ActivityTypeSchema>;
 export const ACTIVITY_PAYLOAD_SCHEMAS = {
   'user.created': z.object({
     user: EntityRefSchema, // kind: 'user'
+  }),
+  'user.password_changed': z.object({
+    user: EntityRefSchema,
+  }),
+  'user.enabled': z.object({
+    user: EntityRefSchema,
+  }),
+  'user.disabled': z.object({
+    user: EntityRefSchema,
   }),
   'email.sent': z.object({
     template: z.string(), // 'welcome' — ключ у i18n фронта

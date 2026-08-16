@@ -12,5 +12,8 @@ export type ActivityListResponseDtoOutputItemsItemType =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ActivityListResponseDtoOutputItemsItemType = {
   usercreated: 'user.created',
+  userpassword_changed: 'user.password_changed',
+  userenabled: 'user.enabled',
+  userdisabled: 'user.disabled',
   emailsent: 'email.sent',
 } as const;

@@ -366,6 +366,89 @@
         ]
       }
     },
+    "/api/users/{id}/password": {
+      "post": {
+        "operationId": "usersSetPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUserPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{id}/status": {
+      "patch": {
+        "operationId": "usersSetStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUserStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/files": {
       "post": {
         "operationId": "filesCreate",
@@ -570,6 +653,9 @@
               "type": "string",
               "enum": [
                 "user.created",
+                "user.password_changed",
+                "user.enabled",
+                "user.disabled",
                 "email.sent"
               ]
             }
@@ -1146,6 +1232,30 @@
           }
         }
       },
+      "SetUserPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "SetUserStatusDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isActive"
+        ]
+      },
       "CreateFileUploadDto": {
         "type": "object",
         "properties": {
@@ -1376,6 +1486,9 @@
                   "type": "string",
                   "enum": [
                     "user.created",
+                    "user.password_changed",
+                    "user.enabled",
+                    "user.disabled",
                     "email.sent"
                   ]
                 },

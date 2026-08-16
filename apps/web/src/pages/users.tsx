@@ -1,22 +1,30 @@
 import { useState } from 'react';
-import { Avatar, Chip } from '@heroui/react';
+import { Chip, toast } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { getUsersFindAllQueryKey, useUsersFindAll, useUsersRemove } from '../api/generated/api';
+import {
+  getUsersFindAllQueryKey,
+  useUsersFindAll,
+  useUsersRemove,
+  useUsersSetStatus,
+} from '../api/generated/api';
+import { parseApiError } from '../api/api-error';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { useAuthStore } from '../stores/auth.store';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { CreateUserModal } from '../components/create-user-modal';
+import { ChangePasswordModal } from '../components/change-password-modal';
 import { ActivityDrawer } from '../components/activity/activity-drawer';
 import { PresenceDot } from '../components/presence-dot';
+import { UserIdentity } from '../components/user-identity';
 import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '../lib/format';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
 import type { UsersSearch } from '../router';
-import { createDataGrid } from '../components/data-grid';
+import { CellSwitch, createDataGrid } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
 
 // Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
@@ -47,6 +55,8 @@ export function UsersPage() {
   const [avatarUser, setAvatarUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
   // Юзер, чий фід активностей відкрито в драйвері; null — драйвер закрито
   const [activityUser, setActivityUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
+  // Юзер, якому міняємо пароль; null — модалка закрита
+  const [passwordUser, setPasswordUser] = useState<UserListResponseDtoOutputItemsItem | null>(null);
 
   const invalidateUsers = (): void => {
     void queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
@@ -56,6 +66,21 @@ export function UsersPage() {
     mutation: { onSuccess: invalidateUsers },
   });
 
+  const setStatus = useUsersSetStatus({
+    mutation: {
+      onSuccess: invalidateUsers,
+      // 4xx тут не має «свого» поля у формі (тумблер — не форма), тому єдиний
+      // чесний канал — тост; глобальний onError мовчить на 4xx за політикою
+      onError: (error) => {
+        toast.danger(t('status.changeFailed'), { description: parseApiError(error).message });
+      },
+    },
+  });
+
+  /** Блокуємо саме той тумблер, який зараз летить на сервер, а не всю колонку */
+  const isStatusPendingFor = (id: string): boolean =>
+    setStatus.isPending && setStatus.variables.id === id;
+
   // Тулбар декларується так само, як columns: масив дефініцій
   const filters: DataGridFilterDef<UsersSearch>[] = [
     Grid.filter.search({ ariaLabel: t('searchLabel'), placeholder: t('searchPlaceholder') }),
@@ -64,35 +89,30 @@ export function UsersPage() {
 
   const columns: DataGridColumn<UserListResponseDtoOutputItemsItem>[] = [
     {
-      id: 'avatar',
-      header: t('table.avatar'),
-      cell: (u) => (
-        <span className="relative inline-flex">
-          <Avatar size="sm">
-            {u.avatarUrl && <Avatar.Image alt={u.email} src={u.avatarUrl} />}
-            <Avatar.Fallback>{(u.name ?? u.email).slice(0, 2).toUpperCase()}</Avatar.Fallback>
-          </Avatar>
-          <PresenceDot
-            isOnline={presence.isOnline(u.id)}
-            isUnknown={presence.isUnknown}
-            labels={{ online: t('presence.online'), offline: t('presence.offline') }}
-          />
-        </span>
-      ),
-    },
-    {
-      id: 'email',
-      header: t('table.email'),
+      // Одна колонка ідентичності замість трьох (аватар/email/ім'я): у гріді
+      // це і є та сама сутність, а не три незалежні атрибути. Сортування —
+      // за іменем (те, що читається першим рядком); email лишається в пошуку
+      id: 'name',
+      header: t('table.user'),
       isRowHeader: true,
       sortable: true,
-      className: 'font-medium text-foreground',
-      cell: (u) => u.email,
-    },
-    {
-      id: 'name',
-      header: t('table.name'),
-      sortable: true,
-      cell: (u) => u.name ?? '—',
+      // max-w потрібен саме на клітинці: у table-layout:auto без нього колонка
+      // розтягнеться під найдовший email і truncate ніколи не спрацює
+      className: 'max-w-[18rem]',
+      cell: (u) => (
+        <UserIdentity
+          email={u.email}
+          name={u.name}
+          avatarUrl={u.avatarUrl}
+          badge={
+            <PresenceDot
+              isOnline={presence.isOnline(u.id)}
+              isUnknown={presence.isUnknown}
+              labels={{ online: t('presence.online'), offline: t('presence.offline') }}
+            />
+          }
+        />
+      ),
     },
     {
       id: 'phone',
@@ -123,9 +143,16 @@ export function UsersPage() {
       header: t('table.active'),
       sortable: true,
       cell: (u) => (
-        <Chip size="sm" color={u.isActive ? 'success' : 'danger'}>
-          {u.isActive ? t('status.active') : t('status.inactive')}
-        </Chip>
+        <CellSwitch
+          label={u.isActive ? t('status.active') : t('status.inactive')}
+          isSelected={u.isActive}
+          // Себе вимкнути не можна (сервер відхилив би так само — тут лише UX);
+          // під час запиту блокуємо ТІЛЬКИ той рядок, який перемикають
+          isDisabled={u.id === currentUser?.id || isStatusPendingFor(u.id)}
+          onChange={(isActive) => {
+            setStatus.mutate({ id: u.id, data: { isActive } });
+          }}
+        />
       ),
     },
     {
@@ -137,6 +164,50 @@ export function UsersPage() {
   ];
 
   const rowActions: DataGridRowAction<UserListResponseDtoOutputItemsItem>[] = [
+    {
+      id: 'password',
+      label: t('password.action'),
+      onAction: (u) => {
+        setPasswordUser(u);
+      },
+    },
+    // Enable і Disable — два пункти з isVisible, а не один із динамічним label:
+    // у меню видно рівно ту дію, яку рядок реально допускає
+    {
+      id: 'enable',
+      label: t('status.enableAction'),
+      isVisible: (u) => !u.isActive,
+      isDisabled: (u) => u.id === currentUser?.id,
+      onAction: (u) => {
+        setStatus.mutate({ id: u.id, data: { isActive: true } });
+      },
+    },
+    {
+      id: 'disable',
+      label: t('status.disableAction'),
+      isVisible: (u) => u.isActive,
+      isDisabled: (u) => u.id === currentUser?.id,
+      onAction: (u) => {
+        setStatus.mutate({ id: u.id, data: { isActive: false } });
+      },
+      // Підтвердження саме тут, а не на тумблері: у меню дія називається словом
+      // і читається як рішення, тоді як тумблер — швидкий перемикач
+      confirm: {
+        heading: t('status.disableHeading'),
+        body: (u) => (
+          <p>
+            <Trans
+              t={t}
+              i18nKey="status.disableBody"
+              values={{ email: u.email }}
+              components={{ strong: <strong /> }}
+            />
+          </p>
+        ),
+        confirmLabel: t('status.disableConfirm'),
+        cancelLabel: t('status.disableCancel'),
+      },
+    },
     {
       id: 'activity',
       label: t('activity.action'),
@@ -199,6 +270,13 @@ export function UsersPage() {
         columns={columns}
         rowActions={rowActions}
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
+      />
+
+      <ChangePasswordModal
+        user={passwordUser}
+        onClose={() => {
+          setPasswordUser(null);
+        }}
       />
 
       <ChangeAvatarModal

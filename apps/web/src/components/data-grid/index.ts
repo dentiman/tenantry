@@ -1,6 +1,7 @@
 export { createDataGrid } from './create-data-grid';
 export { DataGrid } from './data-grid';
 export { DataGridFilters, defineFilters } from './filters';
+export { CellSwitch } from './cell-switch';
 export { useDataGridFilters } from './use-data-grid-filters';
 export { useDataGridSelection } from './use-data-grid-selection';
 export { toSortDescriptor, fromSortDescriptor } from './sort';

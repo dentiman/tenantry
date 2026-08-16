@@ -1,8 +1,9 @@
-import { Avatar, Dropdown } from '@heroui/react';
+import { Dropdown } from '@heroui/react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
 import { ThemeSwitcher } from './theme-switcher';
+import { UserIdentity } from './user-identity';
 
 const navLinkClass =
   'block rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-background-secondary hover:text-foreground';
@@ -20,8 +21,6 @@ export function AppLayout() {
     clearSession();
     void navigate({ to: '/login' });
   };
-
-  const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase();
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -50,10 +49,14 @@ export function AppLayout() {
               aria-label={t('accountMenu')}
               className="flex cursor-pointer items-center gap-2 rounded-full"
             >
-              <Avatar size="sm">
-                <Avatar.Fallback>{initial}</Avatar.Fallback>
-              </Avatar>
-              <span className="text-sm text-muted">{user?.email}</span>
+              <UserIdentity
+                email={user?.email ?? ''}
+                name={user?.name}
+                avatarUrl={user?.avatarUrl}
+                // На вузьких екранах лишається сам аватар — підписи ховаються,
+                // а не тиснуть хедер (той самий компонент, інший брейкпоінт)
+                textClassName="hidden text-start sm:flex"
+              />
             </Dropdown.Trigger>
             <Dropdown.Popover placement="bottom end">
               <Dropdown.Menu

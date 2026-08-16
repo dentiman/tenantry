@@ -37,6 +37,8 @@ import type {
   MeResponseDtoOutput,
   PresenceSnapshotDtoOutput,
   RefreshDto,
+  SetUserPasswordDto,
+  SetUserStatusDto,
   UpdateUserDto,
   UserListResponseDtoOutput,
   UserResponseDtoOutput,
@@ -788,6 +790,160 @@ export const useUsersRemove = <TError = unknown, TContext = unknown>(
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof usersRemove>>, TError, { id: string }, TContext> => {
   const mutationOptions = getUsersRemoveMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const usersSetPassword = (
+  id: string,
+  setUserPasswordDto: SetUserPasswordDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/users/${id}/password`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: setUserPasswordDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getUsersSetPasswordMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof usersSetPassword>>,
+    TError,
+    { id: string; data: SetUserPasswordDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof usersSetPassword>>,
+  TError,
+  { id: string; data: SetUserPasswordDto },
+  TContext
+> => {
+  const mutationKey = ['usersSetPassword'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof usersSetPassword>>,
+    { id: string; data: SetUserPasswordDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return usersSetPassword(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UsersSetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof usersSetPassword>>
+>;
+export type UsersSetPasswordMutationBody = SetUserPasswordDto;
+export type UsersSetPasswordMutationError = unknown;
+
+export const useUsersSetPassword = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof usersSetPassword>>,
+      TError,
+      { id: string; data: SetUserPasswordDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof usersSetPassword>>,
+  TError,
+  { id: string; data: SetUserPasswordDto },
+  TContext
+> => {
+  const mutationOptions = getUsersSetPasswordMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const usersSetStatus = (
+  id: string,
+  setUserStatusDto: SetUserStatusDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<UserResponseDtoOutput>(
+    {
+      url: `/api/users/${id}/status`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: setUserStatusDto,
+    },
+    options,
+  );
+};
+
+export const getUsersSetStatusMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof usersSetStatus>>,
+    TError,
+    { id: string; data: SetUserStatusDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof usersSetStatus>>,
+  TError,
+  { id: string; data: SetUserStatusDto },
+  TContext
+> => {
+  const mutationKey = ['usersSetStatus'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof usersSetStatus>>,
+    { id: string; data: SetUserStatusDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return usersSetStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UsersSetStatusMutationResult = NonNullable<Awaited<ReturnType<typeof usersSetStatus>>>;
+export type UsersSetStatusMutationBody = SetUserStatusDto;
+export type UsersSetStatusMutationError = unknown;
+
+export const useUsersSetStatus = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof usersSetStatus>>,
+      TError,
+      { id: string; data: SetUserStatusDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof usersSetStatus>>,
+  TError,
+  { id: string; data: SetUserStatusDto },
+  TContext
+> => {
+  const mutationOptions = getUsersSetStatusMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

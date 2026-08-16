@@ -5,6 +5,9 @@ export {
   UserQuerySchema,
   UserResponseSchema,
   UserListResponseSchema,
+  PasswordSchema,
+  SetUserPasswordSchema,
+  SetUserStatusSchema,
 } from './user.schema';
 export type {
   User,
@@ -13,4 +16,6 @@ export type {
   UserQuery,
   UserResponse,
   UserListResponse,
+  SetUserPassword,
+  SetUserStatus,
 } from './user.types';

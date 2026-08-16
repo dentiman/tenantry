@@ -22,6 +22,8 @@ import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.de
 import { UsersService, type UserWithAvatar } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { SetUserPasswordDto } from './dto/set-user-password.dto';
+import { SetUserStatusDto } from './dto/set-user-status.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto';
 import { toUserResponse } from './users.mapper';
@@ -67,6 +69,34 @@ export class UsersController {
   @ApiOkResponse({ type: UserResponseDto.Output })
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<UserResponse> {
     const user = await this.usersService.update(id, dto);
+    return this.toResponse(user);
+  }
+
+  /**
+   * Окремий ресурс, а не поле в PATCH: пароль не читається назад і не мапиться
+   * у відповідь — 204 без тіла (і без юзера в ньому, щоб не спокушати клієнта
+   * підтверджувати зміну пароля з відповіді)
+   */
+  @Post(':id/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  async setPassword(
+    @Param('id') id: string,
+    @Body() dto: SetUserPasswordDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<void> {
+    await this.usersService.setPassword(id, dto.password, actor);
+  }
+
+  /** Повертає юзера — грід перемальовує рядок із відповіді, без зайвого GET */
+  @Patch(':id/status')
+  @ApiOkResponse({ type: UserResponseDto.Output })
+  async setStatus(
+    @Param('id') id: string,
+    @Body() dto: SetUserStatusDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<UserResponse> {
+    const user = await this.usersService.setStatus(id, dto.isActive, actor);
     return this.toResponse(user);
   }
 

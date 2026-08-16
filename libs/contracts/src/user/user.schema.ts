@@ -30,6 +30,9 @@ export const UserSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 
+/** Межі пароля — одне місце на всі флоу (create, зміна пароля адміном) */
+export const PasswordSchema = z.string().min(8).max(128);
+
 export const CreateUserSchema = z.object({
   // Нормалізація перед валідацією: у Zod 4 перевірка формату йде до transform-ів
   email: z.string().trim().toLowerCase().pipe(z.email()),
@@ -43,7 +46,22 @@ export const CreateUserSchema = z.object({
   phone: PhoneNumberSchema.nullable().optional(),
   phoneCountry: CountryCodeSchema.nullable().optional(),
   // Рішення користувача: адмін завжди задає початковий пароль (межі — як у register)
-  password: z.string().min(8).max(128),
+  password: PasswordSchema,
+});
+
+/**
+ * Зміна пароля адміном — окремий security-флоу, свідомо НЕ через users PATCH.
+ * Підтвердження пароля тут НЕМАЄ: це UX-перевірка форми (друкарська помилка),
+ * серверу другий екземпляр того самого рядка не дає нічого — фронт валідує
+ * збіг локально своєю схемою поверх цієї.
+ */
+export const SetUserPasswordSchema = z.object({
+  password: PasswordSchema,
+});
+
+/** Увімкнення/вимкнення доступу юзера; окремо від PATCH — бо це подія, а не редагування атрибута */
+export const SetUserStatusSchema = z.object({
+  isActive: z.boolean(),
 });
 
 // Зміна пароля — окремий security-флоу, не через users PATCH

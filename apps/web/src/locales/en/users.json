@@ -8,9 +8,7 @@
   },
   "table": {
     "ariaLabel": "Users",
-    "avatar": "Avatar",
-    "email": "Email",
-    "name": "Name",
+    "user": "User",
     "phone": "Phone",
     "role": "Role",
     "active": "Active",
@@ -19,7 +17,25 @@
   },
   "status": {
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "enableAction": "Enable access",
+    "disableAction": "Disable access",
+    "disableHeading": "Disable access?",
+    "disableBody": "<strong>{{email}}</strong> will not be able to sign in, and all their sessions will be signed out.",
+    "disableConfirm": "Disable",
+    "disableCancel": "Cancel",
+    "changeFailed": "Could not change the status"
+  },
+  "password": {
+    "action": "Change password",
+    "heading": "Change password",
+    "description": "The user will be signed out of all sessions and will need the new password to sign in again.",
+    "new": "New password",
+    "confirm": "Confirm password",
+    "mismatch": "Passwords do not match",
+    "cancel": "Cancel",
+    "submit": "Change password",
+    "submitting": "Saving…"
   },
   "roles": {
     "USER": "User",

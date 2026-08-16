@@ -51,6 +51,8 @@ export * from './queueStatsResponseDtoOutput';
 export * from './queueStatsResponseDtoOutputQueuesItem';
 export * from './refreshDto';
 export * from './registerDto';
+export * from './setUserPasswordDto';
+export * from './setUserStatusDto';
 export * from './updateUserDto';
 export * from './updateUserDtoLocale';
 export * from './updateUserDtoRole';

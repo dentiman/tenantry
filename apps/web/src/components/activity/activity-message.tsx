@@ -5,7 +5,13 @@ type Activity = ActivityListResponseDtoOutputItemsItem;
 
 // Типи, які фронт вміє рендерити явно; решта → generic-ключ 'unknown' (фронт
 // може бути старіший за бекенд — фід не падає на невідомому типі)
-const KNOWN_TYPES = ['user.created', 'email.sent'] as const;
+const KNOWN_TYPES = [
+  'user.created',
+  'user.password_changed',
+  'user.enabled',
+  'user.disabled',
+  'email.sent',
+] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
 function isKnown(type: string): type is KnownType {
@@ -39,14 +45,17 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
     return <>{t('unknown', { type: activity.type })}</>;
   }
 
+  // Усі user.*-події мають однакову форму «хто зробив + над ким»: actorLabel —
+  // снапшот того, хто натиснув (реальна людина доїжджає навіть у подіях, які
+  // дописує worker), fallback — система, коли актора-людини не було
   const values =
-    activity.type === 'user.created'
-      ? { actor: activity.actorLabel ?? '', user: refLabel(payload, 'user') }
-      : {
+    activity.type === 'email.sent'
+      ? {
           template: strField(payload, 'template'),
           recipient: refLabel(payload, 'recipient'),
           email: strField(payload, 'email'),
-        };
+        }
+      : { actor: activity.actorLabel ?? t('system'), user: refLabel(payload, 'user') };
 
   return (
     <Trans

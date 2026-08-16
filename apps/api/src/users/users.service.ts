@@ -169,6 +169,88 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Зміна пароля адміном — окремий флоу, не PATCH: разом із хешем ОБОВ'ЯЗКОВО
+   * відкликаються всі refresh-сесії юзера. Інакше зміна пароля не витісняє того,
+   * хто вже сидить у викраденій сесії, — тобто не робить того, заради чого її роблять.
+   * Access-токени (15m) лишаються дійсними до закінчення — це свідома межа
+   * stateless-JWT, миттєвий kill-switch — це disable.
+   */
+  async setPassword(id: string, password: string, actor: JwtPayload): Promise<void> {
+    this.logger.log(`Changing password for user: ${id}`);
+    const user = await this.findOne(id);
+
+    // argon2 рахуємо ДО транзакції — це ~100мс CPU, тримати на них відкриту
+    // транзакцію (і рядок під блокуванням) немає причин
+    const passwordHash = await argon2.hash(password);
+
+    await this.tenantTx.withTenantTx(async (tx) => {
+      await tx.user.update({ where: { id }, data: { passwordHash } });
+      const revoked = await tx.refreshToken.deleteMany({ where: { userId: id } });
+
+      await this.activities.record(tx, {
+        type: 'user.password_changed',
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        // Ні пароля, ні хеша, ні довжини — у журналі лише факт і його учасники
+        payload: { user: { kind: 'user', id: user.id, label: user.name ?? user.email } },
+        links: [{ entityType: 'user', entityId: user.id, role: 'subject' }],
+      });
+
+      this.logger.log(
+        `Password changed for ${user.email} (ID: ${id}); revoked ${String(revoked.count)} refresh session(s)`,
+      );
+    });
+  }
+
+  /**
+   * Вмикання/вимикання доступу. Повторний виклик із тим самим значенням — no-op
+   * БЕЗ запису в журнал: активність — це факт зміни, а не факт натискання тумблера
+   * (інакше подвійний клік у гріді засмічував би фід).
+   */
+  async setStatus(id: string, isActive: boolean, actor: JwtPayload): Promise<UserWithAvatar> {
+    // Замкнути себе не можна навіть в обхід UI: адмін, що вимкнув власний доступ,
+    // не має ким його повернути (у тенанті може не бути другого адміна)
+    if (id === actor.sub) {
+      throw new BadRequestException({
+        message: 'You cannot change the status of your own account',
+        fieldErrors: [
+          { field: 'isActive', message: 'You cannot disable yourself', code: 'self_status_change' },
+        ],
+      });
+    }
+
+    const user = await this.findOne(id);
+    if (user.isActive === isActive) {
+      this.logger.debug(`User ${id} already ${isActive ? 'enabled' : 'disabled'} - no-op`);
+      return user;
+    }
+
+    return this.tenantTx.withTenantTx(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { isActive },
+        include: { avatarFile: true },
+      });
+
+      // Вимкнення = kill-switch: сесії йдуть разом із доступом. /auth/refresh і так
+      // перевіряє isActive, але лишати живі рядки токенів після відкликання доступу
+      // означало б, що повернення прапорця тихо воскресить старі сесії
+      if (!isActive) {
+        await tx.refreshToken.deleteMany({ where: { userId: id } });
+      }
+
+      await this.activities.record(tx, {
+        type: isActive ? 'user.enabled' : 'user.disabled',
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: { user: { kind: 'user', id: updated.id, label: updated.name ?? updated.email } },
+        links: [{ entityType: 'user', entityId: updated.id, role: 'subject' }],
+      });
+
+      this.logger.log(`User ${updated.email} (ID: ${id}) ${isActive ? 'enabled' : 'disabled'}`);
+      return updated;
+    });
+  }
+
   /** Аватаром може стати лише підтверджений (READY) файл-зображення */
   private async assertUsableAvatar(fileId: string): Promise<void> {
     const file = await this.prisma.file.findUnique({ where: { id: fileId } });

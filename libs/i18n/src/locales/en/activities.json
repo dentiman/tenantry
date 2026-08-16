@@ -1,11 +1,15 @@
 {
   "title": "Activity",
   "user": {
-    "created": "<b>{{actor}}</b> created user <b>{{user}}</b>"
+    "created": "<b>{{actor}}</b> created user <b>{{user}}</b>",
+    "password_changed": "<b>{{actor}}</b> changed the password of <b>{{user}}</b>",
+    "enabled": "<b>{{actor}}</b> enabled access for <b>{{user}}</b>",
+    "disabled": "<b>{{actor}}</b> disabled access for <b>{{user}}</b>"
   },
   "email": {
     "sent": "System sent \"{{template}}\" email to <b>{{recipient}}</b> ({{email}})"
   },
+  "system": "System",
   "unknown": "Activity: {{type}}",
   "empty": "No activity yet",
   "loading": "Loading activity",
