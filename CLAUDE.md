@@ -149,6 +149,10 @@ event-driven шаром, зафіксовані рішення, що лишил�
 (механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
 + `docs/realtime-questions.md` (чек-лист розуміння),
 `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
+`docs/frontend-ui-known-issues.md` (журнал проблем UI-бібліотеки і обходів — щоб обхід був
+один і названий, а не костиль на кожному місці використання; UI-1: HeroUI v3.2.2
+`Switch`/`Checkbox` не перемикаються — відтворюється і поза таблицею, і на сирому
+react-aria-components, обхід живе у `CellSwitch`/`SelectionCheckbox`),
 `README.md` (quickstart).
 
 ## Команди
