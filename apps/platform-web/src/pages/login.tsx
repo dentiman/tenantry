@@ -5,10 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { PlatformLoginSchema, type PlatformLogin } from '@saas-skeleton/contracts/platform';
 import { usePlatformAuthLogin } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
-import { applyServerError, FormPasswordField, FormTextField } from '../components/form';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FieldGroup } from '@/components/ui/field';
+import {
+  applyServerError,
+  FormPasswordField,
+  FormTextField,
+} from '@saas-skeleton/ui/components/form';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
+import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 
 export function LoginPage() {
   const { t } = useTranslation('auth');

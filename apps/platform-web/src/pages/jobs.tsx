@@ -5,10 +5,10 @@ import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
 import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
 import { formatDateTime } from '../lib/format';
 import type { JobsSearch } from '../router';
-import { createDataGrid } from '../components/data-grid';
-import type { DataGridColumn, DataGridFilterDef } from '../components/data-grid';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
+import type { DataGridColumn, DataGridFilterDef } from '@saas-skeleton/ui/components/data-grid';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
 const REFETCH_INTERVAL_MS = 5000;

@@ -5,8 +5,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateTenantSchema, type CreateTenant } from '@saas-skeleton/contracts/platform';
 import { getTenantsFindAllQueryKey, useTenantsCreate } from '../api/generated/api';
-import { applyServerError, FormPasswordField, FormTextField } from './form';
-import { Button } from '@/components/ui/button';
+import {
+  applyServerError,
+  FormPasswordField,
+  FormTextField,
+} from '@saas-skeleton/ui/components/form';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -15,8 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { FieldGroup, FieldLegend, FieldSeparator, FieldSet } from '@/components/ui/field';
+} from '@saas-skeleton/ui/components/ui/dialog';
+import {
+  FieldGroup,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+} from '@saas-skeleton/ui/components/ui/field';
 
 export function CreateTenantModal() {
   const { t } = useTranslation('tenants');

@@ -3,5 +3,11 @@
   "compilerOptions": {
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*", "test/**/*", "../../libs/*/src/**/*"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "../../libs/contracts/src/**/*",
+    "../../libs/database/src/**/*",
+    "../../libs/shared/src/**/*"
+  ]
 }

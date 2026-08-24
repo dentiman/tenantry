@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-nova",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@saas-skeleton/ui/components",
+    "utils": "@saas-skeleton/ui/lib/utils",
+    "ui": "@saas-skeleton/ui/components/ui",
+    "lib": "@saas-skeleton/ui/lib",
+    "hooks": "@saas-skeleton/ui/hooks"
+  },
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {
+    "@reui": "https://reui.io/r/{style}/{name}.json"
+  }
+}

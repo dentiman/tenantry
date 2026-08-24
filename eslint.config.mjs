@@ -49,7 +49,11 @@ export default tseslint.config(
   },
   {
     // React-код: явні типи повернення для компонентів — зайвий шум
-    files: ['apps/web/**/*.{ts,tsx}', 'apps/platform-web/**/*.{ts,tsx}'],
+    files: [
+      'apps/web/**/*.{ts,tsx}',
+      'apps/platform-web/**/*.{ts,tsx}',
+      'libs/ui/src/**/*.{ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -59,7 +63,7 @@ export default tseslint.config(
     // Вендорений код реєстру shadcn (`shadcn add` кладе його сюди й ним же оновлює через
     // `--diff`). Правити стиль під наш конфіг = вічні конфлікти з апстрімом, тому гасимо
     // рівно ті правила, які реально стріляють; файли НЕ в ignores — вони наші, ми їх редагуємо
-    files: ['apps/platform-web/src/components/ui/**/*.{ts,tsx}'],
+    files: ['libs/ui/src/components/ui/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',

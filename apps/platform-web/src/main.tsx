@@ -5,7 +5,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
-import { isGlobalApiError, parseApiError } from './api/api-error';
+import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { showApiErrorToast } from './lib/error-toast';
 import './i18n';
 import './index.css';

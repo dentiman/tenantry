@@ -27,7 +27,8 @@
       "@saas-skeleton/i18n": ["libs/i18n/src/index.ts"],
       "@saas-skeleton/i18n/*": ["libs/i18n/src/*"],
       "@saas-skeleton/shared": ["libs/shared/src/index.ts"],
-      "@saas-skeleton/shared/*": ["libs/shared/src/*"]
+      "@saas-skeleton/shared/*": ["libs/shared/src/*"],
+      "@saas-skeleton/ui/*": ["libs/ui/src/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

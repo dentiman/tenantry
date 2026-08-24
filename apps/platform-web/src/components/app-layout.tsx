@@ -1,16 +1,16 @@
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
-import { ThemeSwitcher } from './theme-switcher';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
+import { Avatar, AvatarFallback } from '@saas-skeleton/ui/components/ui/avatar';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@saas-skeleton/ui/components/ui/dropdown-menu';
 
 const navLinkClass =
   'block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';

@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
+    "components": "@saas-skeleton/ui/components",
+    "utils": "@saas-skeleton/ui/lib/utils",
+    "ui": "@saas-skeleton/ui/components/ui",
+    "lib": "@saas-skeleton/ui/lib",
+    "hooks": "@saas-skeleton/ui/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

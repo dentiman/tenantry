@@ -1,5 +1,5 @@
 import { useRouterState } from '@tanstack/react-router';
-import { Toaster } from '@/components/ui/toast';
+import { Toaster } from '@saas-skeleton/ui/components/ui/toast';
 
 const GUEST_PATHS = ['/login'];
 

@@ -20,6 +20,11 @@
       "@saas-skeleton/shared/*": ["../../libs/shared/src/*"]
     }
   },
-  "include": ["src/**/*", "../../libs/*/src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../libs/contracts/src/**/*",
+    "../../libs/database/src/**/*",
+    "../../libs/shared/src/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }

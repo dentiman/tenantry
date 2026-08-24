@@ -21,7 +21,13 @@
       "@saas-skeleton/shared/*": ["../../libs/shared/src/*"]
     }
   },
-  "include": ["src/**/*", "test/**/*", "../../libs/*/src/**/*"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "../../libs/contracts/src/**/*",
+    "../../libs/database/src/**/*",
+    "../../libs/shared/src/**/*"
+  ],
   "exclude": ["node_modules", "dist"],
   // files:true — щоб ts-node (openapi:generate) бачив ambient-декларації з src/types
   "ts-node": { "files": true }

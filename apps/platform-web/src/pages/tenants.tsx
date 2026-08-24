@@ -20,11 +20,11 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
-import { Spinner } from '@/components/ui/spinner';
+} from '@saas-skeleton/ui/components/ui/alert-dialog';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader } from '@saas-skeleton/ui/components/ui/empty';
+import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import {
   Table,
   TableBody,
@@ -32,7 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@saas-skeleton/ui/components/ui/table';
 
 const COLUMN_COUNT = 5;
 
