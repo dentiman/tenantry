@@ -13,7 +13,7 @@ import { getUsersFindAllQueryKey, useUsersUpdate } from '../api/generated/api';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { FileDropzone, useFileUpload } from './file-upload';
-import { UserIdentity } from './user-identity';
+import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 
 interface ChangeAvatarModalProps {
   /** null — модалка закрита (controlled ззовні, відкривається row action-ом гріда) */

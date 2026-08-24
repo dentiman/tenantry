@@ -1,5 +1,6 @@
 {
   "brand": "SaaS Skeleton",
+  "brandSubtitle": "Workspace",
   "nav": {
     "dashboard": "Dashboard",
     "users": "Users"

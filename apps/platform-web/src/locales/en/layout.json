@@ -1,5 +1,6 @@
 {
   "brand": "Platform Console",
+  "brandSubtitle": "Control plane",
   "nav": {
     "tenants": "Tenants",
     "jobs": "Jobs"

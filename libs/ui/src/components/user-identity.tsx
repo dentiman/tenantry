@@ -14,7 +14,7 @@ interface UserIdentityProps {
   avatarUrl?: string | null;
   /** Розміри реєстру: sm 24px, default 32px (стандарт рядка таблиці), lg 40px */
   size?: 'sm' | 'default' | 'lg';
-  /** Оверлей аватара (PresenceDot) — рендериться ВСЕРЕДИНІ Avatar, бо AvatarBadge бере від нього розмір */
+  /** Оверлей аватара (напр. індикатор присутності) — рендериться ВСЕРЕДИНІ Avatar, бо AvatarBadge бере від нього розмір */
   badge?: ReactNode;
   /** Класи кореня (відступи/ширина від споживача) */
   className?: string;
@@ -65,7 +65,12 @@ export function UserIdentity({
   const secondary = displayName ? email : null;
 
   return (
-    <Item size="sm" className={['w-auto gap-3 p-0', className].filter(Boolean).join(' ')}>
+    // flex-nowrap: стоковий Item переносить вміст, і у вузькому контейнері
+    // (згорнутий сайдбар) текст падав би під аватар замість того, щоб обрізатись
+    <Item
+      size="sm"
+      className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
+    >
       {/* Аватар по центру блоку: стоковий ItemMedia притискає медіа до верху і зсуває
           на 2px, бо розрахований на багаторядковий опис — тут рядків рівно два */}
       <ItemMedia className="translate-y-0 self-center">

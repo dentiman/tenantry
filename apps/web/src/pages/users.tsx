@@ -19,7 +19,7 @@ import { CreateUserModal } from '../components/create-user-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { ActivityDrawer } from '../components/activity/activity-drawer';
 import { PresenceDot } from '../components/presence-dot';
-import { UserIdentity } from '../components/user-identity';
+import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '../lib/format';
 import { CountryFlag } from '../components/form/phone/country-flag';

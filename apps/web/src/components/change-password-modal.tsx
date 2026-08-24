@@ -17,7 +17,7 @@ import { SetUserPasswordSchema } from '@saas-skeleton/contracts';
 import { useUsersSetPassword } from '../api/generated/api';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { applyServerError, FormPasswordField } from './form';
-import { UserIdentity } from './user-identity';
+import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 
 interface ChangePasswordModalProps {
   /** null — модалка закрита (controlled ззовні, як ChangeAvatarModal) */

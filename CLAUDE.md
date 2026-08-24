@@ -509,6 +509,11 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
     RHF: `useController` → `Field`+`FieldLabel htmlFor`+`Input id` (`useId()`)+`FieldError`, стан
     через `data-invalid` на `Field` і `aria-invalid` на контролі; `FormSelect` мусить діставати
     `items` (без мапи value→label Base UI малює в тригері сире значення).
+    **Розкладка шела — патерн `sidebar-07` реєстру** (UI-3): бренд-плитка + назва +
+    підзаголовок у `SidebarHeader`, профіль юзера з дропдауном у `SidebarFooter`
+    (`UserIdentity` живе в `libs/ui`), у хедері лише `SidebarTrigger` + дзвінок + тема;
+    `collapsible="icon"`. ReUI лишається джерелом ідей, а не залежністю: їхні блоки платні
+    (401 без `REUI_LICENSE_KEY`), вільні `c-*` — лише приклади на наших же компонентах.
     **Кустарних обгорток над примітивами не заводимо**: медіа-обʼєкт — `Item*`, порожні стани —
     `Empty*`, індикатор на аватарі — `AvatarBadge`, набір фільтрів — `ToggleGroup`, бокова панель —
     `Sheet`, навігація — `Sidebar*`. Якщо примітив є в реєстрі, свій не пишемо
