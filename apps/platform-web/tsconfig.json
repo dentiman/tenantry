@@ -7,7 +7,15 @@
     "types": ["vite/client"],
     "moduleDetection": "force",
     "useDefineForClassFields": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    // shadcn пише імпорти "@/components/ui/...", "@/lib/utils".
+    // УВАГА: paths у наслідуваному конфігу ЗАМІНЮЄТЬСЯ, а не зливається — після цього
+    // @saas-skeleton/* резолвиться через workspace-симлінки в node_modules (exports/main),
+    // як у platform-api і як уже робить Vite. Дзеркало аліаса — vite.config.ts resolve.alias.
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src/**/*", "vite.config.ts", "orval.config.ts"]
 }

@@ -89,6 +89,9 @@
       "@tailwindcss/oxide",
       "unrs-resolver",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "zod": "^4.4.3"
+    }
   }
 }

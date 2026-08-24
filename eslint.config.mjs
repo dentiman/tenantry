@@ -56,6 +56,16 @@ export default tseslint.config(
     },
   },
   {
+    // Вендорений код реєстру shadcn (`shadcn add` кладе його сюди й ним же оновлює через
+    // `--diff`). Правити стиль під наш конфіг = вічні конфлікти з апстрімом, тому гасимо
+    // рівно ті правила, які реально стріляють; файли НЕ в ignores — вони наші, ми їх редагуємо
+    files: ['apps/platform-web/src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/array-type': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+    },
+  },
+  {
     // MT-1 (§6 multi-tenancy-plan.md): голий $transaction обходить tenant-extension —
     // транзакції в доменному коді ТІЛЬКИ через TenantTransactions.withTenantTx
     files: ['apps/api/src/**/*.ts', 'apps/worker/src/**/*.ts'],
