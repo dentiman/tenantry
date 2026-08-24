@@ -27,18 +27,18 @@
 
 ## Зафіксовані рішення
 
-| Питання             | Рішення                                                                                                                                                  |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Модель              | Дві таблиці: `activities` + `activity_links` (поліморфні `entityType+entityId`, як `attachments`). Варіант «лінки масивом у jsonb» відхилено — дорога фільтрація, непрозоро для RLS-міркувань |
-| Текст події         | **Не зберігається.** `type` (закритий enum) + `payload` (параметри зі снапшот-label-ами). Рендер, переклад і формат дат — повністю на фронті              |
-| Актор               | Окремі колонки `actorType/actorId/actorLabel`, НЕ лінк — «хто зробив» є завжди і семантично відрізняється від «кого стосується»; system/cron теж актори   |
-| `actorId` без FK    | Свідомо: активність — снапшот, юзера можуть видалити (users.remove — hard delete), фід мусить лишатись читабельним. `actorLabel` — снапшот на момент події |
-| Мутабельність       | **Append-only**: жодних update/delete через API. Retention-cron — беклог (не «на виріст», а коли з'явиться реальний обсяг)                                |
-| Запис (sync)        | В ту саму транзакцію, що й доменна зміна (`withTenantTx`) — фід ніколи не бреше                                                                            |
-| Запис (async)       | У worker-і через `MessageInboxService.runOnce` **після** side effect-у — активність успадковує гарантію «не гірше, ніж сам ефект»                             |
-| Читання             | `GET /activities` — **курсорна** пагінація (перший курсорний ендпоінт: фід нескінченний, «page 47» безглуздий, offset пливе на вставках)                  |
+| Питання             | Рішення                                                                                                                                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Модель              | Дві таблиці: `activities` + `activity_links` (поліморфні `entityType+entityId`, як `attachments`). Варіант «лінки масивом у jsonb» відхилено — дорога фільтрація, непрозоро для RLS-міркувань                              |
+| Текст події         | **Не зберігається.** `type` (закритий enum) + `payload` (параметри зі снапшот-label-ами). Рендер, переклад і формат дат — повністю на фронті                                                                               |
+| Актор               | Окремі колонки `actorType/actorId/actorLabel`, НЕ лінк — «хто зробив» є завжди і семантично відрізняється від «кого стосується»; system/cron теж актори                                                                    |
+| `actorId` без FK    | Свідомо: активність — снапшот, юзера можуть видалити (users.remove — hard delete), фід мусить лишатись читабельним. `actorLabel` — снапшот на момент події                                                                 |
+| Мутабельність       | **Append-only**: жодних update/delete через API. Retention-cron — беклог (не «на виріст», а коли з'явиться реальний обсяг)                                                                                                 |
+| Запис (sync)        | В ту саму транзакцію, що й доменна зміна (`withTenantTx`) — фід ніколи не бреше                                                                                                                                            |
+| Запис (async)       | У worker-і через `MessageInboxService.runOnce` **після** side effect-у — активність успадковує гарантію «не гірше, ніж сам ефект»                                                                                          |
+| Читання             | `GET /activities` — **курсорна** пагінація (перший курсорний ендпоінт: фід нескінченний, «page 47» безглуздий, offset пливе на вставках)                                                                                   |
 | `role` лінка        | Nullable-колонка з першого дня (бекфілити семантику заднім числом неможливо), заповнюється лише при неоднозначності. Словник: `subject`/`target`/`source`/`context`, валідація — на рівні Zod-схеми типу події, не колонки |
-| Розміщення recorder | `libs/shared/src/activities/` (спільний для api і worker, як messaging) — нова shared-ліба НЕ потрібна, гачок «три місця» не спрацьовує                        |
+| Розміщення recorder | `libs/shared/src/activities/` (спільний для api і worker, як messaging) — нова shared-ліба НЕ потрібна, гачок «три місця» не спрацьовує                                                                                    |
 
 ## Компоненти
 
@@ -147,13 +147,13 @@ CREATE POLICY tenant_isolation ON "activities"
 
 `payload` і `links` — дві проєкції події: payload — для **рендеру тексту**, links —
 для **запитів**. Поки запит один («усе по сутності») — role не потрібна. Вона потрібна,
-коли запити розрізняють *характер* участі:
+коли запити розрізняють _характер_ участі:
 
 - **Та сама сутність двічі** (без role нерозв'язно): `customer.merged` →
   `(customer, A, 'source')` + `(customer, B, 'target')`;
 - **Дія над сутністю vs контекст**: лист контакту по тікету → `(contact, 'target')` +
   `(ticket, 'context')` + `(customer, 'context')` — UI може фільтрувати «тільки дії
-  *над* тікетом»;
+  _над_ тікетом»;
 - **Учасник, не актор**: `ticket.reassigned` → `(ticket, 'subject')` +
   `(user, Іван, 'source')` + `(user, Марія, 'target')`.
 
@@ -183,9 +183,9 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = {
     user: EntityRefSchema, // kind: 'user'
   }),
   'email.sent': z.object({
-    template: z.string(),      // 'welcome' — ключ у i18n фронта
+    template: z.string(), // 'welcome' — ключ у i18n фронта
     recipient: EntityRefSchema,
-    email: z.email(),          // снапшот адреси, на яку реально пішов лист
+    email: z.email(), // снапшот адреси, на яку реально пішов лист
   }),
 } as const satisfies Record<ActivityType, z.ZodType>;
 
@@ -234,7 +234,7 @@ users.service). Сервіс бере `limit + 1` рядків: зайвий є 
 ```ts
 export type ActivityActor =
   | { type: 'user'; id: string; label: string } // label = email/ім'я з auth-контексту
-  | { type: 'system' };                          // worker/cron — актора-людини немає
+  | { type: 'system' }; // worker/cron — актора-людини немає
 
 export interface RecordActivityInput {
   type: ActivityType;
@@ -379,11 +379,11 @@ async handle(payload: WelcomeEmailPayload, context: JobContext): Promise<void> {
 
 **Порядок «runOnce ПІСЛЯ sendMail» — свідомий.** Розклад падінь:
 
-| Падіння                              | Наслідок                                                                 |
-| ------------------------------------ | ------------------------------------------------------------------------ |
-| впав `sendMail`                      | retry pg-boss; активності нуль — **фід не бреше** (не записали те, чого не було) |
-| між `sendMail` і commit-ом inbox     | лист продубльовано (at-least-once, як і сьогодні), активність — **один раз**: другий прохід `runOnce` побачить jobId у processed_jobs і скіпне |
-| запис активності *до* відправки      | ТАК НЕ РОБИТИ: при падінні мейлера фід стверджує, що лист пішов          |
+| Падіння                          | Наслідок                                                                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| впав `sendMail`                  | retry pg-boss; активності нуль — **фід не бреше** (не записали те, чого не було)                                                               |
+| між `sendMail` і commit-ом inbox | лист продубльовано (at-least-once, як і сьогодні), активність — **один раз**: другий прохід `runOnce` побачить jobId у processed_jobs і скіпне |
+| запис активності _до_ відправки  | ТАК НЕ РОБИТИ: при падінні мейлера фід стверджує, що лист пішов                                                                                |
 
 Активність успадковує гарантію «не гірше, ніж сам ефект»: лист — at-least-once,
 запис про нього — exactly-once відносно job-а.
@@ -453,6 +453,9 @@ const rows = await this.prisma.activity.findMany({
 
 Демо-споживач (за зразком ChangeAvatarModal): row action «Activity» на `/users` →
 `ActivityDrawer` → `useActivitiesFindAll` (orval, operationId `activitiesFindAll`).
+Із появою картки юзера (`/users/$userId`) сама стрічка живе в окремому `ActivityFeed`, а
+драйвер лишив собі тільки оболонку: два хости — одна верстка (той самий принцип, що з
+`NotificationCard`).
 Пагінація v1 — кнопка «Load more» з накопиченням items у локальному стані
 (useInfiniteQuery через orval-конфіг — беклог, не тягнути в цей хід).
 
@@ -468,8 +471,7 @@ const rows = await this.prisma.activity.findMany({
 
 `<ActivityMessage activity={a}>`:
 
-- `t(\`activities:${a.type}\`, { actor: a.actorLabel, user: payload.user.label, … })`
-  через `<Trans>` (виділення `<b>` без dangerouslySetInnerHTML);
+- `t(\`activities:${a.type}\`, { actor: a.actorLabel, user: payload.user.label, … })`через`<Trans>`(виділення`<b>` без dangerouslySetInnerHTML);
 - невідомий `type` (фронт старіший за бекенд) → generic-ключ `activities:unknown` —
   фід не падає;
 - дата — `Intl.DateTimeFormat` з `createdAt` (ISO-рядок), **ніколи не інтерполюється

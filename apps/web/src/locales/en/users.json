@@ -77,6 +77,45 @@
     "submitting": "Creating…"
   },
   "presence": {
-    "online": "Online"
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "detail": {
+    "back": "Users",
+    "notFound": "User not found",
+    "notFoundHint": "It may have been deleted, or the link is wrong.",
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity"
+    },
+    "contact": {
+      "title": "Contact",
+      "email": "Email",
+      "phone": "Phone",
+      "empty": "—"
+    },
+    "account": {
+      "title": "Account",
+      "role": "Role",
+      "status": "Status",
+      "locale": "Language"
+    },
+    "meta": {
+      "title": "Record",
+      "created": "Created",
+      "updated": "Last updated",
+      "id": "User ID"
+    },
+    "state": {
+      "title": "State",
+      "presence": "Presence",
+      "presenceUnknown": "Unknown",
+      "memberSince": "Member since"
+    },
+    "avatarCard": {
+      "title": "Avatar",
+      "empty": "No avatar uploaded"
+    },
+    "you": "You"
   }
 }

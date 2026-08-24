@@ -13,6 +13,7 @@ import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
 import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
+import { UserDetailPage } from './pages/user-detail';
 
 const rootRoute = createRootRoute({
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
@@ -85,9 +86,16 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
+/** Сторінка юзера: окремий роут, а не драйвер — на неї можна дати посилання */
+const userDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/users/$userId',
+  component: UserDetailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([dashboardRoute, usersRoute]),
+  appRoute.addChildren([dashboardRoute, usersRoute, userDetailRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

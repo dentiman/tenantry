@@ -271,7 +271,11 @@ apps/worker     NestJS 11 без HTTP (createApplicationContext). Підписн
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 shadcn/ui на Base UI через libs/ui (HeroUI знято в UI-1, 2026-08-24) +
                 next-themes (light/dark/system), react-i18next. Власного components/ui немає;
-                локальним лишилось телефонне поле (libphonenumber-js + country-flag-icons)
+                локальним лишилось телефонне поле (libphonenumber-js + country-flag-icons).
+                Сторінки: Dashboard, Users (грід) і **картка юзера `/users/$userId`** —
+                окремий роут (можна дати посилання), шапка з ідентичністю/статусами/діями +
+                вкладки Overview | Activity + вузька колонка стану. Стрічка подій — спільний
+                `ActivityFeed`: той самий компонент у вкладці й у драйвері зі списку
 apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, проксі на :3002), АЛЕ інша
                 UI-бібліотека: shadcn/ui на Base UI (стиль base-nova, lucide-react) — HeroUI
                 знято 2026-08-23, див. правило 12 і docs/migrate.md. Власного `components/ui/`

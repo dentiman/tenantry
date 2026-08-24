@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
+import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -109,19 +110,26 @@ export function UsersPage() {
       // max-w потрібен саме на клітинці: у table-layout:auto без нього колонка
       // розтягнеться під найдовший email і truncate ніколи не спрацює
       className: 'max-w-[18rem]',
+      // Ідентичність — вхід у картку юзера: рядок таблиці дає перегляд, сторінка — деталі
       cell: (u) => (
-        <UserIdentity
-          email={u.email}
-          name={u.name}
-          avatarUrl={u.avatarUrl}
-          badge={
-            <PresenceDot
-              isOnline={presence.isOnline(u.id)}
-              isUnknown={presence.isUnknown}
-              label={t('presence.online')}
-            />
-          }
-        />
+        <Link
+          to="/users/$userId"
+          params={{ userId: u.id }}
+          className="block rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <UserIdentity
+            email={u.email}
+            name={u.name}
+            avatarUrl={u.avatarUrl}
+            badge={
+              <PresenceDot
+                isOnline={presence.isOnline(u.id)}
+                isUnknown={presence.isUnknown}
+                label={t('presence.online')}
+              />
+            }
+          />
+        </Link>
       ),
     },
     {
