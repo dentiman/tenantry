@@ -594,6 +594,83 @@ shadcn: `aliases.ui` у `components.json` вказує на workspace-пакет
 тостів **не можна** — трансформи стеку рахуються від висоти вікна, і всі значення виходять
 відʼємними. Спершу `resize_window`, потім вимір.
 
-### ⬜ UI-1. Міграція `apps/web`
+### ✅ UI-1. Міграція `apps/web` (2026-08-24)
 
-_(попереду)_
+**Обсяг:** 29 файлів із HeroUI → 0. З них 9 замінено імпортом із `libs/ui` (файли видалені),
+20 переписано, `cell-switch.tsx` видалений разом із костилем, `form-select.tsx` написаний наново
+в пакеті. Плюс до пакета доданo 11 нових примітивів (`sheet switch progress combobox item
+toggle-group tooltip scroll-area skeleton sidebar` + `toggle`, `hooks/use-mobile`).
+
+**Костилі, зняті цим ходом** (реєстр §3.2):
+
+| #   | Було                                                                     | Стало                       | Доказ                                                                 |
+| --- | ------------------------------------------------------------------------ | --------------------------- | --------------------------------------------------------------------- |
+| 1–2 | `SelectionCheckbox` (`inert` + нативний input), `createPortal` у `thead` | штатний `Checkbox`          | приїхало з `libs/ui`                                                  |
+| 3   | `CellSwitch` (`inert` + `input[role=switch]`)                            | `Switch`                    | тумблер у преференсах перемикається з першого кліку (true→false→true) |
+| 4   | `measureAnchor`, `crossOffset`, `--trigger-width`                        | `ComboboxContent anchor`    | попап країн: ширина 388 = ширина поля 388, `leftDiff` 0               |
+| 5   | `role="button"`+`tabIndex`+`onKeyDown` на `<div>` дропзони               | `Empty` + справжня `Button` | —                                                                     |
+| 6   | те саме в картці сповіщення                                              | `Item render={<button/>}`   | картка тоста — `BUTTON`, вкладених кнопок 0                           |
+| 7   | ручний медіа-обʼєкт (`min-w-0`/`truncate`/`title`)                       | `Item*`                     | —                                                                     |
+| 8   | абсолютний `<span>` + `title` для presence                               | `AvatarBadge` + `Tooltip`   | 8×8, `bg-success`, `aria-label="Online"`                              |
+| 9   | порожні стани як `<p class="py-8 text-center">`                          | `Empty*`                    | —                                                                     |
+| 10  | три `Button` із ручним `variant`                                         | `ToggleGroup`               | `aria-pressed` на активному фільтрі                                   |
+| 11  | рукописний `<aside class="w-60">`                                        | `Sidebar*`                  | згортання `expanded↔collapsed`, стан у cookie                         |
+| 12  | `bg-transparent! p-0! shadow-none!` на тості                             | власна композиція `Toast`   | `!` у розмітці 0                                                      |
+| 13  | інлайн-SVG у 5 файлах                                                    | `lucide-react`              | —                                                                     |
+| 14  | `border-e-0`/`pe-1`/`ps-1` у полі телефону                               | `InputGroupAddon`           | —                                                                     |
+
+**Правки плану, зроблені на місці:**
+
+1. **Порядок 5.B.3 і 5.B.4 помінявся:** свіп токенів робився ПІСЛЯ переключення на пакет — інакше
+   довелося б чистити 9 файлів, які за годину видаляються.
+2. **`FormSelect` потребує `items`.** Без цієї мапи Base UI малює в тригері СИРЕ значення (`USER`),
+   а не підпис (`User`): підпис він не читає з `children` елемента списку. Знайдено живим прогоном.
+3. **Два випадки невалідного HTML, породжені самою міграцією** (React пише їх у консоль):
+   `<p>` у `<p>` — `AlertDialogDescription` уже є абзацом, тож `body` рядкової дії в `users.tsx`
+   більше не обгортає `<Trans>` у власний `<p>`; `<button>` у `<button>` — картка сповіщення в
+   `plain`-режимі сама є кнопкою, тож хрестик і меню винесені в обгортку ПОРУЧ із `Item`.
+4. **ESLint:** вендорені `sidebar`/`toggle-group`/`use-mobile` додали ще 4 правила апстріму
+   (`consistent-type-definitions`, `restrict-template-expressions`, `no-confusing-void-expression`,
+   `prefer-nullish-coalescing`) — вимкнені в тому ж блоці, `hooks/**` додані до його `files`.
+5. **5.B.6 виконано:** `platform-web` переведений на той самий `Sidebar` — інакше «одна платформа
+   в одному стилі» не виконувалась би.
+
+**Бандл `apps/web`:** CSS 307.4 KB, з них **189.9 KB (61%) — це `country-flag-icons`**
+(257 прапорів inline-SVG, до міграції не стосується); власне UI-шар — 117.5 KB проти 77.5 KB у
+`platform-web`, різниця очікувана: сайдбар, sheet, combobox, item, toggle-group, tooltip,
+scroll-area, progress, switch. JS 1150.9 KB.
+
+**Живий прогін** (docker + api :3001 + worker + web :5173, вимірювання в DOM):
+
+| Критерій                   | Результат                                                                                                                                                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                   | ✅ порожній сабміт → 2 `data-invalid` + 2 `aria-invalid`; перемикач пароля `password→text`, `aria-label` Show→Hide                                                                                                          |
+| Каркас                     | ✅ `Sidebar` з іконками, активний пункт `data-active`, `SidebarTrigger` згортає (`expanded↔collapsed`, стан у cookie)                                                                                                       |
+| Грід `/users`              | ✅ 20 рядків, сортування (`aria-sort` + `?sortBy=role&sortOrder=asc`), пошук (`?search=`), пагінація (`?page=2`), `items per page` (`?limit=10` → 10 рядків)                                                                |
+| **Вибір рядків**           | ✅ рядок → `aria-checked=true` + «1 selected», шапка → `mixed`, клік по шапці → 20, Clear скидає                                                                                                                            |
+| Рядкові дії                | ✅ 5 пунктів; `Change password` і `View activity` відкривають Dialog/Sheet; `Disable access` → `AlertDialog` із `AlertDialogMedia`, `<strong>` у тексті і кнопками Cancel/Disable                                           |
+| Присутність                | ✅ `AvatarBadge` 8×8 `bg-success`, `aria-label="Online"`, `role="img"`; API-снапшот збігається                                                                                                                              |
+| Телефонне поле             | ✅ попап країни = ширина поля (388/388, зсув 0), пошук «germ» → 1 елемент, «zzzzzz» → `ComboboxEmpty` видимий, вибір міняє тригер на `+49`; форматування при вводі, вставка `+380671234567` → `67 123 4567` і країна `+380` |
+| `FormSelect`               | ✅ тригер показує `User`, а не `USER` (після правки §2)                                                                                                                                                                     |
+| **Живі сповіщення**        | ✅ інший адмін створює юзера → тост зверху праворуч (top 72 = 16 + висота хедера, ширина 380) із текстом «… added user Live Toast», бейдж дзвінка «1»; повторна подія показала колапс («added 2 users, la…»)                |
+| Центр сповіщень            | ✅ `Sheet`, `ToggleGroup` (Unread/All/Archived, `aria-pressed` на All), 13 карток, футер «Mark all as read»                                                                                                                 |
+| Преференси                 | ✅ 2 тумблери (`user.created`, `user.welcome`) + 1 «Always» (немутабельний тип), перемикання зберігається                                                                                                                   |
+| Тости помилок              | ✅ окремий регіон **знизу праворуч** (`bottomGap` 16), регіон сповіщень — зверху (`top` 72); обидва viewport-и співіснують                                                                                                  |
+| Тема                       | ✅ `class="light"`, `data-theme` немає                                                                                                                                                                                      |
+| `platform-web` після 5.B.6 | ✅ той самий `Sidebar` («Tenants*», «Jobs»), список тенантів на місці                                                                                                                                                       |
+
+**Дві граблі перевірки, які варто знати наперед** (додаток до нотатки UI-0 про viewport `0×0`):
+
+- **У прихованій вкладці не програються CSS-анімації.** Base UI знімає попап із DOM після
+  `animationend`, тож закритий `AlertDialog` лишався у дереві з `data-closed` + `data-ending-style`.
+  Це виглядало як «Cancel не працює», хоча стан перемикався коректно (повторне відкриття міняло
+  `data-closed` → `data-open` на ТОМУ САМОМУ елементі, `getAnimations()` = 0). Судити треба за
+  `data-open`/`data-closed`, а не за наявністю вузла.
+- **Буфер `read_console_messages` кумулятивний** — `console.clear()` і перезавантаження його не
+  чистять, тож «чистоту консолі після правки» довелося доводити структурою DOM
+  (`alert-dialog-description` містить лише `<strong>`; у картці тоста 0 вкладених кнопок).
+
+Ще одна дрібниця: на початку прогону здавалось, що підтвердження рядкової дії взагалі не
+відкривається. Причина — застарілий модульний граф dev-сервера, піднятого посеред міграції;
+після рестарту все працює, а окремий тест довів, що HMR зміни в `libs/ui` підхоплює (правка
+`console.log` → нове значення без рестарту).

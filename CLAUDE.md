@@ -39,7 +39,7 @@ tx перший обовʼязковий аргумент, tenant_id із DB-def
 Sync-запис: `UsersService.create` переїхав у `withTenantTx` (юзер+активність+fan-out job атомарно; try/catch
 «черга некритична» прибрано; контролер передає `@CurrentUser()`). Async-запис: `WelcomeEmailHandler` пише
 `email.sent` через `inbox.runOnce` ПІСЛЯ `sendMail` (exactly-once відносно job-а, актор=система). Web: `ActivityDrawer`
-(HeroUI `Drawer`, «Load more» з накопиченням у стані) + `ActivityMessage` (`<Trans>`, generic-fallback на невідомий
+(`Sheet`, «Load more» з накопиченням у стані) + `ActivityMessage` (`<Trans>`, generic-fallback на невідомий
 тип) + row action «View activity» на `/users`; namespace `activities` у `libs/i18n` (спільний фронтовий — ключі
 вкладені, бо `.` у типах = i18next-роздільник). Граблі: (1) **не мішати скалярний `tenantId` з вкладеним
 `links.create`** у прямому Prisma-сіді тестів — nested write → checked input, скаляр недоступний (два unchecked-виклики);
@@ -137,72 +137,73 @@ Socket.IO `Server`** без `listen()` на тому самому Valkey-ада�
 не заводили); імена room-ів і ключів стріму переїхали в `libs/contracts` — їх формують
 два процеси. Адресацію («кому») робить домен через `recipientsByRole`, а «не собі» і
 преференси — recorder (властивості інбокса, не домену). UI: дзвінок із бейджем + Drawer
-+ **тост у стилі macOS**. Тост і рядок у центрі — **один компонент** `NotificationCard`
-(⋯ і × у правому верхньому куті; × у тості ховає, × у центрі архівує; `role="button"`
-лише в тості — у центрі всередині є лінк на сутність). Черга тостів окрема, **зверху
-справа під дзвінком**, зміщена вниз на висоту хедера; тости API-помилок переїхали
-**вниз-праворуч** — два регіони, щоб подія і невдала дія не витісняли одна одну.
-Попередній тост закривається явно, при відкритій панелі не показується, тільки на живу
-подію — не на resync; стан панелі — Zustand `notification-ui.store`, бо його читає код
-поза React.
-**Сирий SQL — ТІЛЬКИ колапс**
-(частковий індекс недосяжний з Prisma-API); `notification_states`/`_preferences` ідуть
-звичайним `prisma.upsert` із явним `tenantId` (композитний PK — інакше не скласти `where`;
-для інфра-сервісу це легально, як у `PresenceController`). Спроба писати їх сирим SQL
-відкинута: Prisma дає рівно той самий `INSERT … ON CONFLICT … SET revision = revision + $n`
-(перевірено логом Postgres) — атомарність та сама, типізації більше.
-Перевірено живим прогоном (api+worker+web): бейдж без
-перезавантаження, welcome із воркера в сокет, sync прочитаного між вкладками,
-`summary.revision` == revision із події, лист у Mailpit; 124 tenant-e2e (+21) і 11 platform-e2e.
-Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
-`docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
-`docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
-`docs/file-storage.md` (файлова підсистема: структура, presigned-флоу, приклад end-to-end на аватарі,
-формати запитів/відповідей),
-`docs/database-seed.md` (стандартні seed-ідентичності — дефолтні tenant/tenant-адмін/platform-оператор
-— і `pnpm db:reset`: чому НЕ `prisma migrate reset`; винесено окремо від MT-доків, бо стосується
-всього проєкту, не тільки мультитенантності),
-`docs/multi-tenancy-architecture.md` (мультитенантність — єдиний довідник: топологія
-5 застосунків, схема БД, RLS, механіка контексту, auth обох plane-ів, черги, наскрізний
-приклад, контракт для нового доменного модуля, обґрунтування ключових рішень і MT-4/беклог
-з дизайном ще не реалізованих шматків — invite-флоу, піддомени, довідники, білінг),
-`docs/activity-log.md` (журнал бізнес-подій: РЕАЛІЗОВАНО й перевірено 2026-07-21 —
-activities+activity_links, код типу+payload замість тексту, рендер через i18next на фронті,
-sync-запис у withTenantTx / async через inbox, перший курсорний ендпоінт),
-`docs/commands.md` (довідник усіх команд `package.json` з прикладами й описом, включно
-з посиланнями на профільні доки — напр. `db:roles` → `docs/multi-tenancy-architecture.md`;
-там же — мінімальний впорядкований набір JetBrains Run Configurations для dev),
-`docs/deploy-swarm.md` (РЕАЛІЗОВАНО 2026-07-24…31: GitLab CI → Docker Swarm через
-docker-context по SSH; топологія стеку, образи, one-shot db-джоби, рунбук),
-`docs/event-driven-architecture.md` (асинхронний шар — єдиний довідник: діагноз 10 розривів
-старого jobs-шару, цільовий конвеєр подій/команд, конверт, маніфест підписок, DLQ і
-класифікація помилок, гроші/email/зовнішні системи/realtime як підписники, наскрізний приклад
-оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-4 — 2026-08-16
-(§3.12 переглянуто: realtime НЕ підписник), EDA-2 і EDA-3 — попереду)
-+ `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
-`docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15: огляд, стек, межа з
-event-driven шаром, зафіксовані рішення, що лишилось) + `docs/realtime-internals.md`
-(механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
-+ `docs/realtime-questions.md` (чек-лист розуміння),
-`docs/notifications.md` (in-app сповіщення / Notification Center — РЕАЛІЗОВАНО й перевірено
-2026-08-16: скоуп V1 «інбокс», модель даних, контракти, recorder, socket-протокол, REST,
-UI, тести, таблиця «що змінилось під час реалізації»; нагадування — окремий наступний хід.
-Містить **перегляд плану EDA §3.12**: realtime НЕ став підписником у `MESSAGE_TOPOLOGY`,
-міст воркер→браузер — headless Socket.IO Server, стрім `realtime.dispatch` не заводили.
-Синхронізовано з `docs/roadmap.md`, `docs/realtime.md`,
-`docs/event-driven-architecture.md` §3.12 і `docs/realtime-questions.md` (п. 76, 79)),
-`docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
-`docs/frontend-ui-known-issues.md` (журнал проблем UI-бібліотеки і обходів — щоб обхід був
-один і названий, а не костиль на кожному місці використання; UI-1: HeroUI v3.2.2
-`Switch`/`Checkbox` не перемикаються — обхід `CellSwitch`/`SelectionCheckbox` лишається
-чинним для `apps/web`, а в `apps/platform-web` знятий міграцією на shadcn 2026-08-23),
-`docs/migrate.md` (міграція `apps/platform-web` з HeroUI на shadcn/ui: план, зафіксовані
-рішення D1…D5 і журнал виконання §9 — що саме розійшлося з планом і чому),
-`docs/migrate-web.md` (другий і останній хід UI: **UI-0** — спільний `libs/ui`, ЗРОБЛЕНО
-2026-08-24; **UI-1** — `apps/web` з HeroUI на shadcn, попереду. Містить реєстр із 14 кустарних
-місць і чим кожне замінюється, семантичну мапу токенів «роль у UI → токен shadcn» замість
-перейменування імен, рішення W1…W11 і журнал §9),
-`README.md` (quickstart).
+
+- **тост у стилі macOS**. Тост і рядок у центрі — **один компонент** `NotificationCard`
+  (⋯ і × у правому верхньому куті; × у тості ховає, × у центрі архівує; `role="button"`
+  лише в тості — у центрі всередині є лінк на сутність). Черга тостів окрема, **зверху
+  справа під дзвінком**, зміщена вниз на висоту хедера; тости API-помилок переїхали
+  **вниз-праворуч** — два регіони, щоб подія і невдала дія не витісняли одна одну.
+  Попередній тост закривається явно, при відкритій панелі не показується, тільки на живу
+  подію — не на resync; стан панелі — Zustand `notification-ui.store`, бо його читає код
+  поза React.
+  **Сирий SQL — ТІЛЬКИ колапс**
+  (частковий індекс недосяжний з Prisma-API); `notification_states`/`_preferences` ідуть
+  звичайним `prisma.upsert` із явним `tenantId` (композитний PK — інакше не скласти `where`;
+  для інфра-сервісу це легально, як у `PresenceController`). Спроба писати їх сирим SQL
+  відкинута: Prisma дає рівно той самий `INSERT … ON CONFLICT … SET revision = revision + $n`
+  (перевірено логом Postgres) — атомарність та сама, типізації більше.
+  Перевірено живим прогоном (api+worker+web): бейдж без
+  перезавантаження, welcome із воркера в сокет, sync прочитаного між вкладками,
+  `summary.revision` == revision із події, лист у Mailpit; 124 tenant-e2e (+21) і 11 platform-e2e.
+  Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
+  `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
+  `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
+  `docs/file-storage.md` (файлова підсистема: структура, presigned-флоу, приклад end-to-end на аватарі,
+  формати запитів/відповідей),
+  `docs/database-seed.md` (стандартні seed-ідентичності — дефолтні tenant/tenant-адмін/platform-оператор
+  — і `pnpm db:reset`: чому НЕ `prisma migrate reset`; винесено окремо від MT-доків, бо стосується
+  всього проєкту, не тільки мультитенантності),
+  `docs/multi-tenancy-architecture.md` (мультитенантність — єдиний довідник: топологія
+  5 застосунків, схема БД, RLS, механіка контексту, auth обох plane-ів, черги, наскрізний
+  приклад, контракт для нового доменного модуля, обґрунтування ключових рішень і MT-4/беклог
+  з дизайном ще не реалізованих шматків — invite-флоу, піддомени, довідники, білінг),
+  `docs/activity-log.md` (журнал бізнес-подій: РЕАЛІЗОВАНО й перевірено 2026-07-21 —
+  activities+activity_links, код типу+payload замість тексту, рендер через i18next на фронті,
+  sync-запис у withTenantTx / async через inbox, перший курсорний ендпоінт),
+  `docs/commands.md` (довідник усіх команд `package.json` з прикладами й описом, включно
+  з посиланнями на профільні доки — напр. `db:roles` → `docs/multi-tenancy-architecture.md`;
+  там же — мінімальний впорядкований набір JetBrains Run Configurations для dev),
+  `docs/deploy-swarm.md` (РЕАЛІЗОВАНО 2026-07-24…31: GitLab CI → Docker Swarm через
+  docker-context по SSH; топологія стеку, образи, one-shot db-джоби, рунбук),
+  `docs/event-driven-architecture.md` (асинхронний шар — єдиний довідник: діагноз 10 розривів
+  старого jobs-шару, цільовий конвеєр подій/команд, конверт, маніфест підписок, DLQ і
+  класифікація помилок, гроші/email/зовнішні системи/realtime як підписники, наскрізний приклад
+  оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-4 — 2026-08-16
+  (§3.12 переглянуто: realtime НЕ підписник), EDA-2 і EDA-3 — попереду)
+- `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
+  `docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15: огляд, стек, межа з
+  event-driven шаром, зафіксовані рішення, що лишилось) + `docs/realtime-internals.md`
+  (механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
+- `docs/realtime-questions.md` (чек-лист розуміння),
+  `docs/notifications.md` (in-app сповіщення / Notification Center — РЕАЛІЗОВАНО й перевірено
+  2026-08-16: скоуп V1 «інбокс», модель даних, контракти, recorder, socket-протокол, REST,
+  UI, тести, таблиця «що змінилось під час реалізації»; нагадування — окремий наступний хід.
+  Містить **перегляд плану EDA §3.12**: realtime НЕ став підписником у `MESSAGE_TOPOLOGY`,
+  міст воркер→браузер — headless Socket.IO Server, стрім `realtime.dispatch` не заводили.
+  Синхронізовано з `docs/roadmap.md`, `docs/realtime.md`,
+  `docs/event-driven-architecture.md` §3.12 і `docs/realtime-questions.md` (п. 76, 79)),
+  `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
+  `docs/frontend-ui-known-issues.md` (журнал проблем UI-бібліотеки і обходів — щоб обхід був
+  один і названий, а не костиль на кожному місці використання; UI-1 (`Switch`/`Checkbox` HeroUI
+  не перемикаються) **закрита 2026-08-24**: HeroUI пішов з репо, обходи `CellSwitch`/
+  `SelectionCheckbox` видалені),
+  `docs/migrate.md` (міграція `apps/platform-web` з HeroUI на shadcn/ui: план, зафіксовані
+  рішення D1…D5 і журнал виконання §9 — що саме розійшлося з планом і чому),
+  `docs/migrate-web.md` (другий і останній хід UI: **UI-0** — спільний `libs/ui`, ЗРОБЛЕНО
+  2026-08-24; **UI-1** — `apps/web` з HeroUI на shadcn, попереду. Містить реєстр із 14 кустарних
+  місць і чим кожне замінюється, семантичну мапу токенів «роль у UI → токен shadcn» замість
+  перейменування імен, рішення W1…W11 і журнал §9),
+  `README.md` (quickstart).
 
 ## Команди
 
@@ -267,8 +268,9 @@ apps/worker     NestJS 11 без HTTP (createApplicationContext). Підписн
                 (`src/subscribers/`) + cron через pg-boss, MailerService (nodemailer → Mailpit),
                 плейн i18next для email-контенту
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
-                HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system),
-                react-i18next
+                shadcn/ui на Base UI через libs/ui (HeroUI знято в UI-1, 2026-08-24) +
+                next-themes (light/dark/system), react-i18next. Власного components/ui немає;
+                локальним лишилось телефонне поле (libphonenumber-js + country-flag-icons)
 apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, проксі на :3002), АЛЕ інша
                 UI-бібліотека: shadcn/ui на Base UI (стиль base-nova, lucide-react) — HeroUI
                 знято 2026-08-23, див. правило 12 і docs/migrate.md. Власного `components/ui/`
@@ -334,8 +336,9 @@ ZodValidationException → 400 VALIDATION_ERROR + fieldErrors з issue paths; Pr
 `meta.target`; а при недоступній БД кидає код `ECONNREFUSED`, НЕ P1001 — обидва перевірені на живо);
 P2025 → 404; ECONNREFUSED/P1xxx/P2024 → 503; будь-який 5xx-message маскується ("Internal server error",
 деталі тільки в лог з requestId). Явний 409 з полем — `fieldConflictException()` (`common/errors.ts`).
-Фронт: `parseApiError()`/`isGlobalApiError()` (`apps/web/src/api/api-error.ts`); network/5xx/403 →
-HeroUI `toast.danger` (глобальні QueryCache/MutationCache onError у main.tsx, дедуп 5с, `<Toast.Provider>`);
+Фронт: `parseApiError()`/`isGlobalApiError()` (`libs/ui/src/api/api-error.ts` — спільний для обох
+фронтів із UI-0); network/5xx/403 → `toast.add({ type: 'error' })` (глобальні QueryCache/MutationCache
+onError у main.tsx, дедуп 5с; регіони тостів задає `ToastHost` застосунку);
 401 → refresh-інтерсептор; 4xx у формах — `applyServerError(error, form)`: fieldErrors → setError по
 імені поля (звірка з getValues, тому форми МУСЯТЬ мати повні defaultValues), решта → errors.root.server.
 
@@ -357,7 +360,7 @@ HeroUI `toast.danger` (глобальні QueryCache/MutationCache onError у ma
   приймає лише `[a-zA-Z0-9_\-./]`). Додати підписника = рядок у маніфесті + новий клас; жоден
   наявний файл не редагується.
 - **Споживач** (`MessagingModule.forWorker()`): `@Injectable() @MessageSubscriber({ definition, id })
-  class X implements MessageSubscriberContract<typeof def.schema>` із `handle(data, envelope)`.
+class X implements MessageSubscriberContract<typeof def.schema>` із `handle(data, envelope)`.
   Знаходиться через DiscoveryService; **розсинхрон із маніфестом валить старт воркера** в обидва
   боки (оголошений споживач без класу → job-и копичились би в нечитаній черзі; клас без
   оголошення → мертвий код).
@@ -368,7 +371,7 @@ HeroUI `toast.danger` (глобальні QueryCache/MutationCache onError у ma
   registrar відновлює з конверта і tenant-контекст (RLS), і ланцюг (похідна публікація всередині
   споживача успадковує correlation/causation автоматично).
 - **Ідемпотентність — по бізнес-факту, не по job-у:** `MessageInboxService.runOnce(envelope,
-  consumerId, fn)`, ключ `messageId:consumerId` у `processed_jobs`. Захищає не лише від ретраю
+consumerId, fn)`, ключ `messageId:consumerId` у `processed_jobs`. Захищає не лише від ретраю
   job-а, а й від повторної ПУБЛІКАЦІЇ того самого факту; суфікс consumerId — щоб підписники не
   блокували один одного. Маркери чистить cron `maintenance.cleanup-processed-jobs` (30 днів —
   свідомо більше за retention pg-boss).
@@ -409,7 +412,8 @@ allowlist MIME/розміру → PENDING-рядок у `files` + presigned PUT,
 майбутні домени, API поки немає. Демо-споживач: `users.avatarFileId` (PATCH валідує READY+image) →
 `UserResponse.avatarUrl` = presigned GET мініатюри (в JSON, бо `<img>` не шле Authorization; auth-роути
 аватар не пресайнять — тільки users). Фронт: `useFileUpload` (create→PUT з progress→complete, сирий
-axios без інтерсепторів) + `FileDropzone` (свій, у HeroUI v3 немає) + `ChangeAvatarModal` (row action
+axios без інтерсепторів) + `FileDropzone` (свій — дропзони немає і в реєстрі shadcn; оболонка
+складена з `Empty`+`Button`) + `ChangeAvatarModal` (row action
 на /users). E2E: StorageService підміняється in-memory фейком (`overrideProvider`), file-type замокано
 міні-детектором magic bytes — живий SeaweedFS тестам не потрібен.
 
@@ -474,53 +478,57 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
     moduleResolution=node10 → ручна декларація `apps/api/src/types/file-type.d.ts`; ts-node її бачить
     лише з `"ts-node": {"files": true}` у tsconfig (без цього openapi:generate падає); у e2e замокано
     через moduleNameMapper (`test/__mocks__/file-type.ts`). Runtime ок — Node 24 require(esm).
-12. **Дві UI-бібліотеки — по одній на застосунок** (рішення D1, 2026-08-23; не «тимчасово»).
-    **`apps/web` — HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після
-    tailwindcss у index.css; тема = `class` + `data-theme` на `<html>` (next-themes,
-    `attribute={['class','data-theme']}`, storageKey `saas_theme`). Compound API:
-    `Table.Content/Header/Body`, `Dropdown.Popover/Menu/Item`, `AlertDialog.Backdrop/Container/Dialog`,
-    `Pagination.Content/Item/Link`. Семантичні токени: `bg-background/bg-surface`,
-    `text-foreground/text-muted/text-danger/text-link`, `border-border`. RHF: `register()` прямо на
-    `<Input>` усередині `<TextField isInvalid>` + `<FieldError>`. Інлайн-SVG, без пакетів іконок.
-    **`apps/platform-web` — shadcn/ui на Base UI** (стиль `base-nova`, CLI 4.19.0): компоненти —
-    ВЕНДОРЕНИЙ код, який із UI-0 (2026-08-24) живе в **`libs/ui/src/components/ui/`**, а не в
-    застосунку (оновлюється `shadcn add --diff`, не npm-апдейтом; `components.json` є і в пакеті,
-    і в застосунку — аліаси застосунку вказують на пакет, це монорепо-режим CLI);
-    аліас `@/*` продубльований у `tsconfig.json` І `vite.config.ts` (vite не читає tsconfig paths);
-    тема = лише `class` (`attribute="class"`, storageKey `saas_platform_theme`), токени в
-    `src/index.css` (`:root`/`.dark` + `@theme inline`). Композиція замість compound-неймспейсів
-    (`DialogContent`/`DialogTitle`, `TableHead`/`TableCell`, `DropdownMenuItem`), підміна елемента —
-    `render={<Button/>}` (Base UI), НЕ `asChild`. Іконки — `lucide-react` (перегляд «без пакетів
-    іконок»: реєстр приходить із ними у власному коді). Семантичні токени:
-    `bg-background/bg-card/bg-sidebar`, `text-foreground/text-muted-foreground/text-destructive`,
-    `border-border`; `success`/`warning` — наше розширення теми (варіанти в cva `ui/badge.tsx`).
+12. **UI — один стек на обидва фронти: shadcn/ui на Base UI** (стиль `base-nova`, CLI 4.19.0;
+    HeroUI знято з platform-web 2026-08-23, з web — 2026-08-24, у репо його більше немає).
+    Спільний код живе в **`libs/ui`** (див. блок про нього в «Архітектурі»): вендорені примітиви
+    `components/ui/**`, грід, форми, `theme-switcher`, `api/api-error.ts`, тема `styles.css`.
+    Оновлення примітивів — `shadcn add --diff` У ПАКЕТІ (`components.json` є і в пакеті, і в
+    кожному застосунку — аліаси застосунків вказують на пакет, це монорепо-режим CLI);
+    імпорти всередині пакета — самопосилання `@saas-skeleton/ui/…`.
+    `index.css` застосунку = `@import 'tailwindcss'` + `@import '@saas-skeleton/ui/styles.css'` +
+    `@source '../../../libs/ui/src'` (без `@source` Tailwind не бачить класи пакета).
+    Аліас `@/*` (локальний код застосунку) дублюється в `tsconfig.json` І `vite.config.ts` —
+    vite не читає tsconfig paths. Тема — лише `class` (`attribute="class"`; storageKey
+    `saas_theme` / `saas_platform_theme`).
+    Композиція замість compound-неймспейсів (`DialogContent`/`DialogTitle`, `TableHead`/`TableCell`,
+    `DropdownMenuItem`), підміна елемента — `render={<Button/>}` (Base UI), НЕ `asChild`.
+    Іконки — `lucide-react` (перегляд правила «без пакетів іконок»). Семантичні токени:
+    `bg-background/bg-card/bg-sidebar/bg-popover`, `text-foreground/text-muted-foreground/text-destructive`,
+    `border-border`, `bg-accent` = поверхня наведення (НЕ бренд — бренд це `primary`);
+    `success`/`warning` — наше розширення теми (варіанти в cva `ui/badge.tsx`).
     RHF: `useController` → `Field`+`FieldLabel htmlFor`+`Input id` (`useId()`)+`FieldError`, стан
-    через `data-invalid` на `Field` і `aria-invalid` на контролі.
+    через `data-invalid` на `Field` і `aria-invalid` на контролі; `FormSelect` мусить діставати
+    `items` (без мапи value→label Base UI малює в тригері сире значення).
+    **Кустарних обгорток над примітивами не заводимо**: медіа-обʼєкт — `Item*`, порожні стани —
+    `Empty*`, індикатор на аватарі — `AvatarBadge`, набір фільтрів — `ToggleGroup`, бокова панель —
+    `Sheet`, навігація — `Sidebar*`. Якщо примітив є в реєстрі, свій не пишемо
+    (виняток — `FileDropzone`: дропзони в реєстрі немає, але його оболонка теж складена з `Empty`+`Button`).
+    **Вкладеність HTML**: `AlertDialogDescription`/`ItemDescription` уже є `<p>`, а `Item render={<button/>}`
+    уже є `<button>` — не класти всередину ще один абзац/кнопку (React пише про це в консоль).
     **Бекендні tsconfig-и НЕ мають підбирати фронтові ліби**: `include` у
     `apps/{api,platform-api,worker}/tsconfig*.json` перелічує `libs/{contracts,database,shared}`
     ЯВНО — колишній wildcard `libs/*/src/**/*` затягнув `libs/ui` у webpack-збірку і дав 353
     помилки `TS17004` (turbo при цьому віддавав закешований зелений typecheck — перевіряти `--force`).
     **Правки вендореного коду позначаються коментарем «ЛОКАЛЬНА ПРАВКА реєстру»** (зараз їх дві:
-    позиція тостів у `ui/toast.tsx`, indeterminate-іконка в `ui/checkbox.tsx`). Файли гріда/форм
-    у двох застосунках СВІДОМО розійшлися — копіювати між ними більше НЕ можна.
+    позиція тостів у `ui/toast.tsx`, indeterminate-іконка в `ui/checkbox.tsx`).
 
 ## Зафіксовані рішення (НЕ переглядати без запиту користувача)
 
-| Питання           | Рішення                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено; Kafka/NATS/RabbitMQ свідомо поза скоупом). Фаза 2.1 — `JobDispatcher`; **EDA-1 (2026-08-04) замінила його на `messaging/`**: подія/команда, конверт, маніфест підписок, спільна DLQ. Транзакційна постановка через `fromPrisma` лишається — `publish(tx, …)` у тій самій БД, що й дані, і це вже повноцінний transactional outbox (окрема `domain_events` + relay НЕ потрібні). Власний publisher, а не рідний `boss.publish` — той ковтає часткову відмову fan-out-у. Event sourcing, saga-двигун, schema registry — поза скоупом (`docs/event-driven-architecture.md` §7)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Мультитенантність | **MT-0…MT-3 реалізовано й перевірено 2026-07-16/17** (деталі — `docs/multi-tenancy-architecture.md`; лишилась тільки MT-4/беклог). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и, ОБИДВА з UI: `apps/api`+`apps/web` (tenant) і `apps/platform-api`+`apps/platform-web` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк |
-| Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Zod               | v4 (закрито у фазі 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| UI-бібліотека     | **shadcn/ui (Base UI, стиль base-nova) — єдиний цільовий стек платформи.** D1 («дві бібліотеки, по одній на застосунок», 2026-08-23) **переглянуто користувачем 2026-08-24**: `apps/platform-web` уже на shadcn, `apps/web` мігрує наступним ходом (UI-1), HeroUI виходить із репо. Причина початкової міграції — не смаки, а два костилі, які HeroUI v3-beta змушував тримати в гріді (інертний чекбокс під прозорим нативним input + `createPortal` хедер-чекбокса в `thead`); обидва зняті. **`libs/ui` — спільний шар обох фронтів** (UI-0, 2026-08-24): спочатку розглядався й відкладався, але 13 файлів у двох застосунках виявились побайтово однаковими, тож витягування зробили ПЕРЕД міграцією web — щоб перевіряти його проти вже прийнятого platform-web. Іконки — `lucide-react` (D2, перегляд правила «без пакетів іконок»). ReUI не використовуємо, але реєстр `@reui` прописаний у `components.json` (D3). Хід: `docs/migrate.md` (пілот) і `docs/migrate-web.md` (UI-0/UI-1) |
-| Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                     |
-| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**; in-app сповіщення поверх того самого транспорту — 2026-08-16 (`docs/notifications.md`), realtime підписником у `MESSAGE_TOPOLOGY` НЕ став: емісія after-commit у процесі, що записав рядок. Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення» |
-| i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                               |
+| Питання           | Рішення                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ORM               | **Prisma 7** (Drizzle розглянуто й відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Черги             | **pg-boss v12** поверх Postgres (BullMQ відхилено; Kafka/NATS/RabbitMQ свідомо поза скоупом). Фаза 2.1 — `JobDispatcher`; **EDA-1 (2026-08-04) замінила його на `messaging/`**: подія/команда, конверт, маніфест підписок, спільна DLQ. Транзакційна постановка через `fromPrisma` лишається — `publish(tx, …)` у тій самій БД, що й дані, і це вже повноцінний transactional outbox (окрема `domain_events` + relay НЕ потрібні). Власний publisher, а не рідний `boss.publish` — той ковтає часткову відмову fan-out-у. Event sourcing, saga-двигун, schema registry — поза скоупом (`docs/event-driven-architecture.md` §7)                                                                                                                                                                                                                                                                                                                                                       |
+| Мультитенантність | **MT-0…MT-3 реалізовано й перевірено 2026-07-16/17** (деталі — `docs/multi-tenancy-architecture.md`; лишилась тільки MT-4/беклог). Shared schema + `tenant_id` + **Postgres RLS як ОСНОВНИЙ enforcement** (перегляд рішення «RLS не вмикаємо»). Принцип: MT **невидима для бізнес-коду** — extension робить лише `set_config` (НЕ `where: { tenantId }`), колонку заповнює DB-default; поява `tenantId` у доменному сервісі = запах. `users.tenant_id NOT NULL` (User в одному tenant-і; **Membership/Invitations скасовано**). Два plane-и, ОБИДВА з UI: `apps/api`+`apps/web` (tenant) і `apps/platform-api`+`apps/platform-web` (control plane, окремі identity/JWT/DB-роль). Single-tenant = **N=1** тієї самої схеми, не форк                                                                                                                                                                                                                                                   |
+| Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Zod               | v4 (закрито у фазі 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| UI-бібліотека     | **shadcn/ui (Base UI, стиль base-nova) — єдиний цільовий стек платформи.** D1 («дві бібліотеки, по одній на застосунок», 2026-08-23) **переглянуто користувачем 2026-08-24**: **обидва фронти на shadcn (UI-1 завершена 2026-08-24), HeroUI видалений із репо повністю**. Причина початкової міграції — не смаки, а два костилі, які HeroUI v3-beta змушував тримати в гріді (інертний чекбокс під прозорим нативним input + `createPortal` хедер-чекбокса в `thead`); обидва зняті. **`libs/ui` — спільний шар обох фронтів** (UI-0, 2026-08-24): спочатку розглядався й відкладався, але 13 файлів у двох застосунках виявились побайтово однаковими, тож витягування зробили ПЕРЕД міграцією web — щоб перевіряти його проти вже прийнятого platform-web. Іконки — `lucide-react` (D2, перегляд правила «без пакетів іконок»). ReUI не використовуємо, але реєстр `@reui` прописаний у `components.json` (D3). Хід: `docs/migrate.md` (пілот) і `docs/migrate-web.md` (UI-0/UI-1) |
+| Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**; in-app сповіщення поверх того самого транспорту — 2026-08-16 (`docs/notifications.md`), realtime підписником у `MESSAGE_TOPOLOGY` НЕ став: емісія after-commit у процесі, що записав рядок. Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення»                                                                                                                                                                                                                    |
+| i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
 
