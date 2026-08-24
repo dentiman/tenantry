@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Dialog,
@@ -76,7 +77,10 @@ export function CreateUserModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={close}>
-      <DialogTrigger render={<Button />}>{t('create.trigger')}</DialogTrigger>
+      <DialogTrigger render={<Button />}>
+        {t('create.trigger')}
+        <UserPlus />
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>{t('create.heading')}</DialogTitle>

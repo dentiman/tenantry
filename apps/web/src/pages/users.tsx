@@ -271,15 +271,22 @@ export function UsersPage() {
       selection
     >
       <PageBreadcrumbs items={[{ label: t('title') }]} />
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
-        <div className="flex items-center gap-2">
-          <Grid.Filters filters={filters} />
-          <CreateUserModal />
+
+      {/* Розкладка списку — як у satnaing/shadcn-admin (features/users/index.tsx):
+          заголовок із підзаголовком і головна дія в одному рядку, а тулбар пошуку
+          й фільтрів — окремим рядком безпосередньо над таблицею */}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('subtitle')}</p>
         </div>
+        <CreateUserModal />
       </div>
 
-      <Grid.SelectionSummary />
+      <div className="mb-4 flex flex-col gap-4">
+        <Grid.Filters filters={filters} />
+        <Grid.SelectionSummary />
+      </div>
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}

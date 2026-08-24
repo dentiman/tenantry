@@ -10,6 +10,7 @@ import {
   FormPasswordField,
   FormTextField,
 } from '@saas-skeleton/ui/components/form';
+import { Plus } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Dialog,
@@ -75,7 +76,10 @@ export function CreateTenantModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={close}>
-      <DialogTrigger render={<Button />}>{t('create.trigger')}</DialogTrigger>
+      <DialogTrigger render={<Button />}>
+        {t('create.trigger')}
+        <Plus />
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>{t('create.heading')}</DialogTitle>

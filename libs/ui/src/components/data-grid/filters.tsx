@@ -1,5 +1,8 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
 import type { DataGridFiltersState } from './use-data-grid-filters';
 import type { DataGridFiltersBase } from './types';
 import { Input } from '@saas-skeleton/ui/components/ui/input';
@@ -85,20 +88,57 @@ export function defineFilters<TFilters extends DataGridFiltersBase>(): {
 interface DataGridFiltersProps<TFilters extends DataGridFiltersBase> {
   grid: DataGridFiltersState<TFilters>;
   filters: DataGridFilterDef<TFilters>[];
+  /** Дії праворуч у тому ж рядку (напр. перемикач вигляду) */
+  actions?: ReactNode;
   className?: string;
 }
 
-/** Тулбар фільтрів: рендерить масив filters так само, як DataGrid — columns */
+/** Поля фільтрів, які не рахуються «фільтром» для кнопки скидання */
+const NON_FILTER_KEYS = new Set(['page', 'limit', 'sortBy', 'sortOrder']);
+
+/**
+ * Тулбар списку — окремий рядок НАД таблицею (розкладка satnaing/shadcn-admin,
+ * `components/data-table/toolbar.tsx`): ліворуч пошук і фільтри, які на вузькому
+ * екрані стають колонкою, праворуч — місце для дій. Кнопка «Reset» зʼявляється
+ * лише коли є що скидати.
+ *
+ * Фільтри рендеряться масивом так само, як DataGrid рендерить columns.
+ */
 export function DataGridFilters<TFilters extends DataGridFiltersBase>({
   grid,
   filters,
+  actions,
   className,
 }: DataGridFiltersProps<TFilters>) {
+  const { t } = useTranslation('common');
+  const activeKeys = Object.entries(grid.filters).filter(
+    ([key, value]) => !NON_FILTER_KEYS.has(key) && value !== undefined && value !== '',
+  );
+  const isFiltered = activeKeys.length > 0 || grid.searchInput !== '';
+
+  const reset = (): void => {
+    grid.setSearchInput('');
+    grid.setFilter(
+      Object.fromEntries(activeKeys.map(([key]) => [key, undefined])) as Partial<
+        Omit<TFilters, 'page'>
+      >,
+    );
+  };
+
   return (
-    <div className={className ?? 'flex items-center gap-2'}>
-      {filters.map((filter) => (
-        <Fragment key={filter.id}>{filter.render(grid)}</Fragment>
-      ))}
+    <div className={className ?? 'flex items-center justify-between gap-2'}>
+      <div className="flex flex-1 flex-col-reverse items-start gap-2 sm:flex-row sm:items-center">
+        {filters.map((filter) => (
+          <Fragment key={filter.id}>{filter.render(grid)}</Fragment>
+        ))}
+        {isFiltered && (
+          <Button variant="ghost" size="sm" onClick={reset}>
+            {t('filters.reset')}
+            <X />
+          </Button>
+        )}
+      </div>
+      {actions}
     </div>
   );
 }

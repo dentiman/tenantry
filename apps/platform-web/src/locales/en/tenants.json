@@ -1,5 +1,6 @@
 {
   "title": "Tenants",
+  "subtitle": "Create workspaces and control their access.",
   "table": {
     "ariaLabel": "Tenants",
     "slug": "Slug",

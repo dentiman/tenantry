@@ -1,5 +1,6 @@
 {
   "title": "Users",
+  "subtitle": "Manage the people who can sign in to this workspace.",
   "searchLabel": "Search users",
   "searchPlaceholder": "Search by email or name…",
   "filters": {

@@ -35,5 +35,8 @@
     "tooLarge": "File is too large (max {{maxMb}} MB)"
   },
   "loading": "Loading…",
-  "empty": "No results found"
+  "empty": "No results found",
+  "filters": {
+    "reset": "Reset"
+  }
 }

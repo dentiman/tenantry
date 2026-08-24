@@ -140,11 +140,15 @@ export function JobsPage() {
       }
     >
       <PageBreadcrumbs items={[{ label: t('title') }]} />
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
-        <Grid.Filters filters={filters} />
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
 
+      <div className="mb-4">
+        <Grid.Filters filters={filters} />
+      </div>
       {queues.length > 0 && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {queues.map((q) => (
