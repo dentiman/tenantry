@@ -1,4 +1,5 @@
-import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { Building2, ListChecks } from 'lucide-react';
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
@@ -11,18 +12,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@saas-skeleton/ui/components/ui/dropdown-menu';
-
-const navLinkClass =
-  'block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
-const activeProps = {
-  className: 'block rounded-lg px-3 py-2 text-sm font-medium bg-accent text-accent-foreground',
-};
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@saas-skeleton/ui/components/ui/sidebar';
 
 export function AppLayout() {
   const { t } = useTranslation('layout');
   const operator = useAuthStore((s) => s.operator);
   const clearSession = useAuthStore((s) => s.clearSession);
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const logout = () => {
     clearSession();
@@ -32,50 +41,65 @@ export function AppLayout() {
   const initial = (operator?.name ?? operator?.email ?? '?').charAt(0).toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
-        <div className="px-5 py-5 text-lg font-semibold text-primary">{t('brand')}</div>
-        <nav className="flex flex-col gap-1 px-3">
-          <Link
-            to="/"
-            className={navLinkClass}
-            activeProps={activeProps}
-            activeOptions={{ exact: true }}
-          >
-            {t('nav.tenants')}
-          </Link>
-          <Link to="/jobs" className={navLinkClass} activeProps={activeProps}>
-            {t('nav.jobs')}
-          </Link>
-        </nav>
-      </aside>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="px-4 py-4 text-lg font-semibold text-primary">
+          {t('brand')}
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={pathname === '/'} render={<Link to="/" />}>
+                    <Building2 />
+                    <span>{t('nav.tenants')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith('/jobs')}
+                    render={<Link to="/jobs" />}
+                  >
+                    <ListChecks />
+                    <span>{t('nav.jobs')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-border bg-background px-6">
-          <ThemeSwitcher />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  aria-label={t('accountMenu')}
-                  variant="ghost"
-                  className="h-9 rounded-full"
-                />
-              }
-            >
-              <Avatar size="sm">
-                <AvatarFallback>{initial}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground">{operator?.email}</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuGroup>
-                <DropdownMenuItem variant="destructive" onClick={logout}>
-                  {t('logout')}
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
+          <SidebarTrigger className="-ml-2" />
+          <div className="ml-auto flex items-center gap-3">
+            <ThemeSwitcher />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    aria-label={t('accountMenu')}
+                    variant="ghost"
+                    className="h-9 rounded-full"
+                  />
+                }
+              >
+                <Avatar size="sm">
+                  <AvatarFallback>{initial}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">{operator?.email}</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem variant="destructive" onClick={logout}>
+                    {t('logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-8">
@@ -83,7 +107,7 @@ export function AppLayout() {
             <Outlet />
           </div>
         </main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
