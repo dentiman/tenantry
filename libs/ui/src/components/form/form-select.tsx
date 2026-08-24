@@ -50,7 +50,7 @@ export function FormSelect<T extends FieldValues>({
       >
         <SelectTrigger
           id={id}
-          className="h-9 w-full"
+          className="w-full"
           aria-invalid={fieldState.invalid || undefined}
           onBlur={field.onBlur}
         >
