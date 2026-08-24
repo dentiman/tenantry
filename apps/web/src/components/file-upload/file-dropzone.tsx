@@ -1,5 +1,14 @@
-import { useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { UploadIcon } from 'lucide-react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from '@saas-skeleton/ui/components/ui/empty';
 
 interface FileDropzoneProps {
   /** Allowlist MIME-типів (клієнтський фільтр; авторитетна перевірка — на бекенді) */
@@ -12,10 +21,22 @@ interface FileDropzoneProps {
 }
 
 /**
- * Мінімалістичний dropzone (у HeroUI v3 компонента немає): клік або drag&drop
- * одного файлу. Валідує тип/розмір локально і показує помилку під зоною.
+ * Dropzone: клік або drag&drop одного файлу; тип і розмір валідуються локально
+ * (авторитетна перевірка — на бекенді), помилка показується під зоною.
+ *
+ * Компонента дропзони в реєстрі shadcn немає, тож він лишається власним — але
+ * оболонку дає `Empty`, а клік бере справжня `Button`, тому попереднього костиля
+ * `role="button"` + `tabIndex` + `onKeyDown` на `<div>` більше немає: фокус,
+ * Enter/Space і `disabled` приходять від нативної кнопки
+ * (UI-1, костиль 5 у docs/migrate-web.md §3.2).
  */
-export function FileDropzone({ accept, maxSizeBytes, onSelect, isDisabled, prompt }: FileDropzoneProps) {
+export function FileDropzone({
+  accept,
+  maxSizeBytes,
+  onSelect,
+  isDisabled,
+  prompt,
+}: FileDropzoneProps) {
   const { t } = useTranslation('common');
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -49,21 +70,9 @@ export function FileDropzone({ accept, maxSizeBytes, onSelect, isDisabled, promp
     pick(event.dataTransfer.files[0]);
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openPicker();
-    }
-  };
-
   return (
     <div className="flex flex-col gap-2">
-      <div
-        role="button"
-        tabIndex={isDisabled ? -1 : 0}
-        aria-disabled={isDisabled}
-        onClick={openPicker}
-        onKeyDown={onKeyDown}
+      <Empty
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragOver(true);
@@ -72,12 +81,28 @@ export function FileDropzone({ accept, maxSizeBytes, onSelect, isDisabled, promp
           setIsDragOver(false);
         }}
         onDrop={onDrop}
-        className={`rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors ${
-          isDragOver ? 'border-foreground bg-surface' : 'border-border'
-        } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer text-muted hover:bg-surface'}`}
+        className={`border-2 border-dashed p-6 transition-colors ${
+          isDragOver ? 'border-foreground bg-accent' : 'border-border'
+        } ${isDisabled ? 'opacity-50' : ''}`}
       >
-        {prompt ?? t('dropzone.prompt')}
-      </div>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <UploadIcon />
+          </EmptyMedia>
+          <EmptyDescription>{prompt ?? t('dropzone.prompt')}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isDisabled}
+            onClick={openPicker}
+          >
+            {t('dropzone.choose')}
+          </Button>
+        </EmptyContent>
+      </Empty>
       <input
         ref={inputRef}
         type="file"
@@ -89,7 +114,7 @@ export function FileDropzone({ accept, maxSizeBytes, onSelect, isDisabled, promp
           e.target.value = '';
         }}
       />
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

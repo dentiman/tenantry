@@ -3,7 +3,7 @@ import axios from 'axios';
 import { filesComplete, filesCreate } from '../../api/generated/api';
 import type { FileResponseDtoOutput } from '../../api/generated/model/fileResponseDtoOutput';
 import type { CreateFileUploadDtoMimeType } from '../../api/generated/model/createFileUploadDtoMimeType';
-import { parseApiError } from '../../api/api-error';
+import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 
 export type FileUploadState =
   | { status: 'idle' }

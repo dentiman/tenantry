@@ -1,12 +1,19 @@
 import type { ReactNode } from 'react';
-import { Avatar } from '@heroui/react';
+import { Avatar, AvatarFallback, AvatarImage } from '@saas-skeleton/ui/components/ui/avatar';
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@saas-skeleton/ui/components/ui/item';
 
 interface UserIdentityProps {
   email: string;
   name?: string | null;
   avatarUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
-  /** Оверлей поверх аватара (PresenceDot тощо) — позиціонується абсолютно самим оверлеєм */
+  size?: 'sm' | 'default' | 'lg';
+  /** Оверлей аватара (PresenceDot) — рендериться ВСЕРЕДИНІ Avatar, бо AvatarBadge бере від нього розмір */
   badge?: ReactNode;
   /** Класи кореня (відступи/ширина від споживача) */
   className?: string;
@@ -29,14 +36,16 @@ function getInitials(name: string | null | undefined, email: string): string {
 }
 
 /**
- * Ідентичність користувача одним блоком: аватар зліва, два рядки тексту справа
- * (патерн media object; у дизайн-системах — Persona / User / AvatarItem).
+ * Ідентичність користувача одним блоком: аватар зліва, два рядки тексту справа.
+ * Побудований на `Item` реєстру — від нього приходять розкладка, типографіка і
+ * обрізання довгих рядків (`line-clamp`), тож власної верстки медіа-обʼєкта тут немає
+ * (UI-1, костиль 7 у docs/migrate-web.md §3.2). Три класи-перевизначення свідомі:
+ * `Item` розрахований на список (власні відступи і повна ширина), а тут він живе в
+ * клітинці таблиці й у тригері дропдауна.
  *
- * Рішення:
+ * Рішення, які лишились від попередньої версії:
  * - Без імені email піднімається в перший рядок, а другий НЕ рендериться взагалі
  *   (порожній рядок або «—» під аватаром збивав би вертикальний ритм списку).
- * - `min-w-0` на корені і на текстовій колонці — без нього flex-дитина має
- *   min-width:auto і `truncate` не спрацьовує ніколи (класична грабля).
  * - `title` на обох рядках: обрізаний текст мусить лишатись читабельним наведенням.
  * - Аватар декоративний (`alt=""`) — ім'я вже поруч текстом, інакше скрінрідер
  *   зачитує ідентичність двічі.
@@ -55,25 +64,22 @@ export function UserIdentity({
   const secondary = displayName ? email : null;
 
   return (
-    <div className={['flex min-w-0 items-center gap-3', className].filter(Boolean).join(' ')}>
-      <span className="relative inline-flex shrink-0">
+    <Item size="xs" className={['w-auto gap-3 p-0', className].filter(Boolean).join(' ')}>
+      <ItemMedia>
         <Avatar size={size}>
-          {avatarUrl && <Avatar.Image alt="" src={avatarUrl} />}
-          <Avatar.Fallback>{getInitials(name, email)}</Avatar.Fallback>
+          {avatarUrl && <AvatarImage alt="" src={avatarUrl} />}
+          <AvatarFallback>{getInitials(name, email)}</AvatarFallback>
+          {badge}
         </Avatar>
-        {badge}
-      </span>
-
-      <span className={['flex min-w-0 flex-col', textClassName].filter(Boolean).join(' ')}>
-        <span className="truncate font-medium text-foreground" title={primary}>
-          {primary}
-        </span>
+      </ItemMedia>
+      <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
+        <ItemTitle title={primary}>{primary}</ItemTitle>
         {secondary && (
-          <span className="truncate text-xs text-muted" title={secondary}>
+          <ItemDescription className="text-xs" title={secondary}>
             {secondary}
-          </span>
+          </ItemDescription>
         )}
-      </span>
-    </div>
+      </ItemContent>
+    </Item>
   );
 }

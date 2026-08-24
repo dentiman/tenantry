@@ -1,5 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Spinner } from '@heroui/react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from '@saas-skeleton/ui/components/ui/empty';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@saas-skeleton/ui/components/ui/sheet';
+import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { useTranslation } from 'react-i18next';
 import { useActivitiesFindAll } from '../../api/generated/api';
 import type { ActivityListResponseDtoOutputItemsItem } from '../../api/generated/model/activityListResponseDtoOutputItemsItem';
@@ -71,15 +87,15 @@ export function ActivityDrawer({ entityType, entityId, subtitle, onClose }: Acti
   const isInitialLoading = isFetching && entries.length === 0;
 
   return (
-    <Drawer.Backdrop isOpen={isOpen} onOpenChange={close}>
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:max-w-[440px]">
-          <Drawer.CloseTrigger />
-          <Drawer.Header>
-            <Drawer.Heading>{t('title')}</Drawer.Heading>
-            {subtitle && <p className="mt-1 truncate text-sm text-muted">{subtitle}</p>}
-          </Drawer.Header>
-          <Drawer.Body>
+    <Sheet open={isOpen} onOpenChange={close}>
+      <SheetContent side="right" className="sm:max-w-[440px]">
+        <SheetHeader>
+          <SheetTitle>{t('title')}</SheetTitle>
+          {subtitle && <SheetDescription className="truncate">{subtitle}</SheetDescription>}
+        </SheetHeader>
+
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-4 pb-4">
             {isInitialLoading && (
               <div className="flex justify-center py-8">
                 <Spinner aria-label={t('loading')} />
@@ -87,44 +103,56 @@ export function ActivityDrawer({ entityType, entityId, subtitle, onClose }: Acti
             )}
 
             {isError && entries.length === 0 && (
-              <p className="py-8 text-center text-sm text-danger">{t('loadError')}</p>
+              <Empty className="border-0">
+                <EmptyHeader>
+                  <EmptyTitle className="text-destructive">{t('loadError')}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             )}
 
             {!isInitialLoading && !isError && entries.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted">{t('empty')}</p>
+              <Empty className="border-0">
+                <EmptyHeader>
+                  <EmptyDescription>{t('empty')}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
 
             {entries.length > 0 && (
               <ol className="flex flex-col gap-4">
                 {entries.map((activity) => (
-                  <li key={activity.id} className="flex flex-col gap-0.5 border-l-2 border-border pl-3">
+                  <li
+                    key={activity.id}
+                    className="flex flex-col gap-0.5 border-l-2 border-border pl-3"
+                  >
                     <span className="text-sm text-foreground">
                       <ActivityMessage activity={activity} />
                     </span>
-                    <time className="text-xs text-muted" dateTime={activity.createdAt}>
+                    <time className="text-xs text-muted-foreground" dateTime={activity.createdAt}>
                       {formatDateTime(activity.createdAt)}
                     </time>
                   </li>
                 ))}
               </ol>
             )}
-          </Drawer.Body>
-          {nextCursor && (
-            <Drawer.Footer>
-              <Button
-                className="w-full"
-                variant="secondary"
-                isPending={isFetching}
-                onPress={() => {
-                  setCursor(nextCursor);
-                }}
-              >
-                {t('loadMore')}
-              </Button>
-            </Drawer.Footer>
-          )}
-        </Drawer.Dialog>
-      </Drawer.Content>
-    </Drawer.Backdrop>
+          </div>
+        </ScrollArea>
+
+        {nextCursor && (
+          <SheetFooter>
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={isFetching}
+              onClick={() => {
+                setCursor(nextCursor);
+              }}
+            >
+              {t('loadMore')}
+            </Button>
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }

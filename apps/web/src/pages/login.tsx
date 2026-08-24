@@ -1,4 +1,6 @@
-import { Button, Card } from '@heroui/react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
+import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from '@tanstack/react-router';
@@ -37,39 +39,43 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm p-8">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">
-          {t('login.title')}
-        </h1>
-        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-          {/* MT-3: недовірена підказка «де шукати юзера» (тимчасово ручне поле;
-              піддомени — MT-4). Порожнє → дефолтний tenant інсталяції */}
-          <FormTextField
-            control={control}
-            name="tenant"
-            label={t('login.tenant')}
-            autoComplete="organization"
-          />
-          <FormTextField
-            control={control}
-            name="email"
-            label={t('login.email')}
-            type="email"
-            autoComplete="email"
-          />
-          <FormPasswordField
-            control={control}
-            name="password"
-            label={t('login.password')}
-            autoComplete="current-password"
-          />
-          {errors.root?.server && (
-            <p className="text-sm text-danger">{errors.root.server.message}</p>
-          )}
-          <Button type="submit" variant="primary" fullWidth isDisabled={isSubmitting}>
-            {isSubmitting ? t('login.submitting') : t('login.submit')}
-          </Button>
-        </form>
+      <Card className="w-full max-w-sm [--card-spacing:--spacing(6)]">
+        <CardHeader>
+          <CardTitle className="text-center text-xl">{t('login.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+            <FieldGroup>
+              {/* MT-3: недовірена підказка «де шукати юзера» (тимчасово ручне поле;
+                  піддомени — MT-4). Порожнє → дефолтний tenant інсталяції */}
+              <FormTextField
+                control={control}
+                name="tenant"
+                label={t('login.tenant')}
+                autoComplete="organization"
+              />
+              <FormTextField
+                control={control}
+                name="email"
+                label={t('login.email')}
+                type="email"
+                autoComplete="email"
+              />
+              <FormPasswordField
+                control={control}
+                name="password"
+                label={t('login.password')}
+                autoComplete="current-password"
+              />
+            </FieldGroup>
+            {errors.root?.server && (
+              <p className="text-sm text-destructive">{errors.root.server.message}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? t('login.submitting') : t('login.submit')}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
     </div>
   );

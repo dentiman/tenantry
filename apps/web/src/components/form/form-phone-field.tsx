@@ -1,13 +1,18 @@
-import { FieldError, InputGroup, Label, TextField } from '@heroui/react';
 import type { CountryCode } from 'libphonenumber-js';
-import { useEffect, useRef, useState } from 'react';
-import {
-  useController,
-  type Control,
-  type FieldPath,
-  type FieldValues,
-} from 'react-hook-form';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@saas-skeleton/ui/components/ui/field';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@saas-skeleton/ui/components/ui/input-group';
 import { CountrySelect } from './phone/country-select';
 import {
   formatAsYouType,
@@ -29,8 +34,6 @@ interface FormPhoneFieldProps<T extends FieldValues> {
   countryValue?: string | null;
   onCountryChange?: (country: CountryCode) => void;
   placeholder?: string;
-  /** 'secondary' — для полів на однотонній поверхні (модалки), як у решти обгорток */
-  variant?: 'primary' | 'secondary';
   isDisabled?: boolean;
 }
 
@@ -50,16 +53,15 @@ export function FormPhoneField<T extends FieldValues>({
   countryValue,
   onCountryChange,
   placeholder,
-  variant,
   isDisabled,
 }: FormPhoneFieldProps<T>) {
   const { t } = useTranslation('common');
+  const id = useId();
   const { field, fieldState } = useController({ control, name });
 
-  // Ref на Prefix — єдина доступна зачіпка за геометрію поля: сам InputGroup ref не
-  // пропускає (перезаписує власним), а Prefix — звичайний div. CountrySelect бере з
-  // нього parentElement, щоб вирівняти дропдаун по всій ширині поля
-  const prefixRef = useRef<HTMLDivElement>(null);
+  // Ref на сам InputGroup — якір попапа вибору країни (ширину віддає Base UI
+  // змінною --anchor-width, міряти нічого не треба)
+  const groupRef = useRef<HTMLDivElement>(null);
 
   const initial = stateFromE164(field.value, countryValue);
   const [country, setCountry] = useState<CountryCode>(initial.country);
@@ -120,25 +122,19 @@ export function FormPhoneField<T extends FieldValues>({
   };
 
   return (
-    <TextField isInvalid={fieldState.invalid} name={field.name}>
-      <Label>{label}</Label>
-      <InputGroup variant={variant}>
-        {/* border-e-0 — прибирає вертикальний роздільник між селектом країни та
-            інпутом: .input-group__prefix малює border-right завширшки
-            --border-width-field (дзеркально до border-s-0 у FormPasswordField).
-            pe-1 — проміжок до номера: типово префікс і інпут дають по px-3, тобто
-            24px розриву між кодом країни та цифрами */}
-        <InputGroup.Prefix ref={prefixRef} className="border-e-0 pe-1">
+    <Field data-invalid={fieldState.invalid || undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <InputGroup ref={groupRef}>
+        <InputGroupAddon align="inline-start">
           <CountrySelect
             country={country}
             onCountryChange={applyCountry}
-            prefixRef={prefixRef}
+            anchorRef={groupRef}
             isDisabled={isDisabled}
           />
-        </InputGroup.Prefix>
-        <InputGroup.Input
-          // ps-1 — друга половина того ж проміжку (див. коментар до Prefix)
-          className="ps-1"
+        </InputGroupAddon>
+        <InputGroupInput
+          id={id}
           type="tel"
           inputMode="tel"
           autoComplete="tel-national"
@@ -146,6 +142,7 @@ export function FormPhoneField<T extends FieldValues>({
           // слугує маскою, підказуючи і формат, і очікувану довжину
           placeholder={placeholder ?? getCountryHint(country)?.placeholder}
           disabled={isDisabled}
+          aria-invalid={fieldState.invalid || undefined}
           value={national}
           onChange={(event) => {
             handleInput(event.target.value);
@@ -157,9 +154,9 @@ export function FormPhoneField<T extends FieldValues>({
       {/* Не FieldError і не помилка форми: поле саме не дало ввести зайве, тож це
           пояснення, а не проблема, яку користувач має виправляти */}
       {isMaxLengthReached && !fieldState.error && (
-        <p className="text-xs text-muted">{t('phone.maxLengthReached')}</p>
+        <FieldDescription>{t('phone.maxLengthReached')}</FieldDescription>
       )}
       <FieldError>{fieldState.error?.message}</FieldError>
-    </TextField>
+    </Field>
   );
 }

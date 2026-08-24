@@ -1,9 +1,9 @@
-import { ToastQueue } from '@heroui/react';
+import { createToastManager } from '@saas-skeleton/ui/components/ui/toast';
 import type { NotificationResponseDtoOutput } from '../api/generated/model/notificationResponseDtoOutput';
 import { useNotificationUiStore } from '../stores/notification-ui.store';
 
 /** Вміст тоста — сам рядок сповіщення: тост і картка в центрі рендеряться однаково */
-export interface NotificationToastContent {
+export interface NotificationToastData {
   notification: NotificationResponseDtoOutput;
 }
 
@@ -16,16 +16,14 @@ export interface NotificationToastContent {
  * помилка — «щось пішло не так із твоєю дією» (знизу справа). Спільна черга
  * змушувала б їх витісняти одне одного.
  */
-export const notificationQueue = new ToastQueue<NotificationToastContent>({
-  maxVisibleToasts: 1,
-});
+export const notificationManager = createToastManager<NotificationToastData>();
 
 /**
- * Ключ попереднього тоста. `maxVisibleToasts: 1` лише ХОВАЄ зайві — вони чекають
- * у черзі і виринають, коли верхній закриється. Нам потрібно інакше: попереднє
- * не «пізніше», а більше не актуальне, тому закриваємо його явно.
+ * Id попереднього тоста. `limit={1}` на провайдері лише ХОВАЄ зайві (`data-limited`) —
+ * вони чекають, поки верхній закриється. Нам потрібно інакше: попереднє не «пізніше»,
+ * а більше не актуальне, тому закриваємо його явно.
  */
-let lastKey: string | null = null;
+let lastId: string | null = null;
 
 const TOAST_TIMEOUT_MS = 6_000;
 
@@ -36,23 +34,22 @@ export function showNotificationToast(notification: NotificationResponseDtoOutpu
     return;
   }
 
-  if (lastKey) {
-    notificationQueue.close(lastKey);
+  if (lastId) {
+    notificationManager.close(lastId);
   }
 
-  lastKey = notificationQueue.add(
-    { notification },
-    {
-      timeout: TOAST_TIMEOUT_MS,
-      onClose: () => {
-        lastKey = null;
-      },
+  lastId = notificationManager.add({
+    data: { notification },
+    timeout: TOAST_TIMEOUT_MS,
+    onClose: () => {
+      lastId = null;
     },
-  );
+  });
 }
 
 /** Закрити всі спливні сповіщення (напр. коли юзер пішов у центр) */
 export function clearNotificationToasts(): void {
-  notificationQueue.clear();
-  lastKey = null;
+  // close() без id закриває всі тости цього менеджера
+  notificationManager.close();
+  lastId = null;
 }

@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { Avatar, Label, Modal, ProgressBar } from '@heroui/react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@saas-skeleton/ui/components/ui/dialog';
+import { Progress, ProgressLabel, ProgressValue } from '@saas-skeleton/ui/components/ui/progress';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { FILE_MAX_SIZE_BYTES, IMAGE_MIME_TYPES } from '@saas-skeleton/contracts';
 import { getUsersFindAllQueryKey, useUsersUpdate } from '../api/generated/api';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
-import { parseApiError } from '../api/api-error';
+import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { FileDropzone, useFileUpload } from './file-upload';
+import { UserIdentity } from './user-identity';
 
 interface ChangeAvatarModalProps {
   /** null — модалка закрита (controlled ззовні, відкривається row action-ом гріда) */
@@ -56,67 +63,48 @@ export function ChangeAvatarModal({ user, onClose }: ChangeAvatarModalProps) {
   };
 
   return (
-    <Modal.Backdrop isOpen={user !== null} onOpenChange={close}>
-      <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[420px]">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>{t('avatar.heading')}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="flex flex-col gap-4">
-            {user && (
-              <div className="flex items-center gap-3">
-                <Avatar size="lg">
-                  {user.avatarUrl && <Avatar.Image alt={user.email} src={user.avatarUrl} />}
-                  <Avatar.Fallback>{initials(user.name ?? user.email)}</Avatar.Fallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{user.email}</p>
-                  <p className="text-sm text-muted">{t('avatar.description')}</p>
-                </div>
-              </div>
-            )}
+    <Dialog open={user !== null} onOpenChange={close}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>{t('avatar.heading')}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          {user && (
+            <UserIdentity
+              email={user.email}
+              name={user.name}
+              avatarUrl={user.avatarUrl}
+              size="lg"
+            />
+          )}
+          <p className="text-sm text-muted-foreground">{t('avatar.description')}</p>
 
-            {isBusy ? (
-              <ProgressBar
-                aria-label={t('avatar.uploading')}
-                className="w-full"
-                {...(state.status === 'uploading'
-                  ? { value: state.progress }
-                  : { isIndeterminate: true })}
-              >
-                <Label>
-                  {state.status === 'uploading' ? t('avatar.uploading') : t('avatar.saving')}
-                </Label>
-                <ProgressBar.Output />
-                <ProgressBar.Track>
-                  <ProgressBar.Fill />
-                </ProgressBar.Track>
-              </ProgressBar>
-            ) : (
-              <FileDropzone
-                accept={IMAGE_MIME_TYPES}
-                maxSizeBytes={FILE_MAX_SIZE_BYTES}
-                onSelect={(f) => {
-                  void handleSelect(f);
-                }}
-              />
-            )}
+          {isBusy ? (
+            // value={null} — індетермінований стан Base UI (заливка «бігає»);
+            // під час uploading показуємо реальний відсоток із useFileUpload
+            <Progress
+              aria-label={t('avatar.uploading')}
+              value={state.status === 'uploading' ? state.progress : null}
+            >
+              <ProgressLabel>
+                {state.status === 'uploading' ? t('avatar.uploading') : t('avatar.saving')}
+              </ProgressLabel>
+              <ProgressValue className="ml-auto" />
+            </Progress>
+          ) : (
+            <FileDropzone
+              accept={IMAGE_MIME_TYPES}
+              maxSizeBytes={FILE_MAX_SIZE_BYTES}
+              onSelect={(f) => {
+                void handleSelect(f);
+              }}
+            />
+          )}
 
-            {state.status === 'error' && <p className="text-sm text-danger">{state.message}</p>}
-            {saveError && <p className="text-sm text-danger">{saveError}</p>}
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+          {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
+          {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
-}
-
-function initials(nameOrEmail: string): string {
-  return nameOrEmail
-    .split(/[\s@._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
 }

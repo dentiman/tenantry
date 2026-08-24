@@ -1,6 +1,6 @@
-import { toast } from '@heroui/react';
+import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import i18n from '../i18n';
-import type { ParsedApiError } from '../api/api-error';
+import type { ParsedApiError } from '@saas-skeleton/ui/api/api-error';
 
 /** Анти-спам: однакова помилка не частіше ніж раз на вікно (сторінки з автооновленням) */
 const DEDUP_WINDOW_MS = 5_000;
@@ -32,5 +32,9 @@ export function showApiErrorToast(parsed: ParsedApiError): void {
     return;
   }
   recentToasts.set(key, now);
-  toast.danger(toastTitle(parsed), { description: toastDescription(parsed) });
+  toast.add({
+    type: 'error',
+    title: toastTitle(parsed),
+    description: toastDescription(parsed),
+  });
 }

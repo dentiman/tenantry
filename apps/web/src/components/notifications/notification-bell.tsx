@@ -1,4 +1,7 @@
+import { Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { useNotificationsGetSummary } from '../../api/generated/api';
 import { useNotificationUiStore } from '../../stores/notification-ui.store';
 import { NotificationPanel } from './notification-panel';
@@ -31,32 +34,23 @@ export function NotificationBell() {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
         aria-label={count > 0 ? t('unreadBadge', { count }) : t('open')}
-        className="relative cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-background-secondary hover:text-foreground"
         onClick={openPanel}
       >
-        {/* Інлайн-SVG: пакетів іконок у проєкті свідомо немає */}
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-5"
-          aria-hidden="true"
-        >
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Bell />
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          // Суцільна заливка, а не мʼякий destructive-варіант: лічильник має
+          // читатися з відстані. У base-nova немає --destructive-foreground,
+          // тому текст білий явно
+          <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 bg-destructive px-1 text-[10px] text-white">
             {count > 99 ? '99+' : count}
-          </span>
+          </Badge>
         )}
-      </button>
+      </Button>
 
       <NotificationPanel isOpen={isOpen} onClose={closePanel} />
     </>

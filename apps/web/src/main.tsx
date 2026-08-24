@@ -5,7 +5,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
-import { isGlobalApiError, parseApiError } from './api/api-error';
+import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { showApiErrorToast } from './lib/error-toast';
 import { initSocket } from './realtime/socket';
 import { initPresenceSync } from './realtime/presence-sync';
@@ -60,9 +60,9 @@ async function bootstrap(): Promise<void> {
 
   createRoot(rootElement).render(
     <StrictMode>
-      {/* HeroUI v3 очікує class + data-theme на <html>; system — стартове значення */}
+      {/* shadcn/Tailwind очікує лише class на <html>; system — стартове значення */}
       <ThemeProvider
-        attribute={['class', 'data-theme']}
+        attribute="class"
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange

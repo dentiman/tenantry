@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Button, Modal } from '@heroui/react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@saas-skeleton/ui/components/ui/dialog';
+import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
@@ -65,67 +75,66 @@ export function CreateUserModal() {
   });
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={close}>
-      <Button variant="primary">{t('create.trigger')}</Button>
-      <Modal.Backdrop>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-[420px]">
-            <Modal.CloseTrigger />
-            <Modal.Header>
-              <Modal.Heading>{t('create.heading')}</Modal.Heading>
-            </Modal.Header>
-            <form onSubmit={(e) => void onSubmit(e)} noValidate>
-              <Modal.Body className="flex flex-col gap-4">
-                <FormTextField
-                  control={control}
-                  name="email"
-                  label={t('create.email')}
-                  type="email"
-                  placeholder={t('create.emailPlaceholder')}
-                />
-                <FormTextField
-                  control={control}
-                  name="name"
-                  label={t('create.name')}
-                  placeholder={t('create.namePlaceholder')}
-                />
-                <FormSelect control={control} name="role" label={t('create.role')} options={roleOptions} />
-                <FormPhoneField
-                  control={control}
-                  name="phone"
-                  label={t('create.phone')}
-                  // placeholder свідомо не задаємо: поле саме показує приклад номера
-                  // обраної країни, і він змінюється разом із прапором
+    <Dialog open={isOpen} onOpenChange={close}>
+      <DialogTrigger render={<Button />}>{t('create.trigger')}</DialogTrigger>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>{t('create.heading')}</DialogTitle>
+        </DialogHeader>
+        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+          <FieldGroup>
+            <FormTextField
+              control={control}
+              name="email"
+              label={t('create.email')}
+              type="email"
+              placeholder={t('create.emailPlaceholder')}
+            />
+            <FormTextField
+              control={control}
+              name="name"
+              label={t('create.name')}
+              placeholder={t('create.namePlaceholder')}
+            />
+            <FormSelect
+              control={control}
+              name="role"
+              label={t('create.role')}
+              options={roleOptions}
+            />
+            <FormPhoneField
+              control={control}
+              name="phone"
+              label={t('create.phone')}
+              // placeholder свідомо не задаємо: поле саме показує приклад номера
+              // обраної країни, і він змінюється разом із прапором
+              countryValue={form.watch('phoneCountry')}
+              // Пара phone/phoneCountry зшивається тут: поле володіє номером,
+              // форма — вибраною країною (сервер бере її як є, не переґадуючи з +1)
+              onCountryChange={(code) => {
+                setValue('phoneCountry', code, { shouldDirty: true });
+              }}
+            />
+            <FormPasswordField
+              control={control}
+              name="password"
+              label={t('create.password')}
+              autoComplete="new-password"
+            />
+          </FieldGroup>
 
-                  countryValue={form.watch('phoneCountry')}
-                  // Пара phone/phoneCountry зшивається тут: поле володіє номером,
-                  // форма — вибраною країною (сервер бере її як є, не переґадуючи з +1)
-                  onCountryChange={(code) => {
-                    setValue('phoneCountry', code, { shouldDirty: true });
-                  }}
-                />
-                <FormPasswordField
-                  control={control}
-                  name="password"
-                  label={t('create.password')}
-                  autoComplete="new-password"
-                />
-                {errors.root?.server && (
-                  <p className="text-sm text-danger">{errors.root.server.message}</p>
-                )}
-              </Modal.Body>
-              <Modal.Footer>
-                <Button slot="close" variant="tertiary">
-                  {t('create.cancel')}
-                </Button>
-                <Button type="submit" variant="primary" isDisabled={isSubmitting}>
-                  {isSubmitting ? t('create.submitting') : t('create.submit')}
-                </Button>
-              </Modal.Footer>
-            </form>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
+          )}
+
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>{t('create.cancel')}</DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t('create.submitting') : t('create.submit')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

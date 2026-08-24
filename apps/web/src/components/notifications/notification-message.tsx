@@ -81,7 +81,7 @@ export function NotificationMessage({
         a: userRoute ? (
           <Link
             to={userRoute}
-            className="font-medium text-link hover:underline"
+            className="font-medium text-primary underline-offset-4 hover:underline"
             // Щоб клік по сутності не спрацював ще й як «відкрити ціль сповіщення»
             onClick={(e) => {
               e.stopPropagation();

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Chip, toast } from '@heroui/react';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Switch } from '@saas-skeleton/ui/components/ui/switch';
+import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -9,7 +11,7 @@ import {
   useUsersRemove,
   useUsersSetStatus,
 } from '../api/generated/api';
-import { parseApiError } from '../api/api-error';
+import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import type { UserListResponseDtoOutputItemsItem } from '../api/generated/model/userListResponseDtoOutputItemsItem';
 import { useAuthStore } from '../stores/auth.store';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
@@ -24,8 +26,12 @@ import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
 import type { UsersSearch } from '../router';
-import { CellSwitch, createDataGrid } from '../components/data-grid';
-import type { DataGridColumn, DataGridFilterDef, DataGridRowAction } from '../components/data-grid';
+import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
+import type {
+  DataGridColumn,
+  DataGridFilterDef,
+  DataGridRowAction,
+} from '@saas-skeleton/ui/components/data-grid';
 
 // Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
 // привʼязані до search-схеми роуту /users
@@ -72,7 +78,11 @@ export function UsersPage() {
       // 4xx тут не має «свого» поля у формі (тумблер — не форма), тому єдиний
       // чесний канал — тост; глобальний onError мовчить на 4xx за політикою
       onError: (error) => {
-        toast.danger(t('status.changeFailed'), { description: parseApiError(error).message });
+        toast.add({
+          type: 'error',
+          title: t('status.changeFailed'),
+          description: parseApiError(error).message,
+        });
       },
     },
   });
@@ -133,9 +143,7 @@ export function UsersPage() {
       header: t('table.role'),
       sortable: true,
       cell: (u) => (
-        <Chip size="sm" color={u.role === 'ADMIN' ? 'accent' : 'default'}>
-          {t(`roles.${u.role}`)}
-        </Chip>
+        <Badge variant={u.role === 'ADMIN' ? 'default' : 'secondary'}>{t(`roles.${u.role}`)}</Badge>
       ),
     },
     {
@@ -143,13 +151,13 @@ export function UsersPage() {
       header: t('table.active'),
       sortable: true,
       cell: (u) => (
-        <CellSwitch
-          label={u.isActive ? t('status.active') : t('status.inactive')}
-          isSelected={u.isActive}
+        <Switch
+          aria-label={u.isActive ? t('status.active') : t('status.inactive')}
+          checked={u.isActive}
           // Себе вимкнути не можна (сервер відхилив би так само — тут лише UX);
           // під час запиту блокуємо ТІЛЬКИ той рядок, який перемикають
-          isDisabled={u.id === currentUser?.id || isStatusPendingFor(u.id)}
-          onChange={(isActive) => {
+          disabled={u.id === currentUser?.id || isStatusPendingFor(u.id)}
+          onCheckedChange={(isActive) => {
             setStatus.mutate({ id: u.id, data: { isActive } });
           }}
         />
@@ -194,15 +202,15 @@ export function UsersPage() {
       // і читається як рішення, тоді як тумблер — швидкий перемикач
       confirm: {
         heading: t('status.disableHeading'),
+        // Без власного <p>: AlertDialogDescription сам рендерить абзац,
+        // а <p> у <p> браузер розриває (React пише про це в консоль)
         body: (u) => (
-          <p>
-            <Trans
-              t={t}
-              i18nKey="status.disableBody"
-              values={{ email: u.email }}
-              components={{ strong: <strong /> }}
-            />
-          </p>
+          <Trans
+            t={t}
+            i18nKey="status.disableBody"
+            values={{ email: u.email }}
+            components={{ strong: <strong /> }}
+          />
         ),
         confirmLabel: t('status.disableConfirm'),
         cancelLabel: t('status.disableCancel'),
@@ -234,14 +242,12 @@ export function UsersPage() {
       confirm: {
         heading: t('delete.heading'),
         body: (u) => (
-          <p>
-            <Trans
-              t={t}
-              i18nKey="delete.body"
-              values={{ email: u.email }}
-              components={{ strong: <strong /> }}
-            />
-          </p>
+          <Trans
+            t={t}
+            i18nKey="delete.body"
+            values={{ email: u.email }}
+            components={{ strong: <strong /> }}
+          />
         ),
         confirmLabel: t('delete.confirm'),
         cancelLabel: t('delete.cancel'),

@@ -1,3 +1,6 @@
+import { AvatarBadge } from '@saas-skeleton/ui/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@saas-skeleton/ui/components/ui/tooltip';
+
 interface PresenceDotProps {
   isOnline: boolean;
   /** Брокер недоступний — стан присутності невідомий */
@@ -6,9 +9,13 @@ interface PresenceDotProps {
 }
 
 /**
- * Індикатор присутності. При `isUnknown` не рендериться взагалі — і це головне
- * рішення компонента: сірий кружечок читався б як «offline», тобто застосунок
+ * Індикатор присутності поверх аватара. При `isUnknown` не рендериться взагалі — і це
+ * головне рішення компонента: сірий кружечок читався б як «offline», тобто застосунок
  * стверджував би те, чого не знає. Відсутність індикатора чесніша.
+ *
+ * Позиціювання і обвід дає `AvatarBadge` реєстру (він же бере розмір від `Avatar`),
+ * підпис — справжній `Tooltip` замість атрибута `title`, який не показується з
+ * клавіатури (UI-1, костиль 8 у docs/migrate-web.md §3.2).
  */
 export function PresenceDot({ isOnline, isUnknown, labels }: PresenceDotProps) {
   if (isUnknown) {
@@ -16,14 +23,19 @@ export function PresenceDot({ isOnline, isUnknown, labels }: PresenceDotProps) {
   }
   const label = isOnline ? labels.online : labels.offline;
   return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={[
-        'absolute -end-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-background',
-        isOnline ? 'bg-success' : 'bg-muted',
-      ].join(' ')}
-    />
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <AvatarBadge
+            role="img"
+            aria-label={label}
+            // bg-muted у shadcn — світлий ФОН, а не сірий текст: для offline-крапки
+            // потрібен контрастний нейтральний, інакше вона зникає на аватарі
+            className={isOnline ? 'bg-success' : 'bg-muted-foreground/50'}
+          />
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

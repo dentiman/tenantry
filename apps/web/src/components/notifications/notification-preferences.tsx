@@ -1,4 +1,7 @@
-import { Button, Spinner } from '@heroui/react';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
+import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -6,7 +9,6 @@ import {
   useNotificationsGetPreferences,
   useNotificationsSetPreferences,
 } from '../../api/generated/api';
-import { CellSwitch } from '../data-grid/cell-switch';
 
 /**
  * Налаштування інбокса: перемикач на тип. Матриця «тип × канал» уже закладена в
@@ -29,8 +31,9 @@ export function NotificationPreferences({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button variant="ghost" size="sm" className="self-start" onPress={onBack}>
-        ← {t('settings.back')}
+      <Button variant="ghost" size="sm" className="self-start" onClick={onBack}>
+        <ArrowLeft />
+        {t('settings.back')}
       </Button>
 
       {isPending && (
@@ -38,30 +41,35 @@ export function NotificationPreferences({ onBack }: { onBack: () => void }) {
           <Spinner aria-label={t('loading')} />
         </div>
       )}
-      {isError && <p className="py-4 text-sm text-danger">{t('loadError')}</p>}
+      {isError && <p className="py-4 text-sm text-destructive">{t('loadError')}</p>}
 
       {data && (
         <ul className="flex flex-col gap-3">
           {data.items.map((pref) => (
-            <li key={`${pref.type}:${pref.channel}`} className="flex items-center justify-between gap-3">
+            <li
+              key={`${pref.type}:${pref.channel}`}
+              className="flex items-center justify-between gap-3"
+            >
               {/* Окремий ключ-підпис, а не текст самого сповіщення: тому в ньому
                   немає ні розмітки, ні інтерполяцій, які тут нічим заповнити */}
               <span className="min-w-0 text-sm text-foreground">
                 {t(`settings.label.${pref.type}`)}
               </span>
               {pref.muteable ? (
-                <CellSwitch
-                  label={pref.type}
-                  isSelected={pref.enabled}
-                  isDisabled={isSaving}
-                  onChange={(enabled) => {
+                <Switch
+                  aria-label={pref.type}
+                  checked={pref.enabled}
+                  disabled={isSaving}
+                  onCheckedChange={(enabled) => {
                     mutate({
                       data: { items: [{ type: pref.type, channel: pref.channel, enabled }] },
                     });
                   }}
                 />
               ) : (
-                <span className="shrink-0 text-xs text-muted">{t('settings.always')}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {t('settings.always')}
+                </span>
               )}
             </li>
           ))}

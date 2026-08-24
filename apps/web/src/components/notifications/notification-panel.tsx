@@ -1,5 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Spinner } from '@heroui/react';
+import { Settings } from 'lucide-react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from '@saas-skeleton/ui/components/ui/empty';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@saas-skeleton/ui/components/ui/sheet';
+import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
+import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/toggle-group';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -52,7 +69,9 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const { mutate: update } = useNotificationsUpdate({ mutation: { onSuccess: invalidate } });
-  const { mutate: markAllRead } = useNotificationsMarkAllRead({ mutation: { onSuccess: invalidate } });
+  const { mutate: markAllRead } = useNotificationsMarkAllRead({
+    mutation: { onSuccess: invalidate },
+  });
   const { mutate: markSeen } = useNotificationsMarkSeen();
 
   // Відкриття панелі гасить бейдж: рядки лишаються непрочитаними, але «нових»
@@ -108,8 +127,8 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
   const isInitialLoading = isFetching && entries.length === 0;
 
   return (
-    <Drawer.Backdrop
-      isOpen={isOpen}
+    <Sheet
+      open={isOpen}
       onOpenChange={(next) => {
         if (!next) {
           setShowSettings(false);
@@ -117,43 +136,49 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
         }
       }}
     >
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:max-w-[440px]">
-          <Drawer.CloseTrigger />
-          <Drawer.Header>
-            <Drawer.Heading>
-              {showSettings ? t('settings.title') : t('title')}
-            </Drawer.Heading>
-            {!showSettings && (
-              <div className="mt-3 flex items-center gap-1">
+      <SheetContent side="right" className="sm:max-w-[440px]">
+        <SheetHeader>
+          <SheetTitle>{showSettings ? t('settings.title') : t('title')}</SheetTitle>
+          {!showSettings && (
+            <div className="mt-3 flex items-center gap-1">
+              {/* ToggleGroup замість трьох кнопок із ручним variant: вибраний стан
+                  тримає сам компонент і віддає його в aria-pressed */}
+              <ToggleGroup
+                value={[filter]}
+                onValueChange={(next) => {
+                  // multiple=false (дефолт) — у масиві максимум один елемент; порожній
+                  // означає повторний клік по активному фільтру: лишаємо як є.
+                  // Каст — бо обгортка реєстру не generic (звужує Value до string),
+                  // а значення сюди приходять рівно з FILTERS
+                  const [value] = next as NotificationsFindAllFilter[];
+                  if (value) {
+                    setFilter(value);
+                  }
+                }}
+              >
                 {FILTERS.map((value) => (
-                  <Button
-                    key={value}
-                    size="sm"
-                    variant={filter === value ? 'primary' : 'ghost'}
-                    onPress={() => {
-                      setFilter(value);
-                    }}
-                  >
+                  <ToggleGroupItem key={value} value={value} size="sm">
                     {t(`filter.${value}`)}
-                  </Button>
+                  </ToggleGroupItem>
                 ))}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto"
-                  aria-label={t('settings.open')}
-                  onPress={() => {
-                    setShowSettings(true);
-                  }}
-                >
-                  ⚙
-                </Button>
-              </div>
-            )}
-          </Drawer.Header>
+              </ToggleGroup>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="ml-auto"
+                aria-label={t('settings.open')}
+                onClick={() => {
+                  setShowSettings(true);
+                }}
+              >
+                <Settings />
+              </Button>
+            </div>
+          )}
+        </SheetHeader>
 
-          <Drawer.Body>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-4 pb-4">
             {showSettings ? (
               <NotificationPreferences
                 onBack={() => {
@@ -168,10 +193,18 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
                   </div>
                 )}
                 {isError && entries.length === 0 && (
-                  <p className="py-8 text-center text-sm text-danger">{t('loadError')}</p>
+                  <Empty className="border-0">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-destructive">{t('loadError')}</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
                 )}
                 {!isInitialLoading && !isError && entries.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted">{t(`empty.${filter}`)}</p>
+                  <Empty className="border-0">
+                    <EmptyHeader>
+                      <EmptyDescription>{t(`empty.${filter}`)}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 )}
                 {entries.length > 0 && (
                   <ol className="flex flex-col gap-1">
@@ -192,35 +225,35 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
                 )}
               </>
             )}
-          </Drawer.Body>
+          </div>
+        </ScrollArea>
 
-          {!showSettings && (
-            <Drawer.Footer className="flex gap-2">
+        {!showSettings && (
+          <SheetFooter className="flex-row gap-2">
+            <Button
+              className="flex-1"
+              variant="secondary"
+              onClick={() => {
+                markAllRead(undefined);
+              }}
+            >
+              {t('markAllRead')}
+            </Button>
+            {nextCursor && (
               <Button
                 className="flex-1"
-                variant="secondary"
-                onPress={() => {
-                  markAllRead(undefined);
+                variant="outline"
+                disabled={isFetching}
+                onClick={() => {
+                  setCursor(nextCursor);
                 }}
               >
-                {t('markAllRead')}
+                {t('loadMore')}
               </Button>
-              {nextCursor && (
-                <Button
-                  className="flex-1"
-                  variant="ghost"
-                  isPending={isFetching}
-                  onPress={() => {
-                    setCursor(nextCursor);
-                  }}
-                >
-                  {t('loadMore')}
-                </Button>
-              )}
-            </Drawer.Footer>
-          )}
-        </Drawer.Dialog>
-      </Drawer.Content>
-    </Drawer.Backdrop>
+            )}
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }

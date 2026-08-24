@@ -1,5 +1,14 @@
 import { useMemo } from 'react';
-import { Button, Modal } from '@heroui/react';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@saas-skeleton/ui/components/ui/dialog';
+import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
@@ -73,55 +82,49 @@ export function ChangePasswordModal({ user, onClose }: ChangePasswordModalProps)
   });
 
   return (
-    <Modal.Backdrop isOpen={user !== null} onOpenChange={close}>
-      <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[420px]">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>{t('password.heading')}</Modal.Heading>
-          </Modal.Header>
-          <form onSubmit={(e) => void onSubmit(e)} noValidate>
-            <Modal.Body className="flex flex-col gap-4">
-              {user && (
-                <UserIdentity
-                  email={user.email}
-                  name={user.name}
-                  avatarUrl={user.avatarUrl}
-                  size="lg"
-                />
-              )}
-              <p className="text-sm text-muted">{t('password.description')}</p>
+    <Dialog open={user !== null} onOpenChange={close}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>{t('password.heading')}</DialogTitle>
+        </DialogHeader>
+        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+          {user && (
+            <UserIdentity
+              email={user.email}
+              name={user.name}
+              avatarUrl={user.avatarUrl}
+              size="lg"
+            />
+          )}
+          <p className="text-sm text-muted-foreground">{t('password.description')}</p>
 
-              <FormPasswordField
-                control={control}
-                name="password"
-                label={t('password.new')}
-                autoComplete="new-password"
-                variant="secondary"
-              />
-              <FormPasswordField
-                control={control}
-                name="confirmPassword"
-                label={t('password.confirm')}
-                autoComplete="new-password"
-                variant="secondary"
-              />
+          <FieldGroup>
+            <FormPasswordField
+              control={control}
+              name="password"
+              label={t('password.new')}
+              autoComplete="new-password"
+            />
+            <FormPasswordField
+              control={control}
+              name="confirmPassword"
+              label={t('password.confirm')}
+              autoComplete="new-password"
+            />
+          </FieldGroup>
 
-              {errors.root?.server && (
-                <p className="text-sm text-danger">{errors.root.server.message}</p>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button slot="close" variant="tertiary">
-                {t('password.cancel')}
-              </Button>
-              <Button type="submit" variant="primary" isDisabled={isSubmitting}>
-                {isSubmitting ? t('password.submitting') : t('password.submit')}
-              </Button>
-            </Modal.Footer>
-          </form>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
+          )}
+
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>{t('password.cancel')}</DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t('password.submitting') : t('password.submit')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

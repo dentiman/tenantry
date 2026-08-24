@@ -49,9 +49,7 @@ export function getCountryHint(country: CountryCode): CountryHint | null {
     const trunkPrefix = digits.startsWith('0') ? '0' : null;
 
     hint = {
-      placeholder: trunkPrefix
-        ? national.replace(/^0[\s\-()]*/, '')
-        : national,
+      placeholder: trunkPrefix ? national.replace(/^0[\s\-()]*/, '') : national,
       maxDigits: trunkPrefix ? digits.length - 1 : digits.length,
       trunkPrefix,
     };

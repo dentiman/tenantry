@@ -29,7 +29,8 @@
     "maxLengthReached": "Maximum length reached for this country"
   },
   "dropzone": {
-    "prompt": "Drop a file here or click to browse",
+    "prompt": "Drop a file here or choose one",
+    "choose": "Choose file",
     "invalidType": "This file type is not allowed",
     "tooLarge": "File is too large (max {{maxMb}} MB)"
   },
