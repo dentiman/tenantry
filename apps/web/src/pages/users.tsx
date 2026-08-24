@@ -23,6 +23,7 @@ import { PresenceDot } from '../components/presence-dot';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '../lib/format';
+import { PageBreadcrumbs } from '../components/page-breadcrumbs';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
@@ -269,6 +270,7 @@ export function UsersPage() {
       useListQuery={(params, gridOptions) => useUsersFindAll(params, { query: gridOptions })}
       selection
     >
+      <PageBreadcrumbs items={[{ label: t('title') }]} />
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <div className="flex items-center gap-2">

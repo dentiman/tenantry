@@ -22,6 +22,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@saas-skeleton/ui/components/ui/sidebar';
+import {
+  PageHeaderSlot,
+  PageHeaderSlotProvider,
+} from '@saas-skeleton/ui/components/page-header-slot';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { useAuthStore } from '../stores/auth.store';
@@ -53,97 +57,103 @@ export function AppLayout() {
   };
 
   return (
-    <SidebarProvider>
-      {/* collapsible="icon" — як у прикладу, з якого взято розкладку: згорнутий
+    // Хедер тримає слот, який наповнюють сторінки (крихти) — див. page-header-slot.tsx
+    <PageHeaderSlotProvider>
+      <SidebarProvider>
+        {/* collapsible="icon" — як у прикладу, з якого взято розкладку: згорнутий
           сайдбар стає смугою іконок, а не зникає (дефолт реєстру — offcanvas) */}
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link to="/" />}>
-                <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Layers className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left leading-tight">
-                  <span className="truncate font-semibold">{t('brand')}</span>
-                  {/* Підзаголовок — місце для назви тенанта, коли вона зʼявиться на
+        <Sidebar collapsible="icon">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" render={<Link to="/" />}>
+                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <Layers className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left leading-tight">
+                    <span className="truncate font-semibold">{t('brand')}</span>
+                    {/* Підзаголовок — місце для назви тенанта, коли вона зʼявиться на
                       фронті (MT-4); поки що роль інсталяції */}
-                  <span className="truncate text-xs text-muted-foreground">
-                    {t('brandSubtitle')}
-                  </span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {t('brandSubtitle')}
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
 
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive={pathname === '/'} render={<Link to="/" />}>
-                    <LayoutDashboard />
-                    <span>{t('nav.dashboard')}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith('/users')}
-                    render={<Link to="/users" />}
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive={pathname === '/'} render={<Link to="/" />}>
+                      <LayoutDashboard />
+                      <span>{t('nav.dashboard')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith('/users')}
+                      render={<Link to="/users" />}
+                    >
+                      <Users />
+                      <span>{t('nav.users')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<SidebarMenuButton size="lg" aria-label={t('accountMenu')} />}
                   >
-                    <Users />
-                    <span>{t('nav.users')}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+                    <UserIdentity
+                      email={user?.email ?? ''}
+                      name={user?.name}
+                      avatarUrl={user?.avatarUrl}
+                      className="min-w-0 flex-1"
+                    />
+                    <ChevronsUpDown className="ml-auto shrink-0 text-muted-foreground" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="end" sideOffset={8} className="min-w-48">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem variant="destructive" onClick={logout}>
+                        {t('logout')}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
 
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={<SidebarMenuButton size="lg" aria-label={t('accountMenu')} />}
-                >
-                  <UserIdentity
-                    email={user?.email ?? ''}
-                    name={user?.name}
-                    avatarUrl={user?.avatarUrl}
-                    className="min-w-0 flex-1"
-                  />
-                  <ChevronsUpDown className="ml-auto shrink-0 text-muted-foreground" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" sideOffset={8} className="min-w-48">
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem variant="destructive" onClick={logout}>
-                      {t('logout')}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+        <SidebarInset>
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
+            <SidebarTrigger className="-ml-2" />
+            <PageHeaderSlot className="min-w-0 flex-1" />
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationBell />
+              <ThemeSwitcher />
+            </div>
+          </header>
 
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
-          <SidebarTrigger className="-ml-2" />
-          <div className="ml-auto flex items-center gap-1">
-            <NotificationBell />
-            <ThemeSwitcher />
+          {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
+              і вкладений <main> був би невалідним */}
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="mx-auto max-w-5xl">
+              <Outlet />
+            </div>
           </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="mx-auto max-w-5xl">
-            <Outlet />
-          </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </PageHeaderSlotProvider>
   );
 }

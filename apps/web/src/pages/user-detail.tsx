@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -36,6 +35,7 @@ import {
   useUsersSetStatus,
 } from '../api/generated/api';
 import { ActivityFeed } from '../components/activity/activity-feed';
+import { PageBreadcrumbs } from '../components/page-breadcrumbs';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { PresenceDot } from '../components/presence-dot';
@@ -118,18 +118,10 @@ export function UserDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* nativeButton={false} обовʼязково, коли Base UI Button підміняється на <a>:
-          інакше він лишає семантику кнопки і пише попередження в консоль */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-3 self-start"
-        nativeButton={false}
-        render={<Link to="/users" />}
-      >
-        <ArrowLeft />
-        {t('detail.back')}
-      </Button>
+      {/* Крихти живуть у хедері layout-а — сторінка віддає їх через портал */}
+      <PageBreadcrumbs
+        items={[{ label: t('title'), to: '/users' }, { label: user.name ?? user.email }]}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">

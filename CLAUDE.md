@@ -524,6 +524,11 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
     RHF: `useController` → `Field`+`FieldLabel htmlFor`+`Input id` (`useId()`)+`FieldError`, стан
     через `data-invalid` на `Field` і `aria-invalid` на контролі; `FormSelect` мусить діставати
     `items` (без мапи value→label Base UI малює в тригері сире значення).
+    **Крихти сторінок — через портал** (UI-5): сторінка рендерить `PageBreadcrumbs`, а
+    `PageHeaderPortal` (`libs/ui/src/components/page-header-slot.tsx`) телепортує розмітку
+    в слот хедера layout-а. Портал міняє лише місце в DOM — дерево React те саме, тож
+    `Link` роутера й контексти сторінки працюють як звичайно. Новий вміст хедера додається
+    без зміни контракту layout-а.
     **Розкладка шела — патерн `sidebar-07` реєстру** (UI-3): бренд-плитка + назва +
     підзаголовок у `SidebarHeader`, профіль юзера з дропдауном у `SidebarFooter`
     (`UserIdentity` живе в `libs/ui`), у хедері лише `SidebarTrigger` + дзвінок + тема;

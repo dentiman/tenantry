@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
+import { PageBreadcrumbs } from '../components/page-breadcrumbs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -68,6 +69,7 @@ export function TenantsPage() {
 
   return (
     <div>
+      <PageBreadcrumbs items={[{ label: t('title') }]} />
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <CreateTenantModal />

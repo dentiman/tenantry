@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
 import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
 import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
+import { PageBreadcrumbs } from '../components/page-breadcrumbs';
 import { formatDateTime } from '../lib/format';
 import type { JobsSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
@@ -138,6 +139,7 @@ export function JobsPage() {
         })
       }
     >
+      <PageBreadcrumbs items={[{ label: t('title') }]} />
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">{t('title')}</h1>
         <Grid.Filters filters={filters} />

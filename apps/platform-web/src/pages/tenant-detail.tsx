@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, TriangleAlert } from 'lucide-react';
-import { Link, useParams } from '@tanstack/react-router';
+import { TriangleAlert } from 'lucide-react';
+import { useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -32,6 +32,7 @@ import {
   useTenantsFindOne,
   useTenantsUpdate,
 } from '../api/generated/api';
+import { PageBreadcrumbs } from '../components/page-breadcrumbs';
 import { formatDate, formatDateTime } from '../lib/format';
 
 /** Рядок «підпис → значення»: та сама форма, що на картці юзера в apps/web */
@@ -105,17 +106,8 @@ export function TenantDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* nativeButton={false} — Base UI Button, підмінений на <a> (див. картку юзера) */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-3 self-start"
-        nativeButton={false}
-        render={<Link to="/" />}
-      >
-        <ArrowLeft />
-        {t('detail.back')}
-      </Button>
+      {/* Крихти віддаються в хедер layout-а порталом (page-header-slot.tsx) */}
+      <PageBreadcrumbs items={[{ label: t('title'), to: '/' }, { label: tenant.name }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
