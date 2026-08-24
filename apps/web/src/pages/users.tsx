@@ -118,7 +118,7 @@ export function UsersPage() {
             <PresenceDot
               isOnline={presence.isOnline(u.id)}
               isUnknown={presence.isUnknown}
-              labels={{ online: t('presence.online'), offline: t('presence.offline') }}
+              label={t('presence.online')}
             />
           }
         />

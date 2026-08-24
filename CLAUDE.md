@@ -103,8 +103,9 @@ leases на `SIGTERM` (додано `app.enableShutdownHooks()`). Lease звіл
 Snapshot — `GET /api/presence` (`onlineUserIds`+`revision`+`generatedAt`), delta —
 `presence.changed.v1`; фронт тримає snapshot у TanStack Query, а socket його ПАТЧИТЬ за
 правилом трьох ревізій (`<=` ігнор, `+1` застосувати, `>+1` → resync). Недоступний брокер →
-**503, а не порожній список** (порожній читався б як «всі offline»); `PresenceDot` при
-`isUnknown` не рендериться, тост придушено `meta.silentError`. Клієнт — singleton ПОЗА
+**503, а не порожній список** (порожній читався б як «всі offline»); `PresenceDot` рендериться
+ТІЛЬКИ для online (offline і `isUnknown` — без крапки: бачиш крапку — юзер онлайн),
+тост придушено `meta.silentError`. Клієнт — singleton ПОЗА
 React-деревом (StrictMode створив би другий socket), `socket.disconnect()` на `pagehide`.
 Граблі: (1) **приватний метод не можна називати `handleDisconnect`** — Nest шукає хук на
 інстансі за іменем (`private` у TS не заважає), підписує сам і кличе з одним аргументом:

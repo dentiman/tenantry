@@ -5,24 +5,24 @@
 
 ## Карта коду
 
-| Що | Де |
-| --- | --- |
-| Контракти подій і snapshot-у | `libs/contracts/src/realtime/` — Zod-схеми + typed event maps (`ServerToClientEvents` / `ClientToServerEvents`) |
-| Гейтвей | `apps/api/src/realtime/realtime.gateway.ts` — namespace, rooms, цикл auth, обробка розривів |
-| Автентифікація сокета | `apps/api/src/realtime/socket-auth.service.ts` |
-| Перевірка токена (спільна з HTTP) | `apps/api/src/auth/access-token.service.ts` |
-| WebSocket-адаптер Nest | `apps/api/src/realtime/realtime-io.adapter.ts` — транспорт, CORS/`allowRequest`, Redis Streams |
-| Емісія в room-и | `apps/api/src/realtime/realtime.emitter.ts` |
-| Конфіг + валідація env | `apps/api/src/realtime/realtime.config.ts` |
-| Клієнт Valkey | `apps/api/src/realtime/realtime-redis.provider.ts` |
-| Presence: Lua | `apps/api/src/realtime/presence/presence.lua.ts` |
-| Presence: сховище | `apps/api/src/realtime/presence/presence.store.ts` |
-| Presence: логіка ноди | `apps/api/src/realtime/presence/presence.service.ts` |
-| Presence: REST | `apps/api/src/realtime/presence/presence.controller.ts` |
-| Фронт: socket | `apps/web/src/realtime/socket.ts` |
-| Фронт: delta → кеш | `apps/web/src/realtime/presence-sync.ts` |
-| Фронт: читання | `apps/web/src/realtime/use-presence.ts`, `apps/web/src/components/presence-dot.tsx` |
-| Тести | `apps/api/test/realtime.e2e-spec.ts` |
+| Що                                | Де                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Контракти подій і snapshot-у      | `libs/contracts/src/realtime/` — Zod-схеми + typed event maps (`ServerToClientEvents` / `ClientToServerEvents`) |
+| Гейтвей                           | `apps/api/src/realtime/realtime.gateway.ts` — namespace, rooms, цикл auth, обробка розривів                     |
+| Автентифікація сокета             | `apps/api/src/realtime/socket-auth.service.ts`                                                                  |
+| Перевірка токена (спільна з HTTP) | `apps/api/src/auth/access-token.service.ts`                                                                     |
+| WebSocket-адаптер Nest            | `apps/api/src/realtime/realtime-io.adapter.ts` — транспорт, CORS/`allowRequest`, Redis Streams                  |
+| Емісія в room-и                   | `apps/api/src/realtime/realtime.emitter.ts`                                                                     |
+| Конфіг + валідація env            | `apps/api/src/realtime/realtime.config.ts`                                                                      |
+| Клієнт Valkey                     | `apps/api/src/realtime/realtime-redis.provider.ts`                                                              |
+| Presence: Lua                     | `apps/api/src/realtime/presence/presence.lua.ts`                                                                |
+| Presence: сховище                 | `apps/api/src/realtime/presence/presence.store.ts`                                                              |
+| Presence: логіка ноди             | `apps/api/src/realtime/presence/presence.service.ts`                                                            |
+| Presence: REST                    | `apps/api/src/realtime/presence/presence.controller.ts`                                                         |
+| Фронт: socket                     | `apps/web/src/realtime/socket.ts`                                                                               |
+| Фронт: delta → кеш                | `apps/web/src/realtime/presence-sync.ts`                                                                        |
+| Фронт: читання                    | `apps/web/src/realtime/use-presence.ts`, `apps/web/src/components/presence-dot.tsx`                             |
+| Тести                             | `apps/api/test/realtime.e2e-spec.ts`                                                                            |
 
 ## Протокол
 
@@ -35,12 +35,12 @@
 - У назвах room немає email, імені чи будь-яких PII: room-и видно в трафіку адаптера і в
   дампах брокера.
 
-| Напрямок | Подія | Призначення |
-| --- | --- | --- |
-| server → client | `presence.changed.v1` | `{ userId, status, revision, occurredAt }` |
-| server → client | `auth.expiring.v1` | Просить оновити access-токен до завершення `exp` |
-| client → server | `auth.update.v1` | Новий токен + acknowledgement із результатом |
-| server → client | `realtime.resync-required.v1` | Стан міг розʼїхатись — перечитай snapshot |
+| Напрямок        | Подія                         | Призначення                                      |
+| --------------- | ----------------------------- | ------------------------------------------------ |
+| server → client | `presence.changed.v1`         | `{ userId, status, revision, occurredAt }`       |
+| server → client | `auth.expiring.v1`            | Просить оновити access-токен до завершення `exp` |
+| client → server | `auth.update.v1`              | Новий токен + acknowledgement із результатом     |
+| server → client | `realtime.resync-required.v1` | Стан міг розʼїхатись — перечитай snapshot        |
 
 Версія в імені (`.v1`) — та сама доктрина, що в `defineEvent`: зміна форми payload-у це
 **нове імʼя**, а не тихо інша структура під старим.
@@ -152,11 +152,11 @@ Snapshot і ревізія читаються **одним** скриптом: �
 присутності не змінює, отже й ревізію не рухає. Фронт тримає snapshot у кеші TanStack
 Query, а socket його патчить за трьома випадками:
 
-| Умова | Дія | Чому |
-| --- | --- | --- |
-| `revision <= current` | ігнорувати | дубль або переставлена подія — застосування зіпсувало б стан |
-| `revision === current + 1` | застосувати дельту | рівно наступна зміна |
-| `revision > current + 1` | інвалідувати `GET /presence` | між snapshot-ом і цією подією загубились інші, і невідомо, кого саме пропустили |
+| Умова                      | Дія                          | Чому                                                                            |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| `revision <= current`      | ігнорувати                   | дубль або переставлена подія — застосування зіпсувало б стан                    |
+| `revision === current + 1` | застосувати дельту           | рівно наступна зміна                                                            |
+| `revision > current + 1`   | інвалідувати `GET /presence` | між snapshot-ом і цією подією загубились інші, і невідомо, кого саме пропустили |
 
 Плюс два безумовні resync: реконект без успішного recovery (`socket.recovered === false`) і
 серверна подія `realtime.resync-required.v1`.
@@ -166,26 +166,31 @@ Query, а socket його патчить за трьома випадками:
 такому стані не рендериться взагалі, а глобальний тост придушено через `meta.silentError`
 у налаштуваннях запиту — недоступна presence це стан UI, а не подія для юзера.
 
+**Індикатор малюється тільки для «online»** (2026-08-24): «offline» — стан за замовчуванням
+у списку, і крапка на кожному другому рядку перетворювала б сигнал на шум. Разом із
+`isUnknown` це дає просте правило: **бачиш крапку — юзер онлайн; не бачиш — або офлайн, або
+невідомо**, і жодного з цих двох станів застосунок не стверджує окремо.
+
 ## Конфігурація
 
 Валідується на старті процесу: помилка в env має впасти одразу, а не проявитись розʼїханою
 presence за пів години. Дефолти збігаються з dev-compose, тому `pnpm docker:up` +
 `pnpm api:dev` працюють без жодного рядка в `.env`.
 
-| Змінна | Дефолт | Призначення |
-| --- | --- | --- |
-| `REDIS_URL` | `redis://:saas-realtime@localhost:6379` | Брокер. У стеку — `redis://:${REDIS_PASSWORD}@valkey:6379` |
-| `REALTIME_KEY_PREFIX` | `saas:rt` | Префікс усіх ключів — дозволяє ділити один Valkey між інсталяціями |
-| `REALTIME_ALLOWED_ORIGINS` | `http://localhost:5173` | Allowlist origin-ів (через кому) |
-| `REALTIME_LEASE_TTL_MS` | `60000` | Скільки живе lease без продовження |
-| `REALTIME_HEARTBEAT_MS` | `20000` | Період batch-продовження |
-| `REALTIME_SWEEP_MS` | `5000` | Період прибирання протермінованих |
-| `REALTIME_RECOVERY_MS` | `120000` | Вікно connection state recovery; `0` — вимкнути |
+| Змінна                     | Дефолт                                  | Призначення                                                        |
+| -------------------------- | --------------------------------------- | ------------------------------------------------------------------ |
+| `REDIS_URL`                | `redis://:saas-realtime@localhost:6379` | Брокер. У стеку — `redis://:${REDIS_PASSWORD}@valkey:6379`         |
+| `REALTIME_KEY_PREFIX`      | `saas:rt`                               | Префікс усіх ключів — дозволяє ділити один Valkey між інсталяціями |
+| `REALTIME_ALLOWED_ORIGINS` | `http://localhost:5173`                 | Allowlist origin-ів (через кому)                                   |
+| `REALTIME_LEASE_TTL_MS`    | `60000`                                 | Скільки живе lease без продовження                                 |
+| `REALTIME_HEARTBEAT_MS`    | `20000`                                 | Період batch-продовження                                           |
+| `REALTIME_SWEEP_MS`        | `5000`                                  | Період прибирання протермінованих                                  |
+| `REALTIME_RECOVERY_MS`     | `120000`                                | Вікно connection state recovery; `0` — вимкнути                    |
 
 **Origin перевіряється через `allowRequest`, а не лише CORS**: browser CORS захищає HTTP,
 але **не** WebSocket-транспорт. Відсутній Origin (не-браузерні клієнти, інтеграційні
 тести) пропускається свідомо — заголовок усе одно підробний, а перевірка захищає від чужої
-*сторінки* в браузері, де Origin проставляє сам браузер. Справжня автентифікація — JWT,
+_сторінки_ в браузері, де Origin проставляє сам браузер. Справжня автентифікація — JWT,
 вона обовʼязкова завжди.
 
 Брокер вважається trusted internal infrastructure: приватна мережа, пароль, без публічного
@@ -239,16 +244,16 @@ Upgrade-заголовки й idle timeout переїжджають туди. П
 
 ## Режими відмов
 
-| Подія | Поведінка |
-| --- | --- |
-| Закрита остання вкладка | `pagehide` → навмисний disconnect → lease звільняється одразу → offline-дельта |
-| Зникла мережа | Реконект; offline лише після TTL, щоб не блимати на короткому розриві |
-| Crash ноди | Її leases протермінуються; sweeper будь-якої іншої ноди публікує offline |
-| Rolling deploy | Новий таск стартує ДО зупинки старого, обидва в адаптері; старий на SIGTERM віддає leases і закриває сокети |
-| Brokers недоступний | REST/auth/черги працюють; `GET /presence` → 503, UI показує «невідомо»; після відновлення нода шле `resync-required` |
-| Рестарт Valkey | Presence відбудовується heartbeat-ами за один інтервал; клієнти інвалідують snapshot |
-| Пропущена дельта | Розрив у ревізії → resync із REST |
-| Юзера/тенант деактивовано | Новий handshake відхилено. Примусове закриття вже відкритих сесій — окрема майбутня операція |
+| Подія                     | Поведінка                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Закрита остання вкладка   | `pagehide` → навмисний disconnect → lease звільняється одразу → offline-дельта                                       |
+| Зникла мережа             | Реконект; offline лише після TTL, щоб не блимати на короткому розриві                                                |
+| Crash ноди                | Її leases протермінуються; sweeper будь-якої іншої ноди публікує offline                                             |
+| Rolling deploy            | Новий таск стартує ДО зупинки старого, обидва в адаптері; старий на SIGTERM віддає leases і закриває сокети          |
+| Brokers недоступний       | REST/auth/черги працюють; `GET /presence` → 503, UI показує «невідомо»; після відновлення нода шле `resync-required` |
+| Рестарт Valkey            | Presence відбудовується heartbeat-ами за один інтервал; клієнти інвалідують snapshot                                 |
+| Пропущена дельта          | Розрив у ревізії → resync із REST                                                                                    |
+| Юзера/тенант деактивовано | Новий handshake відхилено. Примусове закриття вже відкритих сесій — окрема майбутня операція                         |
 
 ## Спостережуваність
 

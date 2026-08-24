@@ -77,7 +77,6 @@
     "submitting": "Creating…"
   },
   "presence": {
-    "online": "Online",
-    "offline": "Offline"
+    "online": "Online"
   }
 }

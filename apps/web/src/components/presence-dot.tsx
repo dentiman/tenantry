@@ -5,35 +5,29 @@ interface PresenceDotProps {
   isOnline: boolean;
   /** Брокер недоступний — стан присутності невідомий */
   isUnknown: boolean;
-  labels: { online: string; offline: string };
+  /** Підпис індикатора; показується тултіпом (стан «offline» не малюється взагалі) */
+  label: string;
 }
 
 /**
- * Індикатор присутності поверх аватара. При `isUnknown` не рендериться взагалі — і це
- * головне рішення компонента: сірий кружечок читався б як «offline», тобто застосунок
- * стверджував би те, чого не знає. Відсутність індикатора чесніша.
+ * Індикатор присутності поверх аватара. Малюється ТІЛЬКИ для юзера онлайн:
+ * «offline» — це стан за замовчуванням у списку, і крапка на кожному другому
+ * рядку перетворювала б сигнал на шум. При `isUnknown` (брокер недоступний)
+ * теж нічого: сірий кружечок читався б як «offline», тобто застосунок
+ * стверджував би те, чого не знає.
  *
  * Позиціювання і обвід дає `AvatarBadge` реєстру (він же бере розмір від `Avatar`),
  * підпис — справжній `Tooltip` замість атрибута `title`, який не показується з
  * клавіатури (UI-1, костиль 8 у docs/migrate-web.md §3.2).
  */
-export function PresenceDot({ isOnline, isUnknown, labels }: PresenceDotProps) {
-  if (isUnknown) {
+export function PresenceDot({ isOnline, isUnknown, label }: PresenceDotProps) {
+  if (isUnknown || !isOnline) {
     return null;
   }
-  const label = isOnline ? labels.online : labels.offline;
   return (
     <Tooltip>
       <TooltipTrigger
-        render={
-          <AvatarBadge
-            role="img"
-            aria-label={label}
-            // bg-muted у shadcn — світлий ФОН, а не сірий текст: для offline-крапки
-            // потрібен контрастний нейтральний, інакше вона зникає на аватарі
-            className={isOnline ? 'bg-success' : 'bg-muted-foreground/50'}
-          />
-        }
+        render={<AvatarBadge role="img" aria-label={label} className="bg-success" />}
       />
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>

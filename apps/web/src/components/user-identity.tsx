@@ -12,6 +12,7 @@ interface UserIdentityProps {
   email: string;
   name?: string | null;
   avatarUrl?: string | null;
+  /** Розміри реєстру: sm 24px, default 32px (стандарт рядка таблиці), lg 40px */
   size?: 'sm' | 'default' | 'lg';
   /** Оверлей аватара (PresenceDot) — рендериться ВСЕРЕДИНІ Avatar, бо AvatarBadge бере від нього розмір */
   badge?: ReactNode;
@@ -54,7 +55,7 @@ export function UserIdentity({
   email,
   name,
   avatarUrl,
-  size = 'sm',
+  size = 'default',
   badge,
   className,
   textClassName,
@@ -64,8 +65,10 @@ export function UserIdentity({
   const secondary = displayName ? email : null;
 
   return (
-    <Item size="xs" className={['w-auto gap-3 p-0', className].filter(Boolean).join(' ')}>
-      <ItemMedia>
+    <Item size="sm" className={['w-auto gap-3 p-0', className].filter(Boolean).join(' ')}>
+      {/* Аватар по центру блоку: стоковий ItemMedia притискає медіа до верху і зсуває
+          на 2px, бо розрахований на багаторядковий опис — тут рядків рівно два */}
+      <ItemMedia className="translate-y-0 self-center">
         <Avatar size={size}>
           {avatarUrl && <AvatarImage alt="" src={avatarUrl} />}
           <AvatarFallback>{getInitials(name, email)}</AvatarFallback>
@@ -73,9 +76,13 @@ export function UserIdentity({
         </Avatar>
       </ItemMedia>
       <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
-        <ItemTitle title={primary}>{primary}</ItemTitle>
+        {/* leading-tight на обох рядках: стокові snug/normal лишають між іменем і
+            поштою повітря, якого в рядку таблиці бути не має */}
+        <ItemTitle className="leading-tight" title={primary}>
+          {primary}
+        </ItemTitle>
         {secondary && (
-          <ItemDescription className="text-xs" title={secondary}>
+          <ItemDescription className="text-xs leading-tight" title={secondary}>
             {secondary}
           </ItemDescription>
         )}
