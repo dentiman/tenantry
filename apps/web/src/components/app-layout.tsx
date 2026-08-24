@@ -147,10 +147,12 @@ export function AppLayout() {
 
           {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
               і вкладений <main> був би невалідним */}
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="mx-auto max-w-5xl">
-              <Outlet />
-            </div>
+          {/* На всю ширину з бічними відступами: у списках таблиці широкі, і
+              центрована колонка max-w-5xl зʼїдала б половину екрана.
+              (shadcn-admin тут має опційний cap max-w-7xl на дуже широких
+              екранах — свідомо не беремо, бо просили саме повну ширину) */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <Outlet />
           </div>
         </SidebarInset>
       </SidebarProvider>

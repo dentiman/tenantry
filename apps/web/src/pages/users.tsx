@@ -116,7 +116,7 @@ export function UsersPage() {
         <Link
           to="/users/$userId"
           params={{ userId: u.id }}
-          className="block rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <UserIdentity
             email={u.email}

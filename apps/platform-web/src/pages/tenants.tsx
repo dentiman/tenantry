@@ -114,7 +114,7 @@ export function TenantsPage() {
                         <Link
                           to="/tenants/$tenantId"
                           params={{ tenantId: tenant.id }}
-                          className="rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {tenant.slug}
                         </Link>
