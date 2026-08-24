@@ -1,13 +1,21 @@
-import { Avatar, Dropdown } from '@heroui/react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/auth.store';
 import { ThemeSwitcher } from './theme-switcher';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navLinkClass =
-  'block rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-background-secondary hover:text-foreground';
+  'block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
 const activeProps = {
-  className: 'block rounded-lg px-3 py-2 text-sm font-medium bg-accent-soft text-accent-soft-foreground',
+  className: 'block rounded-lg px-3 py-2 text-sm font-medium bg-accent text-accent-foreground',
 };
 
 export function AppLayout() {
@@ -25,8 +33,8 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-surface">
-        <div className="px-5 py-5 text-lg font-semibold text-accent">{t('brand')}</div>
+      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+        <div className="px-5 py-5 text-lg font-semibold text-primary">{t('brand')}</div>
         <nav className="flex flex-col gap-1 px-3">
           <Link
             to="/"
@@ -43,32 +51,31 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-border bg-surface px-6">
+        <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-border bg-background px-6">
           <ThemeSwitcher />
-          <Dropdown>
-            <Dropdown.Trigger
-              aria-label={t('accountMenu')}
-              className="flex cursor-pointer items-center gap-2 rounded-full"
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={t('accountMenu')}
+                  variant="ghost"
+                  className="h-9 rounded-full"
+                />
+              }
             >
               <Avatar size="sm">
-                <Avatar.Fallback>{initial}</Avatar.Fallback>
+                <AvatarFallback>{initial}</AvatarFallback>
               </Avatar>
-              <span className="text-sm text-muted">{operator?.email}</span>
-            </Dropdown.Trigger>
-            <Dropdown.Popover placement="bottom end">
-              <Dropdown.Menu
-                onAction={(key) => {
-                  if (key === 'logout') {
-                    logout();
-                  }
-                }}
-              >
-                <Dropdown.Item id="logout" textValue={t('logout')} className="text-danger">
+              <span className="text-sm text-muted-foreground">{operator?.email}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              <DropdownMenuGroup>
+                <DropdownMenuItem variant="destructive" onClick={logout}>
                   {t('logout')}
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <main className="flex-1 overflow-y-auto p-8">

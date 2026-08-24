@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Button, Modal } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,6 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { CreateTenantSchema, type CreateTenant } from '@saas-skeleton/contracts/platform';
 import { getTenantsFindAllQueryKey, useTenantsCreate } from '../api/generated/api';
 import { applyServerError, FormPasswordField, FormTextField } from './form';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { FieldGroup, FieldLegend, FieldSeparator, FieldSet } from '@/components/ui/field';
 
 export function CreateTenantModal() {
   const { t } = useTranslation('tenants');
@@ -55,79 +65,69 @@ export function CreateTenantModal() {
   });
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={close}>
-      <Button variant="primary">{t('create.trigger')}</Button>
-      <Modal.Backdrop>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-[440px]">
-            <Modal.CloseTrigger />
-            <Modal.Header>
-              <Modal.Heading>{t('create.heading')}</Modal.Heading>
-            </Modal.Header>
-            <form onSubmit={(e) => void onSubmit(e)} noValidate>
-              <Modal.Body className="flex flex-col gap-4">
-                <div>
-                  <FormTextField
-                    control={control}
-                    name="slug"
-                    label={t('create.slug')}
-                    placeholder={t('create.slugPlaceholder')}
-                  />
-                  <p className="mt-1 text-xs text-muted">{t('create.slugHint')}</p>
-                </div>
+    <Dialog open={isOpen} onOpenChange={close}>
+      <DialogTrigger render={<Button />}>{t('create.trigger')}</DialogTrigger>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>{t('create.heading')}</DialogTitle>
+        </DialogHeader>
+        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+          <FieldGroup>
+            <FormTextField
+              control={control}
+              name="slug"
+              label={t('create.slug')}
+              placeholder={t('create.slugPlaceholder')}
+              description={t('create.slugHint')}
+            />
+            <FormTextField
+              control={control}
+              name="name"
+              label={t('create.name')}
+              placeholder={t('create.namePlaceholder')}
+            />
+
+            <FieldSeparator />
+
+            <FieldSet>
+              <FieldLegend variant="label">{t('create.adminSectionTitle')}</FieldLegend>
+              <FieldGroup>
                 <FormTextField
                   control={control}
-                  name="name"
-                  label={t('create.name')}
-                  placeholder={t('create.namePlaceholder')}
+                  name="admin.email"
+                  label={t('create.adminEmail')}
+                  type="email"
+                  placeholder={t('create.adminEmailPlaceholder')}
                 />
+                <FormTextField
+                  control={control}
+                  name="admin.name"
+                  label={t('create.adminName')}
+                  placeholder={t('create.adminNamePlaceholder')}
+                />
+                <FormPasswordField
+                  control={control}
+                  name="admin.password"
+                  label={t('create.adminPassword')}
+                  autoComplete="new-password"
+                  description={t('create.adminPasswordHint')}
+                />
+              </FieldGroup>
+            </FieldSet>
+          </FieldGroup>
 
-                <div className="mt-2 border-t border-border pt-4">
-                  <p className="mb-3 text-sm font-medium text-foreground">
-                    {t('create.adminSectionTitle')}
-                  </p>
-                  <div className="flex flex-col gap-4">
-                    <FormTextField
-                      control={control}
-                      name="admin.email"
-                      label={t('create.adminEmail')}
-                      type="email"
-                      placeholder={t('create.adminEmailPlaceholder')}
-                    />
-                    <FormTextField
-                      control={control}
-                      name="admin.name"
-                      label={t('create.adminName')}
-                      placeholder={t('create.adminNamePlaceholder')}
-                    />
-                    <div>
-                      <FormPasswordField
-                        control={control}
-                        name="admin.password"
-                        label={t('create.adminPassword')}
-                        autoComplete="new-password"
-                      />
-                      <p className="mt-1 text-xs text-muted">{t('create.adminPasswordHint')}</p>
-                    </div>
-                  </div>
-                </div>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
+          )}
 
-                {errors.root?.server && (
-                  <p className="text-sm text-danger">{errors.root.server.message}</p>
-                )}
-              </Modal.Body>
-              <Modal.Footer>
-                <Button slot="close" variant="tertiary">
-                  {t('create.cancel')}
-                </Button>
-                <Button type="submit" variant="primary" isDisabled={isSubmitting}>
-                  {isSubmitting ? t('create.submitting') : t('create.submit')}
-                </Button>
-              </Modal.Footer>
-            </form>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>{t('create.cancel')}</DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t('create.submitting') : t('create.submit')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

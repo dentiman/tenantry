@@ -21,5 +21,6 @@ export type {
   DataGridMessages,
   DataGridNavigation,
   DataGridRowAction,
+  SortDescriptor,
   SortOrder,
 } from './types';

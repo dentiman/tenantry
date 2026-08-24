@@ -1,4 +1,3 @@
-import { Card, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
@@ -8,19 +7,25 @@ import { formatDateTime } from '../lib/format';
 import type { JobsSearch } from '../router';
 import { createDataGrid } from '../components/data-grid';
 import type { DataGridColumn, DataGridFilterDef } from '../components/data-grid';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
 const REFETCH_INTERVAL_MS = 5000;
 
 const JOB_STATES: JobState[] = ['created', 'retry', 'active', 'completed', 'cancelled', 'failed'];
 
-const stateColor: Record<JobState, 'accent' | 'danger' | 'default' | 'success' | 'warning'> = {
-  created: 'default',
+// `default` badge — суцільна заливка primary; для нейтральних станів беремо `secondary`
+const stateVariant: Record<
+  JobState,
+  'default' | 'secondary' | 'destructive' | 'success' | 'warning'
+> = {
+  created: 'secondary',
   retry: 'warning',
-  active: 'accent',
+  active: 'default',
   completed: 'success',
-  cancelled: 'default',
-  failed: 'danger',
+  cancelled: 'secondary',
+  failed: 'destructive',
 };
 
 // Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
@@ -73,11 +78,7 @@ export function JobsPage() {
       id: 'state',
       header: t('table.state'),
       sortable: true,
-      cell: (job) => (
-        <Chip size="sm" color={stateColor[job.state]}>
-          {jobStateLabel(t, job.state)}
-        </Chip>
-      ),
+      cell: (job) => <Badge variant={stateVariant[job.state]}>{jobStateLabel(t, job.state)}</Badge>,
     },
     {
       id: 'attempts',
@@ -145,19 +146,23 @@ export function JobsPage() {
       {queues.length > 0 && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {queues.map((q) => (
-            <Card key={q.name} className="p-4">
-              <p className="truncate text-sm font-medium text-foreground">{q.name}</p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                <span>{t('queueCard.total', { count: q.total })}</span>
-                <span>{t('queueCard.active', { count: q.active })}</span>
-                <span>{t('queueCard.completed', { count: q.completed })}</span>
-                {q.failed > 0 && (
-                  <span className="text-danger">{t('queueCard.failed', { count: q.failed })}</span>
-                )}
-                {q.retry > 0 && (
-                  <span className="text-warning">{t('queueCard.retry', { count: q.retry })}</span>
-                )}
-              </div>
+            <Card key={q.name} size="sm">
+              <CardContent className="flex flex-col gap-2">
+                <p className="truncate text-sm font-medium text-foreground">{q.name}</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>{t('queueCard.total', { count: q.total })}</span>
+                  <span>{t('queueCard.active', { count: q.active })}</span>
+                  <span>{t('queueCard.completed', { count: q.completed })}</span>
+                  {q.failed > 0 && (
+                    <span className="text-destructive">
+                      {t('queueCard.failed', { count: q.failed })}
+                    </span>
+                  )}
+                  {q.retry > 0 && (
+                    <span className="text-warning">{t('queueCard.retry', { count: q.retry })}</span>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           ))}
         </div>

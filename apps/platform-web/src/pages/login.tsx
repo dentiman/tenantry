@@ -1,4 +1,3 @@
-import { Button, Card } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from '@tanstack/react-router';
@@ -7,6 +6,9 @@ import { PlatformLoginSchema, type PlatformLogin } from '@saas-skeleton/contract
 import { usePlatformAuthLogin } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 import { applyServerError, FormPasswordField, FormTextField } from '../components/form';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FieldGroup } from '@/components/ui/field';
 
 export function LoginPage() {
   const { t } = useTranslation('auth');
@@ -37,31 +39,35 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm p-8">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">
-          {t('login.title')}
-        </h1>
-        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-          <FormTextField
-            control={control}
-            name="email"
-            label={t('login.email')}
-            type="email"
-            autoComplete="email"
-          />
-          <FormPasswordField
-            control={control}
-            name="password"
-            label={t('login.password')}
-            autoComplete="current-password"
-          />
-          {errors.root?.server && (
-            <p className="text-sm text-danger">{errors.root.server.message}</p>
-          )}
-          <Button type="submit" variant="primary" fullWidth isDisabled={isSubmitting}>
-            {isSubmitting ? t('login.submitting') : t('login.submit')}
-          </Button>
-        </form>
+      <Card className="w-full max-w-sm [--card-spacing:--spacing(6)]">
+        <CardHeader>
+          <CardTitle className="text-center text-xl">{t('login.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+            <FieldGroup>
+              <FormTextField
+                control={control}
+                name="email"
+                label={t('login.email')}
+                type="email"
+                autoComplete="email"
+              />
+              <FormPasswordField
+                control={control}
+                name="password"
+                label={t('login.password')}
+                autoComplete="current-password"
+              />
+            </FieldGroup>
+            {errors.root?.server && (
+              <p className="text-sm text-destructive">{errors.root.server.message}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? t('login.submitting') : t('login.submit')}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
     </div>
   );

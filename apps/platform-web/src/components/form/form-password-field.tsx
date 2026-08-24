@@ -1,85 +1,69 @@
-import { Button, FieldError, InputGroup, Label, TextField } from '@heroui/react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
 import {
-  useController,
-  type Control,
-  type FieldPath,
-  type FieldValues,
-} from 'react-hook-form';
-
-function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeSlashIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a10.7 10.7 0 0 0 5.4-1.4" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-      <path d="M2 2l20 20" />
-    </svg>
-  );
-}
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 
 interface FormPasswordFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: FieldPath<T>;
   label: string;
+  /** Підказка під полем (FieldDescription) — напр. правила формату */
+  description?: string;
   autoComplete?: string;
   placeholder?: string;
-  /** 'secondary' — для полів на однотонній поверхні (модалки), інакше поле зливається з фоном */
-  variant?: 'primary' | 'secondary';
 }
 
-/** Те саме, що FormTextField, але з перемикачем видимості пароля (HeroUI InputGroup + Suffix-кнопка) */
+/** Те саме, що FormTextField, але з перемикачем видимості пароля (InputGroup + addon-кнопка) */
 export function FormPasswordField<T extends FieldValues>({
   control,
   name,
   label,
+  description,
   autoComplete,
   placeholder,
-  variant,
 }: FormPasswordFieldProps<T>) {
   const { t } = useTranslation('common');
+  const id = useId();
   const { field, fieldState } = useController({ control, name });
   const [isVisible, setIsVisible] = useState(false);
 
   return (
-    <TextField isInvalid={fieldState.invalid} name={field.name}>
-      <Label>{label}</Label>
-      <InputGroup fullWidth variant={variant}>
-        <InputGroup.Input
+    <Field data-invalid={fieldState.invalid || undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput
+          id={id}
           type={isVisible ? 'text' : 'password'}
+          name={field.name}
           autoComplete={autoComplete}
           placeholder={placeholder}
+          aria-invalid={fieldState.invalid || undefined}
           value={field.value ?? ''}
           onChange={field.onChange}
           onBlur={field.onBlur}
           ref={field.ref}
         />
-        {/* border-s-0 — прибирає вертикальний роздільник між інпутом і кнопкою:
-            .input-group__suffix малює border-left завширшки --border-width-field (у нас 1px) */}
-        <InputGroup.Suffix className="pe-0 border-s-0">
-          <Button
-            isIconOnly
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            size="icon-xs"
             aria-label={isVisible ? t('password.hide') : t('password.show')}
-            size="sm"
-            variant="ghost"
-            onPress={() => {
+            onClick={() => {
               setIsVisible((prev) => !prev);
             }}
           >
-            {isVisible ? <EyeSlashIcon /> : <EyeIcon />}
-          </Button>
-        </InputGroup.Suffix>
+            {isVisible ? <EyeOff /> : <Eye />}
+          </InputGroupButton>
+        </InputGroupAddon>
       </InputGroup>
+      {description && <FieldDescription>{description}</FieldDescription>}
       <FieldError>{fieldState.error?.message}</FieldError>
-    </TextField>
+    </Field>
   );
 }

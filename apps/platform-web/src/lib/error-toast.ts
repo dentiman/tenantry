@@ -1,4 +1,4 @@
-import { toast } from '@heroui/react';
+import { toast } from '@/components/ui/toast';
 import i18n from '../i18n';
 import type { ParsedApiError } from '../api/api-error';
 
@@ -32,5 +32,9 @@ export function showApiErrorToast(parsed: ParsedApiError): void {
     return;
   }
   recentToasts.set(key, now);
-  toast.danger(toastTitle(parsed), { description: toastDescription(parsed) });
+  toast.add({
+    type: 'error',
+    title: toastTitle(parsed),
+    description: toastDescription(parsed),
+  });
 }

@@ -1,7 +1,6 @@
-import type { SortDescriptor } from '@heroui/react';
-import type { SortOrder } from './types';
+import type { SortDescriptor, SortOrder } from './types';
 
-/** Міст між HeroUI SortDescriptor (UI) і API-параметрами sortBy/sortOrder */
+/** Міст між SortDescriptor (UI) і API-параметрами sortBy/sortOrder */
 export function toSortDescriptor(
   sortBy: string | undefined,
   sortOrder: SortOrder | undefined,
@@ -19,7 +18,7 @@ export function fromSortDescriptor(descriptor: SortDescriptor): {
   sortOrder: SortOrder;
 } {
   return {
-    sortBy: String(descriptor.column),
+    sortBy: descriptor.column,
     sortOrder: descriptor.direction === 'descending' ? 'desc' : 'asc',
   };
 }

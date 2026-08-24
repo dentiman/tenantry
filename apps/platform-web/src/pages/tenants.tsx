@@ -1,11 +1,40 @@
 import { useState } from 'react';
-import { AlertDialog, Button, Chip, EmptyState, Spinner, Table } from '@heroui/react';
+import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getTenantsFindAllQueryKey, useTenantsFindAll, useTenantsUpdate } from '../api/generated/api';
+import {
+  getTenantsFindAllQueryKey,
+  useTenantsFindAll,
+  useTenantsUpdate,
+} from '../api/generated/api';
 import type { TenantResponseDtoOutput } from '../api/generated/model/tenantResponseDtoOutput';
 import { CreateTenantModal } from '../components/create-tenant-modal';
 import { formatDate } from '../lib/format';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+const COLUMN_COUNT = 5;
 
 /**
  * MT-3: CRUD тенантів — єдине місце в системі, де тенант створюється/suspend-иться
@@ -34,7 +63,6 @@ export function TenantsPage() {
       data: { isActive: !tenant.isActive },
     });
     invalidate();
-    setPending(null);
   };
 
   return (
@@ -50,99 +78,111 @@ export function TenantsPage() {
         </div>
       ) : (
         <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={t('table.ariaLabel')}>
-                <Table.Header>
-                  <Table.Column isRowHeader>{t('table.slug')}</Table.Column>
-                  <Table.Column>{t('table.name')}</Table.Column>
-                  <Table.Column>{t('table.status')}</Table.Column>
-                  <Table.Column>{t('table.created')}</Table.Column>
-                  <Table.Column aria-label={t('actions.menu')}> </Table.Column>
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <EmptyState className="flex h-full w-full flex-col items-center justify-center gap-2 py-6 text-center">
-                      <span className="text-sm text-muted">{t('empty')}</span>
-                    </EmptyState>
-                  )}
-                >
-                  {items.map((tenant) => (
-                    <Table.Row key={tenant.id} id={tenant.id}>
-                      <Table.Cell className="font-medium text-foreground">{tenant.slug}</Table.Cell>
-                      <Table.Cell>{tenant.name}</Table.Cell>
-                      <Table.Cell>
-                        <Chip size="sm" color={tenant.isActive ? 'success' : 'danger'}>
+          <div className="overflow-hidden rounded-xl border border-border">
+            <Table aria-label={t('table.ariaLabel')}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('table.slug')}</TableHead>
+                  <TableHead>{t('table.name')}</TableHead>
+                  <TableHead>{t('table.status')}</TableHead>
+                  <TableHead>{t('table.created')}</TableHead>
+                  <TableHead aria-label={t('actions.menu')} />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={COLUMN_COUNT}>
+                      <Empty className="border-0">
+                        <EmptyHeader>
+                          <EmptyDescription>{t('empty')}</EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((tenant) => (
+                    <TableRow key={tenant.id}>
+                      <TableCell className="font-medium text-foreground">{tenant.slug}</TableCell>
+                      <TableCell>{tenant.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={tenant.isActive ? 'success' : 'destructive'}>
                           {tenant.isActive ? t('status.active') : t('status.suspended')}
-                        </Chip>
-                      </Table.Cell>
-                      <Table.Cell>{formatDate(tenant.createdAt)}</Table.Cell>
-                      <Table.Cell className="text-end">
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(tenant.createdAt)}</TableCell>
+                      <TableCell className="text-end">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onPress={() => {
+                          onClick={() => {
                             setPending(tenant);
                           }}
                         >
                           {tenant.isActive ? t('actions.suspend') : t('actions.resume')}
                         </Button>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
-      <AlertDialog.Backdrop
-        isOpen={pending !== null}
+      <AlertDialog
+        open={pending !== null}
         onOpenChange={(open) => {
           if (!open) {
             setPending(null);
           }
         }}
       >
-        <AlertDialog.Container>
-          <AlertDialog.Dialog className="sm:max-w-[420px]">
-            <AlertDialog.CloseTrigger />
-            <AlertDialog.Header>
-              <AlertDialog.Icon status={pending?.isActive ? 'danger' : 'accent'} />
-              <AlertDialog.Heading>
-                {pending?.isActive ? t('actions.suspendConfirm.heading') : t('actions.resumeConfirm.heading')}
-              </AlertDialog.Heading>
-            </AlertDialog.Header>
-            <AlertDialog.Body>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              {pending?.isActive ? (
+                <TriangleAlert className="text-destructive" />
+              ) : (
+                <CircleCheck className="text-primary" />
+              )}
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              {pending?.isActive
+                ? t('actions.suspendConfirm.heading')
+                : t('actions.resumeConfirm.heading')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
               {pending &&
                 (pending.isActive
                   ? t('actions.suspendConfirm.body', { name: pending.name })
                   : t('actions.resumeConfirm.body', { name: pending.name }))}
-            </AlertDialog.Body>
-            <AlertDialog.Footer>
-              <Button slot="close" variant="tertiary">
-                {pending?.isActive
-                  ? t('actions.suspendConfirm.cancelLabel')
-                  : t('actions.resumeConfirm.cancelLabel')}
-              </Button>
-              <Button
-                slot="close"
-                variant={pending?.isActive ? 'danger' : 'primary'}
-                onPress={() => {
-                  if (pending) {
-                    void toggleActive(pending);
-                  }
-                }}
-              >
-                {pending?.isActive
-                  ? t('actions.suspendConfirm.confirmLabel')
-                  : t('actions.resumeConfirm.confirmLabel')}
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {pending?.isActive
+                ? t('actions.suspendConfirm.cancelLabel')
+                : t('actions.resumeConfirm.cancelLabel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant={pending?.isActive ? 'destructive' : 'default'}
+              onClick={() => {
+                if (pending) {
+                  const tenant = pending;
+                  setPending(null);
+                  void toggleActive(tenant);
+                }
+              }}
+            >
+              {pending?.isActive
+                ? t('actions.suspendConfirm.confirmLabel')
+                : t('actions.resumeConfirm.confirmLabel')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

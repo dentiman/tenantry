@@ -41,9 +41,9 @@ async function bootstrap(): Promise<void> {
 
   createRoot(rootElement).render(
     <StrictMode>
-      {/* HeroUI v3 очікує class + data-theme на <html>; system — стартове значення */}
+      {/* shadcn/Tailwind читає тему з класу .dark на <html>; system — стартове значення */}
       <ThemeProvider
-        attribute={['class', 'data-theme']}
+        attribute="class"
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange

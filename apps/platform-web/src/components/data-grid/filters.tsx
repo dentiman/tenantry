@@ -1,8 +1,16 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
-import { Input, ListBox, Select, TextField } from '@heroui/react';
 import type { DataGridFiltersState } from './use-data-grid-filters';
 import type { DataGridFiltersBase } from './types';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 /**
  * Елемент масиву фільтрів — аналог DataGridColumn, але для тулбара. Вбудовані
@@ -108,16 +116,16 @@ function SearchFilterField({
   className,
 }: SearchFilterFieldProps) {
   return (
-    <TextField aria-label={ariaLabel} className={className ?? 'w-64'}>
-      <Input
-        type="search"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-        }}
-      />
-    </TextField>
+    <Input
+      type="search"
+      aria-label={ariaLabel}
+      className={className ?? 'w-64'}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value);
+      }}
+    />
   );
 }
 
@@ -139,33 +147,33 @@ function SelectFilterField({
   onChange,
   className,
 }: SelectFilterFieldProps) {
+  // Base UI вимагає items на корені — з нього рендериться підпис у тригері
+  const items = [
+    { value: 'all', label: allLabel },
+    ...options.map((option) => ({ value: option.id, label: option.label })),
+  ];
+
   return (
     <Select
-      aria-label={ariaLabel}
-      className={className ?? 'w-48'}
+      items={items}
       value={value ?? 'all'}
-      onChange={(key) => {
-        onChange(key === 'all' ? undefined : String(key));
+      onValueChange={(next: string | null) => {
+        // null приходить лише як placeholder-значення Base UI; у нас його немає
+        onChange(next === null || next === 'all' ? undefined : next);
       }}
     >
-      <Select.Trigger>
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover>
-        <ListBox>
-          <ListBox.Item id="all" textValue={allLabel}>
-            {allLabel}
-            <ListBox.ItemIndicator />
-          </ListBox.Item>
-          {options.map((option) => (
-            <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
-              {option.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
+      <SelectTrigger aria-label={ariaLabel} className={className ?? 'w-48'}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
           ))}
-        </ListBox>
-      </Select.Popover>
+        </SelectGroup>
+      </SelectContent>
     </Select>
   );
 }

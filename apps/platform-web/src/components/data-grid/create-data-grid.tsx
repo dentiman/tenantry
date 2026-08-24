@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Button } from '@heroui/react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { DataGrid } from './data-grid';
@@ -12,7 +11,13 @@ import { useDataGridFilters } from './use-data-grid-filters';
 import type { DataGridFiltersState } from './use-data-grid-filters';
 import { useDataGridSelection } from './use-data-grid-selection';
 import type { DataGridSelectionState } from './use-data-grid-selection';
-import type { DataGridColumn, DataGridFiltersBase, DataGridMessages, DataGridRowAction } from './types';
+import { Button } from '@/components/ui/button';
+import type {
+  DataGridColumn,
+  DataGridFiltersBase,
+  DataGridMessages,
+  DataGridRowAction,
+} from './types';
 
 /** Базові query-опції, які Root передає в замикання useListQuery (keepPreviousData) */
 export type DataGridQueryBaseOptions = typeof gridQueryOptions;
@@ -67,7 +72,10 @@ interface DataGridSelectionSummaryProps<TItem> {
   className?: string;
 }
 
-export interface DataGridInstance<TFilters extends DataGridFiltersBase, TItem extends { id: string }> {
+export interface DataGridInstance<
+  TFilters extends DataGridFiltersBase,
+  TItem extends { id: string },
+> {
   /** Тримає весь стан гріда (фільтри в URL, query, вибір) і роздає його дітям контекстом */
   Root: (props: DataGridRootProps<TFilters, TItem>) => ReactNode;
   /** Тулбар фільтрів — grid більше не проп, а контекст */
@@ -169,10 +177,10 @@ export function createDataGrid<
     }
     return (
       <div className={className ?? 'mb-3 flex items-center gap-2'}>
-        <span className="text-sm text-muted">
+        <span className="text-sm text-muted-foreground">
           {t('selection.summary', { count: selection.selectedItems.length })}
         </span>
-        <Button size="sm" variant="ghost" onPress={selection.clear}>
+        <Button size="sm" variant="ghost" onClick={selection.clear}>
           {t('selection.clear')}
         </Button>
         {children?.(selection)}

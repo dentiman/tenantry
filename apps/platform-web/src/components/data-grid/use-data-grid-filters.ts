@@ -17,8 +17,9 @@ interface UseDataGridFiltersOptions<TFilters extends DataGridFiltersBase> {
   searchDebounceMs?: number;
 }
 
-export interface DataGridFiltersState<TFilters extends DataGridFiltersBase>
-  extends DataGridNavigation {
+export interface DataGridFiltersState<
+  TFilters extends DataGridFiltersBase,
+> extends DataGridNavigation {
   /** Поточні фільтри цілком — сторінка спредить їх у params запиту списку */
   filters: TFilters;
   searchInput: string;
@@ -31,7 +32,7 @@ const DEFAULT_SEARCH_DEBOUNCE_MS = 300;
 
 /**
  * Весь стан списку одним хуком: пошук із debounce (+ синхронізація back/forward),
- * скидання page при зміні фільтра/сортування, міст SortDescriptor (HeroUI) ↔
+ * скидання page при зміні фільтра/сортування, міст SortDescriptor ↔
  * sortBy/sortOrder. Роутер інжектиться всередині — сторінка не робить проводки.
  * Стан свідомо ПОВЕРТАЄТЬСЯ сторінці (а не ховається в <DataGrid>): fetching
  * лишається за сторінкою, а їй для params потрібен grid.filters ДО рендера гріда.

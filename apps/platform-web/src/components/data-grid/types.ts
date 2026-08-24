@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react';
-import type { SortDescriptor } from '@heroui/react';
 
 export type SortOrder = 'asc' | 'desc';
+
+/**
+ * Опис сортування в термінах UI (колонка + напрям). Раніше цей тип приходив із React Aria
+ * (реекспорт старої UI-бібліотеки); shadcn-таблиця — чиста розмітка без власної моделі сортування,
+ * тож тип став наш. Форма публічного контракту `DataGridNavigation` не змінилась, зате
+ * `column` тепер `string`, а не React-Aria-івський `Key` (звідси зник каст у `sort.ts`).
+ */
+export interface SortDescriptor {
+  column: string;
+  direction: 'ascending' | 'descending';
+}
 
 /**
  * Мінімальна форма фільтрів гріда: page/sortBy/sortOrder/search — решта полів

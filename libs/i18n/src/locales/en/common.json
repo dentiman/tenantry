@@ -7,7 +7,9 @@
   },
   "pagination": {
     "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}",
-    "perPage": "Items per page"
+    "perPage": "Items per page",
+    "previous": "Previous page",
+    "next": "Next page"
   },
   "selection": {
     "selectAll": "Select all",
