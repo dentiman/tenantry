@@ -201,7 +201,7 @@ export function DataGrid<T extends { id: string }>({
   return (
     <div>
       <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-        <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <Table aria-label={ariaLabel}>
             <TableHeader>
               <TableRow>

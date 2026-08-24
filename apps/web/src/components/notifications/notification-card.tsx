@@ -126,7 +126,7 @@ export function NotificationCard({
           size="icon-xs"
           aria-label={closeLabel}
           title={closeLabel}
-          className="absolute -top-2 -left-2 z-10 hidden size-5 rounded-full bg-background shadow-md group-focus-within:flex group-hover:flex hover:bg-destructive hover:text-white"
+          className="absolute -top-2 -left-2 z-10 hidden size-5 rounded-full bg-popover shadow-md group-focus-within:flex group-hover:flex hover:bg-destructive hover:text-white"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
@@ -148,7 +148,7 @@ export function NotificationCard({
                   variant="outline"
                   size="icon-xs"
                   aria-label={menu.ariaLabel}
-                  className="size-6 rounded-full bg-background shadow-md"
+                  className="size-6 rounded-full bg-popover shadow-md"
                   // Меню — не «відкрити сповіщення»: клік не має підніматися до картки
                   onClick={(e) => {
                     e.stopPropagation();

@@ -10,94 +10,147 @@
  */
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* ── Палітра HeroUI, перекладена на імена shadcn (2026-08-24) ──────────────
+     Джерело значень — дефолтна тема @heroui/styles (їхній MCP get_theme_variables).
+     Ключове структурне рішення, яке й дає «мʼякий» вигляд: фон сторінки СІРИЙ,
+     а панелі/попапи білі. У стоковому base-nova --card дорівнював --background
+     (обидва білі), через що інтерфейс читався пласким.
+     Нейтралі несуть слабкий фіолетовий підтон (hue ≈ 286), як у HeroUI. */
+
+  /* Примітиви HeroUI — не змінюються між темами */
+  --snow: oklch(0.9911 0 0);
+  --eclipse: oklch(0.2103 0.0059 285.89);
+
+  --background: oklch(0.9702 0 0);
+  --foreground: var(--eclipse);
+  /* surface у HeroUI: картки, панелі, сайдбар */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: var(--foreground);
+  /* overlay у HeroUI: попапи, діалоги, тости, меню */
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  /* Розширення теми (§4.3): у shadcn немає success/warning, а 6 станів job-а
-     і статус тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
-  --success: oklch(0.527 0.154 150.069);
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.555 0.163 48.998);
-  --warning-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  /* Менша округлість (рішення користувача, §4.2): дефолт пресета 0.625rem → 0.5rem,
-     тобто панелі/діалоги (xl) ≈ 11px, попапи й поля (lg) 8px, пункти меню (md) ≈ 6px */
+  --popover-foreground: var(--foreground);
+  /* accent HeroUI = бренд (їхній синій); у shadcn ця роль зветься primary */
+  --primary: oklch(0.6204 0.195 253.83);
+  --primary-foreground: var(--snow);
+  /* default HeroUI: нейтральна поверхня вторинних кнопок і «тихих» блоків */
+  --secondary: oklch(0.94 0.001 286.375);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.94 0.001 286.375);
+  /* Той самий сірий тексту, що в HeroUI (--muted) — саме він дає спокійну шкалу */
+  --muted-foreground: oklch(0.5517 0.0138 285.94);
+  /* surface-hover HeroUI: поверхня наведення рахується від панелі, а не від фону */
+  --accent: color-mix(in oklab, var(--card) 92%, var(--foreground) 8%);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6532 0.2328 25.74);
+  /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
+     тенанта інакше не передати. Значення — HeroUI. Варіанти badge — ui/badge.tsx */
+  --success: oklch(0.7329 0.1935 150.81);
+  --success-foreground: var(--eclipse);
+  --warning: oklch(0.7819 0.1585 72.33);
+  --warning-foreground: var(--eclipse);
+  --border: oklch(0.9 0.004 286.32);
+  /* Поля лишаються з ВИДИМОЮ рамкою (рішення користувача; у HeroUI вона прозора,
+     і це читалось гірше) — тому --input дорівнює --border, а не transparent */
+  --input: oklch(0.9 0.004 286.32);
+  /* focus у HeroUI = accent: фокус-кільце синє, а не сіре */
+  --ring: var(--primary);
+  --chart-1: oklch(0.6204 0.195 253.83);
+  --chart-2: oklch(0.7329 0.1935 150.81);
+  --chart-3: oklch(0.7819 0.1585 72.33);
+  --chart-4: oklch(0.6532 0.2328 25.74);
+  --chart-5: oklch(0.5517 0.0138 285.94);
+  /* Менша округлість (рішення користувача): панелі/діалоги (xl) ≈ 11px,
+     попапи й поля (lg) 8px, пункти меню (md) ≈ 6px. Кнопки — окремо, вони пігулки */
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklab, var(--card) 92%, var(--foreground) 8%);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Мʼякі багатошарові тіні HeroUI. Через @theme inline вони стають значеннями
+     стандартних утиліт shadow-*, тому вендоровані компоненти не треба чіпати */
+  --elevation-field:
+    0 2px 4px 0 rgb(0 0 0 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 0 1px 0 rgb(0 0 0 / 0.06);
+  --elevation-surface:
+    0 2px 4px 0 rgb(0 0 0 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 0 1px 0 rgb(0 0 0 / 0.06);
+  --elevation-overlay-sm: 0 2px 8px 0 rgb(0 0 0 / 0.06), 0 4px 12px 0 rgb(0 0 0 / 0.05);
+  --elevation-overlay:
+    0 2px 8px 0 rgb(0 0 0 / 0.06), 0 -6px 12px 0 rgb(0 0 0 / 0.03), 0 14px 28px 0 rgb(0 0 0 / 0.08);
+  --elevation-overlay-lg: 0 8px 16px 0 rgb(0 0 0 / 0.08), 0 20px 40px 0 rgb(0 0 0 / 0.1);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.792 0.209 151.711);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.828 0.189 84.429);
-  --warning-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.12 0.005 285.823);
+  --foreground: var(--snow);
+  /* У темній темі поверхні СВІТЛІШІ за фон — так само, як у HeroUI */
+  --card: oklch(0.2103 0.0059 285.89);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2103 0.0059 285.89);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.6204 0.195 253.83);
+  --primary-foreground: var(--snow);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: color-mix(in oklab, var(--card) 92%, var(--foreground) 8%);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.594 0.1967 24.63);
+  --success: oklch(0.7329 0.1935 150.81);
+  --success-foreground: var(--eclipse);
+  --warning: oklch(0.8203 0.1388 76.34);
+  --warning-foreground: var(--eclipse);
+  --border: oklch(0.28 0.006 286.033);
+  --input: oklch(0.28 0.006 286.033);
+  --ring: var(--primary);
+  --chart-1: oklch(0.6204 0.195 253.83);
+  --chart-2: oklch(0.7329 0.1935 150.81);
+  --chart-3: oklch(0.8203 0.1388 76.34);
+  --chart-4: oklch(0.594 0.1967 24.63);
+  --chart-5: oklch(0.705 0.015 286.067);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklab, var(--card) 92%, var(--foreground) 8%);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* У темній темі HeroUI тіней НЕМАЄ — глибину дає різниця світлості поверхонь;
+     попапи отримують лише inset-хейрлайн */
+  --elevation-field: 0 0 0 0 transparent inset;
+  --elevation-surface: 0 0 0 0 transparent inset;
+  --elevation-overlay-sm: 0 0 1px 0 rgb(255 255 255 / 0.3) inset;
+  --elevation-overlay: 0 0 1px 0 rgb(255 255 255 / 0.3) inset;
+  --elevation-overlay-lg: 0 0 1px 0 rgb(255 255 255 / 0.3) inset;
 }
 
 @theme inline {
+  /* HeroUI не постачає шрифт зі стилями — їхній власний продукт і документація
+     набрані Inter (next/font). Беремо його ж; далі — системний стек */
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Шкала тіней Tailwind перевизначена мʼякими шарами HeroUI (значення — вище,
+     у :root/.dark, тому вона тема-залежна). Компоненти реєстру продовжують
+     писати shadow-sm/md/lg — міняється лише те, що ці утиліти означають */
+  --shadow-2xs: 0 0 1px 0 rgb(0 0 0 / 0.06);
+  --shadow-xs: var(--elevation-field);
+  --shadow-sm: var(--elevation-surface);
+  --shadow-md: var(--elevation-overlay-sm);
+  --shadow-lg: var(--elevation-overlay);
+  --shadow-xl: var(--elevation-overlay-lg);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

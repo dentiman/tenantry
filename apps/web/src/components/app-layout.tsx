@@ -80,7 +80,7 @@ export function AppLayout() {
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-6">
           <SidebarTrigger className="-ml-2" />
           <div className="ml-auto flex items-center gap-3">
             <NotificationBell />
