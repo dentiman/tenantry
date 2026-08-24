@@ -512,15 +512,15 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
     `bg-background/bg-card/bg-sidebar/bg-popover`, `text-foreground/text-muted-foreground/text-destructive`,
     `border-border`, `bg-accent` = поверхня наведення (НЕ бренд — бренд це `primary`);
     `success`/`warning` — наше розширення теми (варіанти в cva `ui/badge.tsx`).
-    **Тема — палітра HeroUI, перекладена на імена shadcn** (UI-2, 2026-08-24; значення з їхнього
-    MCP `get_theme_variables`): сторінка СІРА (`--background oklch(0.9702 0 0)`), панелі/попапи
-    білі (`--card`/`--popover`), нейтралі з підтоном hue≈286, бренд і фокус — синій
-    `oklch(0.6204 0.195 253.83)` (`--ring: var(--primary)`), шрифт **Inter** (HeroUI власного не
-    постачає — це шрифт їхнього сайту; Geist прибраний). Тіні мʼякі багатошарові: `--shadow-*`
-    у `@theme inline` посилаються на тема-залежні `--elevation-*`, тож `shadow-md/lg` у
-    вендореному коді малюють HeroUI-шари, а в темній темі — нічого. Наслідок, про який легко
-    забути: **`bg-background` НЕ дорівнює `bg-card`** — шапки, таблиці й поля мусять бути
-    поверхнею (`bg-card`), інакше зливаються з сірою сторінкою.
+    **Тема — палітра `satnaing/shadcn-admin`** (UI-4, 2026-08-24; узята з їхніх
+    `src/styles/theme.css` + `components.json` `baseColor: "slate"`): нейтралі slate
+    (hue ≈ 250–265) — той самий холодний підтон, сторінка і панелі БІЛІ (`--background` =
+    `--card` = `--popover` = `oklch(1 0 0)`), глибину дають межі; темна — bg
+    `oklch(0.129 0.042 264.695)`, card `0.14 0.04 259.21`, popover `0.208 0.042 265.755`;
+    `--radius: 0.625rem`; тіні — стокова шкала Tailwind. Шрифт **Inter**.
+    **Два винятки, свідомо збережені з HeroUI-ери** (рішення користувача): `--primary`
+    (і `--ring`) — наш синій `oklch(0.6204 0.195 253.83)`, і метрика контролів 36px.
+    `--success`/`--warning` — наше розширення (у shadcn таких ролей немає).
     RHF: `useController` → `Field`+`FieldLabel htmlFor`+`Input id` (`useId()`)+`FieldError`, стан
     через `data-invalid` на `Field` і `aria-invalid` на контролі; `FormSelect` мусить діставати
     `items` (без мапи value→label Base UI малює в тригері сире значення).

@@ -9,11 +9,9 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react';
 const Select = SelectPrimitive.Root;
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру (2026-08-24, вирівнювання під HeroUI): поле має власну
- * БІЛУ поверхню (`bg-card`) і мʼяку тінь (`shadow-xs`), як `--field-background` +
- * `--field-shadow` у HeroUI. Стокове `bg-transparent` показувало сірий фон
- * сторінки — після переходу на «сіра сторінка / білі панелі» поле губилось.
- * Рамку лишаємо видимою (рішення користувача; у HeroUI вона прозора).
+ * ЛОКАЛЬНА ПРАВКА реєстру: висота поля 36px (`h-9`) і відступи `px-3` — метрика,
+ * свідомо збережена з HeroUI-ери, щоб поля й кнопки стояли в один рядок.
+ * Поверхня і тінь — стокові реєстрові (тема shadcn-admin: біла сторінка).
  */
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -48,7 +46,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-card py-2 pr-2.5 pl-3 shadow-xs text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2.5 pl-3 shadow-xs dark:bg-input/30 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
