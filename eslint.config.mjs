@@ -63,10 +63,15 @@ export default tseslint.config(
     // Вендорений код реєстру shadcn (`shadcn add` кладе його сюди й ним же оновлює через
     // `--diff`). Правити стиль під наш конфіг = вічні конфлікти з апстрімом, тому гасимо
     // рівно ті правила, які реально стріляють; файли НЕ в ignores — вони наші, ми їх редагуємо
-    files: ['libs/ui/src/components/ui/**/*.{ts,tsx}'],
+    files: ['libs/ui/src/components/ui/**/*.{ts,tsx}', 'libs/ui/src/hooks/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      // Додалися з примітивами UI-1 (sidebar, toggle-group, use-mobile) — теж стилістика апстріму
+      '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-confusing-void-expression': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
   {

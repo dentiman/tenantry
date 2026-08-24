@@ -9,6 +9,7 @@
     "./components/form": "./src/components/form/index.ts",
     "./components/theme-switcher": "./src/components/theme-switcher.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
     "./styles.css": "./src/styles.css"
   },
