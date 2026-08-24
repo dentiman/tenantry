@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -103,7 +104,16 @@ export function TenantsPage() {
                 ) : (
                   items.map((tenant) => (
                     <TableRow key={tenant.id}>
-                      <TableCell className="font-medium text-foreground">{tenant.slug}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {/* Slug — вхід у картку тенанта: список дає огляд, сторінка деталі */}
+                        <Link
+                          to="/tenants/$tenantId"
+                          params={{ tenantId: tenant.id }}
+                          className="rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {tenant.slug}
+                        </Link>
+                      </TableCell>
                       <TableCell>{tenant.name}</TableCell>
                       <TableCell>
                         <Badge variant={tenant.isActive ? 'success' : 'destructive'}>

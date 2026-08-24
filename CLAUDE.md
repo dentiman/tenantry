@@ -281,8 +281,12 @@ apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, �
                 знято 2026-08-23, див. правило 12 і docs/migrate.md. Власного `components/ui/`
                 НЕМАЄ: примітиви, грід, форми і тема живуть у libs/ui (UI-0, 2026-08-24).
                 Сторінки: Tenants (плоска таблиця — GET /tenants без пагінації,
-                DataGrid не потрібен) + CreateTenantModal + suspend/resume; Jobs (перенесено з
-                web 1:1, createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в
+                DataGrid не потрібен) + CreateTenantModal + suspend/resume; **картка тенанта
+                `/tenants/$tenantId`** (та сама розкладка, що `/users/$userId` у web: шапка +
+                вкладки Overview | Access + колонка стану). Стрічки подій там НЕМАЄ навмисно:
+                activities живуть у tenant-плані під RLS, платформа їх не читає; лічильника
+                юзерів і джоб тенанта теж немає — відповідних ендпоінтів у platform-api не
+                існує. Jobs (перенесено з web 1:1, createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в
                 localStorage (не тільки в пам'яті, як web) — інакше сесія губилась би на F5
 libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod)
 libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global).

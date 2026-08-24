@@ -48,5 +48,40 @@
     "submitting": "Creating…"
   },
   "loadingLabel": "Loading tenants",
-  "empty": "No tenants found"
+  "empty": "No tenants found",
+  "detail": {
+    "back": "Tenants",
+    "notFound": "Tenant not found",
+    "notFoundHint": "It may have been removed, or the link is wrong.",
+    "tabs": {
+      "overview": "Overview",
+      "access": "Access"
+    },
+    "identity": {
+      "title": "Identity",
+      "name": "Name",
+      "slug": "Slug",
+      "locale": "Language"
+    },
+    "record": {
+      "title": "Record",
+      "created": "Created",
+      "updated": "Last updated",
+      "id": "Tenant ID"
+    },
+    "state": {
+      "title": "State",
+      "status": "Status",
+      "since": "Created"
+    },
+    "access": {
+      "title": "How users sign in",
+      "organization": "Organization field",
+      "organizationHint": "Users type this slug in the Organization field on the tenant sign-in page. Leaving it empty signs them in to the default tenant.",
+      "suspended": "While suspended",
+      "suspendedHint": "Sign-in is rejected for every user of this tenant with the same 401 as a wrong password — no separate message leaks the tenant state.",
+      "admin": "First admin",
+      "adminHint": "Created together with the tenant, with the password set by the operator (invite flow is planned for MT-4)."
+    }
+  }
 }

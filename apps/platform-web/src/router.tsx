@@ -12,6 +12,7 @@ import { AppLayout } from './components/app-layout';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
 import { TenantsPage } from './pages/tenants';
+import { TenantDetailPage } from './pages/tenant-detail';
 import { JobsPage } from './pages/jobs';
 
 const rootRoute = createRootRoute({
@@ -80,9 +81,16 @@ const jobsRoute = createRoute({
   component: JobsPage,
 });
 
+/** Картка тенанта: окремий роут, як `/users/$userId` у tenant-адмінці */
+const tenantDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/tenants/$tenantId',
+  component: TenantDetailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([tenantsRoute, jobsRoute]),
+  appRoute.addChildren([tenantsRoute, tenantDetailRoute, jobsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

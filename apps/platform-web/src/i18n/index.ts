@@ -2,7 +2,13 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
 import { en as zodEn } from 'zod/locales';
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, commonEn, errorsEn, validationEn } from '@saas-skeleton/i18n';
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  commonEn,
+  errorsEn,
+  validationEn,
+} from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
 import layoutEn from '../locales/en/layout.json';
 import tenantsEn from '../locales/en/tenants.json';
