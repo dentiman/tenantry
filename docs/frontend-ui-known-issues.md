@@ -5,23 +5,34 @@
 видно, коли проблему можна закрити (вийшла нова версія — перевірити за
 процедурою нижче й прибрати обхід).
 
+> **Оновлено 2026-08-23.** Документ стосується **`apps/web`** — це єдиний застосунок, який
+> лишився на HeroUI. `apps/platform-web` переведений на shadcn/ui (Base UI), і обхід UI-1 там
+> **знятий разом із бібліотекою**: чекбокси гріда — штатний Base UI `Checkbox` з
+> `checked`/`onCheckedChange`/`indeterminate`, без `inert`-обгортки й нативного інпута поверх
+> (як і портал хедер-чекбокса в `thead`). Деталі міграції — `docs/migrate.md`.
+> Це, до речі, і відповідь на варіант D нижче: рахунок у журналі лишився один, але саме два
+> костилі в гріді виявились достатньою причиною для пілота на одному застосунку.
+
 Стек на момент запису (2026-08-16):
 
-| Пакет | Версія |
-| --- | --- |
-| `@heroui/react` / `@heroui/styles` | 3.2.2 (**beta**) |
-| `react-aria-components` | 1.19.0 |
-| `react` / `react-dom` | 19.2.7 |
+| Пакет                                  | Версія                                         |
+| -------------------------------------- | ---------------------------------------------- |
+| `@heroui/react` / `@heroui/styles`     | 3.2.2 (**beta**)                               |
+| `react-aria-components`                | 1.19.0                                         |
+| `react` / `react-dom`                  | 19.2.7                                         |
 | `@tanstack/react-table`-подібного шару | немає — грід свій, поверх HeroUI `Table` (RAC) |
 
 ---
 
 ## UI-1. Форм-контроли `Switch` і `Checkbox` не перемикаються
 
-**Статус:** відкрита. Обхід у коді: `data-grid/cell-switch.tsx`, `data-grid/data-grid.tsx`
-(`SelectionCheckbox`). Споживачі поза гріда́ми беруть той самий `CellSwitch` — напр.
-налаштування сповіщень (`notifications/notification-preferences.tsx`): обхід лишається
-один і названий, а не переписується на кожному місці.
+**Статус:** відкрита **для `apps/web`**; для `apps/platform-web` — закрита 2026-08-23
+(не полагоджено в апстрімі — застосунок пішов із HeroUI, див. врізку вгорі).
+Обхід у коді: `apps/web/src/components/data-grid/cell-switch.tsx`,
+`apps/web/src/components/data-grid/data-grid.tsx` (`SelectionCheckbox`). Споживачі поза
+гріда́ми беруть той самий `CellSwitch` — напр. налаштування сповіщень
+(`notifications/notification-preferences.tsx`): обхід лишається один і названий, а не
+переписується на кожному місці.
 
 ### Симптом
 
@@ -33,25 +44,27 @@
 
 Проби ставилися на `/dashboard` (поза таблицею) і в клітинці гріда `/users`.
 
-| Перевірка | Результат |
-| --- | --- |
-| HeroUI `Switch` — клік по повзунку | ✗ стан не змінюється |
-| HeroUI `Switch` — клік по текстовій мітці всередині `Switch.Content` | ✗ |
-| HeroUI `Switch` — `Space` на сфокусованому input | ✗ |
-| HeroUI `Checkbox` — клік | ✗ |
-| **Сирий** `react-aria-components` `Switch` — клік | ✗ |
-| Нативний `<input type="checkbox">` на тій самій сторінці | ✓ працює |
-| HeroUI `Button`, `Dropdown` (RAC `usePress`) — клік, зокрема в клітинці таблиці | ✓ працює |
-| Програмний `input.click()` на прихованому input | ✓ спрацьовує, React `onChange` викликається |
-| Поза таблицею vs у клітинці `Table` | однаково ✗ — **таблиця ні до чого** |
-| Дублікати `react-aria-components` / `@react-aria/*` у дереві залежностей | немає (одна копія) |
+| Перевірка                                                                       | Результат                                   |
+| ------------------------------------------------------------------------------- | ------------------------------------------- |
+| HeroUI `Switch` — клік по повзунку                                              | ✗ стан не змінюється                        |
+| HeroUI `Switch` — клік по текстовій мітці всередині `Switch.Content`            | ✗                                           |
+| HeroUI `Switch` — `Space` на сфокусованому input                                | ✗                                           |
+| HeroUI `Checkbox` — клік                                                        | ✗                                           |
+| **Сирий** `react-aria-components` `Switch` — клік                               | ✗                                           |
+| Нативний `<input type="checkbox">` на тій самій сторінці                        | ✓ працює                                    |
+| HeroUI `Button`, `Dropdown` (RAC `usePress`) — клік, зокрема в клітинці таблиці | ✓ працює                                    |
+| Програмний `input.click()` на прихованому input                                 | ✓ спрацьовує, React `onChange` викликається |
+| Поза таблицею vs у клітинці `Table`                                             | однаково ✗ — **таблиця ні до чого**         |
+| Дублікати `react-aria-components` / `@react-aria/*` у дереві залежностей        | немає (одна копія)                          |
 
 Розмітка, до речі, коректна — проблема не в ній:
 
 ```html
 <div data-slot="switch" class="switch switch--sm" data-selected="true">
   <label data-slot="switch-content" data-react-aria-pressable="true">
-    <span style="clip: rect(0,0,0,0); …"><input role="switch" tabindex="0" aria-label="Active" type="checkbox"></span>
+    <span style="clip: rect(0,0,0,0); …"
+      ><input role="switch" tabindex="0" aria-label="Active" type="checkbox"
+    /></span>
     <span class="switch__control"><span class="switch__thumb"></span></span>
   </label>
 </div>
@@ -68,7 +81,11 @@ RAC-обробник натискання не перемикає стан.
 RAC `SwitchButton`, тобто `<label>` із прихованим input усередині. Без нього
 
 ```tsx
-<Switch><Switch.Control><Switch.Thumb /></Switch.Control></Switch>
+<Switch>
+  <Switch.Control>
+    <Switch.Thumb />
+  </Switch.Control>
+</Switch>
 ```
 
 у DOM приїжджає лише `div.switch` — без input, без `role`, без `aria-label`:
@@ -121,6 +138,8 @@ v3 у бета-статусі, симптом виглядає як баг зб�
 **D. Відмовитися від HeroUI на користь іншої бібліотеки.**
 Найдорожче; сенс має лише якщо таких проблем набереться критична маса. Цей
 документ і є лічильником: поки в ньому один пункт — не привід.
+**Частково обрано 2026-08-23:** пілот на `apps/platform-web` (shadcn/ui на Base UI) —
+саме щоб зміряти вартість D на меншому застосунку, перш ніж чіпати `apps/web`.
 
 **Рекомендований порядок:** C (перевірити свіжу версію) → якщо не полагоджено,
 A (винести шар контролів) → D тільки якщо журнал розростеться.
@@ -131,7 +150,11 @@ A (винести шар контролів) → D тільки якщо жур�
 2. Тимчасово покласти на будь-яку сторінку неконтрольований контрол:
    ```tsx
    <Switch aria-label="probe">
-     <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
+     <Switch.Content>
+       <Switch.Control>
+         <Switch.Thumb />
+       </Switch.Control>
+     </Switch.Content>
    </Switch>
    ```
 3. Клікнути по ньому й перевірити `data-selected` на `[data-slot="switch"]`.

@@ -194,8 +194,10 @@ UI, тести, таблиця «що змінилось під час реал�
 `docs/tenant-settings.md` (System Settings — пропозиція, не реалізовано),
 `docs/frontend-ui-known-issues.md` (журнал проблем UI-бібліотеки і обходів — щоб обхід був
 один і названий, а не костиль на кожному місці використання; UI-1: HeroUI v3.2.2
-`Switch`/`Checkbox` не перемикаються — відтворюється і поза таблицею, і на сирому
-react-aria-components, обхід живе у `CellSwitch`/`SelectionCheckbox`),
+`Switch`/`Checkbox` не перемикаються — обхід `CellSwitch`/`SelectionCheckbox` лишається
+чинним для `apps/web`, а в `apps/platform-web` знятий міграцією на shadcn 2026-08-23),
+`docs/migrate.md` (міграція `apps/platform-web` з HeroUI на shadcn/ui: план, зафіксовані
+рішення D1…D5 і журнал виконання §9 — що саме розійшлося з планом і чому),
 `README.md` (quickstart).
 
 ## Команди
@@ -263,11 +265,13 @@ apps/worker     NestJS 11 без HTTP (createApplicationContext). Підписн
 apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4, react-hook-form,
                 HeroUI v3 (React Aria; compound-компоненти) + next-themes (light/dark/system),
                 react-i18next
-apps/platform-web  Той самий стек, що apps/web (клон каркасу, MT-3, :5174, проксі на :3002).
-                Сторінки: Tenants (плоска таблиця — GET /tenants без пагінації, DataGrid не
-                потрібен) + CreateTenantModal + suspend/resume; Jobs (перенесено з web 1:1,
-                createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в localStorage
-                (не тільки в пам'яті, як web) — інакше сесія губилась би на F5
+apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, проксі на :3002), АЛЕ інша
+                UI-бібліотека: shadcn/ui на Base UI (стиль base-nova, lucide-react, вендорений
+                код у src/components/ui/) — HeroUI знято 2026-08-23, див. правило 12 і
+                docs/migrate.md. Сторінки: Tenants (плоска таблиця — GET /tenants без пагінації,
+                DataGrid не потрібен) + CreateTenantModal + suspend/resume; Jobs (перенесено з
+                web 1:1, createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в
+                localStorage (не тільки в пам'яті, як web) — інакше сесія губилась би на F5
 libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod)
 libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global).
                 MT: `src/tenant/` — TenancyModule.forRoot({resolver}), TenantContextService (CLS),
@@ -457,13 +461,29 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
     moduleResolution=node10 → ручна декларація `apps/api/src/types/file-type.d.ts`; ts-node її бачить
     лише з `"ts-node": {"files": true}` у tsconfig (без цього openapi:generate падає); у e2e замокано
     через moduleNameMapper (`test/__mocks__/file-type.ts`). Runtime ок — Node 24 require(esm).
-12. **HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після tailwindcss у index.css;
-    тема = `class` + `data-theme` на `<html>` (next-themes, `attribute={['class','data-theme']}`,
-    storageKey `saas_theme`). Compound API: `Table.Content/Header/Body`, `Dropdown.Popover/Menu/Item`,
-    `AlertDialog.Backdrop/Container/Dialog`, `Pagination.Content/Item/Link`. Семантичні токени в розмітці:
-    `bg-background/bg-surface`, `text-foreground/text-muted/text-danger/text-link`, `border-border`.
-    RHF: `register()` кладеться прямо на `<Input>` усередині `<TextField isInvalid>` + `<FieldError>`.
-    Мінімалізм — рішення користувача: тільки потрібні компоненти, без пакетів іконок (інлайн-SVG).
+12. **Дві UI-бібліотеки — по одній на застосунок** (рішення D1, 2026-08-23; не «тимчасово»).
+    **`apps/web` — HeroUI v3** (НЕ v2/NextUI): без Provider; `@import '@heroui/styles'` після
+    tailwindcss у index.css; тема = `class` + `data-theme` на `<html>` (next-themes,
+    `attribute={['class','data-theme']}`, storageKey `saas_theme`). Compound API:
+    `Table.Content/Header/Body`, `Dropdown.Popover/Menu/Item`, `AlertDialog.Backdrop/Container/Dialog`,
+    `Pagination.Content/Item/Link`. Семантичні токени: `bg-background/bg-surface`,
+    `text-foreground/text-muted/text-danger/text-link`, `border-border`. RHF: `register()` прямо на
+    `<Input>` усередині `<TextField isInvalid>` + `<FieldError>`. Інлайн-SVG, без пакетів іконок.
+    **`apps/platform-web` — shadcn/ui на Base UI** (стиль `base-nova`, CLI 4.19.0): компоненти —
+    ВЕНДОРЕНИЙ код у `src/components/ui/` (оновлюється `shadcn add --diff`, не npm-апдейтом);
+    аліас `@/*` продубльований у `tsconfig.json` І `vite.config.ts` (vite не читає tsconfig paths);
+    тема = лише `class` (`attribute="class"`, storageKey `saas_platform_theme`), токени в
+    `src/index.css` (`:root`/`.dark` + `@theme inline`). Композиція замість compound-неймспейсів
+    (`DialogContent`/`DialogTitle`, `TableHead`/`TableCell`, `DropdownMenuItem`), підміна елемента —
+    `render={<Button/>}` (Base UI), НЕ `asChild`. Іконки — `lucide-react` (перегляд «без пакетів
+    іконок»: реєстр приходить із ними у власному коді). Семантичні токени:
+    `bg-background/bg-card/bg-sidebar`, `text-foreground/text-muted-foreground/text-destructive`,
+    `border-border`; `success`/`warning` — наше розширення теми (варіанти в cva `ui/badge.tsx`).
+    RHF: `useController` → `Field`+`FieldLabel htmlFor`+`Input id` (`useId()`)+`FieldError`, стан
+    через `data-invalid` на `Field` і `aria-invalid` на контролі.
+    **Правки вендореного коду позначаються коментарем «ЛОКАЛЬНА ПРАВКА реєстру»** (зараз їх дві:
+    позиція тостів у `ui/toast.tsx`, indeterminate-іконка в `ui/checkbox.tsx`). Файли гріда/форм
+    у двох застосунках СВІДОМО розійшлися — копіювати між ними більше НЕ можна.
 
 ## Зафіксовані рішення (НЕ переглядати без запиту користувача)
 
@@ -475,6 +495,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Auth              | Власна реалізація fibo-admin as-is (better-auth/Keycloak/Clerk розглянуті й відхилені)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Zod               | v4 (закрито у фазі 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Монорепо          | pnpm + Turborepo (Nx відхилено)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| UI-бібліотека     | **Два стеки, по одному на застосунок** (D1, 2026-08-23): `apps/web` лишається на **HeroUI v3**, `apps/platform-web` переведений на **shadcn/ui (Base UI, стиль base-nova)**. Причина міграції — не смаки, а два костилі, які HeroUI v3-beta змушував тримати в гріді (інертний чекбокс під прозорим нативним input + `createPortal` хедер-чекбокса в `thead`); обидва зняті. Наслідок, з яким живемо свідомо: `data-grid/**`, `form/**`, `theme-switcher`, `toast-host` у двох застосунках розійшлися і **не back-portable**; `libs/ui` як спільний шар розглянуто й відкладено. Іконки в platform-web — `lucide-react` (D2, перегляд правила «без пакетів іконок»). ReUI не використовуємо, але реєстр `@reui` прописаний у `components.json` (D3). Хід міграції і всі граблі — `docs/migrate.md` |
 | Форми (web)       | **RHF + zodResolver + обгортки** в `apps/web/src/components/form/` (FormTextField/FormSelect через useController; applyServerError: 409 → setError поля, решта → errors.root.server). TanStack Form розглянуто — свідомий кандидат на майбутню міграцію, поки форм мало                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
