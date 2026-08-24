@@ -83,7 +83,13 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 | [toolbar](https://coss.com/ui/docs/components/toolbar)                                                                                                                                     | панель дій над грідом                                                                         |
 | [preview-card](https://coss.com/ui/docs/components/preview-card)                                                                                                                           | попередній перегляд сутності по наведенню                                                     |
 | [autocomplete](https://coss.com/ui/docs/components/autocomplete) · [checkbox-group](https://coss.com/ui/docs/components/checkbox-group) · [menu](https://coss.com/ui/docs/components/menu) | альтернативи нашим `combobox`/`checkbox`/`dropdown-menu` — брати лише якщо наших не вистачить |
-| [segmented-control](https://coss.com/ui/docs/components/segmented-control)                                                                                                                 | перемикач режимів (у нас цю роль грає `toggle-group`)                                         |
+
+> **Практичний висновок із розбору їхніх `select` і `input`** (UI-7, `docs/migrate-web.md`):
+> перш ніж тягнути компонент, перевір, чи потрібна поведінка вже не є **пропом у нашому**.
+> `alignItemWithTrigger` (попап не накриває тригер) виявився в обох — це проп Base UI, а не
+> фіча бібліотеки. З coss варто брати не файли, а **точкові прийоми**: ширина попапа
+> `min-w-(--anchor-width)`, глушник autofill, скидання `::-webkit-search-cancel-button`.
+> | [segmented-control](https://coss.com/ui/docs/components/segmented-control) | перемикач режимів (у нас цю роль грає `toggle-group`) |
 
 ⚠️ `toast`, `select`, `combobox`, `dialog` тощо в них теж є — **не брати**: у нас вони вже
 є з `@shadcn`, а імена файлів збігаються (див. §5).
