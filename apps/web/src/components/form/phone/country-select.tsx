@@ -20,7 +20,7 @@ interface CountrySelectProps {
    * Ref на InputGroup усього поля — попап якориться до нього, а не до вузької кнопки:
    * дропдаун має читатися як продовження поля. Base UI сам віддає ширину якоря
    * змінною `--anchor-width`, тож ручного виміру геометрії тут більше немає
-   * (UI-1, костиль 4 у docs/migrate-web.md §3.2).
+   * (замінена ручна геометрія попапа — docs/frontend/ui-migration-history.md §4).
    */
   anchorRef: RefObject<HTMLDivElement | null>;
   isDisabled?: boolean;
@@ -58,7 +58,7 @@ export function CountrySelect({
     >
       <ComboboxTrigger
         aria-label={t('phone.countryLabel')}
-        className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
       >
         <CountryFlag country={country} />
         <span className="tabular-nums">+{selected?.callingCode ?? ''}</span>

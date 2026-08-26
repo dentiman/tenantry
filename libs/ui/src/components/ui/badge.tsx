@@ -9,17 +9,19 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground [a]:hover:bg-primary/80',
+        default:
+          'bg-primary text-primary-foreground [a]:hover:bg-[color-mix(in_oklab,var(--primary)_90%,black_10%)] dark:[a]:hover:bg-[color-mix(in_oklab,var(--primary)_90%,white_10%)]',
         secondary: 'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',
         destructive:
-          'bg-destructive/10 text-destructive focus-visible:ring-destructive/60 dark:bg-destructive/20 dark:focus-visible:ring-destructive/60 [a]:hover:bg-destructive/20',
-        // Розширення реєстру (§4.3 плану міграції): у shadcn немає success/warning, а 6 станів
+          'bg-destructive/10 text-destructive focus-visible:ring-destructive/60 dark:bg-destructive/[8%] dark:focus-visible:ring-destructive/60 [a]:hover:underline',
+        // ЛОКАЛЬНА ПРАВКА реєстру (docs/frontend/ui-stack.md §6): у shadcn немає
+        // success/warning, а 6 станів
         // job-а і статус тенанта інакше не передати. Форма — та сама «м'яка» заливка, що в
-        // destructive, тому при `add --diff` цей блок читається як локальна вставка
+        // destructive, тому в `shadcn diff badge` цей блок читається як локальна вставка
         success:
-          'bg-success/10 text-success focus-visible:ring-success/20 dark:bg-success/20 dark:focus-visible:ring-success/40 [a]:hover:bg-success/20',
+          'bg-success/10 text-success focus-visible:ring-success/20 dark:bg-success/10 dark:focus-visible:ring-success/40 [a]:hover:underline',
         warning:
-          'bg-warning/10 text-warning focus-visible:ring-warning/20 dark:bg-warning/20 dark:focus-visible:ring-warning/40 [a]:hover:bg-warning/20',
+          'bg-warning/10 text-warning focus-visible:ring-warning/20 dark:bg-warning/10 dark:focus-visible:ring-warning/40 [a]:hover:underline',
         outline: 'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
         ghost: 'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
         link: 'text-primary underline-offset-4 hover:underline',

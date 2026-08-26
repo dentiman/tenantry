@@ -1,7 +1,8 @@
 /**
  * Фасад форм застосунку: спільні обгортки приходять із @saas-skeleton/ui, локальним
  * лишається лише телефонне поле — воно тягне libphonenumber-js і country-flag-icons,
- * потрібні поки що одному застосунку (UI-1, рішення W2 docs/migrate-web.md).
+ * потрібні поки що одному застосунку (docs/frontend/ui-stack.md §2; вага цих двох
+ * залежностей — відкрите питання №2 в docs/frontend/README.md).
  */
 export {
   FormTextField,

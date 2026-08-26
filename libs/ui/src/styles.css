@@ -16,12 +16,12 @@
 
 :root {
   /* ── Палітра shadcn-admin (satnaing/shadcn-admin, src/styles/theme.css) ──────
-     Взята цілком: базовий колір slate — нейтралі з холодним синім підтоном
-     (hue ≈ 250–265, chroma 0.007…0.046). Від HeroUI-ери лишились рівно два
-     свідомі винятки, названі користувачем:
+     База: slate-нейтралі з холодним синім підтоном
+     (hue ≈ 250–265, chroma 0.007…0.046). Два свідомі продуктові рішення:
        • --primary (і похідний --ring) — наш синій, а не їхній майже чорний;
        • метрика контролів (36px) — у компонентах, не тут.
-     Наше розширення --success/--warning лишається: у shadcn їх немає. */
+     Семантичні пари нижче скориговані до контрасту 4.5:1; --success/--warning —
+     наше розширення, бо у shadcn цих ролей немає. */
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -29,8 +29,10 @@
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  /* ВИНЯТОК 1: бренд лишається наш (HeroUI accent), у них тут майже чорний slate */
-  --primary: oklch(0.6204 0.195 253.83);
+  /* ВИНЯТОК 1: бренд лишається наш синій, у них тут майже чорний slate.
+     У світлій темі він темніший, щоб і text-primary, і суцільна кнопка мали
+     контраст не менше 4.5:1. */
+  --primary: oklch(0.56 0.195 253.83);
   --primary-foreground: oklch(0.9911 0 0);
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
@@ -38,12 +40,13 @@
   --muted-foreground: oklch(0.554 0.046 257.417);
   --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.557 0.245 27.325);
+  --destructive-foreground: oklch(0.9911 0 0);
   /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
      тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
-  --success: oklch(0.596 0.145 163.225);
+  --success: oklch(0.51 0.145 163.225);
   --success-foreground: oklch(0.984 0.003 247.858);
-  --warning: oklch(0.666 0.179 58.318);
+  --warning: oklch(0.545 0.179 58.318);
   --warning-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
@@ -72,7 +75,7 @@
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
   --primary: oklch(0.6204 0.195 253.83);
-  --primary-foreground: oklch(0.9911 0 0);
+  --primary-foreground: oklch(0.129 0.042 264.695);
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
@@ -80,6 +83,7 @@
   --accent: oklch(0.279 0.041 260.031);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.129 0.042 264.695);
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.129 0.042 264.695);
   --warning: oklch(0.769 0.188 70.08);
@@ -128,6 +132,7 @@
   --color-warning: var(--warning);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);

@@ -147,11 +147,12 @@ throw new UnauthorizedException('Invalid email or password');
 ### Глобальний toast (`main.tsx` + `lib/error-toast.ts`)
 
 - `QueryCache.onError` + `MutationCache.onError` → `parseApiError` → `isGlobalApiError`
-  (network / 403 / ≥500) → `toast.danger` (HeroUI).
+  (network / 403 / ≥500) → `toast.add({ type: 'error' })`.
 - **Дедуп 5 с** по ключу `status:code:message` — сторінки з автооновленням (jobs, 5 с)
   не спамлять однаковими тостами.
-- **Розміщення** (`components/toast-host.tsx`, живе в root-роуті): адмінка — `top end`
-  (верхній правий кут), гостьові `/login`, `/register` — `bottom` (знизу по центру).
+- **Розміщення** (`components/toast-host.tsx`, живе в root-роуті): адмінка — знизу
+  праворуч, гостьовий `/login` — знизу по центру. Регіон живих сповіщень — окремий, зверху
+  праворуч (`docs/frontend/ui-stack.md` § «Регіони тостів»).
 - **I18N-2, переклад**: заголовок — `errors:toast.connectionTitle` / `accessDeniedTitle` /
   `serviceUnavailableTitle` / `serverErrorTitle` (`toastTitle()`, гілки за `status`/`code`
   один в один з таблицею вище). Опис — `errors:codes.<code>` (`toastDescription()`); коли

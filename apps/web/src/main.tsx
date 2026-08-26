@@ -6,7 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
-import { showApiErrorToast } from './lib/error-toast';
+import { showApiErrorToast } from '@saas-skeleton/ui/lib/error-toast';
 import { initSocket } from './realtime/socket';
 import { initPresenceSync } from './realtime/presence-sync';
 import { initNotificationSync } from './realtime/notification-sync';

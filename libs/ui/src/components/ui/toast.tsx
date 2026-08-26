@@ -25,12 +25,12 @@ function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
 }
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру (міграція platform-web на shadcn, §5.5.2 docs/migrate.md).
+ * ЛОКАЛЬНА ПРАВКА реєстру (реєстр правок — docs/frontend/ui-stack.md §6).
  * Реєстр уміє лише нижній правий кут, а застосунку треба два регіони: /login — знизу по
  * центру, сторінки адмінки — зверху праворуч. Base UI стакає тости від НИЖНЬОГО краю
  * viewport-а, тож верхня позиція — це офіційний рецепт Base UI: дзеркаляться `origin`,
  * `--offset-y`, transform стеку, ::after-проміжок і starting/ending-трансформи, плюс
- * `swipeDirection="up"`. Тримається двома константами нижче, щоб `shadcn add --diff`
+ * `swipeDirection="up"`. Тримається двома константами нижче, щоб `shadcn diff toast`
  * лишався читабельним.
  */
 type ToastAnchor = 'top' | 'bottom';

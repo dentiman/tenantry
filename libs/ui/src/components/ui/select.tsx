@@ -9,8 +9,8 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react';
 const Select = SelectPrimitive.Root;
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру: висота поля 36px (`h-9`) і відступи `px-3` — метрика,
- * свідомо збережена з HeroUI-ери, щоб поля й кнопки стояли в один рядок.
+ * ЛОКАЛЬНА ПРАВКА реєстру: висота поля 36px (`h-9`) і відступи `px-3` — свідоме
+ * відхилення від стоку, щоб поля й кнопки стояли в один рядок.
  * Поверхня і тінь — стокові реєстрові (тема shadcn-admin: біла сторінка).
  */
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {

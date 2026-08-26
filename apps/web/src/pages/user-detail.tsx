@@ -35,14 +35,14 @@ import {
   useUsersSetStatus,
 } from '../api/generated/api';
 import { ActivityFeed } from '../components/activity/activity-feed';
-import { PageBreadcrumbs } from '../components/page-breadcrumbs';
+import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { PresenceDot } from '../components/presence-dot';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
-import { formatDate, formatDateTime } from '../lib/format';
+import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { usePresence } from '../realtime/use-presence';
 import { useAuthStore } from '../stores/auth.store';
 

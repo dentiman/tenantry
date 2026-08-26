@@ -15,7 +15,7 @@ import {
   ItemMedia,
 } from '@saas-skeleton/ui/components/ui/item';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { NotificationMessage } from './notification-message';
 
 type Notification = NotificationResponseDtoOutput;
@@ -61,7 +61,7 @@ interface NotificationCardProps {
  *
  * Розкладку дає `Item` реєстру, а в `plain`-режимі він рендериться СПРАВЖНЬОЮ
  * кнопкою (`render`) — попередній `role="button"` + `tabIndex` + ручний `onKeyDown`
- * зник (UI-1, костиль 6 у docs/migrate-web.md §3.2). У центрі кнопкою бути не можна:
+ * зник (docs/frontend/ui-migration-history.md §4). У центрі кнопкою бути не можна:
  * усередині тексту є посилання на сутність, а лінк у кнопці — невалідна ARIA.
  */
 export function NotificationCard({
@@ -126,7 +126,7 @@ export function NotificationCard({
           size="icon-xs"
           aria-label={closeLabel}
           title={closeLabel}
-          className="absolute -top-2 -left-2 z-10 hidden size-5 rounded-full bg-popover shadow-md group-focus-within:flex group-hover:flex hover:bg-destructive hover:text-white"
+          className="absolute -top-2 -left-2 z-10 hidden size-5 rounded-full bg-popover shadow-md group-focus-within:flex group-hover:flex hover:bg-destructive hover:text-destructive-foreground"
           onClick={(e) => {
             e.stopPropagation();
             onClose();

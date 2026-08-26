@@ -44,9 +44,8 @@ export function NotificationBell() {
         <Bell />
         {count > 0 && (
           // Суцільна заливка, а не мʼякий destructive-варіант: лічильник має
-          // читатися з відстані. У base-nova немає --destructive-foreground,
-          // тому текст білий явно
-          <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 bg-destructive px-1 text-[10px] text-white">
+          // читатися з відстані. Контраст пари задає тема окремо для light/dark.
+          <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 bg-destructive px-1 text-[10px] text-destructive-foreground">
             {count > 99 ? '99+' : count}
           </Badge>
         )}

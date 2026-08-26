@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/index.css",
+    "css": "../../libs/ui/src/styles.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@saas-skeleton/ui/components",
+    "components": "@/components",
     "utils": "@saas-skeleton/ui/lib/utils",
     "ui": "@saas-skeleton/ui/components/ui",
-    "lib": "@saas-skeleton/ui/lib",
-    "hooks": "@saas-skeleton/ui/hooks"
+    "lib": "@/lib",
+    "hooks": "@/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

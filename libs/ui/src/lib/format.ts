@@ -1,4 +1,6 @@
-import i18n from '../i18n';
+// Обидва застосунки конфігурують САМ синглтон i18next (не createInstance), тож
+// пакет бере той самий інстанс без прокидання через пропи чи контекст
+import i18n from 'i18next';
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) {

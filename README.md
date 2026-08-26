@@ -14,7 +14,7 @@
 | Contracts   | Zod 4 — єдине джерело правди типів API (`libs/contracts`)                                                                                                                   |
 | API-конвеєр | `@nestjs/swagger` → `openapi.json` → orval → typed TanStack Query hooks                                                                                                     |
 | Frontend    | React 19, Vite 7, TanStack Router + Query v5, Zustand, Tailwind CSS 4, react-hook-form                                                                                      |
-| UI          | HeroUI v3 (React Aria) — мінімальний набір компонентів; тема light/dark/system (next-themes)                                                                                |
+| UI          | shadcn/ui на Base UI (стиль `base-nova`), спільний шар `libs/ui`; тема light/dark/system (next-themes)                                                                       |
 | Auth        | JWT (15m) + refresh rotation (`tenantId:tokenId:secret`, argon2) + theft detection; два незалежні auth-и (tenant `apps/api` і platform `apps/platform-api`, окремі секрети) |
 | Monorepo    | pnpm workspaces + Turborepo, ESLint 9 (strict type-checked), Prettier, Husky                                                                                                |
 
@@ -55,7 +55,7 @@ apps/
   platform-api/   # Control plane API (:3002): platform-auth (окремі platform_users, окремий
                   # JWT-secret), tenants CRUD, jobs-моніторинг; роль saas_platform (BYPASSRLS)
   worker/         # NestJS-процес без HTTP: обробники job-ів pg-boss + cron
-  web/            # Tenant SPA (HeroUI v3, :5173): admin-layout, login, users CRUD
+  web/            # Tenant SPA (:5173): shell, login, users CRUD, картка юзера, інбокс
   platform-web/   # Control plane SPA (:5174): tenants CRUD, jobs-моніторинг
 libs/
   contracts/  # Zod-схеми + z.infer типи (залежить лише від zod; platform-контракти — subpath /platform)
@@ -63,9 +63,10 @@ libs/
               # (nestjs-cls) + tenant-extension для set_config, SystemPrismaService (BYPASSRLS)
   shared/     # Повідомлення: defineEvent/defineCommand, MESSAGE_TOPOLOGY, MessagePublisher,
               # @MessageSubscriber, inbox-ідемпотентність; сховище (StorageService)
+  ui/         # Спільний UI-шар обох фронтів: тема, вендорені примітиви shadcn, грід, форми
 docker/       # docker-compose: postgres, mailpit, valkey (realtime), seaweedfs
 docs/         # архітектурна пропозиція та рішення; docs/multi-tenancy-architecture.md — довідник
-              # поточної мультитенантної архітектури
+              # поточної мультитенантної архітектури; docs/frontend/ — усе про UI-шар
 ```
 
 ## Ключові конвенції (успадковані з fibo-admin)
@@ -163,6 +164,15 @@ live-транспортом). Сповіщення, народжені у вор
 на тому самому Valkey-адаптері. Спливна картка (тост) і рядок у центрі — **один компонент**.
 
 Деталі, зафіксовані рішення і тести — [docs/notifications.md](docs/notifications.md).
+
+## Фронтенд
+
+Обидва фронти на shadcn/ui (Base UI, стиль `base-nova`) зі спільним шаром `libs/ui`: одна тема,
+вендорені примітиви реєстру, грід, обгортки форм. Уся документація UI-шару — у
+[docs/frontend/](docs/frontend/README.md): правила стека
+([ui-stack.md](docs/frontend/ui-stack.md)), звідки брати новий компонент
+([ui-registry.md](docs/frontend/ui-registry.md)), історія переходу на shadcn
+([ui-migration-history.md](docs/frontend/ui-migration-history.md)) і відкриті питання.
 
 ## Далі за roadmap
 

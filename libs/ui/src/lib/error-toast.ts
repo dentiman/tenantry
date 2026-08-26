@@ -1,6 +1,6 @@
-import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import i18n from '../i18n';
-import type { ParsedApiError } from '@saas-skeleton/ui/api/api-error';
+import { toast } from '../components/ui/toast';
+import i18n from 'i18next';
+import type { ParsedApiError } from '../api/api-error';
 
 /** Анти-спам: однакова помилка не частіше ніж раз на вікно (сторінки з автооновленням) */
 const DEDUP_WINDOW_MS = 5_000;

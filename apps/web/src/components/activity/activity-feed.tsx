@@ -10,7 +10,7 @@ import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { useTranslation } from 'react-i18next';
 import { useActivitiesFindAll } from '../../api/generated/api';
 import type { ActivityListResponseDtoOutputItemsItem } from '../../api/generated/model/activityListResponseDtoOutputItemsItem';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { ActivityMessage } from './activity-message';
 
 type Activity = ActivityListResponseDtoOutputItemsItem;

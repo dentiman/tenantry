@@ -6,7 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
-import { showApiErrorToast } from './lib/error-toast';
+import { showApiErrorToast } from '@saas-skeleton/ui/lib/error-toast';
 import './i18n';
 import './index.css';
 

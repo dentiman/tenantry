@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import { PageBreadcrumbs } from '../components/page-breadcrumbs';
+import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../api/generated/api';
 import type { TenantResponseDtoOutput } from '../api/generated/model/tenantResponseDtoOutput';
 import { CreateTenantModal } from '../components/create-tenant-modal';
-import { formatDate } from '../lib/format';
+import { formatDate } from '@saas-skeleton/ui/lib/format';
 import {
   AlertDialog,
   AlertDialogAction,

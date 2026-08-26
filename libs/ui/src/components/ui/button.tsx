@@ -5,12 +5,14 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 
 /**
  * ЛОКАЛЬНА ПРАВКА реєстру. Після переходу на тему shadcn-admin (2026-08-24)
- * лишились рівно дві відмінності від стокового base-nova:
+ * лишились такі відмінності від стокового base-nova:
  *   1. `destructive` — СУЦІЛЬНИЙ червоний, як у shadcn-admin (`bg-destructive
- *      text-white`), а не мʼяка заливка `bg-destructive/10` base-nova. У темі
- *      немає `--destructive-foreground`, тому білий текст заданий явно.
- *   2. Метрика: `default` 36px (`sm` 32, `xs` 28, `lg` 40) — свідомо збережена
- *      з HeroUI-ери, поля вирівняні по тій самій висоті.
+ *      text-destructive-foreground`), а не мʼяка заливка `bg-destructive/10`
+ *      base-nova. Контраст пари задає тема окремо для light/dark.
+ *   2. Hover суцільних primary/destructive змішує колір із black/white за темою,
+ *      а не робить фон прозорим: так foreground-пара не втрачає контраст.
+ *   3. Метрика: `default` 36px (`sm` 32, `xs` 28, `lg` 40) — свідоме відхилення
+ *      від стоку; поля вирівняні по тій самій висоті.
  * Фокус — суцільне `ring-2` кольору `--ring` (наш синій) з відступом 2px.
  */
 const buttonVariants = cva(
@@ -18,7 +20,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        default:
+          'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklab,var(--primary)_90%,black_10%)] dark:hover:bg-[color-mix(in_oklab,var(--primary)_90%,white_10%)]',
         outline:
           'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
@@ -26,7 +29,7 @@ const buttonVariants = cva(
         ghost:
           'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
         destructive:
-          'bg-destructive text-white hover:bg-[color-mix(in_oklab,var(--destructive)_90%,white_10%)] focus-visible:border-destructive/40 focus-visible:ring-destructive/60 dark:focus-visible:ring-destructive/60',
+          'bg-destructive text-destructive-foreground hover:bg-[color-mix(in_oklab,var(--destructive)_90%,black_10%)] focus-visible:border-destructive/40 focus-visible:ring-destructive/60 dark:hover:bg-[color-mix(in_oklab,var(--destructive)_90%,white_10%)] dark:focus-visible:ring-destructive/60',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

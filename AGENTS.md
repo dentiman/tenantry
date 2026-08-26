@@ -166,12 +166,24 @@ pnpm platform:web:codegen
 - Image completion dispatches idempotent thumbnail generation. A cron job removes abandoned
   pending uploads.
 
-### Frontend and HeroUI
+### Frontend and UI
 
 - Both frontends use React 19, Vite 7, TanStack Router/Query, Zustand, Tailwind 4,
-  react-hook-form, react-i18next, and HeroUI v3.
-- HeroUI is v3, not NextUI/v2. Use its compound component APIs and existing semantic tokens.
-  Do not add a provider that v3 does not require.
+  react-hook-form, react-i18next, and shadcn/ui on Base UI (style `base-nova`).
+- Shared UI lives in `libs/ui`: the single theme (`styles.css`), vendored registry primitives
+  (`components/ui/**`), the data grid, form wrappers, and shared helpers. Neither application
+  has its own `components/ui/`. Details: `docs/frontend/ui-stack.md`.
+- Registry primitives are vendored on purpose. Inspect updates with
+  `pnpm dlx shadcn@4.19.0 diff <name>` inside `libs/ui`, and check the local-edit registry
+  first: edits are marked with the comment "ЛОКАЛЬНА ПРАВКА реєстру" and a blind update
+  would silently drop them. Run app blocks from the target application directory.
+- Theme files own semantic color pairs, typography, and theme-level radius values. Control
+  height, padding, focus geometry, popup placement, and density variants stay in component
+  recipes; do not add a select-specific height token to the theme.
+- Compose parts (`DialogContent`, `TableHead`, `DropdownMenuItem`); do not use compound
+  namespaces. Substitute the rendered element with `render={<Button/>}`, not `asChild`.
+- Do not write a wrapper over a primitive that already exists in the registry. Where to look
+  for a new component: `docs/frontend/ui-registry.md`.
 - Use existing form wrappers and data-grid abstractions before introducing page-local copies.
 - Define grids with `createDataGrid<TFilters, TItem>()` at module scope. `Grid.Root` owns URL
   filters, query state, and selection.
@@ -182,8 +194,11 @@ pnpm platform:web:codegen
   not flash the table.
 - Invalidate generated list query keys from the page after mutations; the grid does not own
   business mutations.
-- Keep UI minimal and use inline SVG when an icon is necessary; do not add an icon package for
-  a handful of icons.
+- Icons come from `lucide-react` with per-icon imports. Inside components use
+  `data-icon="inline-start"|"inline-end"` and no size classes; the component sets the size.
+- Do not set control heights at the call site. The project deliberately deviates from the
+  registry defaults: 36px default controls and a solid `ring-2` focus ring in the project's
+  primary blue. Both are fixed decisions.
 
 ## Toolchain pitfalls
 

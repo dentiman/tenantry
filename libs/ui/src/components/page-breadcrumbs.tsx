@@ -7,8 +7,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@saas-skeleton/ui/components/ui/breadcrumb';
-import { PageHeaderPortal } from '@saas-skeleton/ui/components/page-header-slot';
+} from './ui/breadcrumb';
+import { PageHeaderPortal } from './page-header-slot';
 
 export interface Crumb {
   label: ReactNode;
@@ -23,7 +23,7 @@ export interface Crumb {
  * Сторінка рендерить цей компонент у себе, а `PageHeaderPortal` телепортує розмітку
  * в слот хедера. `Link` тут працює як звичайний лінк роутера, хоча в DOM він опиниться
  * поза `<main>`: портал міняє місце в DOM, але дерево React (і всі його контексти)
- * лишається тим самим — деталі в `libs/ui/src/components/page-header-slot.tsx`.
+ * лишається тим самим — деталі в `./page-header-slot.tsx`.
  */
 export function PageBreadcrumbs({ items }: { items: Crumb[] }) {
   return (

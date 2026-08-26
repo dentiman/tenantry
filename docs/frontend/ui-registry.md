@@ -5,8 +5,8 @@
 живі на дату запису).
 
 Наш стек: **shadcn/ui на Base UI, стиль `base-nova`, Tailwind 4**, вендорений код у
-`libs/ui/src/components/ui/`, тема — `libs/ui/src/styles.css` (палітра HeroUI, див.
-`docs/migrate-web.md` §9 UI-2). Правила стека — `CLAUDE.md`, правило 12.
+`libs/ui/src/components/ui/`, тема — `libs/ui/src/styles.css`. Правила стека — `ui-stack.md`
+(стисло — `CLAUDE.md`, правило 12).
 
 ---
 
@@ -20,30 +20,34 @@
 4. **Галереї-референси** (Tailwind Plus, Origin UI, 21st.dev, Kibo, Tremor) — дивимось,
    переносимо руками, як залежність не підключаємо.
 
-Конфіг реєстрів живе в `libs/ui/components.json` і `apps/*/components.json`:
+Конфіг реєстрів живе в `libs/ui/components.json` і в обох `apps/*/components.json`:
 
 ```jsonc
 "registries": {
-  "@reui": "https://reui.io/r/{style}/{name}.json",
-  "@coss": "https://coss.com/ui/r/{name}.json"   // додати, коли знадобиться
+  "@reui": "https://reui.io/r/{style}/{name}.json"
 }
 ```
 
+`@coss` не реєструємо превентивно: додаємо namespace лише разом із першим реально прийнятим
+компонентом. Примітиви ставимо з `libs/ui`, сторінкові блоки — з теки конкретного застосунку.
+
 ---
 
-## 2. Що вже вендеровано у нас (31 примітив)
+## 2. Що вже вендеровано у нас (33 примітиви)
 
-`libs/ui/src/components/ui/`: alert-dialog · avatar · badge · button · card · checkbox ·
-combobox · dialog · dropdown-menu · empty · field · input · input-group · item · label ·
-pagination · progress · scroll-area · select · separator · sheet · sidebar · skeleton ·
+`libs/ui/src/components/ui/`: alert-dialog · avatar · badge · breadcrumb · button · card ·
+checkbox · combobox · dialog · dropdown-menu · empty · field · input · input-group · item ·
+label · pagination · progress · scroll-area · select · separator · sheet · sidebar · skeleton ·
 spinner · switch · table · tabs · textarea · toast · toggle · toggle-group · tooltip
 
 Хуки: `hooks/use-mobile.ts`. Власні (не з реєстру): `theme-switcher.tsx`, `user-identity.tsx`,
-`components/data-grid/**`, `components/form/**`.
+`page-header-slot.tsx`, `page-breadcrumbs.tsx`, `components/data-grid/**`,
+`components/form/**`.
 
 **Локальні правки реєстру** (позначені коментарем «ЛОКАЛЬНА ПРАВКА реєстру») — `toast`
-(позиції), `checkbox` (indeterminate), `button` (пігулка, суцільний destructive, метрика,
-фокус), `input`/`textarea`/`select`/`input-group` (біла поверхня, тінь, висота 36px).
+(позиції), `checkbox` (indeterminate), `button` (суцільний destructive, метрика, фокус),
+`input`/`select`/`input-group` (однорядкова висота 36px і `px-3`), `textarea` (`px-3`, але
+стокова `min-h-16`). Повний реєстр дельт — `ui-stack.md` §6.
 Плюс наскрізна заміна фокус-кільця на `ring-2` у 14 файлах.
 
 ---
@@ -52,13 +56,13 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 
 ### 3.1 `@shadcn` — доступні, але ще не встановлені
 
-[Документація](https://ui.shadcn.com/docs/components) · ставити: `npx shadcn@latest add <name>`
+[Документація](https://ui.shadcn.com/docs/components) · ставити з `libs/ui`:
+`pnpm dlx shadcn@4.19.0 add <name>`
 (з теки `libs/ui`).
 
 | Компонент                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Ймовірний споживач у нас                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [accordion](https://ui.shadcn.com/docs/components/accordion) · [collapsible](https://ui.shadcn.com/docs/components/collapsible)                                                                                                                                                                                                                                                                                                                                                                                      | згортні групи в сайдбарі, коли доменних модулів стане більше |
-| [breadcrumb](https://ui.shadcn.com/docs/components/breadcrumb)                                                                                                                                                                                                                                                                                                                                                                                                                                                       | хлібні крихти в хедері карток (`/users/$userId`)             |
 | [command](https://ui.shadcn.com/docs/components/command)                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ⌘K-пошук по тенантах/юзерах                                  |
 | [popover](https://ui.shadcn.com/docs/components/popover) · [hover-card](https://ui.shadcn.com/docs/components/hover-card)                                                                                                                                                                                                                                                                                                                                                                                            | картка юзера при наведенні в гріді                           |
 | [calendar](https://ui.shadcn.com/docs/components/calendar)                                                                                                                                                                                                                                                                                                                                                                                                                                                           | фільтри за датою в гріді, заплановані сповіщення             |
@@ -84,7 +88,7 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 | [preview-card](https://coss.com/ui/docs/components/preview-card)                                                                                                                           | попередній перегляд сутності по наведенню                                                     |
 | [autocomplete](https://coss.com/ui/docs/components/autocomplete) · [checkbox-group](https://coss.com/ui/docs/components/checkbox-group) · [menu](https://coss.com/ui/docs/components/menu) | альтернативи нашим `combobox`/`checkbox`/`dropdown-menu` — брати лише якщо наших не вистачить |
 
-> **Практичний висновок із розбору їхніх `select` і `input`** (UI-7, `docs/migrate-web.md`):
+> **Практичний висновок із розбору їхніх `select` і `input`** (UI-7, `ui-migration-history.md`):
 > перш ніж тягнути компонент, перевір, чи потрібна поведінка вже не є **пропом у нашому**.
 > `alignItemWithTrigger` (попап не накриває тригер) виявився в обох — це проп Base UI, а не
 > фіча бібліотеки. З coss варто брати не файли, а **точкові прийоми**: ширина попапа
@@ -100,7 +104,8 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 
 ### 4.1 `@shadcn` — сторінкові блоки (безкоштовно, наш стиль)
 
-[Галерея](https://ui.shadcn.com/blocks) · переглянути код: `npx shadcn@latest view @shadcn/<name>`
+[Галерея](https://ui.shadcn.com/blocks) · переглянути код:
+`pnpm dlx shadcn@4.19.0 view @shadcn/<name>`
 
 | Категорія            | Що всередині                                                                                                                                                                                                                                                                                                                                                                                                                           | Посилання                                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -171,9 +176,9 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 1. **Імʼя файла не повинно збігатися** з нашим у `libs/ui/src/components/ui/` — інакше CLI
    перезапише наш вендорений код разом із локальними правками, а місця виклику зламаються
    (у `@coss` частини звуться інакше: `SelectPopup` замість нашого `SelectContent`).
-2. **Прогрепати на невідомі токени.** Перевірено: компоненти `@coss` посилаються на
-   `info` і `destructive-foreground`, яких у нашій темі немає — або додати змінні, або
-   замінити на наші (`primary`, `text-white`).
+2. **Прогрепати на невідомі токени.** `destructive-foreground` у нас уже є; `info` та інші
+   ролі, яких немає в `@theme inline`, треба свідомо зіставити з нашими semantic tokens або
+   додати повною парою `--role` / `--role-foreground` для light і dark.
 3. **Вирівняти метрику й фокус** під наші: висота контролів 36px (`sm` 32, `xs` 28, `lg` 40),
    фокус — суцільне `ring-2` кольору `--ring` (у `@coss` — адаптивна висота `min-h-9 sm:min-h-8`
    і `ring-[3px]` при 24% непрозорості).
@@ -185,9 +190,12 @@ spinner · switch · table · tabs · textarea · toast · toggle · toggle-grou
 
 ## 6. Що з цього вже застосовано
 
-| Рішення                                                              | Джерело                                  | Де                                                 |
-| -------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------- |
-| Розкладка шела (бренд угорі, профіль у футері, `collapsible="icon"`) | `@shadcn/sidebar-07`                     | `app-layout.tsx` обох фронтів, UI-3                |
-| Розкладка карток `/users/$userId` і `/tenants/$tenantId`             | Tailwind Plus → Detail screens           | `pages/user-detail.tsx`, `pages/tenant-detail.tsx` |
-| Палітра, тіні, шрифт Inter                                           | HeroUI (їхній MCP `get_theme_variables`) | `libs/ui/src/styles.css`, UI-2                     |
-| Пігулкові кнопки, суцільний danger, метрика 36px                     | HeroUI `button.css` / `input.css`        | `ui/button.tsx`, поля                              |
+| Рішення                                                                              | Джерело                                                                                    | Де                                                   |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Розкладка шела (бренд угорі, профіль у футері, `collapsible="icon"`)                 | `@shadcn/sidebar-07`                                                                       | `app-layout.tsx` обох фронтів, UI-3                  |
+| Розкладка карток `/users/$userId` і `/tenants/$tenantId`                             | Tailwind Plus → Detail screens                                                             | `pages/user-detail.tsx`, `pages/tenant-detail.tsx`   |
+| Палітра slate, білі поверхні, `--radius`, стокові тіні                               | [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin) (`src/styles/theme.css`) | `libs/ui/src/styles.css`, UI-4                       |
+| Розкладка сторінок списків (шапка + рядок тулбара + `Reset`)                         | там само (`src/features/users`, `src/components/data-table/toolbar.tsx`)                   | `data-grid/filters.tsx`, сторінки списків, UI-6      |
+| Хлібні крихти в хедері                                                               | `@shadcn/breadcrumb` + власний портал                                                      | `page-header-slot.tsx`, `page-breadcrumbs.tsx`, UI-5 |
+| Синій `--primary`/`--ring`, метрика контролів 36px                                   | наші свідомі відхилення від стоку (`ui-stack.md` §3)                                       | `ui/button.tsx`, поля                                |
+| Ширина попапа `min-w-(--anchor-width)`, глушник autofill, скидання ✕ у `type=search` | `@coss` — точкові прийоми, не файли                                                        | `ui/select.tsx`, `ui/input.tsx`, UI-7                |

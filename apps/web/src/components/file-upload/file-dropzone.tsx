@@ -28,7 +28,7 @@ interface FileDropzoneProps {
  * оболонку дає `Empty`, а клік бере справжня `Button`, тому попереднього костиля
  * `role="button"` + `tabIndex` + `onKeyDown` на `<div>` більше немає: фокус,
  * Enter/Space і `disabled` приходять від нативної кнопки
- * (UI-1, костиль 5 у docs/migrate-web.md §3.2).
+ * (знятий role="button" на div — docs/frontend/ui-migration-history.md §4).
  */
 export function FileDropzone({
   accept,

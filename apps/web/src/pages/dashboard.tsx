@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { useAuthMe } from '../api/generated/api';
-import { PageBreadcrumbs } from '../components/page-breadcrumbs';
-import { formatDate } from '../lib/format';
+import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { formatDate } from '@saas-skeleton/ui/lib/format';
 
 export function DashboardPage() {
   const { t } = useTranslation('dashboard');

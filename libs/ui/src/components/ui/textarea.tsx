@@ -3,8 +3,8 @@ import * as React from 'react';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру: висота поля 36px (`h-9`) і відступи `px-3` — метрика,
- * свідомо збережена з HeroUI-ери, щоб поля й кнопки стояли в один рядок.
+ * ЛОКАЛЬНА ПРАВКА реєстру: горизонтальні відступи `px-3` — та сама метрика,
+ * що в однорядкових полів. Мінімальна висота textarea лишається стоковою `min-h-16`.
  * Поверхня і тінь — стокові реєстрові (тема shadcn-admin: біла сторінка).
  */
 function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {

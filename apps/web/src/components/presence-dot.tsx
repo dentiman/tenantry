@@ -18,7 +18,7 @@ interface PresenceDotProps {
  *
  * Позиціювання і обвід дає `AvatarBadge` реєстру (він же бере розмір від `Avatar`),
  * підпис — справжній `Tooltip` замість атрибута `title`, який не показується з
- * клавіатури (UI-1, костиль 8 у docs/migrate-web.md §3.2).
+ * клавіатури (замінений абсолютний span — docs/frontend/ui-migration-history.md §4).
  */
 export function PresenceDot({ isOnline, isUnknown, label }: PresenceDotProps) {
   if (isUnknown || !isOnline) {

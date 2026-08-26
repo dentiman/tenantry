@@ -32,8 +32,8 @@ import {
   useTenantsFindOne,
   useTenantsUpdate,
 } from '../api/generated/api';
-import { PageBreadcrumbs } from '../components/page-breadcrumbs';
-import { formatDate, formatDateTime } from '../lib/format';
+import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 
 /** Рядок «підпис → значення»: та сама форма, що на картці юзера в apps/web */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
@@ -65,7 +65,7 @@ function Note({ title, value, hint }: { title: string; value?: ReactNode; hint: 
  * Показуємо рівно те, що є в control plane: сам рядок тенанта і його наслідки для
  * входу. Стрічки подій тут НЕМАЄ навмисно — activities живуть у tenant-плані під
  * RLS, і платформа їх не читає; так само немає лічильника юзерів і джоб тенанта,
- * бо відповідних ендпоінтів у platform-api не існує (див. docs/migrate-web.md).
+ * бо відповідних ендпоінтів у platform-api не існує.
  */
 export function TenantDetailPage() {
   const { t } = useTranslation('tenants');

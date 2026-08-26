@@ -4,7 +4,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 import { CheckIcon, MinusIcon } from 'lucide-react';
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру (міграція platform-web на shadcn, §5.5.9 docs/migrate.md):
+ * ЛОКАЛЬНА ПРАВКА реєстру (реєстр правок — docs/frontend/ui-stack.md §6):
  * реєстр малює в індикаторі лише «галочку», а Base UI показує індикатор і в стані
  * indeterminate — у шапці гріда (частина рядків сторінки вибрана) там має бути риска.
  */
