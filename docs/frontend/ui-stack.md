@@ -129,7 +129,8 @@ vite не читає tsconfig paths.
 
 Саме ці три відхилення — причина, чому `button`/`input`/`select`/`input-group` лишаються
 з коментарем «ЛОКАЛЬНА ПРАВКА реєстру». **Нову висоту не задавати класом на місці
-використання** — вона дефолтна.
+використання** — вона дефолтна. Для компактних toolbar-ів `Input`, `SelectTrigger` і `Button`
+мають opt-in `size="sm"` (32px); звичайні поля форм лишаються 36px.
 
 `--success` / `--warning` (+`-foreground`) — **наше розширення**: у shadcn таких ролей немає.
 Це нейтрально сумісні emerald/amber; lightness скоригований так, щоб дрібний текст у мʼяких
@@ -142,9 +143,9 @@ vite не читає tsconfig paths.
   значення, які справді перемикаються між light/dark або брендами.
 - **У рецепті компонента (`cva`/класи):** висота, padding, розмір іконки, геометрія focus ring,
   popup placement/width, анімація та поведінкові варіанти.
-- Тому висота `SelectTrigger` — `h-9` у `select.tsx`, а не `--select-height` у темі. Якщо
-  зʼявиться реальна runtime-вимога compact/comfortable для всіх контролів, вводимо спільний
-  density-рецепт або загальний `--control-height`, не select-специфічний токен.
+- Тому висота `SelectTrigger` — у recipe `select.tsx`, а не в `--select-height` теми.
+  Дефолт — `h-9`; компактний toolbar використовує спільний opt-in `size="sm"`, а не локальні
+  height-класи чи select-специфічний токен.
 
 ### Семантична мапа: роль у UI → токен
 
@@ -222,6 +223,8 @@ vite не читає tsconfig paths.
   сторінки; контент проходить під напівпрозорим `background` із `backdrop-blur`. Не додавайте
   `overflow-y-auto` внутрішньому контейнеру сторінки без явно обмеженої висоти — це створить
   другий scroll-контекст і порушить sticky-поведінку.
+- **Верхній відступ контенту — 16px**, бічні та нижній — 24px. Це тримає заголовки й primary
+  actions ближче до sticky-хедера, не стискаючи основний контент сторінки.
 - **Сторінка списку** (за shadcn-admin): рядок шапки (`h2` + підзаголовок ліворуч, головні дії
   праворуч) → окремий рядок тулбара над таблицею (пошук і фільтри ліворуч, `Reset` зʼявляється
   лише коли є що скидати; проп `actions` праворуч) → таблиця → пагінація.
@@ -246,10 +249,10 @@ vite не читає tsconfig paths.
 ### DataGrid
 
 Публічний API — фабрика `createDataGrid<TFilters, TItem>()` на рівні модуля сторінки; повертає
-компаунд-набір `Grid.Root` / `Grid.Filters` / `Grid.Table` / `Grid.SelectionSummary` /
-`Grid.filter`. Повний контракт (фетчинг через проп `useListQuery`, скидання вибору, headless
-escape hatches, wire-формат boolean-фільтрів) — у `CLAUDE.md`, розділ про DataGrid; він не
-змінювався від міграції UI.
+компаунд-набір `Grid.Root` / `Grid.Filters` / `Grid.Toolbar` / `Grid.Table` /
+`Grid.SelectionSummary` / `Grid.filter`. Повний контракт (фетчинг через проп `useListQuery`,
+скидання вибору, headless escape hatches, wire-формат boolean-фільтрів) — у `CLAUDE.md`,
+розділ про DataGrid; він не змінювався від міграції UI.
 
 `Grid.Table surface="card"` — опційна HeroUI-подібна поверхня: спільний `Card size="sm"`
 дає radius/background/shadow, а прозора таблиця заповнює її без внутрішнього padding. Режим
@@ -257,6 +260,14 @@ escape hatches, wire-формат boolean-фільтрів) — у `CLAUDE.md`, 
 лінію на 12 px від обох країв. Режим використовується в tenant Users і platform Jobs grids.
 Platform Tenants має ту саму композицію `Card + Table separator="inset"` вручну, бо цей список
 не потребує DataGrid-фільтрів чи пагінації. `bordered` лишається backward-compatible дефолтом.
+
+`Grid.Toolbar` — контекстна панель списку для business actions. У звичайному стані вона показує
+`Total: N` і компактні фільтри, у selection-стані — `Selected: N`, передані сторінкою
+bulk actions і Clear. Обидва стани накладені в одну CSS grid-комірку: неактивний невидимий,
+але продовжує резервувати найбільші ширину й висоту, тому surface не стрибає при перемиканні.
+Панель має `bg-secondary` без тіні й споріднена з `TabsList`; її Reset — доступна icon-only
+кнопка (`aria-label` + `Tooltip`) з `radius="full"` і `ghost` hover. Нижчорівневий
+`Grid.Filters` лишається для plain toolbar-ів без selection business logic.
 
 Власний тип `SortDescriptor { column: string; direction: 'ascending' | 'descending' }` живе в
 `data-grid/types.ts` і реекспортується з барелю — раніше він приходив із UI-бібліотеки.

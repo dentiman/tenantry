@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import { Link } from '@tanstack/react-router';
@@ -275,18 +276,28 @@ export function UsersPage() {
       {/* Розкладка списку — як у satnaing/shadcn-admin (features/users/index.tsx):
           заголовок із підзаголовком і головна дія в одному рядку, а тулбар пошуку
           й фільтрів — окремим рядком безпосередньо над таблицею */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('subtitle')}</p>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <CreateUserModal />
       </div>
 
-      <div className="mb-4 flex flex-col gap-4">
-        <Grid.Filters filters={filters} />
-        <Grid.SelectionSummary />
-      </div>
+      <Grid.Toolbar
+        filters={filters}
+        totalLabel={t('toolbar.total')}
+        selectedLabel={t('toolbar.selected')}
+        size="sm"
+        className="mb-3"
+        selectionActions={() => (
+          // Демонстраційний slot майбутніх bulk actions; свідомо disabled, доки
+          // немає окремого batch endpoint і confirm-flow.
+          <Button size="sm" disabled>
+            {t('toolbar.bulkAction')}
+          </Button>
+        )}
+      />
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}

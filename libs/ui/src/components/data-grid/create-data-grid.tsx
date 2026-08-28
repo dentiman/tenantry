@@ -4,8 +4,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { DataGrid } from './data-grid';
 import type { DataGridSurface } from './data-grid';
-import { DataGridFilters, defineFilters } from './filters';
-import type { DataGridFilterDef } from './filters';
+import { DataGridFilters, DataGridToolbar, defineFilters } from './filters';
+import type { DataGridFilterDef, DataGridFiltersSize, DataGridFiltersSurface } from './filters';
 import { gridQueryOptions, toGridQueryResult } from './data-grid-query';
 import type { DataGridListResponse, DataGridQueryResult } from './data-grid-query';
 import { useDataGridFilters } from './use-data-grid-filters';
@@ -66,6 +66,17 @@ interface DataGridTableProps<TItem> {
 
 interface DataGridFiltersSlotProps<TFilters extends DataGridFiltersBase> {
   filters: DataGridFilterDef<TFilters>[];
+  surface?: DataGridFiltersSurface;
+  size?: DataGridFiltersSize;
+  className?: string;
+}
+
+interface DataGridToolbarSlotProps<TFilters extends DataGridFiltersBase, TItem> {
+  filters: DataGridFilterDef<TFilters>[];
+  totalLabel: string;
+  selectedLabel: string;
+  selectionActions?: (selection: DataGridSelectionState<TItem>) => ReactNode;
+  size?: DataGridFiltersSize;
   className?: string;
 }
 
@@ -83,6 +94,8 @@ export interface DataGridInstance<
   Root: (props: DataGridRootProps<TFilters, TItem>) => ReactNode;
   /** Тулбар фільтрів — grid більше не проп, а контекст */
   Filters: (props: DataGridFiltersSlotProps<TFilters>) => ReactNode;
+  /** Контекстний toolbar: total + filters або selected + bulk actions */
+  Toolbar: (props: DataGridToolbarSlotProps<TFilters, TItem>) => ReactNode;
   /** Таблиця з сортуванням/пагінацією/чекбоксами — дані з контексту */
   Table: (props: DataGridTableProps<TItem>) => ReactNode;
   /** «N обрано» + Clear; рендериться лише коли щось обрано */
@@ -162,9 +175,45 @@ export function createDataGrid<
     );
   }
 
-  function Filters({ filters, className }: DataGridFiltersSlotProps<TFilters>) {
+  function Filters({ filters, surface, size, className }: DataGridFiltersSlotProps<TFilters>) {
     const { grid } = useGridContext();
-    return <DataGridFilters grid={grid} filters={filters} className={className} />;
+    return (
+      <DataGridFilters
+        grid={grid}
+        filters={filters}
+        surface={surface}
+        size={size}
+        className={className}
+      />
+    );
+  }
+
+  function Toolbar({
+    filters,
+    totalLabel,
+    selectedLabel,
+    selectionActions,
+    size,
+    className,
+  }: DataGridToolbarSlotProps<TFilters, TItem>) {
+    const { grid, list, selection } = useGridContext();
+    const selectedCount = selection?.selectedItems.length ?? 0;
+    return (
+      <DataGridToolbar
+        grid={grid}
+        filters={filters}
+        totalLabel={totalLabel}
+        total={list.total}
+        selectedLabel={selectedLabel}
+        selectedCount={selectedCount}
+        // Рендеримо actions і в невидимому стані: CSS grid врахує їхні розміри
+        // заздалегідь і не змінить геометрію surface після першого вибору.
+        selectionActions={selection ? selectionActions?.(selection) : undefined}
+        onClearSelection={selection?.clear}
+        size={size}
+        className={className}
+      />
+    );
   }
 
   function Table(props: DataGridTableProps<TItem>) {
@@ -183,7 +232,7 @@ export function createDataGrid<
         <span className="text-sm text-muted-foreground">
           {t('selection.summary', { count: selection.selectedItems.length })}
         </span>
-        <Button size="sm" variant="ghost" onClick={selection.clear}>
+        <Button size="sm" variant="toolbar" onClick={selection.clear}>
           {t('selection.clear')}
         </Button>
         {children?.(selection)}
@@ -191,5 +240,5 @@ export function createDataGrid<
     );
   }
 
-  return { Root, Filters, Table, SelectionSummary, filter: defineFilters<TFilters>() };
+  return { Root, Filters, Toolbar, Table, SelectionSummary, filter: defineFilters<TFilters>() };
 }

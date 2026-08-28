@@ -161,7 +161,7 @@ export function AppLayout() {
               центрована колонка max-w-5xl зʼїдала б половину екрана.
               (shadcn-admin тут має опційний cap max-w-7xl на дуже широких
               екранах — свідомо не беремо, бо просили саме повну ширину) */}
-          <div className="flex-1 px-6 py-6">
+          <div className="flex-1 px-6 pt-4 pb-6">
             <Outlet />
           </div>
         </SidebarInset>

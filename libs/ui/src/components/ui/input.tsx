@@ -16,14 +16,24 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *   4. поверхня використовує semantic `bg-field`, а `border-input` лишається
  *      окремою видимою обводкою в обох темах.
  *   5. зовнішньої тіні немає; focus використовує тонкий `ring-1` у primary blue.
+ *   6. `size="sm"` — opt-in висота 32px для компактних toolbar-ів; дефолтні поля
+ *      форм лишаються 36px.
  */
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+function Input({
+  className,
+  type,
+  size = 'default',
+  ...props
+}: Omit<React.ComponentProps<'input'>, 'size'> & {
+  size?: 'sm' | 'default';
+}) {
   return (
     <InputPrimitive
       type={type}
       data-slot="input"
+      data-size={size}
       className={cn(
-        'h-9 w-full min-w-0 rounded-lg border border-input bg-field px-3 py-1 text-base [transition:background-color_5000000s_ease-in-out_0s,border-color_150ms_ease,box-shadow_150ms_ease] autofill:[-webkit-text-fill-color:var(--foreground)] [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60',
+        'w-full min-w-0 rounded-lg border border-input bg-field px-3 py-1 text-base [transition:background-color_5000000s_ease-in-out_0s,border-color_150ms_ease,box-shadow_150ms_ease] autofill:[-webkit-text-fill-color:var(--foreground)] data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:px-2.5 data-[size=sm]:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60',
         className,
       )}
       {...props}

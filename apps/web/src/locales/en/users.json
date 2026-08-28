@@ -7,6 +7,11 @@
     "statusLabel": "Status",
     "statusAll": "All statuses"
   },
+  "toolbar": {
+    "total": "Total",
+    "selected": "Selected",
+    "bulkAction": "Export selected"
+  },
   "table": {
     "ariaLabel": "Users",
     "user": "User",
