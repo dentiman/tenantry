@@ -14,6 +14,7 @@ import { LoginPage } from './pages/login';
 import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
 import { UserDetailPage } from './pages/user-detail';
+import { PlaygroundPage } from './pages/playground';
 
 const rootRoute = createRootRoute({
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
@@ -93,9 +94,15 @@ const userDetailRoute = createRoute({
   component: UserDetailPage,
 });
 
+const playgroundRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/playground',
+  component: PlaygroundPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([dashboardRoute, usersRoute, userDetailRoute]),
+  appRoute.addChildren([dashboardRoute, usersRoute, userDetailRoute, playgroundRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

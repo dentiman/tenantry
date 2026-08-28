@@ -134,7 +134,7 @@ export function CreateTenantModal() {
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>{t('create.cancel')}</DialogClose>
+            <DialogClose render={<Button variant="secondary" />}>{t('create.cancel')}</DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? t('create.submitting') : t('create.submit')}
             </Button>

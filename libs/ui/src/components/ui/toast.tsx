@@ -143,9 +143,10 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   );
 }
 
+// ЛОКАЛЬНА ПРАВКА реєстру: toast action — secondary замість outline.
 function ToastAction({
   className,
-  render = <Button variant="outline" size="sm" />,
+  render = <Button variant="secondary" size="sm" />,
   ...props
 }: ToastPrimitive.Action.Props) {
   return (
@@ -161,7 +162,8 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  render = <Button variant="ghost" size="icon-sm" />,
+  // ЛОКАЛЬНА ПРАВКА реєстру: X-close використовує спільний full radius.
+  render = <Button variant="ghost" size="icon-sm" radius="full" />,
   ...props
 }: ToastPrimitive.Close.Props) {
   return (

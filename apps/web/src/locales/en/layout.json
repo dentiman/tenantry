@@ -3,7 +3,8 @@
   "brandSubtitle": "Workspace",
   "nav": {
     "dashboard": "Dashboard",
-    "users": "Users"
+    "users": "Users",
+    "playground": "Playground"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",

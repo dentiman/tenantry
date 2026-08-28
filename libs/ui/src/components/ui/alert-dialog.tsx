@@ -129,7 +129,8 @@ function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof 
 
 function AlertDialogCancel({
   className,
-  variant = 'outline',
+  // ЛОКАЛЬНА ПРАВКА реєстру: стандартна неосновна дія — secondary, не outline.
+  variant = 'secondary',
   size = 'default',
   ...props
 }: AlertDialogPrimitive.Close.Props &

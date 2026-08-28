@@ -7,6 +7,7 @@ import { CheckIcon, MinusIcon } from 'lucide-react';
  * ЛОКАЛЬНА ПРАВКА реєстру (реєстр правок — docs/frontend/ui-stack.md §6):
  * реєстр малює в індикаторі лише «галочку», а Base UI показує індикатор і в стані
  * indeterminate — у шапці гріда (частина рядків сторінки вибрана) там має бути риска.
+ * Focus у form controls уніфікований до тонкого primary-blue `ring-1`.
  */
 function Checkbox({ className, indeterminate, ...props }: CheckboxPrimitive.Root.Props) {
   return (
@@ -14,7 +15,7 @@ function Checkbox({ className, indeterminate, ...props }: CheckboxPrimitive.Root
       data-slot="checkbox"
       indeterminate={indeterminate}
       className={cn(
-        'peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none group-has-disabled/field:opacity-50 group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary dark:data-checked:bg-primary',
+        'peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none group-has-disabled/field:opacity-50 group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary dark:data-checked:bg-primary',
         className,
       )}
       {...props}

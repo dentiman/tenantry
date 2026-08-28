@@ -58,7 +58,7 @@ export function CountrySelect({
     >
       <ComboboxTrigger
         aria-label={t('phone.countryLabel')}
-        className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
       >
         <CountryFlag country={country} />
         <span className="tabular-nums">+{selected?.callingCode ?? ''}</span>

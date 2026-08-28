@@ -14,6 +14,7 @@ import {
 import authEn from '../locales/en/auth.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import layoutEn from '../locales/en/layout.json';
+import playgroundEn from '../locales/en/playground.json';
 import usersEn from '../locales/en/users.json';
 
 export const LOCALE_STORAGE_KEY = 'saas_locale';
@@ -46,6 +47,7 @@ void i18n.use(initReactI18next).init({
       auth: authEn,
       dashboard: dashboardEn,
       layout: layoutEn,
+      playground: playgroundEn,
       users: usersEn,
     },
   },

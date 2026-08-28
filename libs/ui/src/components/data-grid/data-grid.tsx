@@ -367,7 +367,7 @@ export function DataGrid<T extends { id: string }>({
                     <Button
                       aria-current={item === page ? 'page' : undefined}
                       size="icon-sm"
-                      variant={item === page ? 'outline' : 'ghost'}
+                      variant={item === page ? 'secondary' : 'ghost'}
                       onClick={() => {
                         goToPage(item);
                       }}

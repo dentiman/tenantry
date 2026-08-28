@@ -58,9 +58,17 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
+          // ЛОКАЛЬНА ПРАВКА реєстру: icon-only close завжди геометрично круглий.
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                radius="full"
+                className="absolute top-3 right-3"
+              />
+            }
           >
             <XIcon />
             <span className="sr-only">Close</span>

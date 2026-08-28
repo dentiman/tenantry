@@ -11,7 +11,9 @@ import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
 /**
  * ЛОКАЛЬНА ПРАВКА реєстру: висота поля 36px (`h-9`) і відступи `px-3` — свідоме
  * відхилення від стоку, щоб поля й кнопки стояли в один рядок.
- * Поверхня і тінь — стокові реєстрові (тема shadcn-admin: біла сторінка).
+ * Поверхня використовує semantic `bg-field`, а `border-input` лишається
+ * окремою видимою обводкою в обох темах. Зовнішньої тіні немає; focus
+ * використовує тонкий `ring-1` у primary blue.
  */
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
@@ -19,7 +21,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="input-group"
       role="group"
       className={cn(
-        'group/input-group relative flex h-9 w-full min-w-0 items-center rounded-lg border border-input bg-transparent shadow-xs transition-colors dark:bg-input/30 outline-none in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-disabled:bg-input/50 has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring has-[[data-slot][aria-invalid=true]]:border-destructive has-[[data-slot][aria-invalid=true]]:ring-2 has-[[data-slot][aria-invalid=true]]:ring-destructive/60 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto dark:has-disabled:bg-input/80 dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/60 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=inline-start]]:[&>input]:pl-1.5',
+        'group/input-group relative flex h-9 w-full min-w-0 items-center rounded-lg border border-input bg-field transition-colors outline-none in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-disabled:bg-muted has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-ring has-[[data-slot][aria-invalid=true]]:border-destructive has-[[data-slot][aria-invalid=true]]:ring-2 has-[[data-slot][aria-invalid=true]]:ring-destructive/60 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/60 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=inline-start]]:[&>input]:pl-1.5',
         className,
       )}
       {...props}
@@ -76,9 +78,14 @@ const inputGroupButtonVariants = cva('flex items-center gap-2 text-sm shadow-non
       'icon-xs': 'size-6 rounded-[calc(var(--radius)-3px)] p-0 has-[>svg]:p-0',
       'icon-sm': 'size-8 p-0 has-[>svg]:p-0',
     },
+    radius: {
+      default: '',
+      full: 'rounded-full',
+    },
   },
   defaultVariants: {
     size: 'xs',
+    radius: 'default',
   },
 });
 
@@ -87,8 +94,9 @@ function InputGroupButton({
   type = 'button',
   variant = 'ghost',
   size = 'xs',
+  radius = 'default',
   ...props
-}: Omit<React.ComponentProps<typeof Button>, 'size' | 'type'> &
+}: Omit<React.ComponentProps<typeof Button>, 'size' | 'type' | 'radius'> &
   VariantProps<typeof inputGroupButtonVariants> & {
     type?: 'button' | 'submit' | 'reset';
   }) {
@@ -97,7 +105,8 @@ function InputGroupButton({
       type={type}
       data-size={size}
       variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
+      radius={radius}
+      className={cn(inputGroupButtonVariants({ size, radius }), className)}
       {...props}
     />
   );

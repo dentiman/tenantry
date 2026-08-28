@@ -30,6 +30,7 @@ function PaginationItem({ ...props }: React.ComponentProps<'li'>) {
   return <li data-slot="pagination-item" {...props} />;
 }
 
+// ЛОКАЛЬНА ПРАВКА реєстру: активна сторінка — secondary замість outline.
 type PaginationLinkProps = {
   isActive?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, 'size'> &
@@ -38,7 +39,7 @@ type PaginationLinkProps = {
 function PaginationLink({ className, isActive, size = 'icon', ...props }: PaginationLinkProps) {
   return (
     <Button
-      variant={isActive ? 'outline' : 'ghost'}
+      variant={isActive ? 'secondary' : 'ghost'}
       size={size}
       className={cn(className)}
       nativeButton={false}

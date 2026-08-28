@@ -151,7 +151,7 @@ export function UserDetailPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => {
               setIsPasswordOpen(true);
             }}
@@ -159,7 +159,7 @@ export function UserDetailPage() {
             {t('password.action')}
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => {
               setIsAvatarOpen(true);
             }}
@@ -168,7 +168,7 @@ export function UserDetailPage() {
           </Button>
           {user.isActive ? (
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={isSelf}
               onClick={() => {
                 setConfirm('disable');
@@ -178,7 +178,7 @@ export function UserDetailPage() {
             </Button>
           ) : (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 setStatus.mutate({ id: user.id, data: { isActive: true } });
               }}
@@ -305,7 +305,7 @@ export function UserDetailPage() {
                 <p className="text-sm text-muted-foreground">{t('detail.avatarCard.empty')}</p>
               )}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => {
                   setIsAvatarOpen(true);

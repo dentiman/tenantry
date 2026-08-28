@@ -57,9 +57,17 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
+          // ЛОКАЛЬНА ПРАВКА реєстру: icon-only close завжди геометрично круглий.
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                radius="full"
+                className="absolute top-2 right-2"
+              />
+            }
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -76,6 +84,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
+// ЛОКАЛЬНА ПРАВКА реєстру: footer close — secondary замість outline.
 function DialogFooter({
   className,
   showCloseButton = false,
@@ -95,7 +104,7 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close>
+        <DialogPrimitive.Close render={<Button variant="secondary" />}>Close</DialogPrimitive.Close>
       )}
     </div>
   );

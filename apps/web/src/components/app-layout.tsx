@@ -1,4 +1,4 @@
-import { ChevronsUpDown, LayoutDashboard, Layers, Users } from 'lucide-react';
+import { Blocks, ChevronsUpDown, LayoutDashboard, Layers, Users } from 'lucide-react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -101,6 +101,15 @@ export function AppLayout() {
                     >
                       <Users />
                       <span>{t('nav.users')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={pathname === '/playground'}
+                      render={<Link to="/playground" />}
+                    >
+                      <Blocks />
+                      <span>{t('nav.playground')}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

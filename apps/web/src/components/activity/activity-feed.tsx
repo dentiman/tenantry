@@ -116,7 +116,7 @@ export function ActivityFeed({ entityType, entityId, isEnabled = true }: Activit
       {nextCursor && (
         <Button
           className="w-full"
-          variant="outline"
+          variant="secondary"
           disabled={isFetching}
           onClick={() => {
             setCursor(nextCursor);

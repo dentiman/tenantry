@@ -242,7 +242,7 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
             {nextCursor && (
               <Button
                 className="flex-1"
-                variant="outline"
+                variant="secondary"
                 disabled={isFetching}
                 onClick={() => {
                   setCursor(nextCursor);

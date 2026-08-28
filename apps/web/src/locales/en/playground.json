@@ -1,0 +1,112 @@
+{
+  "title": "Component playground",
+  "eyebrow": "Design system",
+  "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
+  "onThisPage": "On this page",
+  "navigation": {
+    "overview": "Button overview",
+    "variants": "Variants",
+    "sizes": "Sizes",
+    "radius": "Radius",
+    "icons": "Icons",
+    "states": "States and layout",
+    "api": "API reference"
+  },
+  "button": {
+    "title": "Button",
+    "description": "Buttons start an action or confirm a decision. Their color communicates priority; their size should follow the surrounding control density.",
+    "importLabel": "Shared import",
+    "sections": {
+      "variants": {
+        "title": "Variants",
+        "description": "Use one primary action per area. Secondary, outline, and ghost styles reduce visual priority; destructive is reserved for irreversible actions."
+      },
+      "sizes": {
+        "title": "Sizes",
+        "description": "The default 36 px control is the product baseline. Compact sizes are for dense interfaces, while large is for prominent actions."
+      },
+      "radius": {
+        "title": "Radius",
+        "description": "Radius is independent from color and size. Use full for a pill-shaped text button or combine it with an icon size to produce a perfect circle."
+      },
+      "icons": {
+        "title": "With icons",
+        "description": "Icons clarify familiar actions. Text buttons declare icon placement with data-icon; icon-only buttons always need an accessible label."
+      },
+      "states": {
+        "title": "States and layout",
+        "description": "Disabled and loading buttons keep their layout stable. Full-width buttons are composed with the standard className prop."
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Project-facing styling props. Native button and Base UI interaction props are forwarded unchanged."
+      }
+    },
+    "variants": {
+      "default": {
+        "label": "Default",
+        "description": "The primary action in a view or dialog."
+      },
+      "secondary": {
+        "label": "Secondary",
+        "description": "A supporting action with a soft surface."
+      },
+      "outline": {
+        "label": "Outline",
+        "description": "A neutral action that remains clearly bounded."
+      },
+      "ghost": {
+        "label": "Ghost",
+        "description": "A quiet action for toolbars and compact surfaces."
+      },
+      "destructive": {
+        "label": "Destructive",
+        "description": "An irreversible or high-risk action."
+      },
+      "link": {
+        "label": "Link",
+        "description": "A low-emphasis button action presented as text."
+      }
+    },
+    "sizes": {
+      "xs": "Extra small · 28 px",
+      "sm": "Small · 32 px",
+      "default": "Default · 36 px",
+      "lg": "Large · 40 px"
+    },
+    "radius": {
+      "default": "Default radius",
+      "full": "Full radius",
+      "defaultDescription": "The standard component radius used by existing product controls.",
+      "fullDescription": "A pill shape for prominent or compact standalone actions.",
+      "iconDescription": "Equal width and height plus full radius produces a true circle."
+    },
+    "icons": {
+      "leading": "Invite member",
+      "trailing": "Continue",
+      "destructive": "Delete",
+      "addLabel": "Add item"
+    },
+    "states": {
+      "disabled": "Disabled",
+      "loading": "Saving",
+      "fullWidth": "Full width",
+      "buttonLink": "Button-style link",
+      "openUsers": "Open users"
+    },
+    "api": {
+      "prop": "Prop",
+      "type": "Type",
+      "default": "Default",
+      "description": "Description",
+      "rows": {
+        "variant": "Selects the semantic visual style.",
+        "size": "Sets the control height and icon-only geometry.",
+        "radius": "Selects the corner geometry. Full creates a pill or a circle for icon-only sizes.",
+        "disabled": "Prevents interaction and applies the disabled state.",
+        "className": "Adds layout utilities such as w-full without changing the recipe.",
+        "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
+      }
+    }
+  }
+}

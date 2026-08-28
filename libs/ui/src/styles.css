@@ -15,32 +15,33 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Палітра shadcn-admin (satnaing/shadcn-admin, src/styles/theme.css) ──────
-     База: slate-нейтралі з холодним синім підтоном
-     (hue ≈ 250–265, chroma 0.007…0.046). Два свідомі продуктові рішення:
-       • --primary (і похідний --ring) — наш синій, а не їхній майже чорний;
+  /* ── Палітра поверхонь у дусі HeroUI v3 ────────────────────────────────────
+     Джерело моделі: packages/styles/themes/default/variables.css у HeroUI.
+     База: майже ахроматичні zinc-нейтралі з дуже слабким фіолетовим підтоном
+     (hue ≈ 286, chroma 0…0.014). Два свідомі продуктові рішення:
+       • --primary / --destructive — точні accent / danger HeroUI;
        • метрика контролів (36px) — у компонентах, не тут.
-     Семантичні пари нижче скориговані до контрасту 4.5:1; --success/--warning —
-     наше розширення, бо у shadcn цих ролей немає. */
+     --success/--warning — наше розширення, бо у shadcn цих ролей немає. */
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  color-scheme: light;
+  --background: oklch(0.9702 0 0);
+  --foreground: oklch(0.2103 0.0059 285.89);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  /* ВИНЯТОК 1: бренд лишається наш синій, у них тут майже чорний slate.
-     У світлій темі він темніший, щоб і text-primary, і суцільна кнопка мали
-     контраст не менше 4.5:1. */
-  --primary: oklch(0.56 0.195 253.83);
+  --popover-foreground: var(--foreground);
+  /* Точні HeroUI v3 accent / danger та їхні foreground-пари. */
+  --primary: oklch(0.6204 0.195 253.83);
   --primary-foreground: oklch(0.9911 0 0);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.557 0.245 27.325);
+  --secondary: oklch(0.94 0.001 286.375);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(1 0 0);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.9524 0.0013 286.37);
+  --muted-foreground: oklch(0.5517 0.0138 285.94);
+  --accent: oklch(0.94 0.001 286.375);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6532 0.2328 25.74);
   --destructive-foreground: oklch(0.9911 0 0);
   /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
      тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
@@ -48,9 +49,18 @@
   --success-foreground: oklch(0.984 0.003 247.858);
   --warning: oklch(0.545 0.179 58.318);
   --warning-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  /* Фокус-кільце синє — те саме рішення, що й --primary (у них тут slate-400) */
+  --border: oklch(0.9 0.004 286.32);
+  /* Фон поля та його обводка — різні ролі: поле біле, border видимий. */
+  --field: oklch(1 0 0);
+  --input: oklch(0.9 0.004 286.32);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  /* Фокус-кільце синє — те саме рішення, що й --primary. */
   --ring: var(--primary);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -65,31 +75,46 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  --surface-shadow:
+    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  --overlay-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.14 0.04 259.21);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
+  color-scheme: dark;
+  --background: oklch(0.12 0.005 285.823);
+  --foreground: oklch(0.9911 0 0);
+  --card: oklch(0.2103 0.0059 285.89);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2103 0.0059 285.89);
+  --popover-foreground: var(--foreground);
   --primary: oklch(0.6204 0.195 253.83);
-  --primary-foreground: oklch(0.129 0.042 264.695);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.129 0.042 264.695);
+  --primary-foreground: oklch(0.9911 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(0.3964 0.01 285.93);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.257 0.0037 286.14);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.594 0.1967 24.63);
+  --destructive-foreground: oklch(0.9911 0 0);
   --success: oklch(0.696 0.17 162.48);
-  --success-foreground: oklch(0.129 0.042 264.695);
+  --success-foreground: var(--background);
   --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.129 0.042 264.695);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --warning-foreground: var(--background);
+  --border: oklch(0.28 0.006 286.033);
+  --field: var(--card);
+  --input: oklch(0.28 0.006 286.033);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
   --ring: var(--primary);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -104,13 +129,22 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  --surface-shadow: 0 0 0 0 transparent;
+  --overlay-shadow: inset 0 0 1px 0 rgb(255 255 255 / 30%);
 }
 
 @theme inline {
-  /* Inter — шрифт shadcn-admin (у них `--font-inter` + клас на <html>); далі системний стек */
+  /* Inter лишається продуктовим UI-шрифтом; далі — системний sans-serif стек. */
   --font-heading: var(--font-sans);
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* HeroUI-подібна шкала: м'яка багатошарова тінь для полів/поверхонь і трохи
+     глибша для floating overlays. У dark глибину дає світлий inset, не glow. */
+  --shadow-xs: var(--surface-shadow);
+  --shadow-sm: var(--surface-shadow);
+  --shadow-md: var(--overlay-shadow);
+  --shadow-lg: var(--overlay-shadow);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -126,6 +160,8 @@
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
+  --color-field-hover: var(--field-hover);
+  --color-field: var(--field);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-warning-foreground: var(--warning-foreground);
@@ -133,6 +169,7 @@
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -140,7 +177,10 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-segment-foreground: var(--segment-foreground);
+  --color-segment: var(--segment);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
@@ -166,5 +206,9 @@
   }
   html {
     @apply font-sans;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

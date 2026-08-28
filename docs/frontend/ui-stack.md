@@ -92,40 +92,47 @@ vite не читає tsconfig paths.
 ## 3. Тема
 
 Одна на обидва фронти — `libs/ui/src/styles.css`. Палітра перенесена з
-[satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin) — з їхніх
-`src/styles/theme.css`. У наших `components.json` лишається `baseColor: "neutral"`: це
-метадані генератора, а не назва runtime-теми; фактичні slate-нейтралі задають CSS-токени.
+[HeroUI v3](https://github.com/heroui-inc/heroui/blob/v3/packages/styles/themes/default/variables.css)
+у семантичну структуру shadcn. Ми не підключаємо HeroUI і не копіюємо його компонентні
+рецепти: беремо лише модель canvas → surface → overlay, zinc-нейтралі, слабкі межі та
+багатошарові тіні. У `components.json` лишається `baseColor: "neutral"`: це метадані
+генератора, а не назва runtime-теми; фактичну палітру задають CSS-токени.
 
-| Параметр    | Значення                                                                                                  |
-| ----------- | --------------------------------------------------------------------------------------------------------- |
-| Нейтралі    | slate, hue ≈ 250–265 — холодний підтон                                                                    |
-| Світла тема | сторінка і панелі **білі** (`--background` = `--card` = `--popover` = `oklch(1 0 0)`); глибину дають межі |
-| Темна тема  | bg `oklch(0.129 0.042 264.695)`, card `0.14 0.04 259.21`, popover `0.208 0.042 265.755`                   |
-| `--radius`  | `0.625rem`                                                                                                |
-| Тіні        | стокова шкала Tailwind                                                                                    |
-| Шрифт       | Inter                                                                                                     |
-| Перемикач   | `attribute="class"`; storageKey `saas_theme` / `saas_platform_theme`                                      |
+| Параметр    | Значення                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| Нейтралі    | zinc, hue ≈ 286, chroma 0…0.014 — майже ахроматичні, без синьої «сталі»                           |
+| Світла тема | canvas `oklch(0.9702 0 0)`; card/popover/fields білі; поля мають мʼяку тінь і видиму zinc-обводку |
+| Темна тема  | сирий чорний canvas `oklch(0.12 0.005 285.823)`; card/popover `oklch(0.2103 0.0059 285.89)`       |
+| `--radius`  | `0.625rem`                                                                                        |
+| Тіні        | HeroUI-подібні: слабка `surface` для полів/панелей, глибша `overlay`; у dark без зовнішнього glow |
+| Шрифт       | Inter (`@fontsource-variable/inter`)                                                              |
+| Перемикач   | `attribute="class"`; storageKey `saas_theme` / `saas_platform_theme`                              |
 
-### Два свідомі відхилення від стоку
+### Три свідомі відхилення від стоку
 
 Зафіксовані рішенням користувача — **не переглядати без запиту**:
 
-1. **`--primary` (і `--ring`) — наш синій.** У світлій темі
-   `oklch(0.56 0.195 253.83)`, у темній `oklch(0.6204 0.195 253.83)`. Різні lightness і
-   `--primary-foreground` зберігають контраст суцільної пари та `text-primary` не нижче
-   4.5:1. У стоку тут майже чорний slate. Фокус синій, бо `--ring` = `--primary`.
+1. **`--primary` (і `--ring`) — точний accent HeroUI v3.** В обох темах
+   `oklch(0.6204 0.195 253.83)` із `oklch(0.9911 0 0)` foreground. Destructive також бере
+   точні HeroUI danger-пари: `oklch(0.6532 0.2328 25.74)` у light і
+   `oklch(0.594 0.1967 24.63)` у dark. Hover обчислюється так само, як у HeroUI:
+   90% semantic color + 10% його foreground. Фокус синій, бо `--ring` = `--primary`.
 2. **Метрика однорядкових контролів — 36px.** `default` кнопка, `input`, `select` та
    `input-group` мають 36px; кнопки `sm` 32, `xs` 28, `lg` 40, іконкові — `size-7/8/9/10`.
    `textarea` багаторядкова і лишається `min-h-16`. Горизонтальні відступи полів — `px-3`.
-   Фокус — суцільне `ring-2` кольору `--ring`: у кнопок із `ring-offset-2` кольору фону, у
-   полів без відступу.
+   Фокус form controls — суцільний `ring-1` кольору `--ring` без відступу; error-state
+   лишається помітнішим `ring-2`. Кнопки й навігаційні примітиви зберігають `ring-2`.
+3. **Опційна повна округлість кнопок.** `Button radius="full"` дає pill-форму текстовій
+   кнопці, а разом із `size="icon*"` — геометрично круглу icon-only кнопку. Дефолт
+   `radius="default"` зберігає стандартний `rounded-lg` / `rounded-md` і сумісність усіх
+   наявних викликів.
 
-Саме ці два відхилення — єдина причина, чому `button`/`input`/`select`/`input-group` лишаються
+Саме ці три відхилення — причина, чому `button`/`input`/`select`/`input-group` лишаються
 з коментарем «ЛОКАЛЬНА ПРАВКА реєстру». **Нову висоту не задавати класом на місці
 використання** — вона дефолтна.
 
 `--success` / `--warning` (+`-foreground`) — **наше розширення**: у shadcn таких ролей немає.
-Це slate-сумісні emerald/amber; lightness скоригований так, щоб дрібний текст у мʼяких
+Це нейтрально сумісні emerald/amber; lightness скоригований так, щоб дрібний текст у мʼяких
 `bg-*/10` badge мав контраст не нижче 4.5:1. Варіанти — у cva `ui/badge.tsx`.
 `--destructive-foreground` доповнює суцільну semantic pair і має різне значення в light/dark.
 
@@ -145,8 +152,8 @@ vite не читає tsconfig paths.
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Фон сторінки                                 | `bg-background`                                                                                   |
 | Сайдбар                                      | `bg-sidebar` (+ `--sidebar-border` / `--sidebar-accent`)                                          |
-| Хедер                                        | `bg-background` + `border-b` (у світлій темі `--card` = `--background`)                           |
-| Контентна картка                             | `bg-card text-card-foreground`                                                                    |
+| Хедер                                        | `bg-background` + `border-b`                                                                      |
+| Контентна картка                             | `bg-card text-card-foreground shadow-sm` без зовнішнього border                                   |
 | Спливна поверхня (попап/діалог/драйвер/тост) | `bg-popover text-popover-foreground`                                                              |
 | Поверхня наведення                           | `hover:bg-accent` — **`accent` це НЕ бренд**, бренд це `primary`                                  |
 | Активний пункт навігації                     | `SidebarMenuButton isActive`                                                                      |
@@ -158,9 +165,12 @@ vite не читає tsconfig paths.
 | Присутність offline                          | `bg-muted-foreground/40` (`bg-muted` — світлий фон, крапка була б невидима)                       |
 | Межа / межа поля                             | `border-border` / `border-input`                                                                  |
 | Обрана поверхня рядка                        | `bg-muted`                                                                                        |
+| Form fields                                  | `bg-field border-input` без тіні; focus `border-ring ring-1 ring-ring`                            |
+| Контейнер Tabs                               | `bg-secondary text-muted-foreground`                                                              |
+| Активний default Tab                         | `bg-segment text-segment-foreground shadow-sm`                                                    |
 
-Не підставляти `text-white` в суцільні semantic pairs: foreground-токен може навмисно бути
-темним у dark-темі, як у `primary` і `destructive`.
+Не підставляти `text-white` в суцільні semantic pairs: foreground-токен визначає контраст
+ролі й може бути темним, як у dark-парах `success` та `warning`.
 
 ---
 
@@ -182,6 +192,10 @@ vite не читає tsconfig paths.
   (React пише про це в консоль).
 - **Іконки** — `lucide-react`, per-icon імпорти; у компонентах через
   `data-icon="inline-start"|"inline-end"` **без** класів розміру (компонент керує сам).
+- **Неосновні button-actions** — `variant="secondary"`; `outline` лишається частиною
+  дизайн-системи, але не є стандартним cancel/load-more/edit action у продуктових екранах.
+- **Icon-only X-close/clear/remove** — `radius="full"`: це стосується `Dialog`, `Sheet`, toast,
+  notification card та Combobox. Розмір як і раніше задається через `size="icon*"`.
 
 ### Форми
 
@@ -264,17 +278,23 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 
 Точкові плюс одна наскрізна. Усі позначені коментарем «ЛОКАЛЬНА ПРАВКА реєстру».
 
-| Файл                                  | Правка                                                                                                                                 |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui/toast.tsx`                        | позиції регіонів (`position` на `Toaster`/`ToastViewport`, `anchor` на `Toast`)                                                        |
-| `ui/checkbox.tsx`                     | `MinusIcon` у стані `indeterminate` (реєстр знає лише галочку)                                                                         |
-| `ui/badge.tsx`                        | `success`/`warning`; opacity мʼяких фонів обмежена так, щоб дрібний текст тримав 4.5:1                                                 |
-| `ui/button.tsx`                       | суцільний `destructive`, contrast-safe hover, метрика 28/32/36/40px і суцільний focus ring                                             |
-| `ui/{input,select,input-group}.tsx`   | висота однорядкового поля 36px і `px-3`; поверхня/тінь лишаються стоковими                                                             |
-| `ui/textarea.tsx`                     | `px-3`; стокова багаторядкова мінімальна висота `min-h-16`                                                                             |
-| `ui/select.tsx`                       | `alignItemWithTrigger: false` — попап відкривається ПІД тригером, а не накриває його; `align="start"`; ширина `min-w-(--anchor-width)` |
-| `ui/input.tsx`                        | глушник autofill + скидання `::-webkit-search-cancel-button`                                                                           |
-| **наскрізна:** інтерактивні примітиви | фокус-кільце `ring-2` замість `ring-[3px] ring-ring/50`                                                                                |
+| Файл                                | Правка                                                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui/toast.tsx`                      | позиції регіонів (`position` на `Toaster`/`ToastViewport`, `anchor` на `Toast`)                                                        |
+| `ui/checkbox.tsx`                   | `MinusIcon` у стані `indeterminate` (реєстр знає лише галочку); focus `ring-1`                                                         |
+| `ui/badge.tsx`                      | `success`/`warning`; opacity мʼяких фонів обмежена так, щоб дрібний текст тримав 4.5:1                                                 |
+| `ui/button.tsx`                     | суцільний `destructive`, HeroUI hover, метрика 28/32/36/40px, `radius="full"` і суцільний focus ring                                   |
+| `ui/{input,select,input-group}.tsx` | висота 36px і `px-3`; `bg-field` / `border-input`, без тіні, тонкий primary-blue focus `ring-1`                                        |
+| `ui/textarea.tsx`                   | `px-3`, `bg-field`, без тіні, `ring-1`; стокова багаторядкова мінімальна висота `min-h-16`                                             |
+| `ui/combobox.tsx`                   | поле пошуку й chips-контейнер використовують `bg-field` / `border-input`, без тіні, `ring-1`                                           |
+| `ui/{dialog,sheet,toast}.tsx`       | круглі X-close через `radius="full"`; toast action і footer close використовують `secondary`                                           |
+| `ui/{alert-dialog,pagination}.tsx`  | secondary для cancel та активної сторінки замість outline                                                                              |
+| `ui/switch.tsx`                     | тонкий primary-blue focus `ring-1`; error-state зберігає `ring-2`                                                                      |
+| `ui/tabs.tsx`                       | HeroUI neutral list, muted inactive text, окрема `segment`-поверхня active tab і primary indicator у `line`                            |
+| `ui/card.tsx`                       | HeroUI `surface-shadow` без зовнішнього border; стокові spacing, size та композиція частин                                             |
+| `ui/select.tsx`                     | `alignItemWithTrigger: false` — попап відкривається ПІД тригером, а не накриває його; `align="start"`; ширина `min-w-(--anchor-width)` |
+| `ui/input.tsx`                      | глушник autofill + скидання `::-webkit-search-cancel-button`                                                                           |
+| **наскрізна:** form controls        | суцільний semantic focus `ring-1`; error-state — `ring-2`                                                                              |
 
 Про `alignItemWithTrigger`: дефолт Base UI `true` — це macOS-поведінка, коли попап
 «підіймається» так, щоб обраний пункт став на місце тригера. У формах адмінки це збиває.

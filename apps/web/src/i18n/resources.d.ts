@@ -12,6 +12,7 @@ declare module 'react-i18next' {
       dashboard: typeof import('../locales/en/dashboard.json');
       jobs: typeof import('../locales/en/jobs.json');
       layout: typeof import('../locales/en/layout.json');
+      playground: typeof import('../locales/en/playground.json');
       users: typeof import('../locales/en/users.json');
     };
   }

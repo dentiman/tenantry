@@ -118,7 +118,9 @@ export function ChangePasswordModal({ user, onClose }: ChangePasswordModalProps)
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>{t('password.cancel')}</DialogClose>
+            <DialogClose render={<Button variant="secondary" />}>
+              {t('password.cancel')}
+            </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? t('password.submitting') : t('password.submit')}
             </Button>
