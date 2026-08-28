@@ -218,6 +218,10 @@ vite не читає tsconfig paths.
   `PageHeaderPortal` телепортує розмітку в слот хедера layout-а. Портал міняє лише місце в
   DOM — дерево React те саме, тож `Link` роутера й контексти сторінки працюють як звичайно.
   Новий вміст хедера додається без зміни контракту layout-а.
+- **Хедер layout-а — sticky glass surface.** Він закріплений зверху в єдиному scroll-контексті
+  сторінки; контент проходить під напівпрозорим `background` із `backdrop-blur`. Не додавайте
+  `overflow-y-auto` внутрішньому контейнеру сторінки без явно обмеженої висоти — це створить
+  другий scroll-контекст і порушить sticky-поведінку.
 - **Сторінка списку** (за shadcn-admin): рядок шапки (`h2` + підзаголовок ліворуч, головні дії
   праворуч) → окремий рядок тулбара над таблицею (пошук і фільтри ліворуч, `Reset` зʼявляється
   лише коли є що скидати; проп `actions` праворуч) → таблиця → пагінація.
@@ -246,6 +250,13 @@ vite не читає tsconfig paths.
 `Grid.filter`. Повний контракт (фетчинг через проп `useListQuery`, скидання вибору, headless
 escape hatches, wire-формат boolean-фільтрів) — у `CLAUDE.md`, розділ про DataGrid; він не
 змінювався від міграції UI.
+
+`Grid.Table surface="card"` — опційна HeroUI-подібна поверхня: спільний `Card size="sm"`
+дає radius/background/shadow, а прозора таблиця заповнює її без внутрішнього padding. Режим
+`Table separator="inset"` малює горизонтальні separator-и через комірки й відступає лише саму
+лінію на 12 px від обох країв. Режим використовується в tenant Users і platform Jobs grids.
+Platform Tenants має ту саму композицію `Card + Table separator="inset"` вручну, бо цей список
+не потребує DataGrid-фільтрів чи пагінації. `bordered` лишається backward-compatible дефолтом.
 
 Власний тип `SortDescriptor { column: string; direction: 'ascending' | 'descending' }` живе в
 `data-grid/types.ts` і реекспортується з барелю — раніше він приходив із UI-бібліотеки.

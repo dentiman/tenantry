@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { Checkbox } from '@saas-skeleton/ui/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -84,6 +85,28 @@ interface DataGridProps<T extends { id: string }> {
   pageSizeOptions?: number[] | false;
 
   messages?: DataGridMessages;
+  /** bordered — legacy wrapper; card — flush table with inset separators on Card */
+  surface?: DataGridSurface;
+}
+
+export type DataGridSurface = 'bordered' | 'card';
+
+function DataGridTableSurface({
+  children,
+  surface,
+}: {
+  children: ReactNode;
+  surface: DataGridSurface;
+}) {
+  if (surface === 'card') {
+    return (
+      <Card size="sm" className="gap-0 py-0">
+        <CardContent className="px-0">{children}</CardContent>
+      </Card>
+    );
+  }
+
+  return <div className="overflow-hidden rounded-xl border border-border bg-card">{children}</div>;
 }
 
 /** Селект «Items per page» у футері; той самий Select, що й фільтри тулбара */
@@ -146,6 +169,7 @@ export function DataGrid<T extends { id: string }>({
   selection,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   messages,
+  surface = 'bordered',
 }: DataGridProps<T>) {
   const { page, limit, sortDescriptor, onSortChange, goToPage, setLimit } = grid;
   const { items, total, totalPages, isLoading, isPlaceholderData } = list;
@@ -201,8 +225,8 @@ export function DataGrid<T extends { id: string }>({
   return (
     <div>
       <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <Table aria-label={ariaLabel}>
+        <DataGridTableSurface surface={surface}>
+          <Table aria-label={ariaLabel} separator={surface === 'card' ? 'inset' : 'full'}>
             <TableHeader>
               <TableRow>
                 {selection && (
@@ -341,7 +365,7 @@ export function DataGrid<T extends { id: string }>({
               )}
             </TableBody>
           </Table>
-        </div>
+        </DataGridTableSurface>
 
         {/* Футер живе поза <table>: у shadcn таблиця — чиста розмітка, tfoot тут не при ділі */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

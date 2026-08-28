@@ -146,7 +146,7 @@ export function AppLayout() {
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border/70 bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
             <SidebarTrigger className="-ml-2" />
             <PageHeaderSlot className="min-w-0 flex-1" />
             <div className="ml-auto flex items-center gap-1">
@@ -161,7 +161,7 @@ export function AppLayout() {
               центрована колонка max-w-5xl зʼїдала б половину екрана.
               (shadcn-admin тут має опційний cap max-w-7xl на дуже широких
               екранах — свідомо не беремо, бо просили саме повну ширину) */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="flex-1 px-6 py-6">
             <Outlet />
           </div>
         </SidebarInset>

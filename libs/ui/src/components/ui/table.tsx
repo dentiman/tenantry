@@ -4,12 +4,29 @@ import * as React from 'react';
 
 import { cn } from '@saas-skeleton/ui/lib/utils';
 
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+/**
+ * ЛОКАЛЬНА ПРАВКА реєстру: inset separators малюються всередині комірок,
+ * щоб фон рядка міг доходити до країв flush Card, а горизонтальна лінія — ні.
+ * Біля selected-рядка власний і попередній separator-и стають full-width.
+ * Рядки не змінюють фон на hover; checkbox-колонка має симетричний inset.
+ * TableHead повторює 0.8rem typography sortable Button size="sm".
+ */
+function Table({
+  className,
+  separator = 'full',
+  ...props
+}: React.ComponentProps<'table'> & { separator?: 'full' | 'inset' }) {
   return (
     <div data-slot="table-container" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
-        className={cn('w-full caption-bottom text-sm', className)}
+        data-separator={separator}
+        className={cn(
+          'w-full caption-bottom text-sm',
+          separator === 'inset' &&
+            "[&_tr]:border-0! [&_tr>*]:relative [&_tr>*]:after:pointer-events-none [&_tr>*]:after:absolute [&_tr>*]:after:inset-x-0 [&_tr>*]:after:bottom-0 [&_tr>*]:after:h-px [&_tr>*]:after:bg-border [&_tr>*]:after:content-[''] [&_tr>*:first-child]:after:left-3 [&_tr>*:last-child]:after:right-3 [&_tbody_tr:last-child>*]:after:hidden [&_tr[data-state=selected]>*:first-child]:after:left-0 [&_tr[data-state=selected]>*:last-child]:after:right-0 [&_tr:has(+tr[data-state=selected])>*:first-child]:after:left-0 [&_tr:has(+tr[data-state=selected])>*:last-child]:after:right-0 [&_thead:has(+_tbody>tr:first-child[data-state=selected])_tr>*:first-child]:after:left-0 [&_thead:has(+_tbody>tr:first-child[data-state=selected])_tr>*:last-child]:after:right-0",
+          className,
+        )}
         {...props}
       />
     </div>
@@ -45,7 +62,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted',
+        'border-b transition-colors has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted',
         className,
       )}
       {...props}
@@ -58,7 +75,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
+        'h-10 px-2 text-left align-middle text-[0.8rem] font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:px-3',
         className,
       )}
       {...props}
@@ -70,7 +87,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
     <td
       data-slot="table-cell"
-      className={cn('p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0', className)}
+      className={cn('p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:px-3', className)}
       {...props}
     />
   );

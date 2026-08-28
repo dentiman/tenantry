@@ -25,6 +25,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { Empty, EmptyDescription, EmptyHeader } from '@saas-skeleton/ui/components/ui/empty';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import {
@@ -84,65 +85,67 @@ export function TenantsPage() {
         </div>
       ) : (
         <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
-          <div className="overflow-hidden rounded-xl border border-border">
-            <Table aria-label={t('table.ariaLabel')}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('table.slug')}</TableHead>
-                  <TableHead>{t('table.name')}</TableHead>
-                  <TableHead>{t('table.status')}</TableHead>
-                  <TableHead>{t('table.created')}</TableHead>
-                  <TableHead aria-label={t('actions.menu')} />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 ? (
+          <Card size="sm" className="gap-0 py-0">
+            <CardContent className="px-0">
+              <Table aria-label={t('table.ariaLabel')} separator="inset">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={COLUMN_COUNT}>
-                      <Empty className="border-0">
-                        <EmptyHeader>
-                          <EmptyDescription>{t('empty')}</EmptyDescription>
-                        </EmptyHeader>
-                      </Empty>
-                    </TableCell>
+                    <TableHead>{t('table.slug')}</TableHead>
+                    <TableHead>{t('table.name')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead>{t('table.created')}</TableHead>
+                    <TableHead aria-label={t('actions.menu')} />
                   </TableRow>
-                ) : (
-                  items.map((tenant) => (
-                    <TableRow key={tenant.id}>
-                      <TableCell className="font-medium text-foreground">
-                        {/* Slug — вхід у картку тенанта: список дає огляд, сторінка деталі */}
-                        <Link
-                          to="/tenants/$tenantId"
-                          params={{ tenantId: tenant.id }}
-                          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          {tenant.slug}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{tenant.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={tenant.isActive ? 'success' : 'destructive'}>
-                          {tenant.isActive ? t('status.active') : t('status.suspended')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(tenant.createdAt)}</TableCell>
-                      <TableCell className="text-end">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setPending(tenant);
-                          }}
-                        >
-                          {tenant.isActive ? t('actions.suspend') : t('actions.resume')}
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={COLUMN_COUNT}>
+                        <Empty className="border-0">
+                          <EmptyHeader>
+                            <EmptyDescription>{t('empty')}</EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    items.map((tenant) => (
+                      <TableRow key={tenant.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {/* Slug — вхід у картку тенанта: список дає огляд, сторінка деталі */}
+                          <Link
+                            to="/tenants/$tenantId"
+                            params={{ tenantId: tenant.id }}
+                            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {tenant.slug}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{tenant.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={tenant.isActive ? 'success' : 'destructive'}>
+                            {tenant.isActive ? t('status.active') : t('status.suspended')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(tenant.createdAt)}</TableCell>
+                        <TableCell className="text-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setPending(tenant);
+                            }}
+                          >
+                            {tenant.isActive ? t('actions.suspend') : t('actions.resume')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       )}
 

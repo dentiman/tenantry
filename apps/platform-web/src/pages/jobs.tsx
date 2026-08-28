@@ -177,6 +177,7 @@ export function JobsPage() {
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
+        surface="card"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
     </Grid.Root>

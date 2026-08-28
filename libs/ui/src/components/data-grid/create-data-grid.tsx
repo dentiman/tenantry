@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { DataGrid } from './data-grid';
+import type { DataGridSurface } from './data-grid';
 import { DataGridFilters, defineFilters } from './filters';
 import type { DataGridFilterDef } from './filters';
 import { gridQueryOptions, toGridQueryResult } from './data-grid-query';
@@ -59,6 +60,8 @@ interface DataGridTableProps<TItem> {
   /** Варіанти «Items per page» у футері; false — прибрати селект зовсім */
   pageSizeOptions?: number[] | false;
   messages?: DataGridMessages;
+  /** Візуальна поверхня таблиці; card робить таблицю flush, а separator-и — inset */
+  surface?: DataGridSurface;
 }
 
 interface DataGridFiltersSlotProps<TFilters extends DataGridFiltersBase> {

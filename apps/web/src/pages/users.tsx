@@ -292,6 +292,7 @@ export function UsersPage() {
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
+        surface="card"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
 
