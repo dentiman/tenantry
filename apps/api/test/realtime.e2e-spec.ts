@@ -26,6 +26,7 @@ import type { Redis } from 'ioredis';
 import { REALTIME_CONFIG, REALTIME_REDIS } from '../src/realtime/realtime.constants';
 import type { RealtimeConfig } from '../src/realtime/realtime.config';
 import { PresenceStore } from '../src/realtime/presence/presence.store';
+import { LastSeenWriter } from '../src/realtime/presence/last-seen.writer';
 import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
 
 const TENANT_B_ID = '00000000-0000-4000-8000-000000000042';
@@ -209,6 +210,124 @@ describe('Realtime gateway + presence (e2e)', () => {
       socket.disconnect();
       await sleep(300);
       expect((await snapshot(tokens.accessToken)).revision).toBe(start.revision + 2);
+    });
+  });
+
+  /**
+   * Довговічний `users.last_seen_at` (RT-3). Тести НЕ чекають на періодичний
+   * flush (15 с за дефолтом), а кличуть `flushNow()`: детермінізм тут дає явний
+   * злив, а не зменшений інтервал — інакше кожна перевірка залежала б від
+   * таймінгу таймера.
+   */
+  describe('last seen', () => {
+    const readUser = async (id: string): Promise<{ lastSeenAt: Date | null; updatedAt: Date }> => {
+      const row = await sysPrisma.user.findUniqueOrThrow({
+        where: { id },
+        select: { lastSeenAt: true, updatedAt: true },
+      });
+      return row;
+    };
+
+    it('юзер, який жодного разу не підключався, має lastSeenAt = null', async () => {
+      const user = await createTestUser(sysPrisma, { email: uniqueEmail('rt-never') });
+      expect((await readUser(user.id)).lastSeenAt).toBeNull();
+    });
+
+    it('connect ставить позначку і НЕ рухає updated_at', async () => {
+      const { user, tokens } = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-seen-connect'),
+        password: 'Password123',
+      });
+      const before = await readUser(user.id);
+      expect(before.lastSeenAt).toBeNull();
+
+      await connect(tokens.accessToken);
+      await sleep(150);
+      await app.get(LastSeenWriter).flushNow();
+
+      const after = await readUser(user.id);
+      expect(after.lastSeenAt).not.toBeNull();
+      // Ключова властивість сирого UPDATE-у: присутність — не редагування профілю
+      expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+    });
+
+    it('offline-делта несе той самий час, що записаний у БД', async () => {
+      const { user, tokens } = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-seen-delta'),
+        password: 'Password123',
+      });
+      const observerLogin = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-seen-observer'),
+        password: 'Password123',
+      });
+      const observer = await connect(observerLogin.tokens.accessToken);
+      const offline: PresenceChanged[] = [];
+      observer.on(REALTIME_EVENTS.presenceChanged, (payload: PresenceChanged) => {
+        if (payload.status === 'offline' && payload.userId === user.id) {
+          offline.push(payload);
+        }
+      });
+
+      const socket = await connect(tokens.accessToken);
+      await sleep(150);
+      socket.disconnect();
+      await sleep(300);
+      await app.get(LastSeenWriter).flushNow();
+
+      expect(offline).toHaveLength(1);
+      const [delta] = offline;
+      // Без цього поля фронт показав би час фетчу списку, а не час виходу
+      expect(delta?.lastSeenAt).toBeDefined();
+      expect((await readUser(user.id)).lastSeenAt?.toISOString()).toBe(delta?.lastSeenAt);
+    });
+
+    it('позначка не відкочується назад (sweeper пише МИНУЛЕ)', async () => {
+      const writer = app.get(LastSeenWriter);
+      const user = await createTestUser(sysPrisma, { email: uniqueEmail('rt-seen-monotonic') });
+
+      const fresh = Date.now();
+      writer.mark(DEFAULT_TENANT_ID, user.id, fresh);
+      await writer.flushNow();
+      const applied = (await readUser(user.id)).lastSeenAt;
+      expect(applied).not.toBeNull();
+
+      // Саме цей порядок і буває наживо: forgetSocket поставив «щойно», а
+      // sweeper через хвилину додає `now − leaseTtl`, тобто більш ранній час
+      writer.mark(DEFAULT_TENANT_ID, user.id, fresh - 60_000);
+      await writer.flushNow();
+      expect((await readUser(user.id)).lastSeenAt?.getTime()).toBe(applied?.getTime());
+    });
+
+    it('запис не перетинає межу тенанта (RLS)', async () => {
+      const foreign = await sysPrisma.user.create({
+        data: { tenantId: TENANT_B_ID, email: uniqueEmail('rt-seen-foreign'), role: 'USER' },
+      });
+      const writer = app.get(LastSeenWriter);
+
+      // Позначка з КОНТЕКСТОМ тенанта A за юзера тенанта B: політика
+      // tenant_isolation має відсікти рядок, а не оновити його
+      writer.mark(DEFAULT_TENANT_ID, foreign.id);
+      await writer.flushNow();
+
+      expect((await readUser(foreign.id)).lastSeenAt).toBeNull();
+    });
+
+    it('GET /api/users віддає lastSeenAt', async () => {
+      const { user, tokens } = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-seen-api'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      await connect(tokens.accessToken);
+      await sleep(150);
+      await app.get(LastSeenWriter).flushNow();
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/users/${user.id}`)
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
+      const body = response.body as { lastSeenAt: string | null };
+      expect(body.lastSeenAt).toBe((await readUser(user.id)).lastSeenAt?.toISOString());
     });
   });
 

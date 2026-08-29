@@ -18,6 +18,12 @@ const DEFAULT_LEASE_TTL_MS = 60_000;
 const DEFAULT_HEARTBEAT_MS = 20_000;
 const DEFAULT_RECOVERY_MS = 120_000;
 const DEFAULT_SWEEP_MS = 5_000;
+// RT-3: як часто ЖИВА сесія оновлює довговічний last_seen_at, і як часто буфер
+// позначок зливається в БД. Обидва свідомо великі: точність тут потрібна не
+// секундна (підпис «last seen 5 minutes ago»), а запис у Postgres — дорогий
+// відносно heartbeat-а у Valkey
+const DEFAULT_LAST_SEEN_MARK_MS = 300_000;
+const DEFAULT_LAST_SEEN_FLUSH_MS = 15_000;
 
 const RealtimeConfigSchema = z
   .object({
@@ -34,11 +40,20 @@ const RealtimeConfigSchema = z
     /** Вікно Socket.IO connection state recovery; 0 = вимкнути */
     recoveryMs: z.number().int().min(0),
     sweepMs: z.number().int().min(1_000),
+    /** Періодичне оновлення last_seen_at для сесій, які просто тривають */
+    lastSeenMarkMs: z.number().int().min(1_000),
+    /** Інтервал зливу буфера позначок у БД */
+    lastSeenFlushMs: z.number().int().min(100),
   })
   .refine((c) => c.heartbeatMs * 2 <= c.leaseTtlMs, {
     message:
       'REALTIME_HEARTBEAT_MS must be at most half of REALTIME_LEASE_TTL_MS — ' +
       'a lease has to survive one missed heartbeat, otherwise a healthy node flaps users offline',
+  })
+  .refine((c) => c.lastSeenFlushMs <= c.lastSeenMarkMs, {
+    message:
+      'REALTIME_LAST_SEEN_FLUSH_MS must not exceed REALTIME_LAST_SEEN_MARK_MS — ' +
+      'flushing less often than marks appear only delays the same writes',
   });
 
 export type RealtimeConfig = z.infer<typeof RealtimeConfigSchema>;
@@ -67,6 +82,8 @@ export function loadRealtimeConfig(env: NodeJS.ProcessEnv = process.env): Realti
     heartbeatMs: toInt(env.REALTIME_HEARTBEAT_MS, DEFAULT_HEARTBEAT_MS),
     recoveryMs: toInt(env.REALTIME_RECOVERY_MS, DEFAULT_RECOVERY_MS),
     sweepMs: toInt(env.REALTIME_SWEEP_MS, DEFAULT_SWEEP_MS),
+    lastSeenMarkMs: toInt(env.REALTIME_LAST_SEEN_MARK_MS, DEFAULT_LAST_SEEN_MARK_MS),
+    lastSeenFlushMs: toInt(env.REALTIME_LAST_SEEN_FLUSH_MS, DEFAULT_LAST_SEEN_FLUSH_MS),
   });
 
   if (!parsed.success) {

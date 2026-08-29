@@ -21,6 +21,7 @@ import { CreateUserModal } from '../components/create-user-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { ActivityDrawer } from '../components/activity/activity-drawer';
 import { PresenceDot } from '../components/presence-dot';
+import { LastSeen } from '../components/last-seen';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '@saas-skeleton/ui/lib/format';
@@ -170,6 +171,22 @@ export function UsersPage() {
           onCheckedChange={(isActive) => {
             setStatus.mutate({ id: u.id, data: { isActive } });
           }}
+        />
+      ),
+    },
+    {
+      // Окрема колонка, а не другий рядок під іменем: `UserIdentity` спільний
+      // із platform-web (libs/ui), а фіча — тільки в tenant-плані
+      id: 'lastSeen',
+      header: t('table.lastSeen'),
+      // Не sortable: сортування вимагало б поля в UserQuerySchema та індексу
+      // (tenant_id, last_seen_at) — окрема зміна, коли зʼявиться сценарій
+      // «покажи неактивних понад N днів»
+      cell: (u) => (
+        <LastSeen
+          isOnline={presence.isOnline(u.id)}
+          isUnknown={presence.isUnknown}
+          lastSeenAt={presence.lastSeenAt(u.id, u.lastSeenAt)}
         />
       ),
     },

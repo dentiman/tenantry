@@ -25,6 +25,13 @@ export const UserSchema = z.object({
   // Presigned GET мініатюри аватара (короткий TTL). Віддається в JSON, бо <img src>
   // не вміє слати Authorization-заголовок — авторизація вже зашита в підпис URL
   avatarUrl: z.url().nullable(),
+  /**
+   * RT-3: останній момент, коли юзер точно був підключений до realtime.
+   * `null` — не підключався жодного разу (це окремий стан «Never», а не «давно»).
+   * Межа фічі: рахуються ТІЛЬКИ socket-зʼєднання, не REST-активність — інакше
+   * підпис розійшовся б із крапкою присутності, яка теж socket-based.
+   */
+  lastSeenAt: z.iso.datetime().nullable(),
   // Wire-формат API: дати передаються як ISO-рядки
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

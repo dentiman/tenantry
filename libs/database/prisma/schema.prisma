@@ -59,6 +59,12 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
   // Демо-споживач файлової підсистеми (Files v1)
   avatarFileId String?  @map("avatar_file_id")
+  // RT-3: найпізніший момент, коли система ТОЧНО знала про живе socket-зʼєднання юзера
+  // (high-water mark, а НЕ «момент дисконекту»: у режимах відмов дисконект не настає
+  // взагалі). NULL — жодного разу не підключався. Пишеться ТІЛЬКИ presence-шаром
+  // (LastSeenWriter) сирим UPDATE-ом — Prisma-update підняв би @updatedAt і сесія
+  // виглядала б як редагування профілю. З доменного коду не чіпати.
+  lastSeenAt   DateTime? @map("last_seen_at")
 
   tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokens           RefreshToken[]

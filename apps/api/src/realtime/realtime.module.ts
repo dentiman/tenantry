@@ -7,6 +7,7 @@ import { realtimeRedisProvider } from './realtime-redis.provider';
 import { RealtimeEmitter } from './realtime.emitter';
 import { RealtimeGateway } from './realtime.gateway';
 import { SocketAuthService } from './socket-auth.service';
+import { LastSeenWriter } from './presence/last-seen.writer';
 import { PresenceController } from './presence/presence.controller';
 import { PresenceService } from './presence/presence.service';
 import { PresenceStore } from './presence/presence.store';
@@ -25,6 +26,7 @@ import { PresenceStore } from './presence/presence.store';
     { provide: REALTIME_CONFIG, useFactory: (): RealtimeConfig => loadRealtimeConfig() },
     realtimeRedisProvider,
     PresenceStore,
+    LastSeenWriter,
     PresenceService,
     RealtimeEmitter,
     SocketAuthService,

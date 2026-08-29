@@ -19,6 +19,8 @@ export function toUserResponse(user: PrismaUser, avatarUrl: string | null = null
     phoneCountry: user.phoneCountry,
     avatarFileId: user.avatarFileId,
     avatarUrl,
+    // RT-3: пише presence-шар, не доменний код (див. LastSeenWriter)
+    lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

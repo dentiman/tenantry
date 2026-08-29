@@ -19,7 +19,8 @@
     "role": "Role",
     "active": "Active",
     "created": "Created",
-    "actions": "Actions"
+    "actions": "Actions",
+    "lastSeen": "Last seen"
   },
   "status": {
     "active": "Active",
@@ -84,7 +85,8 @@
   },
   "presence": {
     "online": "Online",
-    "offline": "Offline"
+    "never": "Never signed in",
+    "lastSeen": "Last seen {{when}}"
   },
   "detail": {
     "back": "Users",
@@ -115,7 +117,6 @@
     "state": {
       "title": "State",
       "presence": "Presence",
-      "presenceUnknown": "Unknown",
       "memberSince": "Member since"
     },
     "avatarCard": {

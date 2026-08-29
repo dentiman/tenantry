@@ -156,6 +156,35 @@ Socket.IO `Server`** без `listen()` на тому самому Valkey-ада�
   Перевірено живим прогоном (api+worker+web): бейдж без
   перезавантаження, welcome із воркера в сокет, sync прочитаного між вкладками,
   `summary.revision` == revision із події, лист у Mailpit; 124 tenant-e2e (+21) і 11 platform-e2e.
+  **Last seen (RT-3) завершений і перевірений** (2026-08-29): `users.last_seen_at` —
+  довговічний слід присутності поруч із ефемерною presence у Valkey. Семантика —
+  **high-water mark** «останній момент, коли ТОЧНО знали, що юзер живий», а НЕ «момент
+  дисконекту»: у трьох із чотирьох режимів розриву (`transport close`/`ping timeout`,
+  `kill -9` ноди, недоступна Valkey) дисконекту не існує взагалі. Тому позначки йдуть із
+  **шести** точок — connect (якір на випадок аварійного падіння), graceful disconnect
+  останньої вкладки, `forgetSocket`, періодичний mark (`REALTIME_LAST_SEEN_MARK_MS`, 5 хв —
+  ЄДИНЕ джерело, що не залежить від брокера), sweep (`now − leaseTtl`, бо юзера немає вже
+  щонайменше TTL) і drain на SIGTERM. Друга вкладка позначки не ставить. Запис —
+  **write-behind** (`LastSeenWriter`: синхронний `mark()` у буфер `tenant→user→max(ms)`,
+  batched злив раз на `REALTIME_LAST_SEEN_FLUSH_MS`; невдалий злив повертає позначки в
+  буфер — монотонність робить повтор безпечним), інакше rolling deploy давав би сотні
+  окремих UPDATE-ів. **Сирий SQL — другий легальний випадок у проєкті** (після колапсу
+  сповіщень) і рівно з двох причин: `prisma.user.update*` підняв би `@updatedAt` (присутність
+  виглядала б як редагування профілю), а умову «пиши, лише якщо новіше» треба виконати в
+  ОДНОМУ стейтменті. Проти застарілого кеша фронта offline-дельта везе `lastSeenAt`
+  (опційне поле — імʼя події лишилось `presence.changed.v1`), накладку тримає
+  `last-seen.store.ts`, а `usePresence().lastSeenAt()` віддає пізніше з двох значень.
+  UI (тільки tenant-web): колонка в `/users` + рядок «Presence» на картці юзера —
+  `Online` / `Last seen 5 minutes ago` (тултіп з абсолютною датою) / `Never signed in`;
+  при недоступній Valkey час НЕ ховається (він із Postgres і лишається правдою), зникає лише
+  слово «Online». Межа: рахуються ТІЛЬКИ socket-зʼєднання, REST-логін поле не рухає.
+  Граблі: (1) **`$executeRaw` обходить tenant-extension** — без явного
+  `runWith → withTenantTx` під `saas_app` RLS оновлює нуль рядків МОВЧКИ; (2) `users.id` —
+  `text`, а не `uuid` (Prisma тримає id як `String`), тому каст масиву — `::text[]`, інакше
+  `operator does not exist: text = uuid`. 130 tenant-e2e (+6) і 11 platform-e2e. Перевірено
+  живим прогоном проти dev-БД і dev-Valkey: створений юзер → `null`; логін без сокета не
+  рухає; connect ставить якір і НЕ рухає `updated_at`; закриття 1 з 2 вкладок не дає offline;
+  періодичний mark рухає значення; час в offline-дельті збігається з тим, що в БД.
   Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
   `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
   `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -182,9 +211,11 @@ Socket.IO `Server`** без `listen()` на тому самому Valkey-ада�
   оплати інвойса, фази EDA-0…EDA-4; EDA-0/EDA-1 РЕАЛІЗОВАНО 2026-08-04, EDA-4 — 2026-08-16
   (§3.12 переглянуто: realtime НЕ підписник), EDA-2 і EDA-3 — попереду)
 - `docs/event-driven-scenario.md` (вхідна постановка, з якої виріс дизайн),
-  `docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15: огляд, стек, межа з
-  event-driven шаром, зафіксовані рішення, що лишилось) + `docs/realtime-internals.md`
-  (механіка: протокол, ключі Valkey, Lua, конфіг, режими відмов, тести, граблі)
+  `docs/realtime.md` (realtime — РЕАЛІЗОВАНО й перевірено 2026-08-15, last-seen —
+  2026-08-29: огляд, стек, межа з event-driven шаром, зафіксовані рішення, що лишилось) +
+  `docs/realtime-internals.md` (механіка: протокол, ключі Valkey, Lua, § «Last seen:
+  довговічний слід присутності» — шість точок позначки, write-behind, обґрунтування сирого
+  SQL, точність за сценаріями; конфіг, режими відмов, тести, граблі)
 - `docs/realtime-questions.md` (чек-лист розуміння),
   `docs/notifications.md` (in-app сповіщення / Notification Center — РЕАЛІЗОВАНО й перевірено
   2026-08-16: скоуп V1 «інбокс», модель даних, контракти, recorder, socket-протокол, REST,
@@ -242,8 +273,8 @@ pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .en
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm platform:web:codegen # orval: apps/platform-api/openapi.json → apps/platform-web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 124 тести tenant-api (rls, tenant-isolation, slug-login, messaging,
-                          # realtime, notifications);
+pnpm api:test:e2e         # 130 тестів tenant-api (rls, tenant-isolation, slug-login, messaging,
+                          # realtime + last-seen, notifications);
                           # ВИМАГАЄ Postgres І Valkey (presence-тести ходять до живих Lua-скриптів;
                           # ізоляція — окремий REALTIME_KEY_PREFIX на jest-worker, не окреме сховище).
                           # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
@@ -266,7 +297,7 @@ pnpm db:reset             # ДЕСТРУКТИВНО (dev-only, відмовля
 ```
 apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, files (presigned upload/download),
                 activities, notifications (персональний інбокс: курсорний список, summary,
-                стани, преференси), realtime (Socket.IO-gateway namespace /tenant + presence
+                стани, преференси), realtime (Socket.IO-gateway namespace /tenant + presence + last-seen
                 + емісія сповіщень в особистий room),
                 health (jobs-моніторинг переїхав у platform-api на MT-3).
                 Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
@@ -589,7 +620,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Create user (API) | Пароль **обов'язковий** — адмін задає початковий (argon2-хеш у UsersService, у Prisma йде тільки passwordHash). Зміна пароля — НЕ через users PATCH (окремий security-флоу)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Файли             | **S3 API як абстракція** (dev: SeaweedFS, Apache 2.0; Garage відхилено — AGPL, RustFS — alpha, MinIO — репо заархівовано). **Presigned двофазний upload** (proxy через API відхилено). Віддача — тільки короткоживучі presigned GET після authz. ClamAV — беклог                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Деплой            | **Docker Swarm single-node + GitLab CI** (docker-context по SSH, без файлів на сервері). Kubernetes/Helm НЕ розглядаємо. Зараз тестовий прод: http на IP:port, секрети в репо; шлях до справжнього проду — `docs/roadmap.md` §2.7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**; in-app сповіщення поверх того самого транспорту — 2026-08-16 (`docs/notifications.md`), realtime підписником у `MESSAGE_TOPOLOGY` НЕ став: емісія after-commit у процесі, що записав рядок. Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення»                                                                                                                                                          |
+| Realtime          | **Socket.IO 4 + Valkey** (Redis Streams adapter), transports **websocket-only** (sticky sessions не потрібні — Docker VIP балансує по TCP-зʼєднанню). Presence — ефемерні leases у Valkey, не таблиця. **Реалізовано й перевірено 2026-08-15**; in-app сповіщення поверх того самого транспорту — 2026-08-16 (`docs/notifications.md`), realtime підписником у `MESSAGE_TOPOLOGY` НЕ став: емісія after-commit у процесі, що записав рядок. **Last seen (RT-3, 2026-08-29)** — `users.last_seen_at` у Postgres поруч із ефемерною presence: питання «коли був востаннє» переживає рестарт брокера, тому колонка, а не Valkey. `lastSeenAt` СВІДОМО додано в `UserResponse` (на відміну від `isOnline`): це довговічний факт про юзера, який змінюється рідко, а не проєкція, що застаріває за секунди. Сортування/фільтр за ним — поза скоупом (потребує поля в `UserQuerySchema` та індексу). Postgres-адаптер (`LISTEN/NOTIFY`) переглянуто повторно 2026-08-15 і **відхилено знову**: він не вирішує presence (TTL-сховище потрібне все одно, тому економія нульова), а черга NOTIFY — глобальний ресурс кластера, здатний заблокувати коміти всій БД. Обґрунтування — `docs/realtime.md` § «Зафіксовані рішення»                                                                                                                                                          |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)

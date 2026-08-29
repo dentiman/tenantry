@@ -39,6 +39,7 @@ import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { PresenceDot } from '../components/presence-dot';
+import { LastSeen } from '../components/last-seen';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
@@ -276,13 +277,14 @@ export function UserDetailPage() {
             </CardHeader>
             <CardContent>
               <Fact label={t('detail.state.presence')}>
-                {/* Саме «Offline», а не «Inactive»: статус акаунта — це сусідній
-                    рядок, і плутати присутність зі станом доступу не можна */}
-                {presence.isUnknown
-                  ? t('detail.state.presenceUnknown')
-                  : presence.isOnline(user.id)
-                    ? t('presence.online')
-                    : t('presence.offline')}
+                {/* Замість голого «Offline» — коли саме юзер був тут востаннє:
+                    сам по собі факт «не онлайн» майже нічого не повідомляє.
+                    Статус АКАУНТА — сусідній рядок, плутати їх не можна */}
+                <LastSeen
+                  isOnline={presence.isOnline(user.id)}
+                  isUnknown={presence.isUnknown}
+                  lastSeenAt={presence.lastSeenAt(user.id, user.lastSeenAt)}
+                />
               </Fact>
               <Separator />
               <Fact label={t('detail.state.memberSince')}>{formatDate(user.createdAt)}</Fact>

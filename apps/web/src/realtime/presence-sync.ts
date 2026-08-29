@@ -5,6 +5,7 @@ import {
   type PresenceSnapshot,
 } from '@saas-skeleton/contracts';
 import { getPresenceGetQueryKey } from '../api/generated/api';
+import { useLastSeenStore } from './last-seen.store';
 import { getSocket } from './socket';
 
 /**
@@ -24,6 +25,18 @@ export function initPresenceSync(queryClient: QueryClient): void {
   };
 
   socket.on(REALTIME_EVENTS.presenceChanged, (payload: PresenceChanged) => {
+    // Накладка last-seen оновлюється ДО перевірки ревізій: вона не є частиною
+    // snapshot-у присутності, і навіть «зайва» (дубльована) подія несе правдивий
+    // час — гірше було б його втратити через розбіжність лічильників
+    const lastSeen = useLastSeenStore.getState();
+    if (payload.status === 'offline') {
+      if (payload.lastSeenAt) {
+        lastSeen.observe(payload.userId, payload.lastSeenAt);
+      }
+    } else {
+      lastSeen.forget(payload.userId);
+    }
+
     const current = queryClient.getQueryData<PresenceSnapshot>(queryKey);
     if (!current) {
       // Snapshot ще не приїхав — патчити нічого; перший запит уже врахує цю зміну
