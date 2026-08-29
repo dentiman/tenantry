@@ -45,8 +45,16 @@ label · pagination · progress · scroll-area · select · separator · sheet �
 spinner · switch · table · tabs · textarea · toast · toggle · toggle-group · tooltip
 
 Хуки: `hooks/use-mobile.ts`. Власні (не з реєстру): `theme-switcher.tsx`, `user-identity.tsx`,
-`page-header-slot.tsx`, `page-breadcrumbs.tsx`, `components/data-grid/**`,
+`page-header-slot.tsx`, `page-breadcrumbs.tsx`, `not-found-page.tsx`, `components/data-grid/**`,
 `components/form/**`.
+
+`not-found-page.tsx` — сторінка неіснуючого роуту обох фронтів. Окремого 404-блока в `@shadcn`
+немає (перевірено пошуком по реєстру), тож узятий блок shadcn-admin
+(`features/errors/not-found-error.tsx`, MIT — той самий шаблон, звідки розкладка `/settings`),
+але зібраний на реєстровому `Empty`: 404 — це порожній стан, а кустарних обгорток над
+примітивами ми не заводимо. Підключається splat-роутом `$` ПІД app-роутом застосунку —
+так сторінка малюється всередині layout-а і проходить той самий auth-гейт (гість замість 404
+їде на `/login`).
 
 **Локальні правки реєстру** (позначені коментарем «ЛОКАЛЬНА ПРАВКА реєстру») — `toast`
 (позиції), `checkbox` (indeterminate), `button` (суцільний destructive, метрика, фокус),

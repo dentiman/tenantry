@@ -8,6 +8,7 @@ import {
 import { z } from 'zod';
 import { JobQuerySchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
+import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
 import { AppLayout } from './components/app-layout';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
@@ -88,9 +89,22 @@ const tenantDetailRoute = createRoute({
   component: TenantDetailPage,
 });
 
+/**
+ * Неіснуючий роут. Свідомо НЕ `notFoundComponent` кореня, а splat-роут ПІД `appRoute`:
+ * так 404 проходить той самий гейт `beforeLoad: requireAuth`, що й решта застосунку —
+ * залогінений бачить сторінку всередині layout-а (сайдбар/хедер на місці), гість
+ * летить на /login замість того, щоб дивитись на 404 у порожньому вікні.
+ * Статичні й динамічні роути ранжуються вище за splat, тож нічого не перехоплює.
+ */
+const notFoundRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '$',
+  component: NotFoundPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([tenantsRoute, tenantDetailRoute, jobsRoute]),
+  appRoute.addChildren([tenantsRoute, tenantDetailRoute, jobsRoute, notFoundRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

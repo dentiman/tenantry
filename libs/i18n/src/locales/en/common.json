@@ -34,6 +34,13 @@
     "invalidType": "This file type is not allowed",
     "tooLarge": "File is too large (max {{maxMb}} MB)"
   },
+  "notFound": {
+    "breadcrumb": "Not found",
+    "title": "This page does not exist",
+    "description": "The page you are looking for was moved, renamed, or never existed. Check the address or head back to safety.",
+    "goBack": "Go back",
+    "goHome": "Back to home"
+  },
   "loading": "Loading…",
   "empty": "No results found",
   "filters": {
