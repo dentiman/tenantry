@@ -26,7 +26,7 @@ import { SetUserPasswordDto } from './dto/set-user-password.dto';
 import { SetUserStatusDto } from './dto/set-user-status.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto';
-import { toUserResponse } from './users.mapper';
+import { toUserResponseWithAvatar } from './users.mapper';
 import type { UserResponse, UserListResponse } from '@saas-skeleton/contracts';
 
 @ApiTags('users')
@@ -60,7 +60,10 @@ export class UsersController {
 
   @Post()
   @ApiCreatedResponse({ type: UserResponseDto.Output })
-  async create(@Body() dto: CreateUserDto, @CurrentUser() actor: JwtPayload): Promise<UserResponse> {
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<UserResponse> {
     const user = await this.usersService.create(dto, actor);
     return this.toResponse(user);
   }
@@ -107,13 +110,7 @@ export class UsersController {
     await this.usersService.remove(id);
   }
 
-  /** avatarUrl — presigned GET мініатюри (fallback на оригінал до генерації thumbnail-а) */
-  private async toResponse(user: UserWithAvatar): Promise<UserResponse> {
-    const avatar = user.avatarFile;
-    const avatarUrl =
-      avatar?.status === 'READY'
-        ? await this.storage.getDownloadUrl(avatar.thumbnailKey ?? avatar.key)
-        : null;
-    return toUserResponse(user, avatarUrl);
+  private toResponse(user: UserWithAvatar): Promise<UserResponse> {
+    return toUserResponseWithAvatar(user, this.storage);
   }
 }

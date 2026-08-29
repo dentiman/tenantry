@@ -8,6 +8,7 @@ type Activity = ActivityListResponseDtoOutputItemsItem;
 const KNOWN_TYPES = [
   'user.created',
   'user.password_changed',
+  'user.sessions_revoked',
   'user.enabled',
   'user.disabled',
   'email.sent',
@@ -30,6 +31,11 @@ function refLabel(payload: Record<string, unknown>, key: string): string {
 function strField(payload: Record<string, unknown>, key: string): string {
   const value = payload[key];
   return typeof value === 'string' ? value : '';
+}
+
+function numField(payload: Record<string, unknown>, key: string): number {
+  const value = payload[key];
+  return typeof value === 'number' ? value : 0;
 }
 
 /**
@@ -55,7 +61,13 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
           recipient: refLabel(payload, 'recipient'),
           email: strField(payload, 'email'),
         }
-      : { actor: activity.actorLabel ?? t('system'), user: refLabel(payload, 'user') };
+      : {
+          actor: activity.actorLabel ?? t('system'),
+          user: refLabel(payload, 'user'),
+          // Лише один тип має додаткове число — плодити окрему гілку заради нього
+          // немає сенсу, зайвий ключ у values інші повідомлення просто ігнорують
+          sessionCount: numField(payload, 'sessionCount'),
+        };
 
   return (
     <Trans

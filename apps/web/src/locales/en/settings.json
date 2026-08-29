@@ -1,0 +1,83 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your profile, security and notification preferences.",
+  "nav": {
+    "sectionLabel": "Settings section",
+    "profile": "Profile",
+    "account": "Account",
+    "security": "Security",
+    "notifications": "Notifications",
+    "appearance": "Appearance"
+  },
+  "loading": "Loading settings",
+  "loadError": "Could not load your account",
+  "save": "Save changes",
+  "saving": "Saving…",
+  "profile": {
+    "title": "Profile",
+    "description": "This is how you appear to other people in this workspace.",
+    "name": "Name",
+    "namePlaceholder": "Your full name",
+    "phone": "Phone",
+    "language": "Language",
+    "languageHint": "Language of the emails we send you.",
+    "saved": "Profile updated",
+    "avatar": {
+      "title": "Avatar",
+      "description": "PNG, JPEG, WebP or GIF, up to 10 MB.",
+      "change": "Change",
+      "remove": "Remove",
+      "uploading": "Uploading…",
+      "saving": "Saving…",
+      "saveFailed": "Could not save the avatar"
+    }
+  },
+  "account": {
+    "title": "Account",
+    "description": "Facts about your account that only an administrator can change.",
+    "email": "Email",
+    "emailHint": "Contact an administrator to change your email address.",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Disabled",
+    "createdAt": "Member since",
+    "lastSeenAt": "Last seen",
+    "never": "Never signed in"
+  },
+  "security": {
+    "title": "Security",
+    "description": "Change your password and sign out of other devices.",
+    "password": {
+      "title": "Password",
+      "description": "Changing your password signs you out everywhere else.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "mismatch": "Passwords do not match",
+      "submit": "Change password",
+      "submitting": "Changing…",
+      "changed": "Password changed"
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "description": "You stay signed in on this device. Everything else is signed out.",
+      "note": "Individual devices are not listed: a session is not stored as a separate thing, so it is all or nothing. Other devices lose access within 15 minutes.",
+      "signOutAll": "Sign out everywhere else",
+      "confirmTitle": "Sign out everywhere else?",
+      "confirmBody": "All other browsers and devices will have to sign in again. This device stays signed in.",
+      "confirm": "Sign out everywhere",
+      "cancel": "Cancel",
+      "done": "Other devices have been signed out"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choose what lands in your notification inbox."
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "How this app looks on this device. The choice is stored in this browser only.",
+    "theme": "Theme"
+  }
+}

@@ -11,6 +11,7 @@ import {
 import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { AccountModule } from './account/account.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -35,6 +36,7 @@ import { loggerConfig } from './common/logger';
     SharedNotificationsModule,
     AuthModule,
     UsersModule,
+    AccountModule,
     FilesModule,
     ActivitiesModule,
     NotificationsModule,

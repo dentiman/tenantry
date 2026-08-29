@@ -26,6 +26,7 @@ import type {
   ActivityListResponseDtoOutput,
   AuthResponseDtoOutput,
   AuthTokensDtoOutput,
+  ChangeOwnPasswordDto,
   CreateFileUploadDto,
   CreateFileUploadResponseDtoOutput,
   CreateUserDto,
@@ -34,6 +35,7 @@ import type {
   FilesDownloadUrlParams,
   HealthCheck200,
   LoginDto,
+  LogoutDto,
   MeResponseDtoOutput,
   NotificationListResponseDtoOutput,
   NotificationPreferenceListDtoOutput,
@@ -44,6 +46,7 @@ import type {
   RefreshDto,
   SetUserPasswordDto,
   SetUserStatusDto,
+  UpdateAccountProfileDto,
   UpdateNotificationDto,
   UpdateNotificationPreferencesDto,
   UpdateUserDto,
@@ -294,6 +297,82 @@ export const useAuthRefresh = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getAuthRefreshMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const authLogout = (
+  logoutDto: LogoutDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/auth/logout`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: logoutDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getAuthLogoutMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authLogout>>,
+    TError,
+    { data: LogoutDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authLogout>>,
+  TError,
+  { data: LogoutDto },
+  TContext
+> => {
+  const mutationKey = ['authLogout'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authLogout>>,
+    { data: LogoutDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return authLogout(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AuthLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authLogout>>>;
+export type AuthLogoutMutationBody = LogoutDto;
+export type AuthLogoutMutationError = unknown;
+
+export const useAuthLogout = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authLogout>>,
+      TError,
+      { data: LogoutDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authLogout>>,
+  TError,
+  { data: LogoutDto },
+  TContext
+> => {
+  const mutationOptions = getAuthLogoutMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -951,6 +1030,346 @@ export const useUsersSetStatus = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getUsersSetStatusMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountGetProfile = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<UserResponseDtoOutput>(
+    { url: `/api/account`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAccountGetProfileQueryKey = () => {
+  return [`/api/account`] as const;
+};
+
+export const getAccountGetProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof accountGetProfile>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountGetProfile>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAccountGetProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof accountGetProfile>>> = ({ signal }) =>
+    accountGetProfile(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof accountGetProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AccountGetProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof accountGetProfile>>
+>;
+export type AccountGetProfileQueryError = unknown;
+
+export function useAccountGetProfile<
+  TData = Awaited<ReturnType<typeof accountGetProfile>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountGetProfile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountGetProfile>>,
+          TError,
+          Awaited<ReturnType<typeof accountGetProfile>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAccountGetProfile<
+  TData = Awaited<ReturnType<typeof accountGetProfile>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountGetProfile>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountGetProfile>>,
+          TError,
+          Awaited<ReturnType<typeof accountGetProfile>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAccountGetProfile<
+  TData = Awaited<ReturnType<typeof accountGetProfile>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountGetProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAccountGetProfile<
+  TData = Awaited<ReturnType<typeof accountGetProfile>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountGetProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAccountGetProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const accountUpdateProfile = (
+  updateAccountProfileDto: UpdateAccountProfileDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<UserResponseDtoOutput>(
+    {
+      url: `/api/account/profile`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: updateAccountProfileDto,
+    },
+    options,
+  );
+};
+
+export const getAccountUpdateProfileMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountUpdateProfile>>,
+    TError,
+    { data: UpdateAccountProfileDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountUpdateProfile>>,
+  TError,
+  { data: UpdateAccountProfileDto },
+  TContext
+> => {
+  const mutationKey = ['accountUpdateProfile'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountUpdateProfile>>,
+    { data: UpdateAccountProfileDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return accountUpdateProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountUpdateProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountUpdateProfile>>
+>;
+export type AccountUpdateProfileMutationBody = UpdateAccountProfileDto;
+export type AccountUpdateProfileMutationError = unknown;
+
+export const useAccountUpdateProfile = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountUpdateProfile>>,
+      TError,
+      { data: UpdateAccountProfileDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountUpdateProfile>>,
+  TError,
+  { data: UpdateAccountProfileDto },
+  TContext
+> => {
+  const mutationOptions = getAccountUpdateProfileMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountChangePassword = (
+  changeOwnPasswordDto: ChangeOwnPasswordDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AuthTokensDtoOutput>(
+    {
+      url: `/api/account/password`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: changeOwnPasswordDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getAccountChangePasswordMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountChangePassword>>,
+    TError,
+    { data: ChangeOwnPasswordDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountChangePassword>>,
+  TError,
+  { data: ChangeOwnPasswordDto },
+  TContext
+> => {
+  const mutationKey = ['accountChangePassword'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountChangePassword>>,
+    { data: ChangeOwnPasswordDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return accountChangePassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountChangePasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountChangePassword>>
+>;
+export type AccountChangePasswordMutationBody = ChangeOwnPasswordDto;
+export type AccountChangePasswordMutationError = unknown;
+
+export const useAccountChangePassword = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountChangePassword>>,
+      TError,
+      { data: ChangeOwnPasswordDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountChangePassword>>,
+  TError,
+  { data: ChangeOwnPasswordDto },
+  TContext
+> => {
+  const mutationOptions = getAccountChangePasswordMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountRevokeAllSessions = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AuthTokensDtoOutput>(
+    { url: `/api/account/sessions/revoke-all`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getAccountRevokeAllSessionsMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountRevokeAllSessions>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountRevokeAllSessions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['accountRevokeAllSessions'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountRevokeAllSessions>>,
+    void
+  > = () => {
+    return accountRevokeAllSessions(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountRevokeAllSessionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountRevokeAllSessions>>
+>;
+
+export type AccountRevokeAllSessionsMutationError = unknown;
+
+export const useAccountRevokeAllSessions = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountRevokeAllSessions>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountRevokeAllSessions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions = getAccountRevokeAllSessionsMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

@@ -3,6 +3,7 @@
   "user": {
     "created": "<b>{{actor}}</b> created user <b>{{user}}</b>",
     "password_changed": "<b>{{actor}}</b> changed the password of <b>{{user}}</b>",
+    "sessions_revoked": "<b>{{actor}}</b> signed out of all devices ({{sessionCount}} session(s) revoked)",
     "enabled": "<b>{{actor}}</b> enabled access for <b>{{user}}</b>",
     "disabled": "<b>{{actor}}</b> disabled access for <b>{{user}}</b>"
   },

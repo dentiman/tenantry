@@ -17,7 +17,7 @@ import {
  * Немутабельні типи (security) приходять із бекенда з `muteable: false` — фронт
  * не тримає власного списку винятків, інакше вони розійшлися б.
  */
-export function NotificationPreferences({ onBack }: { onBack: () => void }) {
+export function NotificationPreferences({ onBack }: { onBack?: () => void }) {
   const { t } = useTranslation('notifications');
   const queryClient = useQueryClient();
   const { data, isPending, isError } = useNotificationsGetPreferences();
@@ -31,10 +31,14 @@ export function NotificationPreferences({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button variant="ghost" size="sm" className="self-start" onClick={onBack}>
-        <ArrowLeft />
-        {t('settings.back')}
-      </Button>
+      {/* Кнопка «назад» — лише в панелі дзвінка; на сторінці налаштувань
+          повертатись нікуди, тому onBack опційний */}
+      {onBack && (
+        <Button variant="ghost" size="sm" className="self-start" onClick={onBack}>
+          <ArrowLeft />
+          {t('settings.back')}
+        </Button>
+      )}
 
       {isPending && (
         <div className="flex justify-center py-8">

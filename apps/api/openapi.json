@@ -18,17 +18,13 @@
                       "example": "ok"
                     }
                   },
-                  "required": [
-                    "status"
-                  ]
+                  "required": ["status"]
                 }
               }
             }
           }
         },
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/api/auth/login": {
@@ -57,9 +53,7 @@
             }
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/auth/refresh": {
@@ -88,9 +82,29 @@
             }
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "authLogout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": ["auth"]
       }
     },
     "/api/auth/me": {
@@ -114,9 +128,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/users": {
@@ -151,13 +163,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "email",
-                "name",
-                "role",
-                "isActive",
-                "createdAt"
-              ]
+              "enum": ["email", "name", "role", "isActive", "createdAt"]
             }
           },
           {
@@ -167,10 +173,7 @@
             "schema": {
               "default": "asc",
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -179,10 +182,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "ADMIN",
-                "USER"
-              ]
+              "enum": ["ADMIN", "USER"]
             }
           },
           {
@@ -191,10 +191,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "enum": ["true", "false"]
             }
           },
           {
@@ -223,9 +220,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       },
       "post": {
         "operationId": "usersCreate",
@@ -257,9 +252,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       }
     },
     "/api/users/{id}": {
@@ -292,9 +285,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       },
       "patch": {
         "operationId": "usersUpdate",
@@ -335,9 +326,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       },
       "delete": {
         "operationId": "usersRemove",
@@ -361,9 +350,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       }
     },
     "/api/users/{id}/password": {
@@ -399,9 +386,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       }
     },
     "/api/users/{id}/status": {
@@ -444,9 +429,123 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
+      }
+    },
+    "/api/account": {
+      "get": {
+        "operationId": "accountGetProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["account"]
+      }
+    },
+    "/api/account/profile": {
+      "patch": {
+        "operationId": "accountUpdateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["account"]
+      }
+    },
+    "/api/account/password": {
+      "post": {
+        "operationId": "accountChangePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeOwnPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["account"]
+      }
+    },
+    "/api/account/sessions/revoke-all": {
+      "post": {
+        "operationId": "accountRevokeAllSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["account"]
       }
     },
     "/api/files": {
@@ -480,9 +579,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "files"
-        ]
+        "tags": ["files"]
       }
     },
     "/api/files/{id}/complete": {
@@ -515,9 +612,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "files"
-        ]
+        "tags": ["files"]
       }
     },
     "/api/files/{id}": {
@@ -550,9 +645,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "files"
-        ]
+        "tags": ["files"]
       }
     },
     "/api/files/{id}/download-url": {
@@ -574,10 +667,7 @@
             "schema": {
               "default": "original",
               "type": "string",
-              "enum": [
-                "original",
-                "thumbnail"
-              ]
+              "enum": ["original", "thumbnail"]
             }
           }
         ],
@@ -598,9 +688,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "files"
-        ]
+        "tags": ["files"]
       }
     },
     "/api/activities": {
@@ -654,6 +742,7 @@
               "enum": [
                 "user.created",
                 "user.password_changed",
+                "user.sessions_revoked",
                 "user.enabled",
                 "user.disabled",
                 "email.sent"
@@ -678,9 +767,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "activities"
-        ]
+        "tags": ["activities"]
       }
     },
     "/api/notifications": {
@@ -713,11 +800,7 @@
             "schema": {
               "default": "all",
               "type": "string",
-              "enum": [
-                "unread",
-                "all",
-                "archived"
-              ]
+              "enum": ["unread", "all", "archived"]
             }
           }
         ],
@@ -738,9 +821,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/notifications/summary": {
@@ -764,9 +845,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/notifications/preferences": {
@@ -790,9 +869,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       },
       "put": {
         "operationId": "notificationsSetPreferences",
@@ -824,9 +901,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/notifications/mark-all-read": {
@@ -850,9 +925,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/notifications/seen": {
@@ -876,9 +949,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/notifications/{id}": {
@@ -921,9 +992,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/presence": {
@@ -947,9 +1016,7 @@
             "bearer": []
           }
         ],
-        "tags": [
-          "presence"
-        ]
+        "tags": ["presence"]
       }
     }
   },
@@ -985,10 +1052,7 @@
             "maxLength": 63
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "AuthResponseDto_Output": {
         "type": "object",
@@ -1012,19 +1076,14 @@
               },
               "role": {
                 "type": "string",
-                "enum": [
-                  "ADMIN",
-                  "USER"
-                ]
+                "enum": ["ADMIN", "USER"]
               },
               "isActive": {
                 "type": "boolean"
               },
               "locale": {
                 "type": "string",
-                "enum": [
-                  "en"
-                ]
+                "enum": ["en"]
               },
               "phone": {
                 "type": "string",
@@ -1089,17 +1148,11 @@
                 "type": "string"
               }
             },
-            "required": [
-              "accessToken",
-              "refreshToken"
-            ],
+            "required": ["accessToken", "refreshToken"],
             "additionalProperties": false
           }
         },
-        "required": [
-          "user",
-          "tokens"
-        ],
+        "required": ["user", "tokens"],
         "additionalProperties": false
       },
       "RefreshDto": {
@@ -1110,9 +1163,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "AuthTokensDto_Output": {
         "type": "object",
@@ -1124,11 +1175,18 @@
             "type": "string"
           }
         },
-        "required": [
-          "accessToken",
-          "refreshToken"
-        ],
+        "required": ["accessToken", "refreshToken"],
         "additionalProperties": false
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["refreshToken"]
       },
       "MeResponseDto_Output": {
         "type": "object",
@@ -1149,19 +1207,14 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "USER"
-            ]
+            "enum": ["ADMIN", "USER"]
           },
           "isActive": {
             "type": "boolean"
           },
           "locale": {
             "type": "string",
-            "enum": [
-              "en"
-            ]
+            "enum": ["en"]
           },
           "phone": {
             "type": "string",
@@ -1240,19 +1293,14 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "ADMIN",
-                    "USER"
-                  ]
+                  "enum": ["ADMIN", "USER"]
                 },
                 "isActive": {
                   "type": "boolean"
                 },
                 "locale": {
                   "type": "string",
-                  "enum": [
-                    "en"
-                  ]
+                  "enum": ["en"]
                 },
                 "phone": {
                   "type": "string",
@@ -1321,13 +1369,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ],
+        "required": ["items", "total", "page", "limit", "totalPages"],
         "additionalProperties": false
       },
       "UserResponseDto_Output": {
@@ -1349,19 +1391,14 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "USER"
-            ]
+            "enum": ["ADMIN", "USER"]
           },
           "isActive": {
             "type": "boolean"
           },
           "locale": {
             "type": "string",
-            "enum": [
-              "en"
-            ]
+            "enum": ["en"]
           },
           "phone": {
             "type": "string",
@@ -1429,17 +1466,12 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "USER"
-            ]
+            "enum": ["ADMIN", "USER"]
           },
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": [
-              "en"
-            ]
+            "enum": ["en"]
           },
           "phone": {
             "type": "string",
@@ -1456,10 +1488,7 @@
             "maxLength": 128
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "UpdateUserDto": {
         "type": "object",
@@ -1474,17 +1503,12 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "USER"
-            ]
+            "enum": ["ADMIN", "USER"]
           },
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": [
-              "en"
-            ]
+            "enum": ["en"]
           },
           "phone": {
             "type": "string",
@@ -1512,9 +1536,7 @@
             "maxLength": 128
           }
         },
-        "required": [
-          "password"
-        ]
+        "required": ["password"]
       },
       "SetUserStatusDto": {
         "type": "object",
@@ -1523,9 +1545,51 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "isActive"
-        ]
+        "required": ["isActive"]
+      },
+      "UpdateAccountProfileDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9]\\d{7,14}$",
+            "nullable": true
+          },
+          "phoneCountry": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": ["en"]
+          },
+          "avatarFileId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          }
+        }
+      },
+      "ChangeOwnPasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": ["currentPassword", "newPassword"]
       },
       "CreateFileUploadDto": {
         "type": "object",
@@ -1557,11 +1621,7 @@
             "maximum": 26214400
           }
         },
-        "required": [
-          "filename",
-          "mimeType",
-          "size"
-        ]
+        "required": ["filename", "mimeType", "size"]
       },
       "CreateFileUploadResponseDto_Output": {
         "type": "object",
@@ -1600,10 +1660,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "PENDING",
-                  "READY"
-                ]
+                "enum": ["PENDING", "READY"]
               },
               "hasThumbnail": {
                 "type": "boolean"
@@ -1643,10 +1700,7 @@
             "format": "uri"
           }
         },
-        "required": [
-          "file",
-          "uploadUrl"
-        ],
+        "required": ["file", "uploadUrl"],
         "additionalProperties": false
       },
       "FileResponseDto_Output": {
@@ -1683,10 +1737,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "PENDING",
-              "READY"
-            ]
+            "enum": ["PENDING", "READY"]
           },
           "hasThumbnail": {
             "type": "boolean"
@@ -1734,10 +1785,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "url",
-          "expiresInSeconds"
-        ],
+        "required": ["url", "expiresInSeconds"],
         "additionalProperties": false
       },
       "ActivityListResponseDto_Output": {
@@ -1758,6 +1806,7 @@
                   "enum": [
                     "user.created",
                     "user.password_changed",
+                    "user.sessions_revoked",
                     "user.enabled",
                     "user.disabled",
                     "email.sent"
@@ -1765,10 +1814,7 @@
                 },
                 "actorType": {
                   "type": "string",
-                  "enum": [
-                    "user",
-                    "system"
-                  ]
+                  "enum": ["user", "system"]
                 },
                 "actorId": {
                   "type": "string",
@@ -1807,10 +1853,7 @@
             "nullable": true
           }
         },
-        "required": [
-          "items",
-          "nextCursor"
-        ],
+        "required": ["items", "nextCursor"],
         "additionalProperties": false
       },
       "NotificationListResponseDto_Output": {
@@ -1828,11 +1871,7 @@
                 },
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "user.created",
-                    "user.password_changed",
-                    "user.welcome"
-                  ]
+                  "enum": ["user.created", "user.password_changed", "user.welcome"]
                 },
                 "payload": {
                   "type": "object",
@@ -1851,10 +1890,7 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
                   },
-                  "required": [
-                    "kind",
-                    "id"
-                  ],
+                  "required": ["kind", "id"],
                   "additionalProperties": false,
                   "nullable": true
                 },
@@ -1865,10 +1901,7 @@
                 },
                 "actorType": {
                   "type": "string",
-                  "enum": [
-                    "user",
-                    "system"
-                  ]
+                  "enum": ["user", "system"]
                 },
                 "actorId": {
                   "type": "string",
@@ -1925,10 +1958,7 @@
             "nullable": true
           }
         },
-        "required": [
-          "items",
-          "nextCursor"
-        ],
+        "required": ["items", "nextCursor"],
         "additionalProperties": false
       },
       "NotificationSummaryDto_Output": {
@@ -1955,12 +1985,7 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": [
-          "unreadCount",
-          "newCount",
-          "revision",
-          "generatedAt"
-        ],
+        "required": ["unreadCount", "newCount", "revision", "generatedAt"],
         "additionalProperties": false
       },
       "NotificationPreferenceListDto_Output": {
@@ -1973,46 +1998,29 @@
               "properties": {
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "user.created",
-                    "user.password_changed",
-                    "user.welcome"
-                  ]
+                  "enum": ["user.created", "user.password_changed", "user.welcome"]
                 },
                 "channel": {
                   "type": "string",
-                  "enum": [
-                    "in_app"
-                  ]
+                  "enum": ["in_app"]
                 },
                 "enabled": {
                   "type": "boolean"
                 },
                 "category": {
                   "type": "string",
-                  "enum": [
-                    "workspace",
-                    "security"
-                  ]
+                  "enum": ["workspace", "security"]
                 },
                 "muteable": {
                   "type": "boolean"
                 }
               },
-              "required": [
-                "type",
-                "channel",
-                "enabled",
-                "category",
-                "muteable"
-              ],
+              "required": ["type", "channel", "enabled", "category", "muteable"],
               "additionalProperties": false
             }
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "additionalProperties": false
       },
       "UpdateNotificationPreferencesDto": {
@@ -2026,33 +2034,21 @@
               "properties": {
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "user.created",
-                    "user.password_changed",
-                    "user.welcome"
-                  ]
+                  "enum": ["user.created", "user.password_changed", "user.welcome"]
                 },
                 "channel": {
                   "type": "string",
-                  "enum": [
-                    "in_app"
-                  ]
+                  "enum": ["in_app"]
                 },
                 "enabled": {
                   "type": "boolean"
                 }
               },
-              "required": [
-                "type",
-                "channel",
-                "enabled"
-              ]
+              "required": ["type", "channel", "enabled"]
             }
           }
         },
-        "required": [
-          "items"
-        ]
+        "required": ["items"]
       },
       "UpdateNotificationDto": {
         "type": "object",
@@ -2075,11 +2071,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "user.created",
-              "user.password_changed",
-              "user.welcome"
-            ]
+            "enum": ["user.created", "user.password_changed", "user.welcome"]
           },
           "payload": {
             "type": "object",
@@ -2098,10 +2090,7 @@
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
               }
             },
-            "required": [
-              "kind",
-              "id"
-            ],
+            "required": ["kind", "id"],
             "additionalProperties": false,
             "nullable": true
           },
@@ -2112,10 +2101,7 @@
           },
           "actorType": {
             "type": "string",
-            "enum": [
-              "user",
-              "system"
-            ]
+            "enum": ["user", "system"]
           },
           "actorId": {
             "type": "string",
@@ -2188,11 +2174,7 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": [
-          "onlineUserIds",
-          "revision",
-          "generatedAt"
-        ],
+        "required": ["onlineUserIds", "revision", "generatedAt"],
         "additionalProperties": false
       }
     }

@@ -15,6 +15,12 @@ import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
 import { UserDetailPage } from './pages/user-detail';
 import { PlaygroundPage } from './pages/playground';
+import { SettingsLayout } from './pages/settings/layout';
+import { SettingsProfilePage } from './pages/settings/profile';
+import { SettingsAccountPage } from './pages/settings/account';
+import { SettingsSecurityPage } from './pages/settings/security';
+import { SettingsNotificationsPage } from './pages/settings/notifications';
+import { SettingsAppearancePage } from './pages/settings/appearance';
 
 const rootRoute = createRootRoute({
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
@@ -94,6 +100,47 @@ const userDetailRoute = createRoute({
   component: UserDetailPage,
 });
 
+/**
+ * Налаштування — вкладені роути під спільним каркасом. `/settings` = Profile
+ * (індексний роут, як у шаблоні shadcn-admin): у налаштування заходять
+ * найчастіше саме по профіль, і зайвий редірект тут ні до чого.
+ */
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/settings',
+  component: SettingsLayout,
+});
+
+const settingsProfileRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: '/',
+  component: SettingsProfilePage,
+});
+
+const settingsAccountRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'account',
+  component: SettingsAccountPage,
+});
+
+const settingsSecurityRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'security',
+  component: SettingsSecurityPage,
+});
+
+const settingsNotificationsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'notifications',
+  component: SettingsNotificationsPage,
+});
+
+const settingsAppearanceRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'appearance',
+  component: SettingsAppearancePage,
+});
+
 const playgroundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/playground',
@@ -102,7 +149,19 @@ const playgroundRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([dashboardRoute, usersRoute, userDetailRoute, playgroundRoute]),
+  appRoute.addChildren([
+    dashboardRoute,
+    usersRoute,
+    userDetailRoute,
+    settingsRoute.addChildren([
+      settingsProfileRoute,
+      settingsAccountRoute,
+      settingsSecurityRoute,
+      settingsNotificationsRoute,
+      settingsAppearanceRoute,
+    ]),
+    playgroundRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });

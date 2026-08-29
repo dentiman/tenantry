@@ -13,6 +13,7 @@ export type ActivityListResponseDtoOutputItemsItemType =
 export const ActivityListResponseDtoOutputItemsItemType = {
   usercreated: 'user.created',
   userpassword_changed: 'user.password_changed',
+  usersessions_revoked: 'user.sessions_revoked',
   userenabled: 'user.enabled',
   userdisabled: 'user.disabled',
   emailsent: 'email.sent',

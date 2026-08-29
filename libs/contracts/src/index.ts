@@ -2,6 +2,7 @@ export * from './error';
 export * from './pagination';
 export * from './phone';
 export * from './user';
+export * from './account';
 export * from './activity';
 export * from './notification';
 export * from './file';

@@ -27,6 +27,9 @@ export const ACTIVITY_TYPES = [
   // мусить фільтруватися одним type, не розбором payload-у.
   // Пароль у payload не потрапляє НІКОЛИ — ні новий, ні хеш, ні його довжина
   'user.password_changed',
+  // Self-service «вийти на всіх пристроях». Окремий тип, а не 'user.password_changed':
+  // відкликання сесій буває і без зміни пароля, і читач журналу має бачити різницю
+  'user.sessions_revoked',
   'user.enabled',
   'user.disabled',
   'email.sent',
@@ -44,6 +47,12 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = {
   }),
   'user.password_changed': z.object({
     user: EntityRefSchema,
+  }),
+  'user.sessions_revoked': z.object({
+    user: EntityRefSchema,
+    // Скільки refresh-сесій вибито. Число, а не список: ідентичності пристрою в моделі
+    // немає (рядок токена живе до найближчої ротації), і перелічувати нічого
+    sessionCount: z.number().int().nonnegative(),
   }),
   'user.enabled': z.object({
     user: EntityRefSchema,

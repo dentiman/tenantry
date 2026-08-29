@@ -1,8 +1,9 @@
 import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { LogoutDto } from './dto/logout.dto';
 import { AuthResponseDto, AuthTokensDto, MeResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
@@ -32,6 +33,18 @@ export class AuthController {
   @ApiOkResponse({ type: AuthTokensDto.Output })
   async refresh(@Body() dto: RefreshDto): Promise<AuthTokens> {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  /**
+   * Вихід: клієнт здає свій refresh-токен, рядок зникає з БД. Публічний і
+   * ідемпотентний (завжди 204) — деталі в AuthService.logout.
+   */
+  @Public()
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  async logout(@Body() dto: LogoutDto): Promise<void> {
+    await this.authService.logout(dto.refreshToken);
   }
 
   @Get('me')

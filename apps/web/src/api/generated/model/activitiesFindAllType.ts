@@ -13,6 +13,7 @@ export type ActivitiesFindAllType =
 export const ActivitiesFindAllType = {
   usercreated: 'user.created',
   userpassword_changed: 'user.password_changed',
+  usersessions_revoked: 'user.sessions_revoked',
   userenabled: 'user.enabled',
   userdisabled: 'user.disabled',
   emailsent: 'email.sent',

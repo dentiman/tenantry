@@ -57,7 +57,7 @@ export class AuthService {
 
     this.logger.log(`User logged in successfully: ${user.email} (ID: ${user.id})`);
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.issueTokens(user);
     return { user, tokens };
   }
 
@@ -128,7 +128,45 @@ export class AuthService {
       `Token refreshed successfully for user: ${storedToken.user.email} (ID: ${storedToken.userId})`,
     );
 
-    return this.generateTokens(storedToken.user);
+    return this.issueTokens(storedToken.user);
+  }
+
+  /**
+   * Здача власного refresh-токена на виході (V1 «рівень 0»). До цього logout був
+   * суто клієнтським (`clearSession()` у сторі), і рядок токена лишався живим у БД
+   * до `expiresAt` — вийшовши на чужому комп'ютері, юзер лишав там робочу сесію.
+   *
+   * Мовчазно ідемпотентний: невірний формат, чужий tenant, неіснуючий чи вже
+   * зданий токен — усе це 204, а не 4xx. Роут публічний, і будь-яка деталізація
+   * зробила б із нього оракул «чи існує такий tokenId».
+   *
+   * Невірний секрет НЕ вмикає theft-detection (на відміну від /refresh): там
+   * пред'явлення чужого токена — спроба ним скористатись, тут — щонайбільше спосіб
+   * вибити чужі сесії анонімним запитом.
+   */
+  async logout(refreshToken: string): Promise<void> {
+    const [tenantId, tokenId, secret] = refreshToken.split(':');
+    if (!tenantId || !tokenId || !secret) {
+      this.logger.debug('Logout ignored - invalid token format');
+      return;
+    }
+
+    // Як у refresh: контекст беремо з самого токена (JWT на цьому роуті немає)
+    this.tenantContext.set(tenantId);
+
+    const storedToken = await this.prisma.refreshToken.findUnique({ where: { id: tokenId } });
+    if (storedToken?.tenantId !== tenantId) {
+      this.logger.debug(`Logout ignored - token not found: ${tokenId}`);
+      return;
+    }
+
+    if (!(await argon2.verify(storedToken.tokenHash, secret))) {
+      this.logger.warn(`Logout ignored - secret mismatch for token: ${tokenId}`);
+      return;
+    }
+
+    await this.prisma.refreshToken.delete({ where: { id: tokenId } });
+    this.logger.log(`Refresh session revoked on logout (user: ${storedToken.userId})`);
   }
 
   async getMe(userId: string): Promise<PrismaUser> {
@@ -141,7 +179,13 @@ export class AuthService {
     return user;
   }
 
-  private async generateTokens(user: PrismaUser): Promise<AuthTokens> {
+  /**
+   * Видача пари токенів. Публічний, бо потрібен не тільки login/refresh: після
+   * зміни власного пароля і після «вийти звідусіль» усі refresh-рядки юзера
+   * видаляються, і поточному пристрою треба одразу повернути свіжу пару — інакше
+   * дія, яку людина зробила свідомо, викидала б її саму на /login.
+   */
+  async issueTokens(user: PrismaUser): Promise<AuthTokens> {
     // tenantId — З РЯДКА ЮЗЕРА в БД, ніколи з запиту (§ «Джерело tenantId» плану)
     const payload = { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId };
     const accessToken = await this.jwtService.signAsync(payload);

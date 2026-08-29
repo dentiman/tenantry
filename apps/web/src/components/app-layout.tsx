@@ -1,4 +1,4 @@
-import { Blocks, ChevronsUpDown, LayoutDashboard, Layers, Users } from 'lucide-react';
+import { Blocks, ChevronsUpDown, LayoutDashboard, Layers, Settings, Users } from 'lucide-react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@saas-skeleton/ui/components/ui/dropdown-menu';
 import {
@@ -28,7 +29,8 @@ import {
 } from '@saas-skeleton/ui/components/page-header-slot';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
-import { useAuthStore } from '../stores/auth.store';
+import { authLogout } from '../api/generated/api';
+import { getStoredRefreshToken, useAuthStore } from '../stores/auth.store';
 import { NotificationBell } from './notifications/notification-bell';
 
 /**
@@ -53,6 +55,13 @@ export function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const logout = () => {
+    const refreshToken = getStoredRefreshToken();
+    if (refreshToken) {
+      // Здаємо токен серверу, але НЕ чекаємо на відповідь: вихід не має залежати
+      // від мережі. Викликаємо згенеровану функцію напряму, а не через хук —
+      // помилка тут не подія для юзера, а глобальний MutationCache показав би тост
+      void authLogout({ refreshToken }).catch(() => undefined);
+    }
     clearSession();
     void navigate({ to: '/login' });
   };
@@ -133,6 +142,13 @@ export function AppLayout() {
                     <ChevronsUpDown className="ml-auto shrink-0 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="end" sideOffset={8} className="min-w-48">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem render={<Link to="/settings" />}>
+                        <Settings />
+                        {t('nav.settings')}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                       <DropdownMenuItem variant="destructive" onClick={logout}>
                         {t('logout')}
