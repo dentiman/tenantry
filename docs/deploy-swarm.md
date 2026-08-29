@@ -52,7 +52,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | Питання | Рішення |
 | ------- | ------- |
 | Транспорт | `docker context over SSH`, без файлів на сервері (§6) |
-| Registry | GitLab Registry (gitlab.com). Логін скрізь — предефайнені `CI_REGISTRY_USER`/`CI_REGISTRY_PASSWORD` (job-token), як в accounting; нодам роздається через `--with-registry-auth` |
+| Registry | GitLab Registry. Build — предефайнений job-token. **Deploy — Deploy Token (`read_registry`)**, бо job-token дійсний лише поки живе job, а pull на ноді асинхронний (§6, «Три запобіжники»); нодам роздається через `--with-registry-auth` |
 | SSH login | раннер↔manager уже налаштований (ключ на рівні раннера); у CI не інжектимо. Job-и — за runner-тегом (тимчасово `deploy_dev` для всіх) |
 | Середовища | **dev** (гілка `dev`→`saas-dev`) + **prod** (`main`→`saas-prod`) |
 | Стан | у стеку, прибито до manager (`node.role==manager`, `replicas:1`); volume `local`+`o:bind` у `${SAAS_DATA_DIR}` → бекап = весь сервер |
@@ -121,10 +121,47 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 ```
 # SSH раннер↔manager УЖЕ налаштований (ключ/known_hosts на рівні раннера) — не інжектимо
 docker context create swarm --docker host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT
-docker login … -u $CI_REGISTRY_USER (job-token) # роздається нодам через --with-registry-auth
+docker login … -u $REGISTRY_DEPLOY_USER        # Deploy Token; фолбек на job-token із warning
 set -a; . ./docker/deploy.env; set +a          # прикладні секрети з репо → у оточення job-а
-DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-compose.stack.yml $STACK
+for img in …; do DOCKER_CONTEXT=swarm docker pull "$img"; done   # ПЕРЕДПУЛ, синхронно
+DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth --detach=false --prune …
+… пост-перевірка: фактичний Image кожного сервісу == щойно зібраний тег, інакше exit 1
 ```
+
+### Три запобіжники проти «зеленої джоби без деплою»
+
+`docker stack deploy` лише **ставить завдання** — образи тягне swarm-агент асинхронно, вже
+після того, як команда повернулась. Тому будь-яка причина, через яку pull не встигає або
+падає, дає таск `Rejected: No such image`, після чого `failure_action: rollback` зі
+stack-файлу тихо повертає сервіс на попередній образ — **а джоба лишається зеленою**.
+
+Спіймано наживо 2026-08-29 на `saas-dev` (коміт `6cab780`), два деплої поспіль:
+
+| # | Що впало | Симптом у dockerd |
+| - | -------- | ----------------- |
+| 1 | `/var/lib/docker` заповнений на 100% (20G; історія білдів **сусідніх** проєктів на тій самій ноді — раннер і manager це одна машина) | `write /var/lib/docker/tmp/GetImageBlob…: no space left on device` |
+| 2 | Креди на ноді протухли разом із джобою | `unauthorized: HTTP Basic: Access denied` |
+
+Обидва рази оновилась лише частина сервісів — той, хто встиг спулити першим. Стек лишався
+у змішаному стані (новий `api` проти `web` 13-денної давнини), і побачити це можна було
+тільки очима в браузері. Звідси три незалежні запобіжники в `.deploy_base`:
+
+1. **Довговічні креди** — Deploy Token зі скоупом `read_registry` замість job-token. Валідні
+   й тоді, коли нода піде пулити образ після завершення джоби (retry таска, ручний
+   `service update`, друга нода). Не задані — фолбек на job-token і попередження в логу.
+2. **Синхронний передпул** — `docker pull` кожного образу на manager ДО `stack deploy`,
+   у межах живої джоби, fail-fast. Помилка реєстру видно одразу, до того, як стек чіпали.
+3. **Пост-перевірка** — фактичний `ContainerSpec.Image` кожного з 5 сервісів звіряється зі
+   щойно зібраним тегом (з урахуванням `@sha256:`-суфікса, який swarm дописує). Розбіжність
+   = `exit 1`. Саме цього бракувало, щоб провал було видно в CI, а не в браузері.
+
+Плюс `--detach=false`: джоба чекає конвергенції, а не завершується за секунди.
+
+> **Диск на ноді.** Наш `after_script` у build-джобах чистить свої образи і BuildKit-кеш
+> (`$CI_REGISTRY_IMAGE/*` + `builder prune --filter until=24h`), але нода спільна з іншими
+> проєктами, які за собою не прибирають. Якщо `df -h /var/lib/docker` наближається до
+> 100% — це знову вдарить по деплою. Довгострокове лікування — `builder.gc` і ліміт у
+> `daemon.json` на ноді або окремий cron із `docker system prune`.
 > Job-и деплою прив'язані до раннера runner-тегами (`deploy_dev`/`deploy_prod` — скоригуй під
 > імена ваших раннерів). Саме цей раннер має готовий SSH-доступ до manager-а.
 Інтерполяція `${...}` (образи, JWT, S3, SMTP) — **на раннері** з оточення job-а. Нічого не лягає
@@ -139,8 +176,13 @@ DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-c
 
   → docker-context будується як `host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT`.
 
-**Registry** — нічого не заводити: логін предефайненими `CI_REGISTRY_USER`/`CI_REGISTRY_PASSWORD`
-(job-token), як в accounting.
+**Registry:**
+- **build** — нічого не заводити: предефайнені `CI_REGISTRY_USER`/`CI_REGISTRY_PASSWORD` (job-token).
+- **deploy** — `REGISTRY_DEPLOY_USER` / `REGISTRY_DEPLOY_PASSWORD` (обидві masked) з
+  **Deploy Token**: Settings → Repository → Deploy tokens → New token, скоуп **`read_registry`**
+  (більше нічого не вмикати). Пароль показується один раз. Без цих змінних деплой не падає —
+  фолбекається на job-token і пише попередження, — але тоді креди на ноді живуть рівно
+  стільки, скільки джоба (§6).
 
 **Прикладні секрети/конфіг — у РЕПО (тестовий прод, свідомо комітяться):**
 - `docker/deploy.env` — `POSTGRES_PASSWORD`, `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `S3_ENDPOINT`,
@@ -153,8 +195,7 @@ DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth -c docker/docker-c
 - `docker/seaweedfs/s3.prod.json` — ключі сховища (мають збігатися з `S3_ACCESS_KEY`/`S3_SECRET_KEY`).
 
 > **Для СПРАВЖНЬОГО проду:** обидва файли винести в CI Variables (Protected+Masked) і
-> розігнорувати назад у `.gitignore`; за потреби мультиноди — Deploy Token (`read_registry`)
-> замість job-token.
+> розігнорувати назад у `.gitignore`.
 
 > **SSH не налаштовуємо** — раннер↔manager уже пов'язані (ключ/known_hosts на рівні раннера).
 > У CI лише `docker context create host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT`.

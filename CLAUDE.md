@@ -59,6 +59,18 @@ IP:port** без reverse-proxy (web :8511, platform-web :8512, S3 :8503 — `mod
 compose-файлу; для сервісів із host-портом `start-first` НЕМОЖЛИВИЙ (новий таск вічно Pending —
 тільки `stop-first`); shell-executor раннера не чистить BuildKit-кеш сам (19.7GB за кілька
 пайплайнів → ENOSPC; додано `after_script` з prune). Деталі — `docs/deploy-swarm.md`.
+**Деплой посилено після тихого провалу** (2026-08-29): `stack deploy` лише СТАВИТЬ завдання —
+образи тягне swarm-агент асинхронно, тож будь-яка невдача pull-а дає `Rejected: No such image`
+і `failure_action: rollback` мовчки повертає старий образ, **а джоба лишається зеленою**.
+Спіймано двічі поспіль на `saas-dev`: (1) `/var/lib/docker` на 100% від історії білдів
+СУСІДНІХ проєктів (раннер і manager — одна машина) → `no space left on device`; (2) креди
+протухли разом із джобою → `unauthorized: HTTP Basic: Access denied`, бо `--with-registry-auth`
+роздавав нодам **job-token**, дійсний лише поки живе job. Щоразу оновлювалась лише частина
+сервісів — хто встиг спулити першим, і стек лишався у змішаному стані. Три запобіжники в
+`.deploy_base`: Deploy Token (`read_registry`, змінні `REGISTRY_DEPLOY_USER/PASSWORD`; без них
+фолбек на job-token із warning) + синхронний передпул образів у межах джоби (fail-fast, ДО
+`stack deploy`) + пост-перевірка фактичного `ContainerSpec.Image` кожного сервісу проти
+щойно зібраного тега (`exit 1` при розбіжності); плюс `--detach=false`. Деталі — `docs/deploy-swarm.md` §6.
 **EDA-0/EDA-1 завершені і перевірені** (2026-08-04): шар черг перебудований у єдиний конвеєр
 повідомлень — `libs/shared/src/jobs/` ВИДАЛЕНО цілком, натомість `libs/shared/src/messaging/`.
 Два примітиви (`defineEvent` з обовʼязковою `.vN` у типі імені / `defineCommand`) поверх ОДНОГО

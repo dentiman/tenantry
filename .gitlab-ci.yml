@@ -8,15 +8,23 @@
 # у CI ключ НЕ інжектимо. Job-и деплою приземляються на цей раннер через runner-теги
 # (deploy_dev / deploy_prod — скоригуй під імена ваших раннерів).
 #
-# Registry: предефайнені CI_REGISTRY_USER / CI_REGISTRY_PASSWORD (job-token) — як в accounting.
-# (На single-node тестовому проді job-token для --with-registry-auth достатній: manager сам
-#  пулить образи під час job-а. Для мультиноди/HA — завести Deploy Token read_registry.)
+# Registry: build-джоби логіняться предефайненим job-token'ом (CI_REGISTRY_USER/PASSWORD).
+# Deploy — Deploy Token'ом (REGISTRY_DEPLOY_USER/PASSWORD, скоуп read_registry), якщо він заданий.
+# ЧОМУ: job-token дійсний рівно поки живе job. `stack deploy` лише СТАВИТЬ ЗАВДАННЯ, а pull
+# робить swarm-агент асинхронно — і те, що не встигло до кінця джоби, ловить від реєстру
+# 401 «HTTP Basic: Access denied» → «No such image» → тихий rollback на старий образ.
+# Спіймано наживо 2026-08-29: два деплої поспіль показали зелену джобу, а web і platform-api
+# лишились на образі 13-денної давнини. Тому тут три незалежні запобіжники: довговічні креди,
+# синхронний передпул у межах джоби і пост-перевірка фактичного образу сервісів.
 #
 # --- CI/CD Variables (серверні — «як є», ті самі, що в accounting; не в репо) ---
 #   DEPLOY_USER_DEV / _PROD    ssh-юзер manager-а
 #   DEPLOY_HOST_DEV / _PROD    хост/IP manager-а
 #   DEPLOY_PORT_DEV / _PROD    ssh-порт (дефолт 22)
 #   → з них будується docker-context: host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT
+#   REGISTRY_DEPLOY_USER       логін Deploy Token'а (Settings → Repository → Deploy tokens,
+#   REGISTRY_DEPLOY_PASSWORD   скоуп read_registry; обидві masked). Не задані → фолбек на
+#                              job-token із гучним попередженням у логу джоби.
 #
 # Прикладні секрети/конфіг стеку (JWT, S3, SMTP, пароль БД) — у КОМІТНУТОМУ docker/deploy.env
 # (тестовий прод, свідомо в репо). Ключі сховища — docker/seaweedfs/s3.prod.json (теж у репо).
@@ -131,17 +139,66 @@ build_tools:
     # раннера персистентний між job-ами, тож перестворюємо, щоб не падати на «вже існує».
     - docker context rm -f swarm 2>/dev/null || true
     - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
-    # login у реєстр — предефайнений job-token (роздається нодам через --with-registry-auth)
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    # Логін у реєстр. ПРІОРИТЕТ — Deploy Token (скоуп read_registry): його креди довговічні,
+    # тому лишаються валідними й тоді, коли нода піде пулити образ ПІСЛЯ завершення джоби
+    # (retry таска, ручний `service update`, друга нода). Предефайнений job-token живе рівно
+    # стільки, скільки job, після чого реєстр віддає 401 «HTTP Basic: Access denied».
+    - |
+      set -e
+      if [ -n "$REGISTRY_DEPLOY_USER" ] && [ -n "$REGISTRY_DEPLOY_PASSWORD" ]; then
+        echo "$REGISTRY_DEPLOY_PASSWORD" | docker login "$CI_REGISTRY" -u "$REGISTRY_DEPLOY_USER" --password-stdin
+      else
+        echo "УВАГА: REGISTRY_DEPLOY_USER/REGISTRY_DEPLOY_PASSWORD не задані — логінимось job-token'ом."
+        echo "       Передпул у script робить деплой працездатним і так, але роздані нодам креди"
+        echo "       протухнуть разом із джобою. Заведи Deploy Token — docs/deploy-swarm.md §7."
+        echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+      fi
     # прикладні секрети з комітнутого файлу → у оточення job-а (для інтерполяції ${...} у стеку)
     - set -a; . ./docker/deploy.env; set +a
   script:
+    # 1) ПЕРЕДПУЛ образів на manager — синхронно, в межах живої джоби, fail-fast.
+    #    Без нього pull робить swarm-агент АСИНХРОННО вже після `stack deploy`, і будь-яка
+    #    причина, через яку pull не встигає (протухлий job-token, повний диск), дає
+    #    «No such image» → мовчазний rollback на старий образ. Тут же помилка реєстру
+    #    видна одразу і валить джобу до того, як стек чіпали.
     - |
-      echo "Deploy → context=swarm  stack=$STACK_NAME  images: $API_IMAGE / $WORKER_IMAGE"
+      set -e
+      for img in "$API_IMAGE" "$PLATFORM_API_IMAGE" "$WORKER_IMAGE" "$WEB_IMAGE" "$PLATFORM_WEB_IMAGE"; do
+        echo "→ pull $img"
+        DOCKER_CONTEXT=swarm docker pull --quiet "$img"
+      done
+    # 2) Розкат. --detach=false: джоба чекає конвергенції, а не завершується одразу.
+    - |
+      set -e
+      echo "Deploy → context=swarm  stack=$STACK_NAME"
       DOCKER_CONTEXT=swarm docker stack deploy \
-        --with-registry-auth --detach=true --prune \
+        --with-registry-auth --detach=false --prune \
         -c docker/docker-compose.stack.yml "$STACK_NAME"
-    - DOCKER_CONTEXT=swarm docker stack ps "$STACK_NAME" --filter desired-state=running
+    # 3) Пост-перевірка: сервіс мусить крутитися САМЕ на щойно зібраному образі.
+    #    Саме її браку вистачило, щоб два провальні деплої поспіль виглядали зеленими:
+    #    failure_action=rollback повертає старий образ, а джоба про це не дізнається.
+    - |
+      set -e
+      failed=0
+      check_service() {
+        expected="$2"
+        actual=$(DOCKER_CONTEXT=swarm docker service inspect "${STACK_NAME}_$1" \
+          --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}')
+        case "$actual" in
+          "$expected"|"$expected"@*) echo "  ok    $1 → $expected" ;;
+          *) echo "  FAIL  $1: очікували $expected, фактично $actual"; failed=1 ;;
+        esac
+      }
+      check_service api          "$API_IMAGE"
+      check_service platform-api "$PLATFORM_API_IMAGE"
+      check_service worker       "$WORKER_IMAGE"
+      check_service web          "$WEB_IMAGE"
+      check_service platform-web "$PLATFORM_WEB_IMAGE"
+      DOCKER_CONTEXT=swarm docker stack ps "$STACK_NAME" --filter desired-state=running
+      if [ "$failed" -ne 0 ]; then
+        echo "Деплой НЕ розкотився: swarm відкотив частину сервісів на попередній образ."
+        exit 1
+      fi
 
 deploy_dev:
   extends: .deploy_base
