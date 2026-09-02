@@ -8,6 +8,7 @@ export {
   FormTextField,
   FormPasswordField,
   FormSelect,
+  FormTextareaField,
   applyServerError,
 } from '@saas-skeleton/ui/components/form';
 export type { FormSelectOption } from '@saas-skeleton/ui/components/form';

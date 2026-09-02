@@ -14,4 +14,5 @@ export const NotificationPreferenceListDtoOutputItemsItemType = {
   usercreated: 'user.created',
   userpassword_changed: 'user.password_changed',
   userwelcome: 'user.welcome',
+  customerassigned: 'customer.assigned',
 } as const;

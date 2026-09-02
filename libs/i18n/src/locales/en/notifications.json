@@ -29,14 +29,17 @@
     "back": "Back to notifications",
     "always": "Always on",
     "category": {
-      "workspace": "Workspace",
+      "organization": "Organization",
       "security": "Security"
     },
     "label": {
       "user": {
-        "created": "New users in the workspace",
+        "created": "New users in the organization",
         "password_changed": "Password changes",
         "welcome": "Welcome message"
+      },
+      "customer": {
+        "assigned": "Customers assigned to me"
       }
     }
   },
@@ -46,6 +49,10 @@
       "created_other": "<b>{{actor}}</b> added {{count}} users, latest <a>{{user}}</a>",
       "password_changed": "<b>{{actor}}</b> changed your password",
       "welcome": "Welcome to <b>{{tenant}}</b>"
+    },
+    "customer": {
+      "assigned_one": "<b>{{actor}}</b> assigned you <a>{{customer}}</a>",
+      "assigned_other": "<b>{{actor}}</b> assigned you {{count}} customers, latest <a>{{customer}}</a>"
     }
   },
   "unknown": "You have a new notification",

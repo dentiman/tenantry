@@ -57,9 +57,61 @@ async function main(): Promise<void> {
     },
   });
 
+  // Демо-кастомери: щоб грід і картка не відкривались порожніми у свіжому форку.
+  // Ідемпотентно по externalId — тому ж ключу, яким користується справжній імпорт.
+  // Номери (цілі, свої в кожного тенанта) задаються явно — сервісного шару тут
+  // немає, — а лічильник виставляється на максимум використаного: рівно те, що
+  // робить будь-який імпорт старої бази, інакше перший створений через UI
+  // кастомер отримав би номер 1 і впав на унікальному індексі
+  const demoCustomers = [
+    {
+      externalId: 'seed-1',
+      number: 1,
+      name: 'Northwind Traders',
+      legalName: 'Northwind Traders LLC',
+      email: 'billing@northwind.example',
+      city: 'Kyiv',
+      country: 'UA',
+      tags: ['vip'],
+    },
+    {
+      externalId: 'seed-2',
+      number: 2,
+      name: 'Globex Corporation',
+      email: 'ap@globex.example',
+      city: 'Warsaw',
+      country: 'PL',
+      tags: [],
+    },
+    {
+      externalId: 'seed-3',
+      number: 3,
+      name: 'Jane Doe',
+      kind: 'PERSON' as const,
+      email: 'jane@example.com',
+      tags: [],
+    },
+  ];
+
+  for (const demo of demoCustomers) {
+    await prisma.customer.upsert({
+      where: { tenantId_externalId: { tenantId: tenant.id, externalId: demo.externalId } },
+      update: {},
+      create: { tenantId: tenant.id, ownerId: admin.id, ...demo },
+    });
+  }
+
+  await prisma.numberSequence.upsert({
+    // scope '' — майстер-дані нумеруються наскрізно, без скидання за періодом
+    where: { tenantId_name_scope: { tenantId: tenant.id, name: 'customer', scope: '' } },
+    update: {},
+    create: { tenantId: tenant.id, name: 'customer', scope: '', lastValue: demoCustomers.length },
+  });
+
   console.log(
     `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`,
   );
+  console.log(`Seeded ${String(demoCustomers.length)} demo customers`);
   console.log(
     `Seeded platform operator: ${platformAdmin.email} (password: ${PLATFORM_ADMIN_PASSWORD})`,
   );

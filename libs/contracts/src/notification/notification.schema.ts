@@ -18,6 +18,10 @@ export const NOTIFICATION_TYPES = [
   'user.password_changed',
   // новому юзеру, пишеться воркером після welcome-листа
   'user.welcome',
+  // відповідальному: на нього повісили кастомера (докладно — docs/customers.md §6).
+  // НЕ розсилаємо всім адмінам, як user.created: юзерів заводять десятками на рік,
+  // кастомерів — десятками на день, і це перше, що змусить вимкнути сповіщення взагалі
+  'customer.assigned',
 ] as const;
 export const NotificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
@@ -31,6 +35,7 @@ export const NOTIFICATION_PAYLOAD_SCHEMAS = {
   // Ні пароля, ні хеша, ні довжини — тільки факт; хто змінив, видно з actorLabel
   'user.password_changed': z.object({}),
   'user.welcome': z.object({ tenant: z.string().min(1) }),
+  'customer.assigned': z.object({ customer: EntityRefSchema }),
 } as const satisfies Record<NotificationType, z.ZodType>;
 
 /**
@@ -41,7 +46,10 @@ export const NOTIFICATION_CHANNELS = ['in_app'] as const;
 export const NotificationChannelSchema = z.enum(NOTIFICATION_CHANNELS);
 export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;
 
-export const NotificationCategorySchema = z.enum(['workspace', 'security']);
+// 'organization' — усе, що стосується компанії; 'security' — особиста безпека.
+// Слово 'workspace' свідомо не вживаємо: воно зарезервоване за навігаційним
+// поняттям у сайдбарі (docs/settings.md § «Іменування»)
+export const NotificationCategorySchema = z.enum(['organization', 'security']);
 export type NotificationCategory = z.infer<typeof NotificationCategorySchema>;
 
 export interface NotificationTypeMeta {
@@ -60,9 +68,10 @@ export interface NotificationTypeMeta {
  * тільки коли юзер явно змінив дефолт).
  */
 export const NOTIFICATION_TYPE_META = {
-  'user.created': { category: 'workspace', defaultEnabled: true, muteable: true },
+  'user.created': { category: 'organization', defaultEnabled: true, muteable: true },
   'user.password_changed': { category: 'security', defaultEnabled: true, muteable: false },
-  'user.welcome': { category: 'workspace', defaultEnabled: true, muteable: true },
+  'user.welcome': { category: 'organization', defaultEnabled: true, muteable: true },
+  'customer.assigned': { category: 'organization', defaultEnabled: true, muteable: true },
 } as const satisfies Record<NotificationType, NotificationTypeMeta>;
 
 // ---------------------------------------------------------------- читання

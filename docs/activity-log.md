@@ -456,8 +456,14 @@ const rows = await this.prisma.activity.findMany({
 Із появою картки юзера (`/users/$userId`) сама стрічка живе в окремому `ActivityFeed`, а
 драйвер лишив собі тільки оболонку: два хости — одна верстка (той самий принцип, що з
 `NotificationCard`).
-Пагінація v1 — кнопка «Load more» з накопиченням items у локальному стані
-(useInfiniteQuery через orval-конфіг — беклог, не тягнути в цей хід).
+Хостів у стрічки тепер три: `ActivityDrawer`, `ActivityPanel` (постійна бічна колонка
+карток юзера і кастомера — власна висота, свій скрол, `sticky` з `lg`) і журнал змін
+налаштувань компанії.
+Пагінація — накопичення items у локальному стані з ЛІНИВИМ довантаженням: маркер у кінці
+списку під `IntersectionObserver` (без `root`, тобто відносно вьюпорта — вкладений скрол
+панелі браузер враховує сам, тож хост не передає сюди свій контейнер). Кнопки «Load more»
+більше немає; ключ `loadMore` лишився підписом до спінера довантаження.
+`useInfiniteQuery` через orval-конфіг — і далі беклог.
 
 Ключі — `libs/i18n`, namespace `activities` (спільне для web; ключ = тип події):
 
@@ -532,7 +538,7 @@ Definition of Done: `pnpm lint && pnpm typecheck && pnpm build` зелені; `a
 - Tenant-wide фід («останні події по всьому воркспейсу») — індекс уже є
   (`tenantId, createdAt DESC`), потрібен лише варіант query без entityType/entityId.
 - Лінки з фіда на сторінки сутностей — коли з'являться сторінки (customers).
-- `useInfiniteQuery` через orval-конфіг замість «Load more» зі станом.
+- `useInfiniteQuery` через orval-конфіг замість накопичення items у власному стані.
 - Retention-cron (system-scope, за зразком cleanup-orphans) — коли з'явиться обсяг.
 - Audit log (комплаєнс, гарантована незмінність, diff) — **окрема сутність**, не
   розширення активіті.

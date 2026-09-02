@@ -1,83 +1,49 @@
 {
   "title": "Settings",
-  "subtitle": "Manage your profile, security and notification preferences.",
+  "subtitle": "Settings that belong to your organization, not to you personally.",
   "nav": {
-    "sectionLabel": "Settings section",
-    "profile": "Profile",
-    "account": "Account",
-    "security": "Security",
-    "notifications": "Notifications",
-    "appearance": "Appearance"
+    "general": "General",
+    "numbering": "Numbering",
+    "activity": "Activity"
   },
-  "loading": "Loading settings",
-  "loadError": "Could not load your account",
-  "save": "Save changes",
-  "saving": "Saving…",
-  "profile": {
-    "title": "Profile",
-    "description": "This is how you appear to other people in this workspace.",
-    "name": "Name",
-    "namePlaceholder": "Your full name",
-    "phone": "Phone",
-    "language": "Language",
-    "languageHint": "Language of the emails we send you.",
-    "saved": "Profile updated",
-    "avatar": {
-      "title": "Avatar",
-      "description": "PNG, JPEG, WebP or GIF, up to 10 MB.",
-      "change": "Change",
-      "remove": "Remove",
-      "uploading": "Uploading…",
-      "saving": "Saving…",
-      "saveFailed": "Could not save the avatar"
-    }
-  },
-  "account": {
-    "title": "Account",
-    "description": "Facts about your account that only an administrator can change.",
-    "email": "Email",
-    "emailHint": "Contact an administrator to change your email address.",
-    "role": "Role",
-    "status": "Status",
-    "active": "Active",
-    "disabled": "Disabled",
-    "createdAt": "Member since",
-    "lastSeenAt": "Last seen",
-    "never": "Never signed in"
-  },
-  "security": {
-    "title": "Security",
-    "description": "Change your password and sign out of other devices.",
-    "password": {
-      "title": "Password",
-      "description": "Changing your password signs you out everywhere else.",
-      "current": "Current password",
-      "new": "New password",
-      "confirm": "Confirm new password",
-      "mismatch": "Passwords do not match",
-      "submit": "Change password",
-      "submitting": "Changing…",
-      "changed": "Password changed"
+  "general": {
+    "title": "General",
+    "description": "Name, language and currency used across the organization.",
+    "loading": "Loading settings",
+    "name": "Organization name",
+    "locale": "Default language",
+    "locales": {
+      "en": "English"
     },
-    "sessions": {
-      "title": "Active sessions",
-      "description": "You stay signed in on this device. Everything else is signed out.",
-      "note": "Individual devices are not listed: a session is not stored as a separate thing, so it is all or nothing. Other devices lose access within 15 minutes.",
-      "signOutAll": "Sign out everywhere else",
-      "confirmTitle": "Sign out everywhere else?",
-      "confirmBody": "All other browsers and devices will have to sign in again. This device stays signed in.",
-      "confirm": "Sign out everywhere",
-      "cancel": "Cancel",
-      "done": "Other devices have been signed out"
-    }
+    "currency": "Default currency",
+    "currencyHint": "ISO 4217 code, e.g. USD or EUR. New customers inherit it.",
+    "slug": "Sign-in identifier: {{slug}} — changed by the platform operator only.",
+    "save": "Save changes",
+    "saved": "Settings saved"
   },
-  "notifications": {
-    "title": "Notifications",
-    "description": "Choose what lands in your notification inbox."
+  "numbering": {
+    "title": "Numbering",
+    "description": "How human-readable numbers are issued for your records.",
+    "loading": "Loading numbering settings",
+    "series": {
+      "customer": "Customers"
+    },
+    "nextIs": "Next number: {{label}}",
+    "prefix": "Prefix",
+    "prefixHint": "Shown before the number, e.g. \"C-\".",
+    "padding": "Minimum digits",
+    "paddingHint": "Pads with leading zeros: 6 turns 123 into 000123.",
+    "startValue": "Starting number",
+    "startValueHint": "Used for the first record only. Once numbering has started, use the field below.",
+    "save": "Save format",
+    "saved": "Numbering format saved",
+    "nextNumber": "Next number",
+    "nextNumberHint": "Can only move forward — earlier numbers are already issued. Use it after importing records from another system.",
+    "move": "Move counter",
+    "moved": "Next number is now {{next}}"
   },
-  "appearance": {
-    "title": "Appearance",
-    "description": "How this app looks on this device. The choice is stored in this browser only.",
-    "theme": "Theme"
+  "activity": {
+    "title": "Activity",
+    "description": "Who changed the organization settings, and when."
   }
 }

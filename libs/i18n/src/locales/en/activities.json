@@ -7,6 +7,18 @@
     "enabled": "<b>{{actor}}</b> enabled access for <b>{{user}}</b>",
     "disabled": "<b>{{actor}}</b> disabled access for <b>{{user}}</b>"
   },
+  "customer": {
+    "created": "<b>{{actor}}</b> created customer <b>{{customer}}</b>",
+    "archived": "<b>{{actor}}</b> archived <b>{{customer}}</b>",
+    "restored": "<b>{{actor}}</b> restored <b>{{customer}}</b>",
+    "owner_changed": "<b>{{actor}}</b> assigned <b>{{customer}}</b> to <b>{{owner}}</b>",
+    "owner_cleared": "<b>{{actor}}</b> removed the owner of <b>{{customer}}</b>",
+    "deleted": "<b>{{actor}}</b> deleted customer <b>{{customer}}</b>"
+  },
+  "settings": {
+    "updated": "<b>{{actor}}</b> updated the <b>{{section}}</b> settings",
+    "numbering_shifted": "<b>{{actor}}</b> moved the <b>{{series}}</b> numbering to {{nextNumber}}"
+  },
   "email": {
     "sent": "System sent \"{{template}}\" email to <b>{{recipient}}</b> ({{email}})"
   },

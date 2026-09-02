@@ -12,10 +12,12 @@ import {
   validationEn,
 } from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
+import customersEn from '../locales/en/customers.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import layoutEn from '../locales/en/layout.json';
 import playgroundEn from '../locales/en/playground.json';
 import settingsEn from '../locales/en/settings.json';
+import userSettingsEn from '../locales/en/user-settings.json';
 import usersEn from '../locales/en/users.json';
 
 export const LOCALE_STORAGE_KEY = 'saas_locale';
@@ -51,6 +53,8 @@ void i18n.use(initReactI18next).init({
       playground: playgroundEn,
       settings: settingsEn,
       users: usersEn,
+      customers: customersEn,
+      'user-settings': userSettingsEn,
     },
   },
   lng: detectLocale(),

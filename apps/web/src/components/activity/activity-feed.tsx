@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { useEffect, useRef, useState } from 'react';
 import {
   Empty,
   EmptyDescription,
@@ -15,12 +14,34 @@ import { ActivityMessage } from './activity-message';
 
 type Activity = ActivityListResponseDtoOutputItemsItem;
 
+/** Заглушка для безумовного виклику, коли власного джерела не передали */
+function useNoFeed(): ActivityFeedQueryResult {
+  return { isFetching: false, isError: false };
+}
+
+/** Мінімум, який стрічці треба від будь-якого джерела фіда */
+interface ActivityFeedQueryResult {
+  data?: { items: Activity[]; nextCursor: string | null };
+  isFetching: boolean;
+  isError: boolean;
+}
+
 interface ActivityFeedProps {
   entityType: string;
   /** null — сутність не обрана: запит не летить, стрічка не рендериться */
   entityId: string | null;
   /** Драйвер вимикає запит, поки закритий; сторінка тримає його увімкненим */
   isEnabled?: boolean;
+  /**
+   * Чим фетчити. Замикання, а НЕ готовий обʼєкт запиту — той самий патерн, що
+   * `useListQuery` у DataGrid: воно викликається ЯК ХУК усередині компонента,
+   * тому імʼя пропа мусить починатися з `use` (rules-of-hooks).
+   *
+   * Дефолт — фід по сутності. Перекривається там, де фід адресується не парою
+   * `{entityType, entityId}`, а самим ендпоінтом: у воркспейсі сутність береться
+   * з токена, і її id клієнту не віддається взагалі.
+   */
+  useFeedQuery?: (params: { cursor: string | undefined }) => ActivityFeedQueryResult;
 }
 
 /**
@@ -29,20 +50,33 @@ interface ActivityFeedProps {
  * верстки означало б розсинхрон при першій же зміні — той самий аргумент, що і в
  * `NotificationCard`.
  *
- * Курсорна пагінація v1: кнопка «Load more» з накопиченням items у локальному стані
- * (useInfiniteQuery через orval-конфіг — беклог).
+ * Курсорна пагінація з накопиченням items у локальному стані (useInfiniteQuery через
+ * orval-конфіг — беклог). Довантаження **ліниве**: наступна сторінка летить, коли
+ * маркер у кінці списку доходить до екрана, а не по кнопці. Спостерігач без `root`
+ * (тобто відносно вʼюпорта) свідомо: стрічка живе і на сторінці, і у власному
+ * скрол-контейнері картки — вкладений overflow браузер враховує сам, тож хост не
+ * мусить передавати сюди свій контейнер.
  */
-export function ActivityFeed({ entityType, entityId, isEnabled = true }: ActivityFeedProps) {
+export function ActivityFeed({
+  entityType,
+  entityId,
+  isEnabled = true,
+  useFeedQuery,
+}: ActivityFeedProps) {
   const { t } = useTranslation('activities');
 
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [entries, setEntries] = useState<Activity[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const { data, isFetching, isError } = useActivitiesFindAll(
+  // Обидві гілки — безумовні виклики хуків: rules-of-hooks не дозволяє вибирати
+  // джерело умовно, тому невикористана просто вимкнена через `enabled`
+  const defaultQuery = useActivitiesFindAll(
     { entityType, entityId: entityId ?? '', cursor },
-    { query: { enabled: isEnabled && entityId !== null } },
+    { query: { enabled: isEnabled && entityId !== null && useFeedQuery === undefined } },
   );
+  const customQuery = (useFeedQuery ?? useNoFeed)({ cursor });
+  const { data, isFetching, isError } = useFeedQuery ? customQuery : defaultQuery;
 
   // Скидання накопичення при зміні сутності І при кожному вмиканні: компонент може
   // жити в дереві постійно (драйвер), тому без isEnabled у залежностях повторний
@@ -73,6 +107,38 @@ export function ActivityFeed({ entityType, entityId, isEnabled = true }: Activit
   }, [data, cursor, entityId]);
 
   const isInitialLoading = isFetching && entries.length === 0;
+
+  // Маркер кінця списку. Спостерігач перестворюється на КОЖНУ зміну `nextCursor`:
+  // так наступна сторінка запитується рівно один раз на курсор, а поки триває
+  // запит (`isFetching`) спостерігача немає взагалі — це і є захист від подвійної
+  // подачі того самого курсора. Цикл сам зупиняється, коли список переростає
+  // видиму область і маркер іде за її межі.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const canLoadMore = nextCursor !== null && !isFetching;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    // `canLoadMore` заразом звужує `nextCursor` до рядка (aliased condition)
+    if (!sentinel || !canLoadMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (observed) => {
+        if (observed.some((entry) => entry.isIntersecting)) {
+          setCursor(nextCursor);
+        }
+      },
+      // Невеликий запас: сторінка починає їхати трохи раніше, ніж людина
+      // доскролила до самого низу, і скрол не смикається порожнечею
+      { rootMargin: '96px' },
+    );
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [canLoadMore, nextCursor]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -113,17 +179,10 @@ export function ActivityFeed({ entityType, entityId, isEnabled = true }: Activit
         </ol>
       )}
 
-      {nextCursor && (
-        <Button
-          className="w-full"
-          variant="secondary"
-          disabled={isFetching}
-          onClick={() => {
-            setCursor(nextCursor);
-          }}
-        >
-          {t('loadMore')}
-        </Button>
+      {nextCursor !== null && (
+        <div ref={sentinelRef} className="flex justify-center py-2">
+          <Spinner aria-label={t('loadMore')} />
+        </div>
       )}
     </div>
   );

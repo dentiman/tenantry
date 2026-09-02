@@ -1,4 +1,13 @@
-import { Blocks, ChevronsUpDown, LayoutDashboard, Layers, Settings, Users } from 'lucide-react';
+import {
+  Blocks,
+  Building2,
+  ChevronsUpDown,
+  LayoutDashboard,
+  Layers,
+  Settings,
+  UserCog,
+  Users,
+} from 'lucide-react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -114,6 +123,15 @@ export function AppLayout() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
+                      isActive={pathname.startsWith('/customers')}
+                      render={<Link to="/customers" />}
+                    >
+                      <Building2 />
+                      <span>{t('nav.customers')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
                       isActive={pathname === '/playground'}
                       render={<Link to="/playground" />}
                     >
@@ -121,6 +139,19 @@ export function AppLayout() {
                       <span>{t('nav.playground')}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {/* Налаштування ОРГАНІЗАЦІЇ — пункт головної навігації, видимий
+                      лише адміну: USER однаково не збереже жодну форму (403) */}
+                  {user?.role === 'ADMIN' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={pathname.startsWith('/settings')}
+                        render={<Link to="/settings" />}
+                      >
+                        <Settings />
+                        <span>{t('nav.settings')}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -143,9 +174,12 @@ export function AppLayout() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="end" sideOffset={8} className="min-w-48">
                     <DropdownMenuGroup>
-                      <DropdownMenuItem render={<Link to="/settings" />}>
-                        <Settings />
-                        {t('nav.settings')}
+                      {/* Під аватаром — ТІЛЬКИ особисте. Налаштування організації
+                          живуть у головній навігації: так два «Settings» ніде не
+                          стикаються (патерн GitLab/Notion) */}
+                      <DropdownMenuItem render={<Link to="/user-settings" />}>
+                        <UserCog />
+                        {t('nav.userSettings')}
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />

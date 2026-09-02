@@ -6,11 +6,14 @@ import {
   ActivitiesModule as SharedActivitiesModule,
   MessagingModule,
   NotificationsModule as SharedNotificationsModule,
+  NumberingModule as SharedNumberingModule,
   StorageModule,
 } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { CustomersModule } from './customers/customers.module';
+import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
@@ -34,8 +37,11 @@ import { loggerConfig } from './common/logger';
     StorageModule,
     SharedActivitiesModule,
     SharedNotificationsModule,
+    SharedNumberingModule,
     AuthModule,
     UsersModule,
+    CustomersModule,
+    SettingsModule,
     AccountModule,
     FilesModule,
     ActivitiesModule,

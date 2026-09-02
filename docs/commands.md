@@ -293,7 +293,8 @@ pnpm api:test:e2e
 # → pnpm --filter @saas-skeleton/api test:e2e  (Jest + supertest)
 ```
 
-96 e2e-тестів tenant-api (rls, tenant-isolation, slug-login, messaging, realtime) —
+171 e2e-тест tenant-api (rls, tenant-isolation, slug-login, messaging, realtime + last-seen,
+notifications, account, customers, numbering, settings) —
 **вимагає Postgres і Valkey** (обидва піднімає `pnpm docker:up`).
 `globalSetup` сам створює окрему БД `saas_skeleton_test`, ставить ролі (`db:roles`) і
 міграції — dev-дані не чіпає. Presence живе не в БД, тому ізоляцію їй дає окремий
@@ -332,18 +333,18 @@ Configurations для PHPStorm/WebStorm — мінімальний набір, �
 префіксом `01_`…`10_` саме в тому порядку, в якому їх треба запускати — кожен наступний
 крок залежить від того, що вже підняте попереднім:
 
-| # | Run Configuration      | Скрипт                | Навіщо саме тут |
-| - | ----------------------- | ---------------------- | --------------- |
-| 01 | `01 pnpm docker:up`     | `docker:up`            | Postgres + Mailpit + Valkey + SeaweedFS — без них усе інше падає на конекшені |
-| 02 | `02 pnpm db:roles`      | `db:roles`             | ролі `saas_migrator`/`saas_app`/`saas_platform` — без них `db:migrate:dev` (крок 04) падає, бо `MIGRATE_DATABASE_URL` іде під `saas_migrator`, якого ще нема |
-| 03 | `03 pnpm db:generate`   | `db:generate`          | Prisma Client — застосунки не збілдяться без згенерованих типів |
-| 04 | `04 pnpm db:migrate:dev`| `db:migrate:dev`       | схема БД — застосунки впадуть на першому запиті без таблиць |
-| 05 | `05 pnpm db:seed`       | `db:seed`              | дефолтний tenant + admin/platform-юзери для логіну |
-| 06 | `06 pnpm api:dev`       | `api:dev`              | Tenant API :3001 — потрібен ДО web (проксі туди) |
-| 07 | `07 pnpm platform:dev`  | `platform:dev`         | Control plane API :3002 — потрібен ДО platform-web |
-| 08 | `08 pnpm worker:dev`    | `worker:dev`           | обробник черги — потрібен, щоб джоби (welcome-email тощо) не зависали в pending |
-| 09 | `09 pnpm web:dev`       | `web:dev`              | Tenant SPA :5173 (проксі `/api` → :3001, вимагає `api:dev` живим) |
-| 10 | `10 pnpm platform:web:dev` | `platform:web:dev` | Platform SPA :5174 (проксі `/api` → :3002, вимагає `platform:dev` живим) |
+| #   | Run Configuration          | Скрипт             | Навіщо саме тут                                                                                                                                              |
+| --- | -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 01  | `01 pnpm docker:up`        | `docker:up`        | Postgres + Mailpit + Valkey + SeaweedFS — без них усе інше падає на конекшені                                                                                |
+| 02  | `02 pnpm db:roles`         | `db:roles`         | ролі `saas_migrator`/`saas_app`/`saas_platform` — без них `db:migrate:dev` (крок 04) падає, бо `MIGRATE_DATABASE_URL` іде під `saas_migrator`, якого ще нема |
+| 03  | `03 pnpm db:generate`      | `db:generate`      | Prisma Client — застосунки не збілдяться без згенерованих типів                                                                                              |
+| 04  | `04 pnpm db:migrate:dev`   | `db:migrate:dev`   | схема БД — застосунки впадуть на першому запиті без таблиць                                                                                                  |
+| 05  | `05 pnpm db:seed`          | `db:seed`          | дефолтний tenant + admin/platform-юзери для логіну                                                                                                           |
+| 06  | `06 pnpm api:dev`          | `api:dev`          | Tenant API :3001 — потрібен ДО web (проксі туди)                                                                                                             |
+| 07  | `07 pnpm platform:dev`     | `platform:dev`     | Control plane API :3002 — потрібен ДО platform-web                                                                                                           |
+| 08  | `08 pnpm worker:dev`       | `worker:dev`       | обробник черги — потрібен, щоб джоби (welcome-email тощо) не зависали в pending                                                                              |
+| 09  | `09 pnpm web:dev`          | `web:dev`          | Tenant SPA :5173 (проксі `/api` → :3001, вимагає `api:dev` живим)                                                                                            |
+| 10  | `10 pnpm platform:web:dev` | `platform:web:dev` | Platform SPA :5174 (проксі `/api` → :3002, вимагає `platform:dev` живим)                                                                                     |
 
 Кроки 01–05 — одноразовий сетап (запускаються послідовно й завершуються самі); 06–10 —
 довгоживучі процеси (запускаються й лишаються висіти, кожен у своїй вкладці Run tool

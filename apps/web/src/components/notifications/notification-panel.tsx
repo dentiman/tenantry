@@ -30,7 +30,7 @@ import {
 } from '../../api/generated/api';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
 import type { NotificationsFindAllFilter } from '../../api/generated/model/notificationsFindAllFilter';
-import { entityRoute } from '../../lib/entity-routes';
+import { entityLink, entityPath } from '../../lib/entity-routes';
 import { NotificationItem } from './notification-item';
 import { NotificationPreferences } from './notification-preferences';
 
@@ -111,15 +111,17 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
   }, [data, cursor]);
 
   const open = (notification: Notification): void => {
-    const route = notification.target ? entityRoute(notification.target.kind) : null;
+    const link = notification.target
+      ? entityLink(notification.target.kind, notification.target.id)
+      : null;
     if (notification.readAt === null) {
       update({ id: notification.id, data: { read: true } });
     }
     // Закриваємо панель ТІЛЬКИ якщо клік справді кудись веде. Якщо цільова
     // сторінка вже відкрита, закриття виглядало б як «центр згорнувся сам собою»:
     // юзер натиснув на повідомлення, нічого не змінилось, а список зник
-    if (route && route !== pathname) {
-      void navigate({ to: route });
+    if (link && entityPath(link) !== pathname) {
+      void navigate(link);
       onClose();
     }
   };

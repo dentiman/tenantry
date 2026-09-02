@@ -3,22 +3,34 @@
  * `{kind, id}` з payload-у сповіщення чи активності; бекенд про роути не знає
  * нічого і слати їх не має права (інакше UI-навігація переїхала б у БД).
  *
- * Тип значення — union реальних роутів застосунку, а не `string`: типізовані
- * `<Link>` TanStack Router-а не приймуть довільний рядок, і це добре — мертве
- * посилання ловиться компіляцією.
+ * Значення — не рядок, а пара `{ to, params }` реального роуту застосунку:
+ * типізовані `<Link>` TanStack Router-а не приймуть довільний шлях, і мертве
+ * посилання ловиться компіляцією. Union росте рядком на кожну нову сутність.
  *
  * Невідомий kind — легальний стан (фронт може бути старіший за бекенд): виклик
  * повертає null, і місце виклику рендерить сам label без посилання.
  */
-export type EntityRoute = '/' | '/users';
+export type EntityLink =
+  | { to: '/users/$userId'; params: { userId: string } }
+  | { to: '/customers/$customerId'; params: { customerId: string } };
 
-const ENTITY_ROUTES: Record<string, EntityRoute> = {
-  // Сторінки одного юзера ще немає — ведемо на список. Коли зʼявляться сторінки
-  // сутностей (customers/tickets), тут буде рядок на кожну (з параметром id),
-  // і більше ніде нічого міняти не доведеться
-  user: '/users',
+const ENTITY_LINKS: Record<string, (id: string) => EntityLink> = {
+  user: (id) => ({ to: '/users/$userId', params: { userId: id } }),
+  customer: (id) => ({ to: '/customers/$customerId', params: { customerId: id } }),
 };
 
-export function entityRoute(kind: string): EntityRoute | null {
-  return ENTITY_ROUTES[kind] ?? null;
+export function entityLink(kind: string, id: string): EntityLink | null {
+  return ENTITY_LINKS[kind]?.(id) ?? null;
+}
+
+/**
+ * Розгорнутий шлях — ТІЛЬКИ для порівняння з поточним `location.pathname`
+ * («ми вже на цій сторінці?»). Для навігації і `<Link>` використовується сама
+ * пара `{ to, params }`, щоб роутер лишався типізованим.
+ */
+export function entityPath(link: EntityLink): string {
+  return Object.entries(link.params).reduce<string>(
+    (path, [key, value]) => path.replace(`$${key}`, value),
+    link.to,
+  );
 }

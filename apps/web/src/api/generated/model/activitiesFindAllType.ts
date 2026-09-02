@@ -17,4 +17,11 @@ export const ActivitiesFindAllType = {
   userenabled: 'user.enabled',
   userdisabled: 'user.disabled',
   emailsent: 'email.sent',
+  customercreated: 'customer.created',
+  customerarchived: 'customer.archived',
+  customerrestored: 'customer.restored',
+  customerowner_changed: 'customer.owner_changed',
+  customerdeleted: 'customer.deleted',
+  settingsupdated: 'settings.updated',
+  settingsnumbering_shifted: 'settings.numbering_shifted',
 } as const;

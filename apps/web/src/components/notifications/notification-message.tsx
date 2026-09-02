@@ -1,13 +1,18 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
-import { entityRoute } from '../../lib/entity-routes';
+import { entityLink } from '../../lib/entity-routes';
 
 type Notification = NotificationResponseDtoOutput;
 
 // Типи, які фронт уміє рендерити явно; решта → generic-ключ (фронт може бути
 // старіший за бекенд — панель не падає на невідомому типі)
-const KNOWN_TYPES = ['user.created', 'user.password_changed', 'user.welcome'] as const;
+const KNOWN_TYPES = [
+  'user.created',
+  'user.password_changed',
+  'user.welcome',
+  'customer.assigned',
+] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
 function isKnown(type: string): type is KnownType {
@@ -60,8 +65,10 @@ export function NotificationMessage({
     return <>{t('unknown')}</>;
   }
 
-  const user = entityRef(payload, 'user');
-  const userRoute = user && !plain ? entityRoute(user.kind) : null;
+  // Сутність, на яку веде текст: у user.* це юзер, у customer.* — кастомер.
+  // Ключ у payload один на тип, тому беремо перший знайдений
+  const subject = entityRef(payload, 'user') ?? entityRef(payload, 'customer');
+  const link = subject && !plain ? entityLink(subject.kind, subject.id) : null;
 
   return (
     <Trans
@@ -70,7 +77,10 @@ export function NotificationMessage({
       count={notification.groupCount}
       values={{
         actor: notification.actorLabel ?? t('system'),
-        user: user?.label ?? '',
+        // Обидва імені вказують на ту саму сутність: ключ повідомлення вживає те,
+        // яким сутність зветься в його тексті ({{user}} / {{customer}})
+        user: subject?.label ?? '',
+        customer: subject?.label ?? '',
         tenant: strField(payload, 'tenant'),
       }}
       components={{
@@ -78,9 +88,9 @@ export function NotificationMessage({
         // фронт САМ будує посилання з {kind,id}. Різні теги, бо лінкувати актора
         // на сторінку сутності було б неправильно
         b: <b className="font-medium text-foreground" />,
-        a: userRoute ? (
+        a: link ? (
           <Link
-            to={userRoute}
+            {...link}
             className="font-medium text-primary underline-offset-4 hover:underline"
             // Щоб клік по сутності не спрацював ще й як «відкрити ціль сповіщення»
             onClick={(e) => {

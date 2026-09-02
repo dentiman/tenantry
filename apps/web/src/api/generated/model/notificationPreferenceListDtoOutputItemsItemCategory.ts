@@ -11,6 +11,6 @@ export type NotificationPreferenceListDtoOutputItemsItemCategory =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const NotificationPreferenceListDtoOutputItemsItemCategory = {
-  workspace: 'workspace',
+  organization: 'organization',
   security: 'security',
 } as const;

@@ -1,6 +1,6 @@
 {
   "title": "Users",
-  "subtitle": "Manage the people who can sign in to this workspace.",
+  "subtitle": "Manage the people who can sign in to this organization.",
   "searchLabel": "Search users",
   "searchPlaceholder": "Search by email or name…",
   "filters": {
@@ -92,10 +92,6 @@
     "back": "Users",
     "notFound": "User not found",
     "notFoundHint": "It may have been deleted, or the link is wrong.",
-    "tabs": {
-      "overview": "Overview",
-      "activity": "Activity"
-    },
     "contact": {
       "title": "Contact",
       "email": "Email",

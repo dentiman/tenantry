@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
-import { entityRoute } from '../../lib/entity-routes';
+import { entityLink } from '../../lib/entity-routes';
 import { NotificationCard } from './notification-card';
 
 type Notification = NotificationResponseDtoOutput;
@@ -33,7 +33,9 @@ export function NotificationItem({
   const isArchived = notification.archivedAt !== null;
   // Ціль може бути невідомого фронту типу — тоді картка не клікабельна, але
   // прочитати/архівувати її все одно можна
-  const hasTarget = notification.target !== null && entityRoute(notification.target.kind) !== null;
+  const hasTarget =
+    notification.target !== null &&
+    entityLink(notification.target.kind, notification.target.id) !== null;
 
   return (
     <li>

@@ -24,7 +24,6 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { TriangleAlert } from 'lucide-react';
 import {
@@ -34,7 +33,7 @@ import {
   useUsersRemove,
   useUsersSetStatus,
 } from '../api/generated/api';
-import { ActivityFeed } from '../components/activity/activity-feed';
+import { ActivityPanel } from '../components/activity/activity-panel';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
@@ -199,78 +198,10 @@ export function UserDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Tabs defaultValue="overview" className="lg:col-span-2">
-          <TabsList>
-            <TabsTrigger value="overview">{t('detail.tabs.overview')}</TabsTrigger>
-            <TabsTrigger value="activity">{t('detail.tabs.activity')}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="flex flex-col gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.contact.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Fact label={t('detail.contact.email')}>{user.email}</Fact>
-                <Separator />
-                <Fact label={t('detail.contact.phone')}>
-                  {phone ? (
-                    <span className="flex items-center justify-end gap-2 tabular-nums">
-                      {isSupportedCountry(user.phoneCountry) && (
-                        <CountryFlag country={user.phoneCountry} />
-                      )}
-                      {phone}
-                    </span>
-                  ) : (
-                    t('detail.contact.empty')
-                  )}
-                </Fact>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.account.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Fact label={t('detail.account.role')}>{t(`roles.${user.role}`)}</Fact>
-                <Separator />
-                <Fact label={t('detail.account.status')}>
-                  {user.isActive ? t('status.active') : t('status.inactive')}
-                </Fact>
-                <Separator />
-                <Fact label={t('detail.account.locale')}>{user.locale}</Fact>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.meta.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Fact label={t('detail.meta.created')}>{formatDateTime(user.createdAt)}</Fact>
-                <Separator />
-                <Fact label={t('detail.meta.updated')}>{formatDateTime(user.updatedAt)}</Fact>
-                <Separator />
-                <Fact label={t('detail.meta.id')}>
-                  <code className="font-mono text-xs break-all">{user.id}</code>
-                </Fact>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <Card>
-              <CardContent>
-                {/* Той самий компонент, що в драйвері зі списку — стрічка одна */}
-                <ActivityFeed entityType="user" entityId={user.id} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex flex-col gap-4">
+      {/* Дві колонки: зліва дані, справа — постійна стрічка подій. Вкладок більше
+          немає: після переїзду Activity у колонку в них лишався б один розділ */}
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>{t('detail.state.title')}</CardTitle>
@@ -288,6 +219,43 @@ export function UserDetailPage() {
               </Fact>
               <Separator />
               <Fact label={t('detail.state.memberSince')}>{formatDate(user.createdAt)}</Fact>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('detail.contact.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Fact label={t('detail.contact.email')}>{user.email}</Fact>
+              <Separator />
+              <Fact label={t('detail.contact.phone')}>
+                {phone ? (
+                  <span className="flex items-center justify-end gap-2 tabular-nums">
+                    {isSupportedCountry(user.phoneCountry) && (
+                      <CountryFlag country={user.phoneCountry} />
+                    )}
+                    {phone}
+                  </span>
+                ) : (
+                  t('detail.contact.empty')
+                )}
+              </Fact>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('detail.account.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Fact label={t('detail.account.role')}>{t(`roles.${user.role}`)}</Fact>
+              <Separator />
+              <Fact label={t('detail.account.status')}>
+                {user.isActive ? t('status.active') : t('status.inactive')}
+              </Fact>
+              <Separator />
+              <Fact label={t('detail.account.locale')}>{user.locale}</Fact>
             </CardContent>
           </Card>
 
@@ -317,7 +285,25 @@ export function UserDetailPage() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('detail.meta.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Fact label={t('detail.meta.created')}>{formatDateTime(user.createdAt)}</Fact>
+              <Separator />
+              <Fact label={t('detail.meta.updated')}>{formatDateTime(user.updatedAt)}</Fact>
+              <Separator />
+              <Fact label={t('detail.meta.id')}>
+                <code className="font-mono text-xs break-all">{user.id}</code>
+              </Fact>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Той самий компонент, що на картці кастомера — стрічка одна */}
+        <ActivityPanel entityType="user" entityId={user.id} />
       </div>
 
       <ChangePasswordModal

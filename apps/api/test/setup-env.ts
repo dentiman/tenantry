@@ -1,4 +1,12 @@
+import http from 'node:http';
 import { buildTestDatabaseUrl, buildTestPlatformUrl } from './test-database';
+
+// Node ≥19 тримає keep-alive у globalAgent увімкненим. У e2e це шкодить: кожен
+// сьют піднімає СВІЙ Nest-застосунок і закриває його в afterAll, а supertest
+// бере сокети зі спільного пулу — сокет до вже закритого сервера повертається
+// наступному сьюту й дає транспортну помилку (`ECONNRESET`, `Parse Error:
+// Expected HTTP/`) у випадковому тесті, що не має до неї стосунку.
+http.globalAgent = new http.Agent({ keepAlive: false });
 
 // setupFiles виконується в worker-і ДО імпорту модулів застосунку —
 // PrismaService і все інше побачать уже тестовий DATABASE_URL
@@ -6,6 +14,12 @@ process.env.DATABASE_URL = buildTestDatabaseUrl();
 // MT-2: SystemPrismaService (BYPASSRLS) теж мусить дивитись на ТЕСТОВУ БД —
 // його дефолт вказує на dev, і без цього прямі доступи тестів чистили б dev-дані
 process.env.PLATFORM_DATABASE_URL = buildTestPlatformUrl();
+
+// Малий пул на застосунок: e2e піднімає десяток Nest-апок в ОДНОМУ процесі, і з
+// дефолтними 10 конекшенами на кожен пул (× 2 — звичайний і системний клієнт)
+// вони впираються в max_connections Postgres-а. Проявлялось як випадкові 503 у
+// сусідніх сьютах, а не як помилка підключення
+process.env.DATABASE_POOL_MAX ??= '3';
 
 // RT-0: presence живе у Valkey, а не в БД, тому окремої «тестової БД» для неї немає —
 // ізоляцію дає префікс ключів. Свій префікс на КОЖЕН jest-worker: інакше паралельні

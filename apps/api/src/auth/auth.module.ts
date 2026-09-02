@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AccessTokenService } from './access-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
@@ -26,6 +27,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      // ПІСЛЯ JwtAuthGuard — порядок guard-ів дорівнює порядку реєстрації,
+      // і RolesGuard читає request.user, який кладе перший
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
   // AccessTokenService експортується для RealtimeModule: socket-middleware перевіряє

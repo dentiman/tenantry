@@ -11,35 +11,15 @@ import {
   userRegisteredEvent,
 } from '@saas-skeleton/shared';
 import { Role } from '@saas-skeleton/database';
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+// Пара phone/phoneCountry узгоджується одним правилом на застосунок (common/phone.ts):
+// те саме поле є в кастомерів і їхніх контактів
+import { normalizePhonePair } from '../common/phone';
 
 /** avatarFile потрібен контролеру для presign мініатюри в UserResponse.avatarUrl */
 export type UserWithAvatar = Prisma.UserGetPayload<{ include: { avatarFile: true } }>;
-
-/**
- * phone і phoneCountry — одна неподільна пара, і тримається вона ТУТ, а не крос-полевим
- * refine у контракті (той зробив би зі схеми ZodEffects і зламав .omit()/.partial(),
- * якими UpdateUserSchema виводиться з CreateUserSchema).
- *
- * Правила: телефон стерли → країну теж; країну не прислали → виводимо з самого номера
- * (для +380 однозначно; для +1 клієнт має прислати явно — інакше буде US);
- * телефон у патчі відсутній → пари не чіпаємо взагалі, навіть якщо прислали саму країну.
- */
-function normalizePhonePair(data: {
-  phone?: string | null;
-  phoneCountry?: string | null;
-}): { phone?: string | null; phoneCountry?: string | null } {
-  if (data.phone === undefined) return {};
-  if (data.phone === null) return { phone: null, phoneCountry: null };
-
-  return {
-    phone: data.phone,
-    phoneCountry: data.phoneCountry ?? parsePhoneNumberFromString(data.phone)?.country ?? null,
-  };
-}
 
 @Injectable()
 export class UsersService {

@@ -1,0 +1,169 @@
+{
+  "title": "Customers",
+  "subtitle": "The companies and people you do business with.",
+  "searchLabel": "Search customers",
+  "searchPlaceholder": "Name, number, email or tax ID…",
+  "filters": {
+    "statusLabel": "Status",
+    "statusAll": "All statuses",
+    "kindLabel": "Type",
+    "kindAll": "All types"
+  },
+  "toolbar": {
+    "total": "Total",
+    "selected": "Selected"
+  },
+  "table": {
+    "ariaLabel": "Customers",
+    "number": "No.",
+    "name": "Customer",
+    "status": "Status",
+    "owner": "Owner",
+    "tags": "Tags",
+    "created": "Created"
+  },
+  "kind": {
+    "ORGANIZATION": "Company",
+    "PERSON": "Individual"
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "ARCHIVED": "Archived",
+    "changeFailed": "Could not change the status",
+    "archiveAction": "Archive",
+    "archiveHeading": "Archive customer?",
+    "archiveBody": "<strong>{{name}}</strong> will be hidden from the default list. Nothing is deleted — you can restore them at any time.",
+    "archiveConfirm": "Archive",
+    "archiveCancel": "Cancel",
+    "restoreAction": "Restore",
+    "deactivateAction": "Mark inactive",
+    "activateAction": "Mark active"
+  },
+  "owner": {
+    "none": "Unassigned"
+  },
+  "loadingLabel": "Loading customers",
+  "empty": "No customers found",
+  "delete": {
+    "button": "Delete",
+    "heading": "Delete customer?",
+    "body": "This will permanently delete <strong>{{name}}</strong>. Archive them instead if you only want them out of the way.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "create": {
+    "trigger": "Add customer",
+    "heading": "Add customer",
+    "hint": "Only the name is required — everything else can be filled in later.",
+    "name": "Name",
+    "namePlaceholder": "Acme Inc",
+    "kind": "Type",
+    "email": "Email",
+    "emailPlaceholder": "billing@acme.com",
+    "phone": "Phone",
+    "cancel": "Cancel",
+    "submit": "Create customer",
+    "submitting": "Creating…"
+  },
+  "detail": {
+    "notFound": "Customer not found",
+    "notFoundHint": "It may have been deleted, or the link is wrong.",
+    "tabs": {
+      "overview": "Overview",
+      "contacts": "Contacts"
+    },
+    "edit": "Edit",
+    "contact": {
+      "title": "Contact",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "address": "Address",
+      "empty": "—"
+    },
+    "business": {
+      "title": "Business",
+      "kind": "Type",
+      "legalName": "Legal name",
+      "taxId": "Tax ID",
+      "currency": "Currency",
+      "locale": "Language",
+      "externalId": "External ID"
+    },
+    "meta": {
+      "title": "Record",
+      "created": "Created",
+      "updated": "Last updated",
+      "id": "Customer ID"
+    },
+    "state": {
+      "title": "State",
+      "status": "Status",
+      "owner": "Owner",
+      "customerSince": "Customer since",
+      "contacts": "Contacts"
+    },
+    "notes": {
+      "title": "Notes",
+      "empty": "No notes yet"
+    },
+    "tags": {
+      "title": "Tags",
+      "empty": "No tags"
+    }
+  },
+  "contacts": {
+    "title": "Contacts",
+    "empty": "No contact persons yet",
+    "emptyHint": "Add the people you actually talk to at this customer.",
+    "add": "Add contact",
+    "edit": "Edit contact",
+    "primary": "Primary",
+    "makePrimary": "Primary contact",
+    "name": "Name",
+    "position": "Position",
+    "positionPlaceholder": "CFO",
+    "email": "Email",
+    "phone": "Phone",
+    "notes": "Notes",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "submitting": "Saving…",
+    "delete": "Delete",
+    "deleteHeading": "Delete contact?",
+    "deleteBody": "<strong>{{name}}</strong> will be removed from this customer.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "rowActions": "Contact actions"
+  },
+  "edit": {
+    "heading": "Edit customer",
+    "sections": {
+      "identity": "Identity",
+      "contact": "Contact",
+      "address": "Address",
+      "business": "Business"
+    },
+    "name": "Name",
+    "legalName": "Legal name",
+    "kind": "Type",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website",
+    "taxId": "Tax ID",
+    "currency": "Currency",
+    "owner": "Owner",
+    "ownerNone": "Unassigned",
+    "notes": "Notes",
+    "addressLine1": "Address line 1",
+    "addressLine2": "Address line 2",
+    "city": "City",
+    "region": "Region",
+    "postalCode": "Postal code",
+    "country": "Country (ISO code)",
+    "cancel": "Cancel",
+    "submit": "Save changes",
+    "submitting": "Saving…"
+  }
+}

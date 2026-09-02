@@ -4,8 +4,10 @@
   "nav": {
     "dashboard": "Dashboard",
     "users": "Users",
+    "customers": "Customers",
     "playground": "Playground",
-    "settings": "Settings"
+    "settings": "Settings",
+    "userSettings": "User settings"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",

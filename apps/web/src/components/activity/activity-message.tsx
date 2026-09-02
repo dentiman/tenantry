@@ -12,6 +12,13 @@ const KNOWN_TYPES = [
   'user.enabled',
   'user.disabled',
   'email.sent',
+  'customer.created',
+  'customer.archived',
+  'customer.restored',
+  'customer.owner_changed',
+  'customer.deleted',
+  'settings.updated',
+  'settings.numbering_shifted',
 ] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
@@ -51,6 +58,14 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
     return <>{t('unknown', { type: activity.type })}</>;
   }
 
+  // Зняття відповідального — не «призначення на null»: у людини це окрема фраза,
+  // тому окремий ключ. Тип події при цьому один — журнал фільтрується по ньому
+  const owner = payload.owner;
+  const i18nKey =
+    activity.type === 'customer.owner_changed' && owner === null
+      ? 'customer.owner_cleared'
+      : activity.type;
+
   // Усі user.*-події мають однакову форму «хто зробив + над ким»: actorLabel —
   // снапшот того, хто натиснув (реальна людина доїжджає навіть у подіях, які
   // дописує worker), fallback — система, коли актора-людини не було
@@ -64,6 +79,12 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
       : {
           actor: activity.actorLabel ?? t('system'),
           user: refLabel(payload, 'user'),
+          customer: refLabel(payload, 'customer'),
+          owner: refLabel(payload, 'owner'),
+          // Налаштування — не сутність із EntityRef: у payload прості скаляри
+          section: strField(payload, 'section'),
+          series: strField(payload, 'series'),
+          nextNumber: numField(payload, 'nextNumber'),
           // Лише один тип має додаткове число — плодити окрему гілку заради нього
           // немає сенсу, зайвий ключ у values інші повідомлення просто ігнорують
           sessionCount: numField(payload, 'sessionCount'),
@@ -72,7 +93,7 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
   return (
     <Trans
       t={t}
-      i18nKey={activity.type}
+      i18nKey={i18nKey}
       values={values}
       components={{ b: <b className="font-medium text-foreground" /> }}
     />

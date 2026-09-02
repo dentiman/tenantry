@@ -20,6 +20,10 @@ model Tenant {
   isActive  Boolean  @default(true) @map("is_active")
   // Дефолтна локаль для нових юзерів тенанта
   locale    String   @default("en")
+  // Валюта розрахунків воркспейсу (ISO 4217) — дефолт для нових кастомерів і
+  // для будь-якого показу сум. КОЛОНКА, а не settings Json: закритий формат,
+  // і платформа колись питатиме «усі тенанти з currency=EUR» (docs/workspace-settings.md)
+  currency  String   @default("USD") @db.Char(3)
   // Гнучкі налаштування (feature-flags, UI-преференси); типізовані — окремими колонками
   settings  Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
@@ -34,6 +38,10 @@ model Tenant {
   notifications           Notification[]
   notificationStates      NotificationState[]
   notificationPreferences NotificationPreference[]
+  customers               Customer[]
+  customerContacts        CustomerContact[]
+  numberSequences         NumberSequence[]
+  numberSeries            NumberSeries[]
 
   @@map("tenants")
 }
@@ -77,6 +85,7 @@ model User {
   // (Prisma не вміє SET NULL з переліком колонок). Крос-tenant захист — RLS на обох таблицях.
   avatarFile              File?                    @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   uploadedFiles           File[]                   @relation("UploadedFiles")
+  ownedCustomers          Customer[]               @relation("CustomerOwner")
 
   // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
   @@unique([tenantId, email])
@@ -300,6 +309,180 @@ model NotificationPreference {
 
   @@id([tenantId, userId, type, channel])
   @@map("notification_preferences")
+}
+
+// Кастомер (контрагент) — базова доменна сутність скелетона (docs/customers.md).
+// Одна сутність із дискримінатором kind замість party-моделі (SAP BP / Odoo res.partner):
+// party правильна для ERP із кількома типами контрагентів, і Customer → Party мігрується
+// перейменуванням, коли зʼявиться другий тип. Наперед — рівень непрямості без споживача.
+model Customer {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  // Людський ідентифікатор — ЦІЛЕ число, своє в кожного тенанта. Видає сервер
+  // із number_sequences, НЕ змінюється і не перевикористовується. Префікс і нулі
+  // (`C-000123`) — presentation з number_series, а не частина ідентичності:
+  // інакше зміна формату вимагала б переписати всі рядки
+  number Int
+  kind   CustomerKind   @default(ORGANIZATION)
+  // ARCHIVED замість soft delete: «коли і хто» — питання до activities, тому
+  // окремої колонки archived_at немає (вона б розійшлася зі status)
+  status CustomerStatus @default(ACTIVE)
+
+  // Робоча назва (те, що в гріді). НЕ унікальна: жорсткий констрейнт дає
+  // «ТОВ Ромашка 2» замість правильного запису; дублікати ловить merge (беклог)
+  name      String
+  legalName String? @map("legal_name")
+
+  // Канали рівня організації; персональні — у контактних осіб
+  email        String?
+  phone        String?
+  phoneCountry String? @map("phone_country") @db.Char(2)
+  website      String?
+
+  // VAT / ЄДРПОУ / EIN — рядок як прийшов: формати і контрольні суми різні в кожній
+  // країні і змінюються, валідація тут = відхилений валідний номер клієнта
+  taxId String? @map("tax_id")
+
+  // Валюта розрахунків (ISO 4217) — потрібна ДО білінгу: без неї не показати суми
+  currency String @default("USD") @db.Char(3)
+  // Мова листів ДО КАСТОМЕРА (аналог SPRAS у SAP KNA1), не локаль співробітника
+  locale   String @default("en")
+
+  // Відповідальний менеджер. NULL — «нічий», легальний стан.
+  // FK НЕ композитний — та сама причина, що в User.avatarFile: Prisma не вміє
+  // SET NULL з переліком колонок і занулила б заодно tenant_id. Захист — RLS
+  ownerId String? @map("owner_id")
+
+  // Id у системі-джерелі: ключ ідемпотентності імпорту (повторний запуск оновлює,
+  // а не дублює) і зчеплення з інтеграцією
+  externalId String? @map("external_id")
+
+  tags  String[] @default([])
+  notes String?
+
+  // Адреса V1 — колонки, не окрема таблиця (docs/customers.md §4.3).
+  // Коли зʼявляться документи, вони копіюють адресу В СЕБЕ на момент виставлення:
+  // рахунок не має мінятися від того, що клієнт переїхав
+  addressLine1 String? @map("address_line1")
+  addressLine2 String? @map("address_line2")
+  city         String?
+  region       String?
+  postalCode   String? @map("postal_code")
+  country      String? @db.Char(2)
+
+  // Снапшот автора; без FK — юзера можуть видалити, запис лишається
+  createdById String? @map("created_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner    User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts CustomerContact[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, externalId])
+  // Опора під композитні FK майбутніх модулів (tickets/invoices → customer)
+  @@unique([tenantId, id])
+  @@index([tenantId, status, createdAt(sort: Desc), id])
+  @@index([tenantId, ownerId])
+  @@map("customers")
+}
+
+enum CustomerKind {
+  ORGANIZATION
+  PERSON
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+// Контактна особа кастомера. Вкладена сутність (не самостійний Contact, як у
+// Salesforce): не існує без кастомера, і доступ до неї = доступ до нього.
+model CustomerContact {
+  id         String @id @default(uuid())
+  tenantId   String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  customerId String @map("customer_id")
+
+  name         String
+  position     String?
+  email        String?
+  phone        String?
+  phoneCountry String? @map("phone_country") @db.Char(2)
+  // Рівно один основний на кастомера — гарантує ЧАСТКОВИЙ унікальний індекс
+  // (сирим SQL у міграції: Prisma часткові індекси не вміє). Перевірка в сервісі
+  // програла б гонці двох вкладок
+  isPrimary    Boolean @default(false) @map("is_primary")
+  notes        String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: контакт не може вказати на кастомера чужого тенанта
+  customer Customer @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, customerId])
+  @@map("customer_contacts")
+}
+
+// Лічильник людських номерів — СПІЛЬНИЙ на всі майбутні нумерації
+// (name: 'customer', далі 'invoice', 'ticket'), не таблиця кастомерів.
+//
+// Чому не CREATE SEQUENCE: послідовність одна на БД (номери скачуть між тенантами,
+// витікає обсяг сусіда), вона поза RLS, і головне — nextval НЕ відкочується, тобто
+// дає дірки в нумерації. Тут інкремент живе в тій самій транзакції, що й сам рядок,
+// тому відкат забирає і номер. Ціна — блокування рядка до коміту (створення
+// серіалізується в межах тенанта); для документів, де пропуск номера — питання від
+// податкової, це саме те, що потрібно.
+model NumberSequence {
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  name     String
+  // Бакет скидання: '' — наскрізна нумерація (майстер-дані), '2026' / '2026-09' —
+  // документи з YEARLY/MONTHLY. У ключі з першого дня: додати колонку в PK згодом
+  // дорожче, ніж завести її порожньою зараз
+  scope    String @default("")
+
+  lastValue Int @default(0) @map("last_value")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, name, scope])
+  @@map("number_sequences")
+}
+
+// Конфіг нумерації тенанта. Окремо від лічильника свідомо: у них різні життєві
+// цикли — конфіг редагує людина раз на рік, лічильник блокується на КОЖНІЙ
+// видачі. Рядок існує тільки коли тенант змінив дефолт (NUMBER_SERIES_DEFAULTS
+// у контрактах) — той самий патерн, що в notification_preferences.
+model NumberSeries {
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  name     String
+
+  prefix  String @default("")
+  padding Int    @default(0)
+  // Перший номер у КОЖНОМУ новому періоді. На вже початий лічильник не впливає —
+  // для нього є окрема монотонна операція «наступний номер = N»
+  startValue  Int               @default(1) @map("start_value")
+  resetPeriod NumberResetPeriod @default(NONE) @map("reset_period")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, name])
+  @@map("number_series")
+}
+
+enum NumberResetPeriod {
+  NONE
+  YEARLY
+  MONTHLY
 }
 
 // Inbox-патерн для ідемпотентності обробки job-ів (див. libs/shared JobInboxService).
