@@ -18,7 +18,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateCustomerSchema, type CreateCustomer } from '@saas-skeleton/contracts';
 import { getCustomersFindAllQueryKey, useCustomersCreate } from '../api/generated/api';
-import { applyServerError, FormPhoneField, FormSelect, FormTextField } from './form';
+import { useAuthStore } from '../stores/auth.store';
+import {
+  applyServerError,
+  FormPhoneField,
+  FormSelect,
+  FormTextField,
+  FormUserSelect,
+} from './form';
 
 /**
  * Швидке створення: назва + тип, решта — опційно. Це не спрощення форми, а
@@ -31,6 +38,10 @@ export function CreateCustomerModal() {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
   const createCustomer = useCustomersCreate();
+  // Дефолтний відповідальний — той, хто заводить кастомера. Сервер зробив би те
+  // саме («не передали → автор дії»), але у формі це мусить бути ВИДНО: інакше
+  // порожнє поле читається як «нічий», а створений кастомер виявиться моїм
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
 
   const kindOptions = [
     { id: 'ORGANIZATION', label: t('kind.ORGANIZATION') },
@@ -46,6 +57,7 @@ export function CreateCustomerModal() {
       email: '',
       phone: null,
       phoneCountry: null,
+      ownerId: currentUserId,
     },
   });
   const {
@@ -97,6 +109,11 @@ export function CreateCustomerModal() {
               name="kind"
               label={t('create.kind')}
               options={kindOptions}
+            />
+            <FormUserSelect
+              control={control}
+              name="ownerId"
+              label={t('create.owner')}
             />
             <FormTextField
               control={control}

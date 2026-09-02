@@ -28,6 +28,13 @@
     "noCountriesFound": "No countries found",
     "maxLengthReached": "Maximum length reached for this country"
   },
+  "userSelect": {
+    "search": "Search by name or email…",
+    "notFound": "No users found",
+    "unassigned": "Unassigned",
+    "clear": "Clear selection",
+    "refine": "Showing {{shown}} of {{total}} — refine your search"
+  },
   "dropzone": {
     "prompt": "Drop a file here or choose one",
     "choose": "Choose file",

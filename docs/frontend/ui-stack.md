@@ -308,7 +308,7 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 | `ui/button.tsx`                     | суцільний `destructive`, HeroUI hover, метрика 28/32/36/40px, `radius="full"` і суцільний focus ring                                   |
 | `ui/{input,select,input-group}.tsx` | висота 36px і `px-3`; `bg-field` / `border-input`, без тіні, тонкий primary-blue focus `ring-1`                                        |
 | `ui/textarea.tsx`                   | `px-3`, `bg-field`, без тіні, `ring-1`; стокова багаторядкова мінімальна висота `min-h-16`                                             |
-| `ui/combobox.tsx`                   | поле пошуку й chips-контейнер використовують `bg-field` / `border-input`, без тіні, `ring-1`                                           |
+| `ui/combobox.tsx`                   | поле пошуку й chips-контейнер використовують `bg-field` / `border-input`, без тіні, `ring-1`; **`ComboboxClear` доданий до експортів** — реєстр визначає його, але тримає приватним для `ComboboxInput` (`showClear`), а комбобокс із кнопкою-тригером (`UserSelect`) інпута зовні не має і рендерить скидання сестрою тригера |
 | `ui/{dialog,sheet,toast}.tsx`       | круглі X-close через `radius="full"`; toast action і footer close використовують `secondary`                                           |
 | `ui/{alert-dialog,pagination}.tsx`  | secondary для cancel та активної сторінки замість outline                                                                              |
 | `ui/switch.tsx`                     | тонкий primary-blue focus `ring-1`; error-state зберігає `ring-2`                                                                      |

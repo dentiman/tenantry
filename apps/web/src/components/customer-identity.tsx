@@ -41,6 +41,21 @@ interface CustomerIdentityProps {
 const ICON_SIZE = { sm: 'size-3', default: 'size-4', lg: 'size-5' } as const;
 
 /**
+ * Типографіка двох рядків — дзеркало `UserIdentity` (`libs/ui`), причина там же:
+ * на дефолтних 14/12px рядки майже не відрізняються один від одного, а поруч із
+ * аватаром 24px блок тексту виявляється ВИЩИМ за саме медіа. У компактному
+ * вигляді кегль падає на щабель, а міжрядковий інтервал стискається сильніше за
+ * `leading-tight` — саме він, а не `gap` (той нульовий), і дає видиму відстань.
+ * Титул шапки сюди не входить: `header` — це `h1` рівня сторінки з власною
+ * типографікою, і масштабується він кеглем заголовка, а не розміром медіа.
+ */
+const TEXT = {
+  sm: { title: 'text-xs leading-[1.15]', description: 'text-[11px] leading-[1.15]' },
+  default: { title: 'leading-tight', description: 'text-xs leading-tight' },
+  lg: { title: 'leading-tight', description: 'text-xs leading-tight' },
+} as const;
+
+/**
  * Ініціали фізособи: «Ada Lovelace» → «AL», «Ada» → «AD». Береться перша літера
  * ДВОХ слів, а не перші дві літери рядка — так блок читається як особа.
  */
@@ -101,8 +116,9 @@ export function CustomerIdentity({
       className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
     >
       {/* Медіа по центру блоку: стоковий ItemMedia притискає його до верху,
-          бо розрахований на багаторядковий опис — тут рядків рівно два */}
-      <ItemMedia className="translate-y-0 self-center">
+          бо розрахований на багаторядковий опис — тут рядків рівно два.
+          Варіант у перевизначенні обовʼязковий — про причину див. `UserIdentity` */}
+      <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
         {/* rounded-md перекриває rounded-full примітива (і його рамку в ::after) —
             тому tailwind-merge, а не власна верстка аватара */}
         <Avatar size={size} className={isOrganization ? 'rounded-md after:rounded-md' : undefined}>
@@ -117,8 +133,8 @@ export function CustomerIdentity({
         </Avatar>
       </ItemMedia>
       <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
-        {/* leading-tight на обох рядках: стокові snug/normal лишають між рядками
-            повітря, якого в рядку таблиці бути не має */}
+        {/* Стискання рядків замість стокових snug/normal: повітря, яке примітив
+            лишає між рядками, не витримує ні рядок таблиці, ні тригер поля */}
         {isHeader ? (
           // Явний <h1>, а не ItemTitle: шапка мусить лишитись заголовком першого
           // рівня сторінки (як на решті сторінок web), а примітив реєстру фіксовано
@@ -130,13 +146,13 @@ export function CustomerIdentity({
             // він росте разом із кеглем, тож на text-2xl читається як зайвий відступ,
             // а на text-sm у рядку гріда — ні. Тому в `em`, а не в пікселях: правило
             // лишається правильним за будь-якого розміру заголовка
-            className="line-clamp-1 -mb-[0.16em] text-2xl leading-tight font-bold tracking-tight text-foreground"
+            className="line-clamp-1 -mb-[0.12em] text-2xl leading-tight font-bold tracking-tight text-foreground"
             title={name}
           >
             {name}
           </h1>
         ) : (
-          <ItemTitle className="leading-tight" title={name}>
+          <ItemTitle className={TEXT[size].title} title={name}>
             {name}
           </ItemTitle>
         )}
@@ -145,7 +161,9 @@ export function CustomerIdentity({
             // Номер моноширинним — той самий вигляд, що в колонці «Number» гріда:
             // одне й те саме значення не має виглядати на двох екранах по-різному
             className={
-              isHeader ? 'font-mono text-xs leading-tight tabular-nums' : 'text-xs leading-tight'
+              isHeader
+                ? `font-mono tabular-nums ${TEXT[size].description}`
+                : TEXT[size].description
             }
             title={secondary}
           >

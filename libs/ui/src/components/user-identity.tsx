@@ -23,6 +23,20 @@ interface UserIdentityProps {
 }
 
 /**
+ * Типографіка двох рядків. `sm` — не просто менший аватар: із дефолтними 14/12px
+ * рядки майже не відрізнялись один від одного і разом були ВИЩІ за сам аватар
+ * 24px, тож блок читався як два окремі рядки тексту, а не як одна двоярусна
+ * ідентичність. У компактному вигляді кегль падає на щабель (12/11px), а
+ * міжрядковий інтервал стискається сильніше за `leading-tight` — саме він, а не
+ * `gap` (той нульовий), і створює видиму відстань між іменем і поштою.
+ */
+const TEXT = {
+  sm: { title: 'text-xs leading-[1.15]', description: 'text-[11px] leading-[1.15]' },
+  default: { title: 'leading-tight', description: 'text-xs leading-tight' },
+  lg: { title: 'leading-tight', description: 'text-xs leading-tight' },
+} as const;
+
+/**
  * Ініціали для fallback-у: «Ada Lovelace» → «AL», «Ada» → «AD», без імені — з email.
  * Береться саме перша літера ДВОХ слів, а не перші дві літери рядка — так блок
  * читається як особа навіть коли аватара немає.
@@ -73,8 +87,13 @@ export function UserIdentity({
       className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
     >
       {/* Аватар по центру блоку: стоковий ItemMedia притискає медіа до верху і зсуває
-          на 2px, бо розрахований на багаторядковий опис — тут рядків рівно два */}
-      <ItemMedia className="translate-y-0 self-center">
+          на 2px, бо розрахований на багаторядковий опис — тут рядків рівно два.
+          Перевизначення мусить нести ТОЙ САМИЙ варіант, що й стокове правило:
+          голі `self-center`/`translate-y-0` програють `group-has-…:self-start` за
+          специфічністю (tailwind-merge їх навіть не вважає конфліктом і лишає
+          обидва), і центрування було мертвим кодом — з `size="sm"` аватар 24px
+          помітно висів угорі двох рядків тексту, бо ті вищі за нього */}
+      <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
         <Avatar size={size}>
           {avatarUrl && <AvatarImage alt="" src={avatarUrl} />}
           <AvatarFallback>{getInitials(name, email)}</AvatarFallback>
@@ -82,13 +101,13 @@ export function UserIdentity({
         </Avatar>
       </ItemMedia>
       <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
-        {/* leading-tight на обох рядках: стокові snug/normal лишають між іменем і
-            поштою повітря, якого в рядку таблиці бути не має */}
-        <ItemTitle className="leading-tight" title={primary}>
+        {/* Стискання рядків замість стокових snug/normal: між іменем і поштою не
+            має бути повітря, якого не витримує ні рядок таблиці, ні тригер поля */}
+        <ItemTitle className={TEXT[size].title} title={primary}>
           {primary}
         </ItemTitle>
         {secondary && (
-          <ItemDescription className="text-xs leading-tight" title={secondary}>
+          <ItemDescription className={TEXT[size].description} title={secondary}>
             {secondary}
           </ItemDescription>
         )}

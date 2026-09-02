@@ -23,7 +23,6 @@ import {
   getCustomersFindAllQueryKey,
   getCustomersFindOneQueryKey,
   useCustomersUpdate,
-  useUsersFindAll,
 } from '../api/generated/api';
 import type { CustomerDetailResponseDtoOutput } from '../api/generated/model/customerDetailResponseDtoOutput';
 import {
@@ -32,10 +31,8 @@ import {
   FormSelect,
   FormTextareaField,
   FormTextField,
+  FormUserSelect,
 } from './form';
-
-/** Порожній рядок у селекті = «нічий»: Base UI не вміє null як значення пункту */
-const UNASSIGNED = '';
 
 /**
  * Повне редагування картки. Номер і статус тут відсутні свідомо: номер незмінний
@@ -51,9 +48,6 @@ export function EditCustomerModal({
   const { t } = useTranslation('customers');
   const queryClient = useQueryClient();
   const updateCustomer = useCustomersUpdate();
-  // Список для вибору відповідального. limit великий свідомо: селект без пошуку
-  // має сенс лише поки команда невелика — з ростом це стане окремим комбобоксом
-  const { data: users } = useUsersFindAll({ limit: 200, isActive: 'true' });
 
   const form = useForm<UpdateCustomer>({
     resolver: zodResolver(UpdateCustomerSchema),
@@ -80,7 +74,7 @@ export function EditCustomerModal({
       website: customer.website ?? '',
       taxId: customer.taxId ?? '',
       currency: customer.currency,
-      ownerId: customer.ownerId ?? UNASSIGNED,
+      ownerId: customer.ownerId,
       notes: customer.notes ?? '',
       addressLine1: customer.addressLine1 ?? '',
       addressLine2: customer.addressLine2 ?? '',
@@ -96,18 +90,14 @@ export function EditCustomerModal({
     { id: 'PERSON', label: t('kind.PERSON') },
   ];
 
-  const ownerOptions = [
-    { id: UNASSIGNED, label: t('edit.ownerNone') },
-    ...(users?.items ?? []).map((user) => ({ id: user.id, label: user.name ?? user.email })),
-  ];
-
   const onSubmit = handleSubmit(async (values) => {
     if (!customer) return;
     try {
       await updateCustomer.mutateAsync({
         id: customer.id,
-        // Порожній вибір відповідального означає «нічий», а не «не чіпати»
-        data: { ...values, ownerId: values.ownerId === UNASSIGNED ? null : values.ownerId },
+        // ownerId: null — свідомо «нічий», а не «не чіпати». Поле завжди присутнє
+        // у values, тож окремої проводки більше не потрібно
+        data: values,
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getCustomersFindAllQueryKey() }),
@@ -142,11 +132,10 @@ export function EditCustomerModal({
                 label={t('edit.kind')}
                 options={kindOptions}
               />
-              <FormSelect
+              <FormUserSelect
                 control={control}
                 name="ownerId"
                 label={t('edit.owner')}
-                options={ownerOptions}
               />
             </FieldGroup>
           </FieldSet>

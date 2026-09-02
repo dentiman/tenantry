@@ -18,6 +18,13 @@ const Combobox = ComboboxPrimitive.Root;
  * semantic `bg-field` із видимою `border-input` в обох темах. Зовнішньої тіні
  * немає; field focus використовує тонкий `ring-1` у primary blue. X-clear/remove
  * кнопки мають `radius="full"`, щоб icon-only control був геометрично круглим.
+ *
+ * ЛОКАЛЬНА ПРАВКА реєстру: `ComboboxClear` доданий до експортів. Реєстр його
+ * визначає, але тримає приватним — там він потрібен лише всередині
+ * `ComboboxInput` (проп `showClear`). Комбобокс із КНОПКОЮ-тригером (вибраний
+ * елемент показується розміткою, а не текстом у полі — див. `UserSelect`) не має
+ * інпута зовні, тож скидання доводиться рендерити сестрою тригера самому.
+ * Поведінка частини не змінена — тільки видимість.
  */
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -260,6 +267,7 @@ function useComboboxAnchor() {
 
 export {
   Combobox,
+  ComboboxClear,
   ComboboxInput,
   ComboboxContent,
   ComboboxList,
