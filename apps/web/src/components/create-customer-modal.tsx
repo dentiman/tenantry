@@ -6,7 +6,6 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -91,12 +90,17 @@ export function CreateCustomerModal() {
         {t('create.trigger')}
         <Building2 />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[420px]">
+        <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>{t('create.heading')}</DialogTitle>
           <DialogDescription>{t('create.hint')}</DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+        {/* Форма і є body діалогу: скрол тільки тут, хедер лишається на місці */}
+        <form
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
+          onSubmit={(e) => void onSubmit(e)}
+          noValidate
+        >
           <FieldGroup>
             <FormTextField
               control={control}
@@ -137,12 +141,12 @@ export function CreateCustomerModal() {
             <p className="text-sm text-destructive">{errors.root.server.message}</p>
           )}
 
-          <DialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <DialogClose render={<Button variant="secondary" />}>{t('create.cancel')}</DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? t('create.submitting') : t('create.submit')}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

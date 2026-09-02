@@ -64,11 +64,11 @@ export function ChangeAvatarModal({ user, onClose }: ChangeAvatarModalProps) {
 
   return (
     <Dialog open={user !== null} onOpenChange={close}>
-      <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[420px]">
+        <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>{t('avatar.heading')}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
           {user && (
             <UserIdentity
               email={user.email}

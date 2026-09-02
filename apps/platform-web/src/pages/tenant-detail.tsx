@@ -9,7 +9,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
@@ -217,7 +216,7 @@ export function TenantDetailPage() {
               <Trans t={t} i18nKey={`${confirmKey}.body`} values={{ name: tenant.name }} />
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialogCancel>{t(`${confirmKey}.cancelLabel`)}</AlertDialogCancel>
             <AlertDialogAction
               variant={tenant.isActive ? 'destructive' : 'default'}
@@ -228,7 +227,7 @@ export function TenantDetailPage() {
             >
               {t(`${confirmKey}.confirmLabel`)}
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

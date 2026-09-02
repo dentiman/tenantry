@@ -10,7 +10,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
@@ -182,7 +181,7 @@ function SessionsSection() {
             <AlertDialogTitle>{t('security.sessions.confirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>{t('security.sessions.confirmBody')}</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialogCancel>{t('security.sessions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -191,7 +190,7 @@ function SessionsSection() {
             >
               {t('security.sessions.confirm')}
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </section>

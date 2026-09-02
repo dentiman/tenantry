@@ -18,7 +18,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
@@ -178,7 +177,7 @@ export function TenantsPage() {
                   : t('actions.resumeConfirm.body', { name: pending.name }))}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialogCancel>
               {pending?.isActive
                 ? t('actions.suspendConfirm.cancelLabel')
@@ -198,7 +197,7 @@ export function TenantsPage() {
                 ? t('actions.suspendConfirm.confirmLabel')
                 : t('actions.resumeConfirm.confirmLabel')}
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

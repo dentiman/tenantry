@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@saas-skeleton/ui/components/ui/dialog';
@@ -108,11 +107,16 @@ export function CustomerContactModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-[440px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[440px]">
+        <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>{contact ? t('contacts.edit') : t('contacts.add')}</DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+        {/* Форма і є body діалогу: скрол тільки тут, хедер лишається на місці */}
+        <form
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
+          onSubmit={(e) => void onSubmit(e)}
+          noValidate
+        >
           <FieldGroup>
             <FormTextField control={control} name="name" label={t('contacts.name')} />
             <FormTextField
@@ -160,14 +164,14 @@ export function CustomerContactModal({
             <p className="text-sm text-destructive">{errors.root.server.message}</p>
           )}
 
-          <DialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <DialogClose render={<Button variant="secondary" />}>
               {t('contacts.cancel')}
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? t('contacts.submitting') : t('contacts.submit')}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

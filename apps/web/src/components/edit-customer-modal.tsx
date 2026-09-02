@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@saas-skeleton/ui/components/ui/dialog';
@@ -116,11 +115,16 @@ export function EditCustomerModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]">
+        <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>{t('edit.heading')}</DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
+        {/* Форма і є body діалогу: скрол тільки тут, хедер лишається на місці */}
+        <form
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
+          onSubmit={(e) => void onSubmit(e)}
+          noValidate
+        >
           <FieldSet>
             <FieldLegend>{t('edit.sections.identity')}</FieldLegend>
             <FieldGroup>
@@ -190,12 +194,12 @@ export function EditCustomerModal({
             <p className="text-sm text-destructive">{errors.root.server.message}</p>
           )}
 
-          <DialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <DialogClose render={<Button variant="secondary" />}>{t('edit.cancel')}</DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? t('edit.submitting') : t('edit.submit')}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -8,7 +8,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
@@ -480,7 +479,7 @@ export function CustomerDetailPage() {
               />
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialogCancel>
               {isDeleteConfirm ? t('delete.cancel') : t('status.archiveCancel')}
             </AlertDialogCancel>
@@ -503,7 +502,7 @@ export function CustomerDetailPage() {
                   ? t('status.archiveConfirm')
                   : t('contacts.deleteConfirm')}
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>
