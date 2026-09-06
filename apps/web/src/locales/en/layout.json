@@ -19,6 +19,11 @@
     "switchLabel": "Switch theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "paletteLabel": "Switch color theme",
+    "palettes": {
+      "slate": "Slate",
+      "gray": "Default gray"
+    }
   }
 }

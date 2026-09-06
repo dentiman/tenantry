@@ -1,0 +1,136 @@
+/**
+ * ТЕМА «Дефолтна сіра» (`gray`) — палітра, з якою платформа жила до переходу на
+ * Tailwind slate (2026-09-06). Збережена як повноцінна тема, а не як архів:
+ * її можна вибрати перемикачем і вона лишається робочою в обох режимах.
+ *
+ * Характер: майже ахроматичні zinc-нейтралі з ледь помітним фіолетовим підтоном
+ * (hue ≈ 286, chroma 0…0.014) — тепліша і пласкіша за slate; усі три поверхні
+ * шела (рейл, сайдбар, полотно) однакові, глибину дають тільки межі й тіні.
+ * Модель поверхонь узята з HeroUI v3 (`packages/styles/themes/default/variables.css`),
+ * --primary / --destructive — точні accent / danger звідти ж.
+ *
+ * КОНТРАКТ ТЕМИ (див. `docs/frontend/theming.md`):
+ *   • світлий режим — `:root[data-theme='<id>']` (вага 0-2-0);
+ *   • темний  режим — `:root[data-theme='<id>'].dark` (0-3-0).
+ *     Обидва селектори НАВМИСНО важчі за базові `:root` / `.dark`: файли тем
+ *     підключаються через `@import`, а імпорти в CSS завжди спливають на початок
+ *     файла — тобто на порядок джерела спиратися не можна, виграти має саме
+ *     специфічність;
+ *   • тема оголошує ВЕСЬ набір токенів, а не дельту — часткова тема лишила б
+ *     половину значень від попередньої;
+ *   • `color-scheme` — обовʼязковий: від нього залежать нативні скролбари,
+ *     чекбокси і автозаповнення.
+ * Мапа `@theme inline` живе в `styles.css` і темами не дублюється.
+ */
+
+:root[data-theme='gray'] {
+  --radius: 0.625rem;
+  color-scheme: light;
+  --background: oklch(0.9702 0 0);
+  --foreground: oklch(0.2103 0.0059 285.89);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  /* Точні HeroUI v3 accent / danger та їхні foreground-пари. */
+  --primary: oklch(0.6204 0.195 253.83);
+  --primary-foreground: oklch(0.9911 0 0);
+  --secondary: oklch(0.94 0.001 286.375);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(1 0 0);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.9524 0.0013 286.37);
+  --muted-foreground: oklch(0.5517 0.0138 285.94);
+  --accent: oklch(0.94 0.001 286.375);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6532 0.2328 25.74);
+  --destructive-foreground: oklch(0.9911 0 0);
+  /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
+     тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
+  --success: oklch(0.51 0.145 163.225);
+  --success-foreground: oklch(0.984 0.003 247.858);
+  --warning: oklch(0.545 0.179 58.318);
+  --warning-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.9 0.004 286.32);
+  /* Фон поля та його обводка — різні ролі: поле біле, border видимий. */
+  --field: oklch(1 0 0);
+  --input: oklch(0.9 0.004 286.32);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  /* Фокус-кільце синє — те саме рішення, що й --primary. */
+  --ring: var(--primary);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --surface-shadow:
+    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  --overlay-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+}
+
+:root[data-theme='gray'].dark {
+  color-scheme: dark;
+  --background: oklch(0.12 0.005 285.823);
+  --foreground: oklch(0.9911 0 0);
+  --card: oklch(0.2103 0.0059 285.89);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2103 0.0059 285.89);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.6204 0.195 253.83);
+  --primary-foreground: oklch(0.9911 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(0.3964 0.01 285.93);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.257 0.0037 286.14);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.594 0.1967 24.63);
+  --destructive-foreground: oklch(0.9911 0 0);
+  --success: oklch(0.696 0.17 162.48);
+  --success-foreground: var(--background);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: var(--background);
+  --border: oklch(0.28 0.006 286.033);
+  --field: var(--card);
+  --input: oklch(0.28 0.006 286.033);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  --ring: var(--primary);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --surface-shadow: 0 0 0 0 transparent;
+  --overlay-shadow: inset 0 0 1px 0 rgb(255 255 255 / 30%);
+}

@@ -725,9 +725,68 @@ POST   /public/channels/:provider/webhook @Public(), підпис провайд
   мигання; повторне надсилання того самого id безпечне (§4.5);
 - вкладення — наявні `useFileUpload` + `FileDropzone`;
 - примітиви беруться з реєстру (`docs/frontend/ui-registry.md`), **власних обгорток над
-  наявними примітивами не заводимо** — правило 12 CLAUDE.md діє і тут; для бульбашок і
-  композера свій компонент писати доведеться (у реєстрі їх немає), але складений з `Item*`,
-  `Avatar`, `Textarea`, `Button`.
+  наявними примітивами не заводимо** — правило 12 CLAUDE.md діє і тут.
+
+#### 4.14.1. З чого складається екран і що з цього вже є
+
+| Елемент екрана | Що має вміти в нашій моделі | Звідки береться |
+| --- | --- | --- |
+| Контейнер стрічки | якір на низ, догортання **старої** історії вгору (keyset, §4.3), стрибок на конкретний `seq` (диплінк), трекінг видимості рядків | [`message-scroller`](https://ui.shadcn.com/docs/components/base/message-scroller) |
+| Рядок розмови | аватар, автор, час, групування підряд ідучих реплік одного автора, футер під рядком | [`message`](https://ui.shadcn.com/docs/components/base/message) |
+| Бульбашка | варіанти (вхідна / вихідна / **внутрішня нотатка** — це наш `visibility`), дії на рівні повідомлення | [`bubble`](https://ui.shadcn.com/docs/components/base/bubble) |
+| Вкладення | медіа-прев'ю, розмір/тип, **стан завантаження**, дії | [`attachment`](https://ui.shadcn.com/docs/components/base/attachment) |
+| Системні рядки і роздільники | «додав учасника», «закрито», роздільник дати, «друкує…» | [`marker`](https://ui.shadcn.com/docs/components/base/marker) + утиліта `shimmer` |
+| **Композер** | textarea з автовисотою, Enter/Shift+Enter, вкладення, стан «надсилається» | у реєстрі немає — свій, з `input-group` + `textarea` + `button` |
+| **Список розмов** | аватар, прев'ю останньої репліки, час, **лічильник непрочитаних**, крапка присутності; курсорний фід, не `DataGrid` (§6) | у реєстрі немає — свій, з `Item*` + `Badge` + `AvatarBadge` |
+| Статуси доставки | `sent → delivered → read`, тільки вперед (§6) | свій — іконка у футері `Message` |
+
+Три «свій» — не прогалина реєстру, а наслідок того, що **чат-компоненти 2026 року описують
+діалог з AI-асистентом, а не месенджер**: у асистента рівно два учасники, і йому не потрібні
+ні список розмов, ні непрочитані, ні статуси доставки, ні внутрішні нотатки. Ринок
+перевірений (AI-кіти, платні каталоги блоків, Tailwind-бібліотеки) — **месенджерної
+механіки не дає жодне джерело, шукати вдруге не треба**. Єдине, що лишаємо як референс
+**розкладки** тришпальтового екрана, — модуль `chat/` у
+[arhamkhnz/next-shadcn-admin-dashboard-baseui](https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui)
+(MIT, Base UI, стиль `base-nova`): дивимось композицію, код не переносимо.
+
+#### 4.14.2. Що ставимо з реєстру
+
+Реліз [«Components for Chat Interfaces», червень 2026](https://ui.shadcn.com/docs/changelog/2026-06-chat-components) —
+п'ять примітивів, усі є в нашому стилі `base-nova` і написані на `@base-ui/react`
+(`merge-props` + `use-render`), тобто тієї ж родини, що й наші 33 примітиви.
+
+| Item | Частини | Залежності |
+| --- | --- | --- |
+| `message-scroller` | `Provider · Root · Viewport · Content · Item · Button` | npm `@shadcn/react` (headless, MIT, peer React ≥19) + реєстровий `button` |
+| `message` | `MessageGroup · Message · Avatar · Content · Header · Footer` | — |
+| `bubble` | `BubbleGroup · Bubble · BubbleContent · BubbleReactions` | — |
+| `attachment` | `Attachment · Media · Content · Title · Description · Actions · Trigger · Group` | реєстровий `button` |
+| `marker` | `Marker · MarkerIcon · MarkerContent` | — |
+
+Ставимо в `libs/ui` (це `registry:ui`, не сторінкові блоки):
+`pnpm dlx shadcn@4.19.0 add message-scroller message bubble attachment marker` з попереднім
+`--dry-run`; `platform-web` їх просто не імпортує. Сторінкова композиція лишається в `apps/web`.
+
+Аргумент на користь саме офіційного скролера, а не автоскрола з будь-якого чат-кіта: чотири
+його можливості лягають рівно на чотири вже ухвалені рішення — трекінг видимості дає
+`lastReadSeq` (§4.3), догортання вгору — keyset-курсор, стрибок на елемент — диплінк на `seq`,
+`Marker` — системні рядки в одній стрічці (§4.7).
+
+#### 4.14.3. Граблі, спіймані на живій перевірці реєстру
+
+- **`IconPlaceholder` у джерелі — це не поламаний імпорт**, а плейсхолдер, який CLI
+  підставляє під `iconLibrary` з `components.json` (у нас `lucide`). Копіювати JSON руками,
+  минаючи CLI, через це не можна.
+- **CSS-утиліти `scroll-fade-*` і `shimmer` у нас уже є** — `libs/ui/src/styles.css`
+  імпортує `shadcn/tailwind.css` (4.19.0), де вони оголошені; `scrollbar-thin` дає сам
+  Tailwind 4.3. Окремих плагінів ставити не треба.
+- **`message-scroller` тягне npm-пакет `@shadcn/react`** — перша headless-залежність у
+  `libs/ui`; має потрапити в `dependencies` пакета, а не застосунку.
+- **sr-only рядки зашиті англійською** (`"Scroll to end"`) — той самий відкритий пункт, що
+  хардкод «Close» у `docs/frontend/README.md`; при вендеренні виносимо в i18next.
+- **Слово «повідомлення» тепер означає дві різні речі**: конверт асинхронного шару
+  (`libs/shared/messaging`) і репліку в чаті (`chat_messages`, `ui/message.tsx`). У коді
+  колізії немає (різні пакети), у текстах — уточнюємо.
 
 ---
 

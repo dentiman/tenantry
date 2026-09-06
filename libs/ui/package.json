@@ -10,12 +10,14 @@
     "./components/not-found-page": "./src/components/not-found-page.tsx",
     "./components/page-breadcrumbs": "./src/components/page-breadcrumbs.tsx",
     "./components/page-header-slot": "./src/components/page-header-slot.tsx",
+    "./components/theme-select": "./src/components/theme-select.tsx",
     "./components/theme-switcher": "./src/components/theme-switcher.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",
     "./components/user-identity": "./src/components/user-identity.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./themes": "./src/themes/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"

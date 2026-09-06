@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SaaS Skeleton</title>
+    <!--
+      Палітра — ДО першого малювання, інакше кожне завантаження показувало б кадр
+      дефолтної теми. Клас світло/темрява так само вставляє next-themes своїм
+      скриптом; це його дзеркало для другої осі (docs/frontend/theming.md).
+      Ключ мусить збігатися зі `storageKey` у <UiThemeProvider>; значення
+      просіюється регуляркою, бо потрапляє в DOM.
+    -->
+    <script>
+      try {
+        var palette = localStorage.getItem('saas_theme_palette');
+        if (palette && /^[a-z-]{1,20}$/.test(palette)) {
+          document.documentElement.dataset.theme = palette;
+        }
+      } catch (e) {
+        /* приватний режим — лишиться дефолтна тема */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -76,6 +76,8 @@
   "appearance": {
     "title": "Appearance",
     "description": "How this app looks on this device. The choice is stored in this browser only.",
-    "theme": "Theme"
+    "theme": "Theme",
+    "palette": "Color theme",
+    "paletteDescription": "Applies to both light and dark mode."
   }
 }

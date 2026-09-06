@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
+import { UiThemeProvider } from '@saas-skeleton/ui/themes';
 import { router } from './router';
 import { initAuth } from './lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
@@ -68,9 +69,13 @@ async function bootstrap(): Promise<void> {
         disableTransitionOnChange
         storageKey="saas_theme"
       >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
+        {/* Друга вісь теми: режим тримає next-themes (клас), палітру — цей
+            провайдер (атрибут data-theme). Див. docs/frontend/theming.md */}
+        <UiThemeProvider storageKey="saas_theme_palette">
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </UiThemeProvider>
       </ThemeProvider>
     </StrictMode>,
   );

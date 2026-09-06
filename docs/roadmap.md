@@ -32,7 +32,9 @@
 Проєктні документи без реалізації (готові до роботи):
 беклог MT-4 у `multi-tenancy-architecture.md`,
 фази EDA-2 і EDA-3 у [event-driven-architecture.md](event-driven-architecture.md),
-заплановані сповіщення в [notifications.md](notifications.md) (§ «Обмеження V1 / беклог»).
+заплановані сповіщення в [notifications.md](notifications.md) (§ «Обмеження V1 / беклог»),
+календар і нагадування в [calendar.md](calendar.md) (фази CAL-1…CAL-4; перший реальний
+споживач тих самих запланованих сповіщень).
 
 ---
 

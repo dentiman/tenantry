@@ -11,35 +11,52 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/inter';
+/* Альтернативні теми. Кожна перевизначає ВЕСЬ набір токенів під власним
+   `:root[data-theme='<id>']` (світло) і `:root[data-theme='<id>'].dark` (темрява);
+   ці селектори важчі за базові нижче, тож порядок імпорту ролі не грає.
+   Контракт, реєстр і план перемикача — `docs/frontend/theming.md`. */
+@import './themes/gray.css';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Палітра поверхонь у дусі HeroUI v3 ────────────────────────────────────
-     Джерело моделі: packages/styles/themes/default/variables.css у HeroUI.
-     База: майже ахроматичні zinc-нейтралі з дуже слабким фіолетовим підтоном
-     (hue ≈ 286, chroma 0…0.014). Два свідомі продуктові рішення:
-       • --primary / --destructive — точні accent / danger HeroUI;
-       • метрика контролів (36px) — у компонентах, не тут.
-     --success/--warning — наше розширення, бо у shadcn цих ролей немає. */
+  /* ── Тема за замовчуванням: `slate` ───────────────────────────────────────
+     Живе прямо в `:root` / `.dark`, БЕЗ `[data-theme]`: атрибут на <html> може
+     бути не виставлений (перший візит, вимкнений JS), і тоді має рендеритись
+     повноцінна тема, а не порожнеча. Перемикач, виставивши `data-theme="slate"`,
+     теж потрапляє сюди — просто жоден інший блок тем не збігається.
+
+     ── Нейтраль — шкала Tailwind slate ───────────────────────────────────────
+     Прийнято 2026-09-06 замість zinc-подібних нейтралей HeroUI (варіант
+     «Slate classic»): полотно slate-50, навігаційні колонки slate-100, межі
+     slate-200, обводка полів slate-300, текст slate-900, вторинний slate-500,
+     картки — чистий білий. Тобто шкала поверхонь щільнішає ліворуч:
+     200 (наведення) → 100 (навігація) → 50 (полотно) → #fff (картки).
+     Головне: slate — НЕ «синюватий zinc», а інша нейтраль (hue ≈ 250…266,
+     chroma до 0.046), тому міняється весь блок разом, а не окремі токени —
+     інакше сірі в шелі й сірі в компонентах розійдуться.
+     Акцент — blue-600 (light) / blue-500 (dark), рідна пара цієї шкали.
+     --destructive лишається HeroUI danger, --success/--warning — наше
+     розширення: у slate відповідників немає. */
   --radius: 0.625rem;
   color-scheme: light;
-  --background: oklch(0.9702 0 0);
-  --foreground: oklch(0.2103 0.0059 285.89);
+  --background: oklch(0.984 0.003 247.858); /* slate-50  #f8fafc */
+  --foreground: oklch(0.208 0.042 265.755); /* slate-900 #0f172a */
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
-  /* Точні HeroUI v3 accent / danger та їхні foreground-пари. */
-  --primary: oklch(0.6204 0.195 253.83);
-  --primary-foreground: oklch(0.9911 0 0);
-  --secondary: oklch(0.94 0.001 286.375);
+  --primary: oklch(0.546 0.245 262.881); /* blue-600 #2563eb */
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.929 0.013 255.508); /* slate-200 #e2e8f0 */
   --secondary-foreground: var(--foreground);
   --segment: oklch(1 0 0);
   --segment-foreground: var(--foreground);
-  --muted: oklch(0.9524 0.0013 286.37);
-  --muted-foreground: oklch(0.5517 0.0138 285.94);
-  --accent: oklch(0.94 0.001 286.375);
+  --muted: oklch(0.968 0.007 247.896); /* slate-100 #f1f5f9 */
+  --muted-foreground: oklch(0.554 0.046 257.417); /* slate-500 #64748b */
+  /* Поверхня наведення/активного стану — на сходинку щільніша за навігацію,
+     інакше hover у сайдбарі (він же slate-100) не було б видно взагалі. */
+  --accent: oklch(0.929 0.013 255.508); /* slate-200 */
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.6532 0.2328 25.74);
   --destructive-foreground: oklch(0.9911 0 0);
@@ -49,10 +66,11 @@
   --success-foreground: oklch(0.984 0.003 247.858);
   --warning: oklch(0.545 0.179 58.318);
   --warning-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.9 0.004 286.32);
-  /* Фон поля та його обводка — різні ролі: поле біле, border видимий. */
+  --border: oklch(0.929 0.013 255.508); /* slate-200 */
+  /* Фон поля та його обводка — різні ролі: поле біле, border на сходинку
+     контрастніший за звичайну межу, щоб форма читалась на світлому полотні. */
   --field: oklch(1 0 0);
-  --input: oklch(0.9 0.004 286.32);
+  --input: oklch(0.869 0.022 252.894); /* slate-300 #cbd5e1 */
   --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
   --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
   --destructive-hover: color-mix(
@@ -60,14 +78,15 @@
     var(--destructive) 90%,
     var(--destructive-foreground) 10%
   );
-  /* Фокус-кільце синє — те саме рішення, що й --primary. */
   --ring: var(--primary);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: var(--background);
+  /* Навігація щільніша за полотно на одну сходинку — рівні шела читаються з
+     самих заливок, а не тільки з меж (рейл додає ще одну сходинку класом). */
+  --sidebar: oklch(0.968 0.007 247.896); /* slate-100 */
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -82,22 +101,25 @@
 }
 
 .dark {
+  /* Дзеркало світлої шкали на темних сходинках slate: полотно slate-950,
+     картки й навігація slate-900 (у темряві «щільніше» = світліше), поверхні
+     наведення slate-800, обводка полів slate-700, текст slate-50. */
   color-scheme: dark;
-  --background: oklch(0.12 0.005 285.823);
-  --foreground: oklch(0.9911 0 0);
-  --card: oklch(0.2103 0.0059 285.89);
+  --background: oklch(0.129 0.042 264.695); /* slate-950 #020617 */
+  --foreground: oklch(0.984 0.003 247.858); /* slate-50  #f8fafc */
+  --card: oklch(0.208 0.042 265.755); /* slate-900 #0f172a */
   --card-foreground: var(--foreground);
-  --popover: oklch(0.2103 0.0059 285.89);
+  --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.6204 0.195 253.83);
-  --primary-foreground: oklch(0.9911 0 0);
-  --secondary: oklch(0.274 0.006 286.033);
+  --primary: oklch(0.623 0.214 259.815); /* blue-500 #3b82f6 */
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.279 0.041 260.031); /* slate-800 #1e293b */
   --secondary-foreground: var(--foreground);
-  --segment: oklch(0.3964 0.01 285.93);
+  --segment: oklch(0.372 0.044 257.287); /* slate-700 #334155 */
   --segment-foreground: var(--foreground);
-  --muted: oklch(0.257 0.0037 286.14);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788); /* slate-400 #94a3b8 */
+  --accent: oklch(0.279 0.041 260.031);
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.594 0.1967 24.63);
   --destructive-foreground: oklch(0.9911 0 0);
@@ -105,9 +127,9 @@
   --success-foreground: var(--background);
   --warning: oklch(0.769 0.188 70.08);
   --warning-foreground: var(--background);
-  --border: oklch(0.28 0.006 286.033);
+  --border: oklch(0.279 0.041 260.031); /* slate-800 */
   --field: var(--card);
-  --input: oklch(0.28 0.006 286.033);
+  --input: oklch(0.372 0.044 257.287); /* slate-700 */
   --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
   --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
   --destructive-hover: color-mix(
@@ -121,7 +143,7 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: var(--background);
+  --sidebar: oklch(0.208 0.042 265.755); /* slate-900 */
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
