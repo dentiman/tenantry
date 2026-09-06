@@ -99,7 +99,7 @@ const tenantDetailRoute = createRoute({
 const notFoundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '$',
-  component: NotFoundPage,
+  component: () => <NotFoundPage homeTo="/" />,
 });
 
 const routeTree = rootRoute.addChildren([

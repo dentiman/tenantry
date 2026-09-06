@@ -286,7 +286,7 @@ export function PlaygroundPage() {
                 code="buttonVariants({ variant: 'secondary' })"
                 description={t('button.states.buttonLink')}
               >
-                <Link to="/users" className={buttonVariants({ variant: 'secondary' })}>
+                <Link to="/workspace/users" className={buttonVariants({ variant: 'secondary' })}>
                   {t('button.states.openUsers')}
                   <ArrowRight data-icon="inline-end" />
                 </Link>

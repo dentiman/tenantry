@@ -1,5 +1,8 @@
 {
   "title": "Component playground",
+  "nav": {
+    "buttons": "Buttons"
+  },
   "eyebrow": "Design system",
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
   "onThisPage": "On this page",

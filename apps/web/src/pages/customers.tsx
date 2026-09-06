@@ -109,7 +109,7 @@ export function CustomersPage() {
       // на /users). Текстову позначку типу знято: її тепер несе форма медіа
       cell: (c) => (
         <Link
-          to="/customers/$customerId"
+          to="/workspace/customers/$customerId"
           params={{ customerId: c.id }}
           className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

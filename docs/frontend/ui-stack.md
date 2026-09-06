@@ -191,6 +191,12 @@ vite не читає tsconfig paths.
 - **Вкладеність HTML.** `AlertDialogDescription` / `ItemDescription` уже є `<p>`, а
   `Item render={<button/>}` уже є `<button>` — не класти всередину ще один абзац або кнопку
   (React пише про це в консоль).
+- **Частини, які вимагають батька, Base UI перевіряє в РАНТАЙМІ, а не типами.**
+  `DropdownMenuLabel` — це `MenuPrimitive.GroupLabel`, і без `DropdownMenuGroup` навколо він
+  падає з `MenuGroupContext is missing` уже в браузері; те саме стосується інших `*GroupLabel`
+  і радіо-частин. Це головна пастка при переносі блоків із реєстру: shadcn-блоки писались під
+  Radix, де `DropdownMenuLabel` лежить прямо в `DropdownMenuContent` (див. `nav-user`), і
+  компілятор різницю не бачить — **кожен перенесений дропдаун треба відкрити руками**.
 - **Іконки** — `lucide-react`, per-icon імпорти; у компонентах через
   `data-icon="inline-start"|"inline-end"` **без** класів розміру (компонент керує сам).
 - **Неосновні button-actions** — `variant="secondary"`; `outline` лишається частиною
@@ -211,10 +217,15 @@ vite не читає tsconfig paths.
 
 ### Розкладка
 
-- **Шел — патерн `sidebar-07`** реєстру: бренд-плитка + назва + підзаголовок у
-  `SidebarHeader`, профіль юзера з дропдауном у `SidebarFooter` (`UserIdentity` із `libs/ui`),
-  у хедері лише `SidebarTrigger` + дзвінок + перемикач теми. `collapsible="icon"` — згорнутий
-  сайдбар стає смугою іконок 48px.
+- **Шел `apps/web` — ДВА рівні навігації** (смуга іконок area + колонка активної area):
+  окремий документ [`app-shell.md`](app-shell.md), реєстровий предок — `sidebar-09`.
+  Термінологія (`AppRail` / area / `AreaSidebar`), прив'язка до роутингу і метрики
+  розкладки — там.
+- **Шел `apps/platform-web` — патерн `sidebar-07`** реєстру: бренд-плитка + назва +
+  підзаголовок у `SidebarHeader`, профіль юзера з дропдауном у `SidebarFooter` (`UserIdentity`
+  із `libs/ui`), у хедері лише `SidebarTrigger` + дзвінок + перемикач теми.
+  `collapsible="icon"` — згорнутий сайдбар стає смугою іконок 48px. Другого рівня там немає
+  навмисно: одна area, і рейл був би декорацією.
 - **Крихти сторінок — через портал.** Сторінка рендерить `PageBreadcrumbs`, а
   `PageHeaderPortal` телепортує розмітку в слот хедера layout-а. Портал міняє лише місце в
   DOM — дерево React те саме, тож `Link` роутера й контексти сторінки працюють як звичайно.

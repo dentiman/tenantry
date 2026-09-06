@@ -11,12 +11,12 @@
  * повертає null, і місце виклику рендерить сам label без посилання.
  */
 export type EntityLink =
-  | { to: '/users/$userId'; params: { userId: string } }
-  | { to: '/customers/$customerId'; params: { customerId: string } };
+  | { to: '/workspace/users/$userId'; params: { userId: string } }
+  | { to: '/workspace/customers/$customerId'; params: { customerId: string } };
 
 const ENTITY_LINKS: Record<string, (id: string) => EntityLink> = {
-  user: (id) => ({ to: '/users/$userId', params: { userId: id } }),
-  customer: (id) => ({ to: '/customers/$customerId', params: { customerId: id } }),
+  user: (id) => ({ to: '/workspace/users/$userId', params: { userId: id } }),
+  customer: (id) => ({ to: '/workspace/customers/$customerId', params: { customerId: id } }),
 };
 
 export function entityLink(kind: string, id: string): EntityLink | null {

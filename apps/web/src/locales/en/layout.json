@@ -1,12 +1,16 @@
 {
   "brand": "SaaS Skeleton",
-  "brandSubtitle": "Workspace",
+  "areas": {
+    "workspace": "Workspace",
+    "chat": "Chat",
+    "settings": "Settings",
+    "playground": "Playground",
+    "userSettings": "User settings"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Users",
     "customers": "Customers",
-    "playground": "Playground",
-    "settings": "Settings",
     "userSettings": "User settings"
   },
   "accountMenu": "Account menu",

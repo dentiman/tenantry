@@ -116,7 +116,7 @@ export function UsersPage() {
       // Ідентичність — вхід у картку юзера: рядок таблиці дає перегляд, сторінка — деталі
       cell: (u) => (
         <Link
-          to="/users/$userId"
+          to="/workspace/users/$userId"
           params={{ userId: u.id }}
           className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

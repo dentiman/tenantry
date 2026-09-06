@@ -76,7 +76,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  */
 export function CustomerDetailPage() {
   const { t } = useTranslation(['customers']);
-  const { customerId } = useParams({ from: '/app/customers/$customerId' });
+  const { customerId } = useParams({ from: '/app/workspace/customers/$customerId' });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -100,7 +100,7 @@ export function CustomerDetailPage() {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getCustomersFindAllQueryKey() });
-        void navigate({ to: '/customers' });
+        void navigate({ to: '/workspace/customers' });
       },
     },
   });
@@ -142,7 +142,7 @@ export function CustomerDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/customers' }, { label: customer.name }]}
+        items={[{ label: t('title'), to: '/workspace/customers' }, { label: customer.name }]}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-4">

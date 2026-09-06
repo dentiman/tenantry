@@ -66,7 +66,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  */
 export function UserDetailPage() {
   const { t } = useTranslation(['users', 'common']);
-  const { userId } = useParams({ from: '/app/users/$userId' });
+  const { userId } = useParams({ from: '/app/workspace/users/$userId' });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
@@ -88,7 +88,7 @@ export function UserDetailPage() {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getUsersFindAllQueryKey() });
-        void navigate({ to: '/users' });
+        void navigate({ to: '/workspace/users' });
       },
     },
   });
@@ -119,7 +119,7 @@ export function UserDetailPage() {
     <div className="flex flex-col gap-6">
       {/* Крихти живуть у хедері layout-а — сторінка віддає їх через портал */}
       <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/users' }, { label: user.name ?? user.email }]}
+        items={[{ label: t('title'), to: '/workspace/users' }, { label: user.name ?? user.email }]}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-4">

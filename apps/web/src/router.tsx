@@ -9,7 +9,8 @@ import { z } from 'zod';
 import { CustomerQuerySchema, UserQuerySchema } from '@saas-skeleton/contracts';
 import { useAuthStore } from './stores/auth.store';
 import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
-import { AppLayout } from './components/app-layout';
+import { AppShell } from './app-shell/app-shell';
+import { isUnder } from './app-shell/paths';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
 import { DashboardPage } from './pages/dashboard';
@@ -17,19 +18,42 @@ import { UsersPage } from './pages/users';
 import { CustomersPage } from './pages/customers';
 import { CustomerDetailPage } from './pages/customer-detail';
 import { UserDetailPage } from './pages/user-detail';
+import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
-import { UserSettingsLayout } from './pages/user-settings/layout';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
 import { UserSettingsSecurityPage } from './pages/user-settings/security';
 import { UserSettingsNotificationsPage } from './pages/user-settings/notifications';
 import { UserSettingsAppearancePage } from './pages/user-settings/appearance';
-import { SettingsLayout } from './pages/settings/layout';
 import { SettingsGeneralPage } from './pages/settings/general';
 import { SettingsNumberingPage } from './pages/settings/numbering';
 import { SettingsActivityPage } from './pages/settings/activity';
 
+/**
+ * Шляхи, які до появи area-навігації лежали в корені, а тепер живуть під
+ * `/workspace`. Зовнішні посилання і закладки юзерів на них уже існують, тож
+ * один нормалізатор у корені дешевший за дублюючі роути на кожен старий шлях.
+ *
+ * `href`, а не `to`: джерело — довільний старий рядок, типізації тут не буде.
+ * `searchStr` обовʼязковий — стан гріда (фільтри, сторінка, сортування) живе в
+ * URL, і редірект без нього викидав би юзера на порожній список.
+ *
+ * Тимчасова сумісність, не частина архітектури: видалити, коли старі посилання
+ * протухнуть (орієнтир — кінець 2026).
+ */
+const LEGACY_WORKSPACE_PREFIXES = ['/users', '/customers'];
+
 const rootRoute = createRootRoute({
+  beforeLoad: ({ location }) => {
+    if (LEGACY_WORKSPACE_PREFIXES.some((prefix) => isUnder(location.pathname, prefix))) {
+      // TanStack Router: redirect() кидається як управляючий об'єкт, не помилка
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({
+        href: `/workspace${location.pathname}${location.searchStr}`,
+        replace: true,
+      });
+    }
+  },
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
   component: () => (
     <>
@@ -41,9 +65,8 @@ const rootRoute = createRootRoute({
 
 function requireGuest(): void {
   if (useAuthStore.getState().user) {
-    // TanStack Router: redirect() кидається як управляючий об'єкт, не помилка
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw redirect({ to: '/' });
+    throw redirect({ to: '/workspace' });
   }
 }
 
@@ -57,7 +80,8 @@ function requireAuth(): void {
 /**
  * Налаштування організації редагує лише адмін — і бекенд це enforce-ить
  * (`@Roles(ADMIN)` на записі). Гейт тут не «замість» серверного, а щоб USER не
- * дивився на форми, які однаково не збережуться.
+ * дивився на форми, які однаково не збережуться. Пункт area в рейлі ховає
+ * `canSee` у `app-shell/areas.tsx` — це видимість, а enforcement саме тут.
  */
 function requireAdmin(): void {
   const user = useAuthStore.getState().user;
@@ -67,7 +91,7 @@ function requireAdmin(): void {
   }
   if (user.role !== 'ADMIN') {
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw redirect({ to: '/' });
+    throw redirect({ to: '/workspace' });
   }
 }
 
@@ -78,15 +102,45 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
+/**
+ * Гейт сесії і каркас застосунку. Pathless (`id`, а не `path`), бо префікс
+ * задає вже area — див. `docs/frontend/app-shell.md`.
+ *
+ * `notFoundComponent` тут, а не в корені: так 404 усередині area (напр.
+ * `/settings/nope`) малюється ВСЕРЕДИНІ шела — рейл і панель area лишаються на
+ * місці, тож із помилки видно, куди йти далі. Гість сюди не доходить: гейт
+ * `beforeLoad` відправляє його на /login.
+ */
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
   beforeLoad: requireAuth,
-  component: AppLayout,
+  component: AppShell,
+  notFoundComponent: () => <NotFoundPage homeTo="/workspace" />,
+});
+
+/** Корінь застосунку — це area workspace, окремої сторінки на `/` немає */
+const appIndexRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/',
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/workspace', replace: true });
+  },
+});
+
+/**
+ * Area «Workspace» — робоча частина застосунку. Layout-роут без компонента:
+ * TanStack Router рендерить `Outlet` сам, а вся навігація area живе в шелі
+ * (`app-shell/areas/workspace-sidebar.tsx`).
+ */
+const workspaceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/workspace',
 });
 
 const dashboardRoute = createRoute({
-  getParentRoute: () => appRoute,
+  getParentRoute: () => workspaceRoute,
   path: '/',
   component: DashboardPage,
 });
@@ -111,8 +165,8 @@ const UsersSearchSchema = z.object({
 export type UsersSearch = z.infer<typeof UsersSearchSchema>;
 
 const usersRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/users',
+  getParentRoute: () => workspaceRoute,
+  path: 'users',
   validateSearch: (search) => UsersSearchSchema.parse(search),
   component: UsersPage,
 });
@@ -133,36 +187,80 @@ const CustomersSearchSchema = z.object({
 export type CustomersSearch = z.infer<typeof CustomersSearchSchema>;
 
 const customersRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/customers',
+  getParentRoute: () => workspaceRoute,
+  path: 'customers',
   validateSearch: (search) => CustomersSearchSchema.parse(search),
   component: CustomersPage,
 });
 
 /** Картка кастомера: окремий роут — на неї дають посилання в листі й у тікеті */
 const customerDetailRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/customers/$customerId',
+  getParentRoute: () => workspaceRoute,
+  path: 'customers/$customerId',
   component: CustomerDetailPage,
 });
 
 /** Сторінка юзера: окремий роут, а не драйвер — на неї можна дати посилання */
 const userDetailRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/users/$userId',
+  getParentRoute: () => workspaceRoute,
+  path: 'users/$userId',
   component: UserDetailPage,
 });
 
 /**
- * ОСОБИСТІ налаштування. `/user-settings` = Profile (індексний роут): у свої
- * налаштування заходять найчастіше саме по профіль, і зайвий редірект тут ні до
- * чого. Словом `settings` без кваліфікатора володіє ОРГАНІЗАЦІЯ — патерн
- * GitLab / Stripe / Notion (docs/settings.md).
+ * Area «Chat». Layout + index від першого дня, хоча сторінка поки одна: на
+ * layout-роуті сидітиме гейт area, а `/chat/$conversationId` додається дитиною,
+ * не переписуванням. Сам роут розмови не заводимо — мертвих роутів не тримаємо.
+ */
+const chatRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/chat',
+});
+
+const chatIndexRoute = createRoute({
+  getParentRoute: () => chatRoute,
+  path: '/',
+  component: ChatPage,
+});
+
+/**
+ * Area «Settings» — налаштування ОРГАНІЗАЦІЇ. Своя area, а не розділ усередині
+ * workspace: її під-розділи — повноцінне меню, і йому місце в навігаційній
+ * колонці шела, а не в контенті сторінки (звідки й прибрано `SectionNav`).
+ */
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/settings',
+  beforeLoad: requireAdmin,
+});
+
+const settingsGeneralRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: '/',
+  component: SettingsGeneralPage,
+});
+
+const settingsNumberingRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'numbering',
+  component: SettingsNumberingPage,
+});
+
+const settingsActivityRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'activity',
+  component: SettingsActivityPage,
+});
+
+/**
+ * ОСОБИСТІ налаштування — area без пункту в рейлі: вхід із дропдауна аватара, бо
+ * в головній навігації словом «Settings» володіє організація (патерн
+ * GitLab / Stripe / Notion, docs/settings.md). `/user-settings` = Profile
+ * (індексний роут): у свої налаштування заходять найчастіше саме по профіль.
  */
 const userSettingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/user-settings',
-  component: UserSettingsLayout,
 });
 
 const userSettingsProfileRoute = createRoute({
@@ -196,61 +294,52 @@ const userSettingsAppearanceRoute = createRoute({
 });
 
 /**
- * Налаштування ОРГАНІЗАЦІЇ — окремий розділ, а не вкладка в особистих:
- * компанійські лишаються компанії, особисті йдуть за людиною (docs/settings.md).
+ * Area «Playground» — візуальні стенди примітивів UI. Layout + index: пункт поки
+ * один (кнопки), наступний стенд додається роутом і рядком у
+ * `app-shell/areas/playground-sidebar.tsx`.
  */
-const settingsRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/settings',
-  beforeLoad: requireAdmin,
-  component: SettingsLayout,
-});
-
-const settingsGeneralRoute = createRoute({
-  getParentRoute: () => settingsRoute,
-  path: '/',
-  component: SettingsGeneralPage,
-});
-
-const settingsNumberingRoute = createRoute({
-  getParentRoute: () => settingsRoute,
-  path: 'numbering',
-  component: SettingsNumberingPage,
-});
-
-const settingsActivityRoute = createRoute({
-  getParentRoute: () => settingsRoute,
-  path: 'activity',
-  component: SettingsActivityPage,
-});
-
 const playgroundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/playground',
+});
+
+const playgroundButtonsRoute = createRoute({
+  getParentRoute: () => playgroundRoute,
+  path: '/',
   component: PlaygroundPage,
 });
 
 /**
- * Неіснуючий роут. Свідомо НЕ `notFoundComponent` кореня, а splat-роут ПІД `appRoute`:
- * так 404 проходить той самий гейт `beforeLoad: requireAuth`, що й решта застосунку —
- * залогінений бачить сторінку всередині layout-а (сайдбар/хедер на місці), гість
- * летить на /login замість того, щоб дивитись на 404 у порожньому вікні.
+ * Неіснуючий роут ПОЗА будь-якою area (`/nonsense`). Свідомо splat-роут ПІД
+ * `appRoute`, а не `notFoundComponent` кореня: так 404 проходить той самий гейт
+ * `beforeLoad: requireAuth`, що й решта застосунку — залогінений бачить сторінку
+ * всередині шела, гість летить на /login. Промахи ВСЕРЕДИНІ area (`/chat/nope`)
+ * ловить `notFoundComponent` на `appRoute`.
  * Статичні й динамічні роути ранжуються вище за splat, тож нічого не перехоплює.
  */
 const notFoundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '$',
-  component: NotFoundPage,
+  component: () => <NotFoundPage homeTo="/workspace" />,
 });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
-    dashboardRoute,
-    usersRoute,
-    userDetailRoute,
-    customersRoute,
-    customerDetailRoute,
+    appIndexRoute,
+    workspaceRoute.addChildren([
+      dashboardRoute,
+      usersRoute,
+      userDetailRoute,
+      customersRoute,
+      customerDetailRoute,
+    ]),
+    chatRoute.addChildren([chatIndexRoute]),
+    settingsRoute.addChildren([
+      settingsGeneralRoute,
+      settingsNumberingRoute,
+      settingsActivityRoute,
+    ]),
     userSettingsRoute.addChildren([
       userSettingsProfileRoute,
       userSettingsAccountRoute,
@@ -258,12 +347,7 @@ const routeTree = rootRoute.addChildren([
       userSettingsNotificationsRoute,
       userSettingsAppearanceRoute,
     ]),
-    settingsRoute.addChildren([
-      settingsGeneralRoute,
-      settingsNumberingRoute,
-      settingsActivityRoute,
-    ]),
-    playgroundRoute,
+    playgroundRoute.addChildren([playgroundButtonsRoute]),
     notFoundRoute,
   ]),
 ]);

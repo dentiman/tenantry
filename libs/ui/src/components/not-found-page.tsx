@@ -12,8 +12,12 @@ import {
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 
 /**
- * Сторінка неіснуючого роуту — спільна для обох фронтів (нічого специфічного для
- * плану в ній немає: обидва мають головну на `/`).
+ * Сторінка неіснуючого роуту — спільна для обох фронтів.
+ *
+ * «Головну» приймає пропом, а не хардкодить: у tenant-web корінь застосунку — це
+ * area `/workspace` (docs/frontend/app-shell.md), у platform-web — `/`. Спільний
+ * компонент не має знати шляхів конкретного плану, а `Link to` типізований
+ * роутером ТОГО фронту, який його рендерить, тож хардкод там просто не збереться.
  *
  * Блок узятий із shadcn-admin (`src/features/errors/not-found-error.tsx`, MIT — той
  * самий шаблон, з якого приїхала розкладка `/settings`): великий номер помилки,
@@ -25,7 +29,7 @@ import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
  * тож із помилки видно, куди йти далі. Гість сюди не потрапляє — гейт роуту
  * (`beforeLoad` батьківського app-роуту) відправляє його на /login.
  */
-export function NotFoundPage() {
+export function NotFoundPage({ homeTo }: { homeTo: string }) {
   const { t } = useTranslation('common');
   // Кнопка «назад» має сенс лише коли в історії справді є куди повертатись:
   // на 404 часто приходять із зовнішнього посилання, і тоді вона винесла б із застосунку.
@@ -56,7 +60,7 @@ export function NotFoundPage() {
                 {t('notFound.goBack')}
               </Button>
             )}
-            <Button render={<Link to="/" />}>{t('notFound.goHome')}</Button>
+            <Button render={<Link to={homeTo} />}>{t('notFound.goHome')}</Button>
           </div>
         </EmptyContent>
       </Empty>

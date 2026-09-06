@@ -30,7 +30,7 @@ export function LoginPage() {
     try {
       const res = await login.mutateAsync({ data: values });
       setSession(res.user, res.tokens);
-      await navigate({ to: '/' });
+      await navigate({ to: '/workspace' });
     } catch (error) {
       // 401 → root.server з message бекенда; network/5xx покаже глобальний toast
       applyServerError(error, form);

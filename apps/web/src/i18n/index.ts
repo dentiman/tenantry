@@ -12,6 +12,7 @@ import {
   validationEn,
 } from '@saas-skeleton/i18n';
 import authEn from '../locales/en/auth.json';
+import chatEn from '../locales/en/chat.json';
 import customersEn from '../locales/en/customers.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import layoutEn from '../locales/en/layout.json';
@@ -48,6 +49,7 @@ void i18n.use(initReactI18next).init({
       activities: activitiesEn,
       notifications: notificationsEn,
       auth: authEn,
+      chat: chatEn,
       dashboard: dashboardEn,
       layout: layoutEn,
       playground: playgroundEn,
