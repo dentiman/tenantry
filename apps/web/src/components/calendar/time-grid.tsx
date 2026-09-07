@@ -30,6 +30,14 @@ const HOUR_HEIGHT = 48;
  * 30 хв це 24px), тому час у ній не показуємо — лишається сама назва.
  */
 const COMPACT_MINUTES = 45;
+/**
+ * Ширина жолоба годин. `4rem` (64px), а не стокові `3.5rem`: підпису «10:00 AM»
+ * потрібно 49.1px тексту + 4px власного `px-0.5` + 6px відступу `right-1.5` =
+ * 59.1px, і в 56px він не влазив — «10:00» лишалось на місці, а «AM» переїжджало
+ * в наступний рядок (спіймано в браузері). Разом із `whitespace-nowrap` на
+ * підписі це закриває і 12-годинні локалі, і 24-годинні (там підпис коротший).
+ */
+const HOUR_GUTTER = '4rem';
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 interface TimeGridProps {
@@ -87,7 +95,7 @@ export function TimeGrid({
         <div
           className="grid"
           style={{
-            gridTemplateColumns: `3.5rem repeat(${String(days.length)}, minmax(0, 1fr))`,
+            gridTemplateColumns: `${HOUR_GUTTER} repeat(${String(days.length)}, minmax(0, 1fr))`,
           }}
         >
           {/* Кут над жолобом: теж sticky і теж непрозорий, інакше крізь нього
@@ -101,15 +109,21 @@ export function TimeGrid({
                 key={`head-${key}`}
                 className="sticky top-0 z-20 border-r border-b bg-card last:border-r-0"
               >
-                <div className="flex items-baseline justify-center gap-1.5 py-2">
+                {/* Геометрія однакова в КОЖНІЙ комірці: бокс числа завжди
+                    `size-6`, а «сьогодні» додає лише колір. Доки плитку мав
+                    тільки поточний день, його комірка була на 4px вища (40
+                    проти 36), а підпис дня стояв на 2px нижче за сусідів —
+                    `items-baseline` рахує базову лінію flex-боксу інакше, ніж
+                    текстового рядка. Тому й `items-center`: вирівнювання не
+                    має залежати від того, що саме лежить у комірці */}
+                <div className="flex items-center justify-center gap-1.5 py-2">
                   <span className="text-xs text-muted-foreground uppercase">
                     {formatWeekday(day, timeZone)}
                   </span>
                   <span
                     className={cn(
-                      'text-sm font-medium',
-                      isToday &&
-                        'flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground',
+                      'flex size-6 items-center justify-center rounded-full text-sm font-medium',
+                      isToday && 'bg-primary text-primary-foreground',
                     )}
                   >
                     {day.getDate()}
@@ -139,7 +153,7 @@ export function TimeGrid({
                 className="relative border-b text-right"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <span className="absolute -top-2 right-1.5 bg-card px-0.5 text-[11px] text-muted-foreground">
+                <span className="absolute -top-2 right-1.5 bg-card px-0.5 text-[11px] whitespace-nowrap text-muted-foreground">
                   {hour === 0 ? '' : formatHour(hour, timeZone)}
                 </span>
               </div>

@@ -30,7 +30,16 @@ interface EventBody {
   isOrganizer: boolean;
   canEdit: boolean;
   myResponse: string | null;
-  attendees: { id: string; userId: string; response: string; role: string }[];
+  // Юзер — ВКЛАДЕНИЙ (як `owner` події); на ВХІД натомість ідуть плоскі
+  // `attendees: [{ userId }]` — id на запит, сутності у відповіді
+  attendees: {
+    id: string;
+    user: { id: string; email: string; name: string | null };
+    response: string;
+    role: string;
+    respondedAt: string | null;
+    comment: string | null;
+  }[];
   reminders: { id: string; minutesBefore: number }[];
 }
 
@@ -335,10 +344,17 @@ describe('Calendar API (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post(`/api/calendar/events/${event.id}/rsvp`)
       .set(guest.headers)
-      .send({ response: 'ACCEPTED' })
+      .send({ response: 'ACCEPTED', comment: 'Running 15 min late' })
       .expect(200);
     const body = response.body as EventBody;
     expect(body.myResponse).toBe('ACCEPTED');
+
+    // Три поля рядка участі: відповідь, її час і примітка. Час не задається
+    // клієнтом — його ставить сервер, і саме тому його неможливо добрати потім
+    const mine = body.attendees.find((attendee) => attendee.user.id === guest.id);
+    expect(mine?.user.email).toBe(guest.email);
+    expect(mine?.comment).toBe('Running 15 min late');
+    expect(mine?.respondedAt).not.toBeNull();
 
     expect(
       await prisma.notification.count({

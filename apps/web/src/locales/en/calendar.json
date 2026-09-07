@@ -40,13 +40,16 @@
   },
   "rsvp": {
     "question": "Are you going?",
+    "commentPlaceholder": "Add a note (optional)",
+    "commentHint": "Sent together with your answer — click it again to update just the note.",
     "ACCEPTED": "Yes",
     "TENTATIVE": "Maybe",
     "DECLINED": "No",
     "accepted": "Going",
     "tentative": "Maybe",
     "declined": "Declined",
-    "pending": "No reply"
+    "pending": "No reply",
+    "respondedAt": "Replied {{at}}"
   },
   "attendees": {
     "label": "Guests",
