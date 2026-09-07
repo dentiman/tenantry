@@ -203,14 +203,44 @@ export const CalendarUserRefSchema = z.object({
   name: z.string().nullable(),
 });
 
+/**
+ * Учасник. Юзер — ВКЛАДЕНИЙ обʼєкт, а не розсипані `userId`/`email`/`name`.
+ *
+ * Спершу тут була плоска форма Google (`attendees[]: {email, displayName,
+ * responseStatus}`), і сама по собі вона захищається: рядок участі — самостійна
+ * сутність зі своїм станом. Але в цьому репозиторії вже є конвенція, і вона
+ * розрізняє два випадки:
+ *
+ * - **живий юзер із FK** → вкладений `{id, email, name}` (`customer.owner`,
+ *   `calendarEvent.owner` — той самий `CalendarUserRefSchema`);
+ * - **снапшот без FK** → плоска трійка `actorType`/`actorId`/`actorLabel`
+ *   (`activities`, `notifications`), бо юзера могли видалити, а актором буває
+ *   ще й `system`.
+ *
+ * Учасник — перший випадок (композитний FK із каскадом), тож форма мусить бути
+ * вкладена: інакше в одній відповіді те саме поняття має дві різні форми, а
+ * кожне нове поле юзера доводиться дописувати префіксом (`userAvatarUrl`…).
+ *
+ * `userId` окремо НЕ дублюється — на відміну від `customer.ownerId`, який
+ * лишається полем, бо ним фільтрує грід. Тут клієнту достатньо `user.id`.
+ *
+ * Три поля нижче — стан САМОГО рядка участі, не юзера: юзер відповідає на «хто»,
+ * вони — на «як він відреагував».
+ */
 export const CalendarAttendeeResponseItemSchema = z.object({
+  /** id рядка участі, а не юзера */
   id: z.uuid(),
-  userId: z.uuid(),
-  email: z.email(),
-  name: z.string().nullable(),
+  user: CalendarUserRefSchema,
   role: CalendarAttendeeRoleSchema,
+  /** PARTSTAT із RFC 5545 */
   response: CalendarAttendeeResponseSchema,
+  /**
+   * Коли відповів; `null`, доки `NEEDS_ACTION`. Організатора цікавить не лише
+   * «хто не відповів», а й «скільки вже» — і цей момент неможливо добрати заднім
+   * числом, тому пишеться з першого дня.
+   */
   respondedAt: z.iso.datetime().nullable(),
+  /** Необовʼязкова примітка до відповіді («буду, але на 15 хв пізніше») */
   comment: z.string().nullable(),
 });
 

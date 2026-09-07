@@ -14,10 +14,14 @@ type AttendeeRow = CalendarEventWithRelations['attendees'][number];
 
 function toAttendee(attendee: AttendeeRow): CalendarAttendeeResponseItem {
   return {
+    // id рядка УЧАСТІ; ідентичність юзера — вкладеним обʼєктом тієї самої форми,
+    // що `owner` події (див. CalendarAttendeeResponseItemSchema)
     id: attendee.id,
-    userId: attendee.userId,
-    email: attendee.user.email,
-    name: attendee.user.name,
+    user: {
+      id: attendee.user.id,
+      email: attendee.user.email,
+      name: attendee.user.name,
+    },
     role: attendee.role,
     response: attendee.response,
     respondedAt: attendee.respondedAt?.toISOString() ?? null,

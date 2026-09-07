@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { TZDate } from '@date-fns/tz';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +19,12 @@ import {
   AlertDialogTrigger,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@saas-skeleton/ui/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@saas-skeleton/ui/components/ui/field';
 import { Input } from '@saas-skeleton/ui/components/ui/input';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import {
@@ -42,6 +47,7 @@ import {
   useCalendarUpdate,
 } from '../../api/generated/api';
 import { ActivityFeed } from '../activity/activity-feed';
+import { useAuthStore } from '../../stores/auth.store';
 import { applyServerError, FormSelect, FormTextField, FormTextareaField } from '../form';
 import { AttendeePicker, RsvpBadge } from './attendee-picker';
 import { CustomerSelect } from './customer-select';
@@ -142,6 +148,13 @@ export function EventSheet({
   const event = target?.event ?? null;
   const isNew = event === null;
   const canEdit = event?.canEdit ?? true;
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
+  /**
+   * Примітка живе в локальному стані, а не у формі події: вона їде окремим
+   * ендпоінтом (`POST /rsvp`) разом із відповіддю, і до `PATCH` події стосунку
+   * не має — учасник, який не може редагувати подію, свою примітку змінює вільно.
+   */
+  const [rsvpComment, setRsvpComment] = useState('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -168,7 +181,10 @@ export function EventSheet({
         ? valuesOf(target.event, timeZone)
         : draftValues(target.draft, timeZone, defaultDurationMinutes, defaultReminderMinutes),
     );
-  }, [target, timeZone, defaultDurationMinutes, defaultReminderMinutes, reset]);
+    setRsvpComment(
+      target.event?.attendees.find((attendee) => attendee.user.id === currentUserId)?.comment ?? '',
+    );
+  }, [target, timeZone, defaultDurationMinutes, defaultReminderMinutes, reset, currentUserId]);
 
   const invalidate = async (): Promise<void> => {
     // Інвалідація ЗА СТОРІНКОЮ, а не зсередини гріда — той самий контракт, що в
@@ -218,7 +234,7 @@ export function EventSheet({
         // Учасники й нагадування — окремі під-ресурси: перші сервер ДИФАЄ (щоб не
         // спамити запрошеннями), другі персональні. Відправляємо лише те, що
         // справді змінилось — інакше кожне збереження чіпало б чужий стан
-        if (!sameSet(values.attendeeIds, event.attendees.map((a) => a.userId))) {
+        if (!sameSet(values.attendeeIds, event.attendees.map((a) => a.user.id))) {
           await setAttendees.mutateAsync({
             id: event.id,
             data: { attendees: values.attendeeIds.map((userId) => ({ userId })) },
@@ -281,7 +297,7 @@ export function EventSheet({
               {/* RSVP — перше, що бачить запрошений: рішення в два кліки */}
               {!isNew && event.myResponse !== null && !event.isOrganizer && (
                 <Field>
-                  <FieldLabel>{t('rsvp.question')}</FieldLabel>
+                  <FieldLabel htmlFor="calendar-rsvp-comment">{t('rsvp.question')}</FieldLabel>
                   <div className="flex items-center gap-2">
                     {(['ACCEPTED', 'TENTATIVE', 'DECLINED'] as const).map((response) => (
                       <Button
@@ -292,7 +308,15 @@ export function EventSheet({
                         disabled={setRsvp.isPending}
                         onClick={() => {
                           void (async () => {
-                            await setRsvp.mutateAsync({ id: event.id, data: { response } });
+                            // Примітка їде РАЗОМ із відповіддю: окремої кнопки
+                            // «зберегти нотатку» немає свідомо — сервер порівнює
+                            // обидва поля і no-op-ить, лише якщо не змінилось
+                            // жодне, тож повторний клік по вже вибраній відповіді
+                            // оновлює саму примітку
+                            await setRsvp.mutateAsync({
+                              id: event.id,
+                              data: { response, comment: rsvpComment },
+                            });
                             await invalidate();
                           })();
                         }}
@@ -301,6 +325,16 @@ export function EventSheet({
                       </Button>
                     ))}
                   </div>
+                  <Input
+                    id="calendar-rsvp-comment"
+                    value={rsvpComment}
+                    maxLength={500}
+                    placeholder={t('rsvp.commentPlaceholder')}
+                    onChange={(e) => {
+                      setRsvpComment(e.target.value);
+                    }}
+                  />
+                  <FieldDescription>{t('rsvp.commentHint')}</FieldDescription>
                 </Field>
               )}
 
@@ -633,7 +667,7 @@ function valuesOf(event: CalendarEventResponse, timeZone: string): FormValues {
     customerId: event.customerId,
     isPrivate: event.visibility === 'PRIVATE',
     busy: event.busy,
-    attendeeIds: event.attendees.map((attendee) => attendee.userId),
+    attendeeIds: event.attendees.map((attendee) => attendee.user.id),
     reminders: event.reminders.map((reminder) => reminder.minutesBefore),
   };
 }
