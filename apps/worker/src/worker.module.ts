@@ -12,6 +12,7 @@ import { loggerConfig } from './logger.config';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
 import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-jobs.subscriber';
+import { DispatchScheduledNotificationsSubscriber } from './subscribers/dispatch-scheduled-notifications.subscriber';
 import { GenerateThumbnailSubscriber } from './subscribers/generate-thumbnail.subscriber';
 import { WelcomeEmailSubscriber } from './subscribers/welcome-email.subscriber';
 import { MailerService } from './mail/mailer.service';
@@ -37,6 +38,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,
     CleanupProcessedJobsSubscriber,
+    DispatchScheduledNotificationsSubscriber,
     GenerateThumbnailSubscriber,
     WelcomeEmailSubscriber,
     MailerService,

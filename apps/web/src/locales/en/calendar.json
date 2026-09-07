@@ -1,0 +1,106 @@
+{
+  "title": "Calendar",
+  "loading": "Loading calendar",
+  "loadError": "Could not load the calendar",
+  "loadMore": "Loading more events",
+  "allDay": "All day",
+  "view": {
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "agenda": "Agenda"
+  },
+  "toolbar": {
+    "today": "Today",
+    "upcoming": "Upcoming",
+    "previous": "Previous period",
+    "next": "Next period",
+    "create": "New event"
+  },
+  "zoneBanner": {
+    "title": "Times are shown in {{zone}}",
+    "hint": "Your device is in a different time zone.",
+    "action": "Change your time zone"
+  },
+  "grid": {
+    "now": "Current time",
+    "createAt": "Create an event at {{time}}",
+    "createOn": "Create an event on {{date}}",
+    "more": "+{{count}} more"
+  },
+  "agenda": {
+    "empty": "Nothing scheduled ahead"
+  },
+  "kind": {
+    "MEETING": "Meeting",
+    "CALL": "Call",
+    "DEADLINE": "Deadline",
+    "OUT_OF_OFFICE": "Out of office",
+    "OTHER": "Other"
+  },
+  "rsvp": {
+    "question": "Are you going?",
+    "ACCEPTED": "Yes",
+    "TENTATIVE": "Maybe",
+    "DECLINED": "No",
+    "accepted": "Going",
+    "tentative": "Maybe",
+    "declined": "Declined",
+    "pending": "No reply"
+  },
+  "attendees": {
+    "label": "Guests",
+    "add": "Add a guest",
+    "added": "Added",
+    "remove": "Remove guest"
+  },
+  "reminders": {
+    "label": "Reminders",
+    "add": "Add a reminder",
+    "remove": "Remove reminder",
+    "atStart": "At the start",
+    "minutes": "{{count}} minutes before",
+    "hours": "{{count}} hour before",
+    "hours_plural": "{{count}} hours before",
+    "days": "{{count}} day before",
+    "days_plural": "{{count}} days before",
+    "weeks": "{{count}} week before",
+    "weeks_plural": "{{count}} weeks before"
+  },
+  "form": {
+    "createTitle": "New event",
+    "createHint": "Guests get an in-app invitation right away.",
+    "tabDetails": "Details",
+    "tabActivity": "Activity",
+    "title": "Title",
+    "titlePlaceholder": "Weekly sync",
+    "allDay": "All day",
+    "date": "Date",
+    "endDate": "Last day",
+    "from": "From",
+    "to": "To",
+    "kind": "Type",
+    "customer": "Customer",
+    "customerNone": "No customer",
+    "customerClear": "Clear customer",
+    "customerSearch": "Search customers",
+    "customerNotFound": "No customers found",
+    "location": "Location",
+    "description": "Notes",
+    "private": "Private",
+    "busy": "Show me as busy",
+    "create": "Create",
+    "save": "Save",
+    "cancelEvent": "Cancel event",
+    "restoreEvent": "Restore",
+    "delete": "Delete",
+    "deleteTitle": "Delete this event?",
+    "deleteHint": "It disappears for every guest. Cancelling keeps it visible as cancelled.",
+    "deleteCancel": "Keep it"
+  },
+  "customer": {
+    "upcoming": "Upcoming",
+    "empty": "No meetings scheduled",
+    "create": "Schedule a meeting"
+  }
+}

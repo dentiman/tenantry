@@ -15,6 +15,12 @@ export interface UpdateUserDto {
   role?: UpdateUserDtoRole;
   locale?: UpdateUserDtoLocale;
   /**
+   * @minLength 1
+   * @maxLength 64
+   * @nullable
+   */
+  timeZone?: string | null;
+  /**
    * @nullable
    * @pattern ^\+[1-9]\d{7,14}$
    */

@@ -12,6 +12,11 @@ const KNOWN_TYPES = [
   'user.password_changed',
   'user.welcome',
   'customer.assigned',
+  'calendar_event.invited',
+  'calendar_event.rescheduled',
+  'calendar_event.cancelled',
+  'calendar_event.rsvp_changed',
+  'calendar_event.reminder',
 ] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
@@ -67,7 +72,8 @@ export function NotificationMessage({
 
   // Сутність, на яку веде текст: у user.* це юзер, у customer.* — кастомер.
   // Ключ у payload один на тип, тому беремо перший знайдений
-  const subject = entityRef(payload, 'user') ?? entityRef(payload, 'customer');
+  const subject =
+    entityRef(payload, 'user') ?? entityRef(payload, 'customer') ?? entityRef(payload, 'event');
   const link = subject && !plain ? entityLink(subject.kind, subject.id) : null;
 
   return (
@@ -81,6 +87,7 @@ export function NotificationMessage({
         // яким сутність зветься в його тексті ({{user}} / {{customer}})
         user: subject?.label ?? '',
         customer: subject?.label ?? '',
+        event: subject?.label ?? '',
         tenant: strField(payload, 'tenant'),
       }}
       components={{

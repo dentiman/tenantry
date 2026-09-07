@@ -17,6 +17,9 @@ export function toUserResponse(user: PrismaUser, avatarUrl: string | null = null
     isActive: user.isActive,
     // Prisma зберігає locale як звичайний string; валідність гарантує вхідний Zod-контракт
     locale: user.locale as UserResponse['locale'],
+    // Календар: NULL означає «як в організації», а не «не знаємо» — фолбек
+    // робить клієнт із settings.calendar.timeZone
+    timeZone: user.timeZone,
     phone: user.phone,
     phoneCountry: user.phoneCountry,
     avatarFileId: user.avatarFileId,

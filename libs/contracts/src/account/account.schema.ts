@@ -15,6 +15,10 @@ export const UpdateAccountProfileSchema = CreateUserSchema.pick({
   phone: true,
   phoneCountry: true,
   locale: true,
+  // Таймзона — атрибут ПРОФІЛЮ, поруч із локаллю: обидві їдуть за людиною, якщо
+  // вона змінить компанію. Окремої особистої секції «Calendar» під одне поле не
+  // заводимо — це був би екран з одним селектом (уточнення до docs/calendar.md §9.5)
+  timeZone: true,
 })
   .partial()
   .extend({

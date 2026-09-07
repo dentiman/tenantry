@@ -17,6 +17,12 @@ interface FormTextFieldProps<T extends FieldValues> {
   type?: string;
   autoComplete?: string;
   placeholder?: string;
+  /**
+   * Режим перегляду: та сама форма, але без права змінювати (напр. подія
+   * календаря, яку редагує лише організатор). Свідомо `disabled`, а не
+   * `readOnly`: клавіатурний фокус на нередагованому полі лише збиває.
+   */
+  disabled?: boolean;
 }
 
 /** Єдина точка інтеграції RHF ↔ Field/Input: значення, blur, ref, помилки */
@@ -28,6 +34,7 @@ export function FormTextField<T extends FieldValues>({
   type = 'text',
   autoComplete,
   placeholder,
+  disabled,
 }: FormTextFieldProps<T>) {
   const id = useId();
   const { field, fieldState } = useController({ control, name });
@@ -41,6 +48,7 @@ export function FormTextField<T extends FieldValues>({
         name={field.name}
         autoComplete={autoComplete}
         placeholder={placeholder}
+        disabled={disabled}
         aria-invalid={fieldState.invalid || undefined}
         value={field.value ?? ''}
         onChange={field.onChange}

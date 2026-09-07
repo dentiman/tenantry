@@ -18,13 +18,17 @@
                       "example": "ok"
                     }
                   },
-                  "required": ["status"]
+                  "required": [
+                    "status"
+                  ]
                 }
               }
             }
           }
         },
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/api/auth/login": {
@@ -53,7 +57,9 @@
             }
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/refresh": {
@@ -82,7 +88,9 @@
             }
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/logout": {
@@ -104,7 +112,9 @@
             "description": ""
           }
         },
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/auth/me": {
@@ -128,7 +138,9 @@
             "bearer": []
           }
         ],
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/users": {
@@ -163,7 +175,13 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["email", "name", "role", "isActive", "createdAt"]
+              "enum": [
+                "email",
+                "name",
+                "role",
+                "isActive",
+                "createdAt"
+              ]
             }
           },
           {
@@ -173,7 +191,10 @@
             "schema": {
               "default": "asc",
               "type": "string",
-              "enum": ["asc", "desc"]
+              "enum": [
+                "asc",
+                "desc"
+              ]
             }
           },
           {
@@ -182,7 +203,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["ADMIN", "USER"]
+              "enum": [
+                "ADMIN",
+                "USER"
+              ]
             }
           },
           {
@@ -191,7 +215,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true", "false"]
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           },
           {
@@ -220,7 +247,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "post": {
         "operationId": "usersCreate",
@@ -252,7 +281,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     },
     "/api/users/{id}": {
@@ -285,7 +316,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "patch": {
         "operationId": "usersUpdate",
@@ -326,7 +359,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       },
       "delete": {
         "operationId": "usersRemove",
@@ -350,7 +385,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     },
     "/api/users/{id}/password": {
@@ -386,7 +423,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     },
     "/api/users/{id}/status": {
@@ -429,7 +468,9 @@
             "bearer": []
           }
         ],
-        "tags": ["users"]
+        "tags": [
+          "users"
+        ]
       }
     },
     "/api/customers": {
@@ -464,7 +505,13 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["number", "name", "status", "createdAt", "updatedAt"]
+              "enum": [
+                "number",
+                "name",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
             }
           },
           {
@@ -474,7 +521,10 @@
             "schema": {
               "default": "asc",
               "type": "string",
-              "enum": ["asc", "desc"]
+              "enum": [
+                "asc",
+                "desc"
+              ]
             }
           },
           {
@@ -483,7 +533,11 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"]
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "ARCHIVED"
+              ]
             }
           },
           {
@@ -492,7 +546,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["ORGANIZATION", "PERSON"]
+              "enum": [
+                "ORGANIZATION",
+                "PERSON"
+              ]
             }
           },
           {
@@ -527,7 +584,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true", "false"]
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           }
         ],
@@ -548,7 +608,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       },
       "post": {
         "operationId": "customersCreate",
@@ -580,7 +642,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       }
     },
     "/api/customers/{id}": {
@@ -613,7 +677,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       },
       "patch": {
         "operationId": "customersUpdate",
@@ -654,7 +720,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       },
       "delete": {
         "operationId": "customersRemove",
@@ -678,7 +746,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       }
     },
     "/api/customers/{id}/status": {
@@ -721,7 +791,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       }
     },
     "/api/customers/{id}/contacts": {
@@ -764,7 +836,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       }
     },
     "/api/customers/{id}/contacts/{contactId}": {
@@ -815,7 +889,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       },
       "delete": {
         "operationId": "customersRemoveContact",
@@ -847,7 +923,9 @@
             "bearer": []
           }
         ],
-        "tags": ["customers"]
+        "tags": [
+          "customers"
+        ]
       }
     },
     "/api/settings/bootstrap": {
@@ -871,7 +949,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/settings/general": {
@@ -895,7 +975,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       },
       "put": {
         "operationId": "settingsUpdateGeneral",
@@ -927,7 +1009,69 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/calendar": {
+      "get": {
+        "operationId": "settingsCalendar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "settingsUpdateCalendar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/settings/activity": {
@@ -971,7 +1115,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/settings/numbering": {
@@ -995,7 +1141,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/settings/numbering/{name}": {
@@ -1038,7 +1186,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/settings/numbering/{name}/next-number": {
@@ -1081,7 +1231,9 @@
             "bearer": []
           }
         ],
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/activities": {
@@ -1145,7 +1297,15 @@
                 "customer.owner_changed",
                 "customer.deleted",
                 "settings.updated",
-                "settings.numbering_shifted"
+                "settings.numbering_shifted",
+                "calendar_event.created",
+                "calendar_event.rescheduled",
+                "calendar_event.cancelled",
+                "calendar_event.restored",
+                "calendar_event.deleted",
+                "calendar_event.attendee_added",
+                "calendar_event.attendee_removed",
+                "calendar_event.rsvp_changed"
               ]
             }
           }
@@ -1167,7 +1327,514 @@
             "bearer": []
           }
         ],
-        "tags": ["activities"]
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/calendar/events": {
+      "get": {
+        "operationId": "calendarFindWindow",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "mine",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MEETING",
+                "CALL",
+                "DEADLINE",
+                "OUT_OF_OFFICE",
+                "OTHER"
+              ]
+            }
+          },
+          {
+            "name": "includeCancelled",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventListResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      },
+      "post": {
+        "operationId": "calendarCreate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCalendarEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/agenda": {
+      "get": {
+        "operationId": "calendarAgenda",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MEETING",
+                "CALL",
+                "DEADLINE",
+                "OUT_OF_OFFICE",
+                "OTHER"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarAgendaResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/events/{id}": {
+      "get": {
+        "operationId": "calendarFindOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      },
+      "patch": {
+        "operationId": "calendarUpdate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCalendarEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      },
+      "delete": {
+        "operationId": "calendarRemove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/events/{id}/status": {
+      "patch": {
+        "operationId": "calendarSetStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCalendarEventStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/events/{id}/attendees": {
+      "put": {
+        "operationId": "calendarSetAttendees",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCalendarAttendeesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/events/{id}/rsvp": {
+      "post": {
+        "operationId": "calendarSetRsvp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCalendarRsvpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/calendar/events/{id}/reminders": {
+      "put": {
+        "operationId": "calendarSetReminders",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCalendarRemindersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "calendar"
+        ]
       }
     },
     "/api/account": {
@@ -1191,7 +1858,9 @@
             "bearer": []
           }
         ],
-        "tags": ["account"]
+        "tags": [
+          "account"
+        ]
       }
     },
     "/api/account/profile": {
@@ -1225,7 +1894,9 @@
             "bearer": []
           }
         ],
-        "tags": ["account"]
+        "tags": [
+          "account"
+        ]
       }
     },
     "/api/account/password": {
@@ -1259,7 +1930,9 @@
             "bearer": []
           }
         ],
-        "tags": ["account"]
+        "tags": [
+          "account"
+        ]
       }
     },
     "/api/account/sessions/revoke-all": {
@@ -1283,7 +1956,9 @@
             "bearer": []
           }
         ],
-        "tags": ["account"]
+        "tags": [
+          "account"
+        ]
       }
     },
     "/api/files": {
@@ -1317,7 +1992,9 @@
             "bearer": []
           }
         ],
-        "tags": ["files"]
+        "tags": [
+          "files"
+        ]
       }
     },
     "/api/files/{id}/complete": {
@@ -1350,7 +2027,9 @@
             "bearer": []
           }
         ],
-        "tags": ["files"]
+        "tags": [
+          "files"
+        ]
       }
     },
     "/api/files/{id}": {
@@ -1383,7 +2062,9 @@
             "bearer": []
           }
         ],
-        "tags": ["files"]
+        "tags": [
+          "files"
+        ]
       }
     },
     "/api/files/{id}/download-url": {
@@ -1405,7 +2086,10 @@
             "schema": {
               "default": "original",
               "type": "string",
-              "enum": ["original", "thumbnail"]
+              "enum": [
+                "original",
+                "thumbnail"
+              ]
             }
           }
         ],
@@ -1426,7 +2110,9 @@
             "bearer": []
           }
         ],
-        "tags": ["files"]
+        "tags": [
+          "files"
+        ]
       }
     },
     "/api/notifications": {
@@ -1459,7 +2145,11 @@
             "schema": {
               "default": "all",
               "type": "string",
-              "enum": ["unread", "all", "archived"]
+              "enum": [
+                "unread",
+                "all",
+                "archived"
+              ]
             }
           }
         ],
@@ -1480,7 +2170,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/notifications/summary": {
@@ -1504,7 +2196,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/notifications/preferences": {
@@ -1528,7 +2222,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       },
       "put": {
         "operationId": "notificationsSetPreferences",
@@ -1560,7 +2256,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/notifications/mark-all-read": {
@@ -1584,7 +2282,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/notifications/seen": {
@@ -1608,7 +2308,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/notifications/{id}": {
@@ -1651,7 +2353,9 @@
             "bearer": []
           }
         ],
-        "tags": ["notifications"]
+        "tags": [
+          "notifications"
+        ]
       }
     },
     "/api/presence": {
@@ -1675,7 +2379,9 @@
             "bearer": []
           }
         ],
-        "tags": ["presence"]
+        "tags": [
+          "presence"
+        ]
       }
     }
   },
@@ -1711,7 +2417,10 @@
             "maxLength": 63
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "AuthResponseDto_Output": {
         "type": "object",
@@ -1735,14 +2444,23 @@
               },
               "role": {
                 "type": "string",
-                "enum": ["ADMIN", "USER"]
+                "enum": [
+                  "ADMIN",
+                  "USER"
+                ]
               },
               "isActive": {
                 "type": "boolean"
               },
               "locale": {
                 "type": "string",
-                "enum": ["en"]
+                "enum": [
+                  "en"
+                ]
+              },
+              "timeZone": {
+                "type": "string",
+                "nullable": true
               },
               "phone": {
                 "type": "string",
@@ -1787,6 +2505,7 @@
               "role",
               "isActive",
               "locale",
+              "timeZone",
               "phone",
               "phoneCountry",
               "avatarFileId",
@@ -1807,11 +2526,17 @@
                 "type": "string"
               }
             },
-            "required": ["accessToken", "refreshToken"],
+            "required": [
+              "accessToken",
+              "refreshToken"
+            ],
             "additionalProperties": false
           }
         },
-        "required": ["user", "tokens"],
+        "required": [
+          "user",
+          "tokens"
+        ],
         "additionalProperties": false
       },
       "RefreshDto": {
@@ -1822,7 +2547,9 @@
             "minLength": 1
           }
         },
-        "required": ["refreshToken"]
+        "required": [
+          "refreshToken"
+        ]
       },
       "AuthTokensDto_Output": {
         "type": "object",
@@ -1834,7 +2561,10 @@
             "type": "string"
           }
         },
-        "required": ["accessToken", "refreshToken"],
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
         "additionalProperties": false
       },
       "LogoutDto": {
@@ -1845,7 +2575,9 @@
             "minLength": 1
           }
         },
-        "required": ["refreshToken"]
+        "required": [
+          "refreshToken"
+        ]
       },
       "MeResponseDto_Output": {
         "type": "object",
@@ -1866,14 +2598,23 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "isActive": {
             "type": "boolean"
           },
           "locale": {
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
+          },
+          "timeZone": {
+            "type": "string",
+            "nullable": true
           },
           "phone": {
             "type": "string",
@@ -1918,6 +2659,7 @@
           "role",
           "isActive",
           "locale",
+          "timeZone",
           "phone",
           "phoneCountry",
           "avatarFileId",
@@ -1952,14 +2694,23 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["ADMIN", "USER"]
+                  "enum": [
+                    "ADMIN",
+                    "USER"
+                  ]
                 },
                 "isActive": {
                   "type": "boolean"
                 },
                 "locale": {
                   "type": "string",
-                  "enum": ["en"]
+                  "enum": [
+                    "en"
+                  ]
+                },
+                "timeZone": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "phone": {
                   "type": "string",
@@ -2004,6 +2755,7 @@
                 "role",
                 "isActive",
                 "locale",
+                "timeZone",
                 "phone",
                 "phoneCountry",
                 "avatarFileId",
@@ -2028,7 +2780,13 @@
             "type": "number"
           }
         },
-        "required": ["items", "total", "page", "limit", "totalPages"],
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ],
         "additionalProperties": false
       },
       "UserResponseDto_Output": {
@@ -2050,14 +2808,23 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "isActive": {
             "type": "boolean"
           },
           "locale": {
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
+          },
+          "timeZone": {
+            "type": "string",
+            "nullable": true
           },
           "phone": {
             "type": "string",
@@ -2102,6 +2869,7 @@
           "role",
           "isActive",
           "locale",
+          "timeZone",
           "phone",
           "phoneCountry",
           "avatarFileId",
@@ -2125,12 +2893,23 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "nullable": true
           },
           "phone": {
             "type": "string",
@@ -2147,7 +2926,10 @@
             "maxLength": 128
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "UpdateUserDto": {
         "type": "object",
@@ -2162,12 +2944,23 @@
           "role": {
             "default": "USER",
             "type": "string",
-            "enum": ["ADMIN", "USER"]
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "nullable": true
           },
           "phone": {
             "type": "string",
@@ -2195,7 +2988,9 @@
             "maxLength": 128
           }
         },
-        "required": ["password"]
+        "required": [
+          "password"
+        ]
       },
       "SetUserStatusDto": {
         "type": "object",
@@ -2204,7 +2999,9 @@
             "type": "boolean"
           }
         },
-        "required": ["isActive"]
+        "required": [
+          "isActive"
+        ]
       },
       "CustomerListResponseDto_Output": {
         "type": "object",
@@ -2229,11 +3026,18 @@
                 },
                 "kind": {
                   "type": "string",
-                  "enum": ["ORGANIZATION", "PERSON"]
+                  "enum": [
+                    "ORGANIZATION",
+                    "PERSON"
+                  ]
                 },
                 "status": {
                   "type": "string",
-                  "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"]
+                  "enum": [
+                    "ACTIVE",
+                    "INACTIVE",
+                    "ARCHIVED"
+                  ]
                 },
                 "name": {
                   "type": "string"
@@ -2292,7 +3096,11 @@
                       "nullable": true
                     }
                   },
-                  "required": ["id", "email", "name"],
+                  "required": [
+                    "id",
+                    "email",
+                    "name"
+                  ],
                   "additionalProperties": false,
                   "nullable": true
                 },
@@ -2396,7 +3204,13 @@
             "type": "number"
           }
         },
-        "required": ["items", "total", "page", "limit", "totalPages"],
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ],
         "additionalProperties": false
       },
       "CustomerDetailResponseDto_Output": {
@@ -2417,11 +3231,18 @@
           },
           "kind": {
             "type": "string",
-            "enum": ["ORGANIZATION", "PERSON"]
+            "enum": [
+              "ORGANIZATION",
+              "PERSON"
+            ]
           },
           "status": {
             "type": "string",
-            "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"]
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "ARCHIVED"
+            ]
           },
           "name": {
             "type": "string"
@@ -2480,7 +3301,11 @@
                 "nullable": true
               }
             },
-            "required": ["id", "email", "name"],
+            "required": [
+              "id",
+              "email",
+              "name"
+            ],
             "additionalProperties": false,
             "nullable": true
           },
@@ -2645,7 +3470,10 @@
           "kind": {
             "default": "ORGANIZATION",
             "type": "string",
-            "enum": ["ORGANIZATION", "PERSON"]
+            "enum": [
+              "ORGANIZATION",
+              "PERSON"
+            ]
           },
           "name": {
             "type": "string",
@@ -2685,7 +3513,9 @@
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
           },
           "ownerId": {
             "type": "string",
@@ -2742,7 +3572,9 @@
             "nullable": true
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       },
       "UpdateCustomerDto": {
         "type": "object",
@@ -2750,7 +3582,10 @@
           "kind": {
             "default": "ORGANIZATION",
             "type": "string",
-            "enum": ["ORGANIZATION", "PERSON"]
+            "enum": [
+              "ORGANIZATION",
+              "PERSON"
+            ]
           },
           "name": {
             "type": "string",
@@ -2790,7 +3625,9 @@
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
           },
           "ownerId": {
             "type": "string",
@@ -2853,10 +3690,16 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"]
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "ARCHIVED"
+            ]
           }
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "CreateCustomerContactDto": {
         "type": "object",
@@ -2893,7 +3736,9 @@
             "nullable": true
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       },
       "CustomerContactResponseDto_Output": {
         "type": "object",
@@ -3015,7 +3860,62 @@
                 "type": "string"
               }
             },
-            "required": ["name", "slug", "locale", "currency"],
+            "required": [
+              "name",
+              "slug",
+              "locale",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "calendar": {
+            "type": "object",
+            "properties": {
+              "timeZone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "weekStartsOn": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 6
+              },
+              "workDayStart": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              "workDayEnd": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              "defaultEventDurationMinutes": {
+                "type": "integer",
+                "minimum": 5,
+                "maximum": 1440
+              },
+              "defaultReminderMinutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 40320,
+                "nullable": true
+              },
+              "defaultAllDayReminderMinutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 40320,
+                "nullable": true
+              }
+            },
+            "required": [
+              "timeZone",
+              "weekStartsOn",
+              "workDayStart",
+              "workDayEnd",
+              "defaultEventDurationMinutes",
+              "defaultReminderMinutes",
+              "defaultAllDayReminderMinutes"
+            ],
             "additionalProperties": false
           },
           "features": {
@@ -3025,7 +3925,11 @@
             }
           }
         },
-        "required": ["general", "features"],
+        "required": [
+          "general",
+          "calendar",
+          "features"
+        ],
         "additionalProperties": false
       },
       "GeneralSettingsResponseDto_Output": {
@@ -3038,7 +3942,9 @@
           },
           "locale": {
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
           },
           "currency": {
             "type": "string",
@@ -3048,7 +3954,12 @@
             "type": "string"
           }
         },
-        "required": ["name", "locale", "currency", "slug"],
+        "required": [
+          "name",
+          "locale",
+          "currency",
+          "slug"
+        ],
         "additionalProperties": false
       },
       "GeneralSettingsDto": {
@@ -3061,13 +3972,118 @@
           },
           "locale": {
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
           },
           "currency": {
             "type": "string"
           }
         },
-        "required": ["name", "locale", "currency"]
+        "required": [
+          "name",
+          "locale",
+          "currency"
+        ]
+      },
+      "CalendarSettingsDto_Output": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "weekStartsOn": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "workDayStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "workDayEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "defaultEventDurationMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "defaultReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          },
+          "defaultAllDayReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          }
+        },
+        "required": [
+          "timeZone",
+          "weekStartsOn",
+          "workDayStart",
+          "workDayEnd",
+          "defaultEventDurationMinutes",
+          "defaultReminderMinutes",
+          "defaultAllDayReminderMinutes"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarSettingsDto": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "weekStartsOn": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "workDayStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "workDayEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "defaultEventDurationMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "defaultReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          },
+          "defaultAllDayReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          }
+        },
+        "required": [
+          "timeZone",
+          "weekStartsOn",
+          "workDayStart",
+          "workDayEnd",
+          "defaultEventDurationMinutes",
+          "defaultReminderMinutes",
+          "defaultAllDayReminderMinutes"
+        ]
       },
       "ActivityListResponseDto_Output": {
         "type": "object",
@@ -3097,12 +4113,23 @@
                     "customer.owner_changed",
                     "customer.deleted",
                     "settings.updated",
-                    "settings.numbering_shifted"
+                    "settings.numbering_shifted",
+                    "calendar_event.created",
+                    "calendar_event.rescheduled",
+                    "calendar_event.cancelled",
+                    "calendar_event.restored",
+                    "calendar_event.deleted",
+                    "calendar_event.attendee_added",
+                    "calendar_event.attendee_removed",
+                    "calendar_event.rsvp_changed"
                   ]
                 },
                 "actorType": {
                   "type": "string",
-                  "enum": ["user", "system"]
+                  "enum": [
+                    "user",
+                    "system"
+                  ]
                 },
                 "actorId": {
                   "type": "string",
@@ -3141,7 +4168,10 @@
             "nullable": true
           }
         },
-        "required": ["items", "nextCursor"],
+        "required": [
+          "items",
+          "nextCursor"
+        ],
         "additionalProperties": false
       },
       "NumberSeriesListResponseDto_Output": {
@@ -3154,7 +4184,9 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["customer"]
+                  "enum": [
+                    "customer"
+                  ]
                 },
                 "prefix": {
                   "type": "string"
@@ -3171,7 +4203,11 @@
                 },
                 "resetPeriod": {
                   "type": "string",
-                  "enum": ["NONE", "YEARLY", "MONTHLY"]
+                  "enum": [
+                    "NONE",
+                    "YEARLY",
+                    "MONTHLY"
+                  ]
                 },
                 "resettable": {
                   "type": "boolean"
@@ -3203,7 +4239,9 @@
             }
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "additionalProperties": false
       },
       "UpdateNumberSeriesDto": {
@@ -3230,7 +4268,9 @@
         "properties": {
           "name": {
             "type": "string",
-            "enum": ["customer"]
+            "enum": [
+              "customer"
+            ]
           },
           "prefix": {
             "type": "string"
@@ -3247,7 +4287,11 @@
           },
           "resetPeriod": {
             "type": "string",
-            "enum": ["NONE", "YEARLY", "MONTHLY"]
+            "enum": [
+              "NONE",
+              "YEARLY",
+              "MONTHLY"
+            ]
           },
           "resettable": {
             "type": "boolean"
@@ -3286,7 +4330,1211 @@
             "maximum": 2000000000
           }
         },
-        "required": ["nextNumber"]
+        "required": [
+          "nextNumber"
+        ]
+      },
+      "CalendarEventListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "location": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "MEETING",
+                    "CALL",
+                    "DEADLINE",
+                    "OUT_OF_OFFICE",
+                    "OTHER"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "CONFIRMED",
+                    "TENTATIVE",
+                    "CANCELLED"
+                  ]
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "DEFAULT",
+                    "PRIVATE"
+                  ]
+                },
+                "busy": {
+                  "type": "boolean"
+                },
+                "startsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "endsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "timeZone": {
+                  "type": "string"
+                },
+                "allDay": {
+                  "type": "boolean"
+                },
+                "occurrenceStart": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "occurrenceEnd": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "recurringEventId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "ownerId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "customerId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "customer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "attendees": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "REQUIRED",
+                          "OPTIONAL"
+                        ]
+                      },
+                      "response": {
+                        "type": "string",
+                        "enum": [
+                          "NEEDS_ACTION",
+                          "ACCEPTED",
+                          "DECLINED",
+                          "TENTATIVE"
+                        ]
+                      },
+                      "respondedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "nullable": true
+                      },
+                      "comment": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "userId",
+                      "email",
+                      "name",
+                      "role",
+                      "response",
+                      "respondedAt",
+                      "comment"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "reminders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "minutesBefore": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "channel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "minutesBefore",
+                      "channel"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "myResponse": {
+                  "type": "string",
+                  "enum": [
+                    "NEEDS_ACTION",
+                    "ACCEPTED",
+                    "DECLINED",
+                    "TENTATIVE",
+                    null
+                  ],
+                  "nullable": true
+                },
+                "isOrganizer": {
+                  "type": "boolean"
+                },
+                "canEdit": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "description",
+                "location",
+                "kind",
+                "status",
+                "visibility",
+                "busy",
+                "startsAt",
+                "endsAt",
+                "timeZone",
+                "allDay",
+                "occurrenceStart",
+                "occurrenceEnd",
+                "recurringEventId",
+                "ownerId",
+                "owner",
+                "customerId",
+                "customer",
+                "attendees",
+                "reminders",
+                "myResponse",
+                "isOrganizer",
+                "canEdit",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "window": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "to": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "items",
+          "window"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarAgendaResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "location": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "MEETING",
+                    "CALL",
+                    "DEADLINE",
+                    "OUT_OF_OFFICE",
+                    "OTHER"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "CONFIRMED",
+                    "TENTATIVE",
+                    "CANCELLED"
+                  ]
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "DEFAULT",
+                    "PRIVATE"
+                  ]
+                },
+                "busy": {
+                  "type": "boolean"
+                },
+                "startsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "endsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "timeZone": {
+                  "type": "string"
+                },
+                "allDay": {
+                  "type": "boolean"
+                },
+                "occurrenceStart": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "occurrenceEnd": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "recurringEventId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "ownerId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "customerId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "customer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "attendees": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "REQUIRED",
+                          "OPTIONAL"
+                        ]
+                      },
+                      "response": {
+                        "type": "string",
+                        "enum": [
+                          "NEEDS_ACTION",
+                          "ACCEPTED",
+                          "DECLINED",
+                          "TENTATIVE"
+                        ]
+                      },
+                      "respondedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "nullable": true
+                      },
+                      "comment": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "userId",
+                      "email",
+                      "name",
+                      "role",
+                      "response",
+                      "respondedAt",
+                      "comment"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "reminders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "minutesBefore": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "channel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "minutesBefore",
+                      "channel"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "myResponse": {
+                  "type": "string",
+                  "enum": [
+                    "NEEDS_ACTION",
+                    "ACCEPTED",
+                    "DECLINED",
+                    "TENTATIVE",
+                    null
+                  ],
+                  "nullable": true
+                },
+                "isOrganizer": {
+                  "type": "boolean"
+                },
+                "canEdit": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "description",
+                "location",
+                "kind",
+                "status",
+                "visibility",
+                "busy",
+                "startsAt",
+                "endsAt",
+                "timeZone",
+                "allDay",
+                "occurrenceStart",
+                "occurrenceEnd",
+                "recurringEventId",
+                "ownerId",
+                "owner",
+                "customerId",
+                "customer",
+                "attendees",
+                "reminders",
+                "myResponse",
+                "isOrganizer",
+                "canEdit",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarEventResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MEETING",
+              "CALL",
+              "DEADLINE",
+              "OUT_OF_OFFICE",
+              "OTHER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "TENTATIVE",
+              "CANCELLED"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "DEFAULT",
+              "PRIVATE"
+            ]
+          },
+          "busy": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "occurrenceStart": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "occurrenceEnd": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "recurringEventId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "name"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "customer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "attendees": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "REQUIRED",
+                    "OPTIONAL"
+                  ]
+                },
+                "response": {
+                  "type": "string",
+                  "enum": [
+                    "NEEDS_ACTION",
+                    "ACCEPTED",
+                    "DECLINED",
+                    "TENTATIVE"
+                  ]
+                },
+                "respondedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "comment": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "userId",
+                "email",
+                "name",
+                "role",
+                "response",
+                "respondedAt",
+                "comment"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "reminders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "minutesBefore": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "channel": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "minutesBefore",
+                "channel"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "myResponse": {
+            "type": "string",
+            "enum": [
+              "NEEDS_ACTION",
+              "ACCEPTED",
+              "DECLINED",
+              "TENTATIVE",
+              null
+            ],
+            "nullable": true
+          },
+          "isOrganizer": {
+            "type": "boolean"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "location",
+          "kind",
+          "status",
+          "visibility",
+          "busy",
+          "startsAt",
+          "endsAt",
+          "timeZone",
+          "allDay",
+          "occurrenceStart",
+          "occurrenceEnd",
+          "recurringEventId",
+          "ownerId",
+          "owner",
+          "customerId",
+          "customer",
+          "attendees",
+          "reminders",
+          "myResponse",
+          "isOrganizer",
+          "canEdit",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateCalendarEventDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "kind": {
+            "default": "MEETING",
+            "type": "string",
+            "enum": [
+              "MEETING",
+              "CALL",
+              "DEADLINE",
+              "OUT_OF_OFFICE",
+              "OTHER"
+            ]
+          },
+          "status": {
+            "default": "CONFIRMED",
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "TENTATIVE"
+            ]
+          },
+          "visibility": {
+            "default": "DEFAULT",
+            "type": "string",
+            "enum": [
+              "DEFAULT",
+              "PRIVATE"
+            ]
+          },
+          "busy": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "attendees": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "role": {
+                  "default": "REQUIRED",
+                  "type": "string",
+                  "enum": [
+                    "REQUIRED",
+                    "OPTIONAL"
+                  ]
+                }
+              },
+              "required": [
+                "userId"
+              ]
+            }
+          },
+          "reminders": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "minutesBefore": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 40320
+                },
+                "channel": {
+                  "default": "in_app",
+                  "type": "string",
+                  "enum": [
+                    "in_app"
+                  ]
+                }
+              },
+              "required": [
+                "minutesBefore"
+              ]
+            }
+          }
+        },
+        "required": [
+          "title",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UpdateCalendarEventDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "kind": {
+            "default": "MEETING",
+            "type": "string",
+            "enum": [
+              "MEETING",
+              "CALL",
+              "DEADLINE",
+              "OUT_OF_OFFICE",
+              "OTHER"
+            ]
+          },
+          "visibility": {
+            "default": "DEFAULT",
+            "type": "string",
+            "enum": [
+              "DEFAULT",
+              "PRIVATE"
+            ]
+          },
+          "busy": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          }
+        }
+      },
+      "SetCalendarEventStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "TENTATIVE",
+              "CANCELLED"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "SetCalendarAttendeesDto": {
+        "type": "object",
+        "properties": {
+          "attendees": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "role": {
+                  "default": "REQUIRED",
+                  "type": "string",
+                  "enum": [
+                    "REQUIRED",
+                    "OPTIONAL"
+                  ]
+                }
+              },
+              "required": [
+                "userId"
+              ]
+            }
+          }
+        },
+        "required": [
+          "attendees"
+        ]
+      },
+      "SetCalendarRsvpDto": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "string",
+            "enum": [
+              "NEEDS_ACTION",
+              "ACCEPTED",
+              "DECLINED",
+              "TENTATIVE"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "response"
+        ]
+      },
+      "SetCalendarRemindersDto": {
+        "type": "object",
+        "properties": {
+          "reminders": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "minutesBefore": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 40320
+                },
+                "channel": {
+                  "default": "in_app",
+                  "type": "string",
+                  "enum": [
+                    "in_app"
+                  ]
+                }
+              },
+              "required": [
+                "minutesBefore"
+              ]
+            }
+          }
+        },
+        "required": [
+          "reminders"
+        ]
       },
       "UpdateAccountProfileDto": {
         "type": "object",
@@ -3307,7 +5555,15 @@
           "locale": {
             "default": "en",
             "type": "string",
-            "enum": ["en"]
+            "enum": [
+              "en"
+            ]
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "nullable": true
           },
           "avatarFileId": {
             "type": "string",
@@ -3330,7 +5586,10 @@
             "maxLength": 128
           }
         },
-        "required": ["currentPassword", "newPassword"]
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
       },
       "CreateFileUploadDto": {
         "type": "object",
@@ -3362,7 +5621,11 @@
             "maximum": 26214400
           }
         },
-        "required": ["filename", "mimeType", "size"]
+        "required": [
+          "filename",
+          "mimeType",
+          "size"
+        ]
       },
       "CreateFileUploadResponseDto_Output": {
         "type": "object",
@@ -3401,7 +5664,10 @@
               },
               "status": {
                 "type": "string",
-                "enum": ["PENDING", "READY"]
+                "enum": [
+                  "PENDING",
+                  "READY"
+                ]
               },
               "hasThumbnail": {
                 "type": "boolean"
@@ -3441,7 +5707,10 @@
             "format": "uri"
           }
         },
-        "required": ["file", "uploadUrl"],
+        "required": [
+          "file",
+          "uploadUrl"
+        ],
         "additionalProperties": false
       },
       "FileResponseDto_Output": {
@@ -3478,7 +5747,10 @@
           },
           "status": {
             "type": "string",
-            "enum": ["PENDING", "READY"]
+            "enum": [
+              "PENDING",
+              "READY"
+            ]
           },
           "hasThumbnail": {
             "type": "boolean"
@@ -3526,7 +5798,10 @@
             "maximum": 9007199254740991
           }
         },
-        "required": ["url", "expiresInSeconds"],
+        "required": [
+          "url",
+          "expiresInSeconds"
+        ],
         "additionalProperties": false
       },
       "NotificationListResponseDto_Output": {
@@ -3548,7 +5823,12 @@
                     "user.created",
                     "user.password_changed",
                     "user.welcome",
-                    "customer.assigned"
+                    "customer.assigned",
+                    "calendar_event.invited",
+                    "calendar_event.rescheduled",
+                    "calendar_event.cancelled",
+                    "calendar_event.rsvp_changed",
+                    "calendar_event.reminder"
                   ]
                 },
                 "payload": {
@@ -3568,7 +5848,10 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
                   },
-                  "required": ["kind", "id"],
+                  "required": [
+                    "kind",
+                    "id"
+                  ],
                   "additionalProperties": false,
                   "nullable": true
                 },
@@ -3579,7 +5862,10 @@
                 },
                 "actorType": {
                   "type": "string",
-                  "enum": ["user", "system"]
+                  "enum": [
+                    "user",
+                    "system"
+                  ]
                 },
                 "actorId": {
                   "type": "string",
@@ -3636,7 +5922,10 @@
             "nullable": true
           }
         },
-        "required": ["items", "nextCursor"],
+        "required": [
+          "items",
+          "nextCursor"
+        ],
         "additionalProperties": false
       },
       "NotificationSummaryDto_Output": {
@@ -3663,7 +5952,12 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": ["unreadCount", "newCount", "revision", "generatedAt"],
+        "required": [
+          "unreadCount",
+          "newCount",
+          "revision",
+          "generatedAt"
+        ],
         "additionalProperties": false
       },
       "NotificationPreferenceListDto_Output": {
@@ -3680,30 +5974,49 @@
                     "user.created",
                     "user.password_changed",
                     "user.welcome",
-                    "customer.assigned"
+                    "customer.assigned",
+                    "calendar_event.invited",
+                    "calendar_event.rescheduled",
+                    "calendar_event.cancelled",
+                    "calendar_event.rsvp_changed",
+                    "calendar_event.reminder"
                   ]
                 },
                 "channel": {
                   "type": "string",
-                  "enum": ["in_app"]
+                  "enum": [
+                    "in_app"
+                  ]
                 },
                 "enabled": {
                   "type": "boolean"
                 },
                 "category": {
                   "type": "string",
-                  "enum": ["organization", "security"]
+                  "enum": [
+                    "organization",
+                    "security",
+                    "calendar"
+                  ]
                 },
                 "muteable": {
                   "type": "boolean"
                 }
               },
-              "required": ["type", "channel", "enabled", "category", "muteable"],
+              "required": [
+                "type",
+                "channel",
+                "enabled",
+                "category",
+                "muteable"
+              ],
               "additionalProperties": false
             }
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "additionalProperties": false
       },
       "UpdateNotificationPreferencesDto": {
@@ -3721,22 +6034,35 @@
                     "user.created",
                     "user.password_changed",
                     "user.welcome",
-                    "customer.assigned"
+                    "customer.assigned",
+                    "calendar_event.invited",
+                    "calendar_event.rescheduled",
+                    "calendar_event.cancelled",
+                    "calendar_event.rsvp_changed",
+                    "calendar_event.reminder"
                   ]
                 },
                 "channel": {
                   "type": "string",
-                  "enum": ["in_app"]
+                  "enum": [
+                    "in_app"
+                  ]
                 },
                 "enabled": {
                   "type": "boolean"
                 }
               },
-              "required": ["type", "channel", "enabled"]
+              "required": [
+                "type",
+                "channel",
+                "enabled"
+              ]
             }
           }
         },
-        "required": ["items"]
+        "required": [
+          "items"
+        ]
       },
       "UpdateNotificationDto": {
         "type": "object",
@@ -3759,7 +6085,17 @@
           },
           "type": {
             "type": "string",
-            "enum": ["user.created", "user.password_changed", "user.welcome", "customer.assigned"]
+            "enum": [
+              "user.created",
+              "user.password_changed",
+              "user.welcome",
+              "customer.assigned",
+              "calendar_event.invited",
+              "calendar_event.rescheduled",
+              "calendar_event.cancelled",
+              "calendar_event.rsvp_changed",
+              "calendar_event.reminder"
+            ]
           },
           "payload": {
             "type": "object",
@@ -3778,7 +6114,10 @@
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
               }
             },
-            "required": ["kind", "id"],
+            "required": [
+              "kind",
+              "id"
+            ],
             "additionalProperties": false,
             "nullable": true
           },
@@ -3789,7 +6128,10 @@
           },
           "actorType": {
             "type": "string",
-            "enum": ["user", "system"]
+            "enum": [
+              "user",
+              "system"
+            ]
           },
           "actorId": {
             "type": "string",
@@ -3862,7 +6204,11 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           }
         },
-        "required": ["onlineUserIds", "revision", "generatedAt"],
+        "required": [
+          "onlineUserIds",
+          "revision",
+          "generatedAt"
+        ],
         "additionalProperties": false
       }
     }

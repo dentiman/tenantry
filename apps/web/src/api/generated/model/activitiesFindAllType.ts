@@ -24,4 +24,12 @@ export const ActivitiesFindAllType = {
   customerdeleted: 'customer.deleted',
   settingsupdated: 'settings.updated',
   settingsnumbering_shifted: 'settings.numbering_shifted',
+  calendar_eventcreated: 'calendar_event.created',
+  calendar_eventrescheduled: 'calendar_event.rescheduled',
+  calendar_eventcancelled: 'calendar_event.cancelled',
+  calendar_eventrestored: 'calendar_event.restored',
+  calendar_eventdeleted: 'calendar_event.deleted',
+  calendar_eventattendee_added: 'calendar_event.attendee_added',
+  calendar_eventattendee_removed: 'calendar_event.attendee_removed',
+  calendar_eventrsvp_changed: 'calendar_event.rsvp_changed',
 } as const;

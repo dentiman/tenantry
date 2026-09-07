@@ -19,6 +19,8 @@ export type AuthResponseDtoOutputUser = {
   isActive: boolean;
   locale: AuthResponseDtoOutputUserLocale;
   /** @nullable */
+  timeZone: string | null;
+  /** @nullable */
   phone: string | null;
   /** @nullable */
   phoneCountry: string | null;

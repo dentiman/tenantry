@@ -47,6 +47,18 @@ export const ACTIVITY_TYPES = [
   // окремий тип і з числом у payload: дія незворотна, аудиту потрібне значення
   'settings.updated',
   'settings.numbering_shifted',
+  // --- Календар (docs/calendar.md §9.1). Знову окремі типи, а не один
+  // 'calendar_event.updated': «хто пересунув зустріч» питають найчастіше, і це
+  // мусить фільтруватися по type. Редагування назви чи опису в журнал НЕ йде —
+  // інакше фід кастомера потоне в шумі
+  'calendar_event.created',
+  'calendar_event.rescheduled',
+  'calendar_event.cancelled',
+  'calendar_event.restored',
+  'calendar_event.deleted',
+  'calendar_event.attendee_added',
+  'calendar_event.attendee_removed',
+  'calendar_event.rsvp_changed',
 ] as const;
 export const ActivityTypeSchema = z.enum(ACTIVITY_TYPES);
 export type ActivityType = z.infer<typeof ActivityTypeSchema>;
@@ -101,6 +113,44 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = {
   'settings.numbering_shifted': z.object({
     series: z.string(),
     nextNumber: z.number().int(),
+  }),
+  'calendar_event.created': z.object({
+    event: EntityRefSchema, // kind: 'calendar_event'
+    startsAt: z.iso.datetime(),
+    // Снапшот контексту: подія могла бути привʼязана до кастомера, і фід
+    // кастомера читає саме цей лінк
+    customer: EntityRefSchema.nullable(),
+  }),
+  // Перенесення — окремий тип із ОБОМА моментами: «на коли перенесли» без
+  // «з коли» не читається, а join на живий рядок фід робити не має права
+  'calendar_event.rescheduled': z.object({
+    event: EntityRefSchema,
+    previousStartsAt: z.iso.datetime(),
+    startsAt: z.iso.datetime(),
+  }),
+  'calendar_event.cancelled': z.object({
+    event: EntityRefSchema,
+  }),
+  'calendar_event.restored': z.object({
+    event: EntityRefSchema,
+    status: z.enum(['CONFIRMED', 'TENTATIVE']), // куди саме повернули зі скасування
+  }),
+  'calendar_event.deleted': z.object({
+    // Лінк лишається на неіснуючий id — журнал переживає сутність
+    event: EntityRefSchema,
+  }),
+  'calendar_event.attendee_added': z.object({
+    event: EntityRefSchema,
+    attendee: EntityRefSchema, // kind: 'user'
+  }),
+  'calendar_event.attendee_removed': z.object({
+    event: EntityRefSchema,
+    attendee: EntityRefSchema,
+  }),
+  'calendar_event.rsvp_changed': z.object({
+    event: EntityRefSchema,
+    attendee: EntityRefSchema,
+    response: z.enum(['NEEDS_ACTION', 'ACCEPTED', 'DECLINED', 'TENTATIVE']),
   }),
   'email.sent': z.object({
     template: z.string(), // 'welcome' — ключ у i18n фронта

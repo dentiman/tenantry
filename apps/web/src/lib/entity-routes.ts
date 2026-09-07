@@ -12,11 +12,15 @@
  */
 export type EntityLink =
   | { to: '/workspace/users/$userId'; params: { userId: string } }
-  | { to: '/workspace/customers/$customerId'; params: { customerId: string } };
+  | { to: '/workspace/customers/$customerId'; params: { customerId: string } }
+  | { to: '/calendar/events/$eventId'; params: { eventId: string } };
 
 const ENTITY_LINKS: Record<string, (id: string) => EntityLink> = {
   user: (id) => ({ to: '/workspace/users/$userId', params: { userId: id } }),
   customer: (id) => ({ to: '/workspace/customers/$customerId', params: { customerId: id } }),
+  // Подія відкривається ПОВЕРХ сітки того тижня, у якому лежить — тому окремий
+  // роут, а не `?eventId=` (docs/calendar.md §11.1)
+  calendar_event: (id) => ({ to: '/calendar/events/$eventId', params: { eventId: id } }),
 };
 
 export function entityLink(kind: string, id: string): EntityLink | null {

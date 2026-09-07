@@ -11,5 +11,6 @@ export * from './pg-boss.service';
 export * from './topology';
 export * from './definitions/files.messages';
 export * from './definitions/maintenance.messages';
+export * from './definitions/notifications.messages';
 export * from './definitions/users.messages';
 export * from './message-correlation.middleware';

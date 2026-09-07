@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { NotificationDispatcherRegistry } from './notification-dispatcher';
 import { NotificationRecorder } from './notification-recorder.service';
 import { NotificationStateService } from './notification-state.service';
+import { ScheduledNotificationService } from './scheduled-notification.service';
 
 /**
  * Глобальний (як ActivitiesModule і StorageModule): інбокс — інфраструктура,
@@ -10,7 +11,17 @@ import { NotificationStateService } from './notification-state.service';
  */
 @Global()
 @Module({
-  providers: [NotificationRecorder, NotificationStateService, NotificationDispatcherRegistry],
-  exports: [NotificationRecorder, NotificationStateService, NotificationDispatcherRegistry],
+  providers: [
+    NotificationRecorder,
+    NotificationStateService,
+    NotificationDispatcherRegistry,
+    ScheduledNotificationService,
+  ],
+  exports: [
+    NotificationRecorder,
+    NotificationStateService,
+    NotificationDispatcherRegistry,
+    ScheduledNotificationService,
+  ],
 })
 export class NotificationsModule {}

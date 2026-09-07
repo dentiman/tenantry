@@ -35,10 +35,12 @@ describe('Organization settings API (e2e)', () => {
     await prisma.activity.deleteMany();
     await prisma.refreshToken.deleteMany();
     await prisma.user.deleteMany();
-    // Дефолтний стан воркспейсу між тестами
+    // Дефолтний стан воркспейсу між тестами. `settings` теж: секції в JSON
+    // (calendar) пише сусідній сьют, а `--runInBand` виконує їх послідовно —
+    // без цього скидання тест на bootstrap залежав би від порядку файлів
     await prisma.tenant.update({
       where: { id: DEFAULT_TENANT_ID },
-      data: { name: 'Default Tenant', locale: 'en', currency: 'USD' },
+      data: { name: 'Default Tenant', locale: 'en', currency: 'USD', settings: {} },
     });
   });
 
@@ -151,6 +153,18 @@ describe('Organization settings API (e2e)', () => {
 
     expect(response.body).toEqual({
       general: { name: 'Default Tenant', slug: 'default', locale: 'en', currency: 'USD' },
+      // Секція календаря їде в bootstrap-і: без першого дня тижня і робочих
+      // годин сітку неможливо намалювати першим рендером (docs/calendar.md §9.5).
+      // Тенант без явних налаштувань отримує дефолти CALENDAR_SETTINGS_DEFAULTS
+      calendar: {
+        timeZone: 'UTC',
+        weekStartsOn: 1,
+        workDayStart: '09:00',
+        workDayEnd: '18:00',
+        defaultEventDurationMinutes: 30,
+        defaultReminderMinutes: 10,
+        defaultAllDayReminderMinutes: 900,
+      },
       features: {},
     });
   });

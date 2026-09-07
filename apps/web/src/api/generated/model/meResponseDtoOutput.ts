@@ -19,6 +19,8 @@ export interface MeResponseDtoOutput {
   isActive: boolean;
   locale: MeResponseDtoOutputLocale;
   /** @nullable */
+  timeZone: string | null;
+  /** @nullable */
   phone: string | null;
   /** @nullable */
   phoneCountry: string | null;

@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { CustomerQuerySchema, UserQuerySchema } from '@saas-skeleton/contracts';
+import { isCalendarView } from './lib/calendar-date';
 import { useAuthStore } from './stores/auth.store';
 import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
 import { AppShell } from './app-shell/app-shell';
@@ -18,6 +19,7 @@ import { UsersPage } from './pages/users';
 import { CustomersPage } from './pages/customers';
 import { CustomerDetailPage } from './pages/customer-detail';
 import { UserDetailPage } from './pages/user-detail';
+import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
@@ -26,6 +28,7 @@ import { UserSettingsSecurityPage } from './pages/user-settings/security';
 import { UserSettingsNotificationsPage } from './pages/user-settings/notifications';
 import { UserSettingsAppearancePage } from './pages/user-settings/appearance';
 import { SettingsGeneralPage } from './pages/settings/general';
+import { SettingsCalendarPage } from './pages/settings/calendar';
 import { SettingsNumberingPage } from './pages/settings/numbering';
 import { SettingsActivityPage } from './pages/settings/activity';
 
@@ -208,6 +211,62 @@ const userDetailRoute = createRoute({
 });
 
 /**
+ * Area «Calendar». Перегляд — у ШЛЯХУ (`/calendar/week`), період — у search
+ * (`?date=2026-09-06`): і те, і те мусить переживати F5 і жити в надісланому
+ * посиланні (docs/calendar.md §11.1). `$view` валідується `beforeLoad`-ом —
+ * невідомий перегляд тихо падає в тиждень замість 404.
+ */
+const calendarRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/calendar',
+});
+
+const CalendarSearchSchema = z.object({
+  // `yyyy-MM-dd`; невалідне значення з URL тихо падає в дефолт (сьогодні),
+  // як і решта search-схем застосунку
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .catch(undefined),
+});
+
+export type CalendarSearch = z.infer<typeof CalendarSearchSchema>;
+
+/** `/calendar` → тиждень: «домівка» area мусить щось показувати */
+const calendarIndexRoute = createRoute({
+  getParentRoute: () => calendarRoute,
+  path: '/',
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/calendar/$view', params: { view: 'week' }, replace: true });
+  },
+});
+
+const calendarViewRoute = createRoute({
+  getParentRoute: () => calendarRoute,
+  path: '$view',
+  validateSearch: (search) => CalendarSearchSchema.parse(search),
+  beforeLoad: ({ params }) => {
+    if (!isCalendarView(params.view)) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({ to: '/calendar/$view', params: { view: 'week' }, replace: true });
+    }
+  },
+  component: CalendarPage,
+});
+
+/**
+ * Deep link на подію (з інбоксу, з журналу, з листа). Окремий роут, а не
+ * `?eventId=`: посилання на зустріч дають так само, як на картку кастомера.
+ */
+const calendarEventRoute = createRoute({
+  getParentRoute: () => calendarRoute,
+  path: 'events/$eventId',
+  component: CalendarPage,
+});
+
+/**
  * Area «Chat». Layout + index від першого дня, хоча сторінка поки одна: на
  * layout-роуті сидітиме гейт area, а `/chat/$conversationId` додається дитиною,
  * не переписуванням. Сам роут розмови не заводимо — мертвих роутів не тримаємо.
@@ -238,6 +297,12 @@ const settingsGeneralRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: '/',
   component: SettingsGeneralPage,
+});
+
+const settingsCalendarRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'calendar',
+  component: SettingsCalendarPage,
 });
 
 const settingsNumberingRoute = createRoute({
@@ -334,9 +399,11 @@ const routeTree = rootRoute.addChildren([
       customersRoute,
       customerDetailRoute,
     ]),
+    calendarRoute.addChildren([calendarIndexRoute, calendarViewRoute, calendarEventRoute]),
     chatRoute.addChildren([chatIndexRoute]),
     settingsRoute.addChildren([
       settingsGeneralRoute,
+      settingsCalendarRoute,
       settingsNumberingRoute,
       settingsActivityRoute,
     ]),

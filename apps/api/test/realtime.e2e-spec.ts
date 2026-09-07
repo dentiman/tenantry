@@ -15,6 +15,7 @@ import { io as ioClient, type Socket as ClientSocket } from 'socket.io-client';
 import * as argon2 from 'argon2';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type {
+  CalendarEventChanged,
   NotificationChanged,
   NotificationCreated,
   PresenceChanged,
@@ -546,5 +547,190 @@ describe('Realtime gateway + presence (e2e)', () => {
       role: 'ADMIN',
     });
     expect((await snapshot(tokens.accessToken)).onlineUserIds).not.toContain(user.id);
+  });
+
+  /**
+   * Дельти календаря (docs/calendar.md §9.3). Перевіряємо саме те, чого не
+   * видно з HTTP: емісія йде в ОСОБИСТІ room-и учасників (не broadcast у
+   * tenant-room — інакше факт існування чужої зустрічі з її часом розсилався б
+   * усьому тенанту), відбувається ПІСЛЯ коміту, а перенесення дає ДВІ дельти —
+   * на нове й на старе вікно.
+   */
+  describe('дельти календаря', () => {
+    const CAL_START = '2027-05-12T10:00:00.000Z';
+    const CAL_END = '2027-05-12T11:00:00.000Z';
+
+    const waitForCalendar = (socket: ClientSocket): Promise<CalendarEventChanged> =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('calendar.event-changed.v1 not received'));
+        }, 3_000);
+        socket.once(REALTIME_EVENTS.calendarEventChanged, (payload: CalendarEventChanged) => {
+          clearTimeout(timer);
+          resolve(payload);
+        });
+      });
+
+    const collect = (socket: ClientSocket): CalendarEventChanged[] => {
+      const seen: CalendarEventChanged[] = [];
+      socket.on(REALTIME_EVENTS.calendarEventChanged, (payload: CalendarEventChanged) => {
+        seen.push(payload);
+      });
+      return seen;
+    };
+
+    it('доїжджає в усі вкладки учасника і НЕ доїжджає до сторонньої людини', async () => {
+      const organizer = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-organizer'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      const guest = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-guest'),
+        password: 'Password123',
+      });
+      const stranger = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-stranger'),
+        password: 'Password123',
+      });
+
+      const guestTabA = await connect(guest.tokens.accessToken);
+      const guestTabB = await connect(guest.tokens.accessToken);
+      const strangerSocket = await connect(stranger.tokens.accessToken);
+      const strangerSeen = collect(strangerSocket);
+
+      const received = Promise.all([waitForCalendar(guestTabA), waitForCalendar(guestTabB)]);
+
+      const created = await request(app.getHttpServer())
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({
+          title: 'RT sync',
+          startsAt: CAL_START,
+          endsAt: CAL_END,
+          attendees: [{ userId: guest.user.id }],
+        })
+        .expect(201);
+      const eventId = (created.body as { id: string }).id;
+
+      const [first, second] = await received;
+      expect(first.eventId).toBe(eventId);
+      expect(first.change).toBe('created');
+      expect(first.startsAt).toBe(CAL_START);
+      expect(second.eventId).toBe(eventId);
+
+      await sleep(200);
+      // Сторонній не в події — і про її існування не дізнається
+      expect(strangerSeen).toHaveLength(0);
+    });
+
+    it('на перенесення шле дві дельти: нове вікно і старе', async () => {
+      const organizer = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-move'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+
+      const created = await request(app.getHttpServer())
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({ title: 'RT move', startsAt: CAL_START, endsAt: CAL_END })
+        .expect(201);
+      const eventId = (created.body as { id: string }).id;
+
+      // Підключаємось ПІСЛЯ створення: цікавить саме дельта переносу
+      const socket = await connect(organizer.tokens.accessToken);
+      const seen = collect(socket);
+
+      await request(app.getHttpServer())
+        .patch(`/api/calendar/events/${eventId}`)
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({ startsAt: '2027-05-20T10:00:00.000Z', endsAt: '2027-05-20T11:00:00.000Z' })
+        .expect(200);
+
+      await sleep(300);
+      expect(seen).toHaveLength(2);
+      // Порядок фіксований: спершу нова межа, потім стара — клієнт інвалідує
+      // обидва вікна, тому черговість на результат не впливає, але контракт
+      // мусить бути детермінованим
+      expect(seen[0]?.startsAt).toBe('2027-05-20T10:00:00.000Z');
+      expect(seen[1]?.startsAt).toBe(CAL_START);
+      expect(seen.every((delta) => delta.change === 'updated')).toBe(true);
+    });
+
+    it('прибраний учасник отримує дельту про зникнення події', async () => {
+      const organizer = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-drop-owner'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      const guest = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-drop-guest'),
+        password: 'Password123',
+      });
+
+      const created = await request(app.getHttpServer())
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({
+          title: 'RT drop',
+          startsAt: CAL_START,
+          endsAt: CAL_END,
+          attendees: [{ userId: guest.user.id }],
+        })
+        .expect(201);
+      const eventId = (created.body as { id: string }).id;
+
+      const guestSocket = await connect(guest.tokens.accessToken);
+      const received = waitForCalendar(guestSocket);
+
+      await request(app.getHttpServer())
+        .put(`/api/calendar/events/${eventId}/attendees`)
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({ attendees: [{ userId: organizer.user.id }] })
+        .expect(200);
+
+      // У room-ах події його вже немає, тому дельта мусить піти в обʼєднання
+      // старого і нового складу — інакше подія «залипла» б у його календарі
+      const delta = await received;
+      expect(delta.eventId).toBe(eventId);
+      expect(delta.change).toBe('updated');
+    });
+
+    it('не перетікає між тенантами', async () => {
+      const organizer = await createAndLoginTestUser(app, sysPrisma, {
+        email: uniqueEmail('rt-cal-tenant-a'),
+        password: 'Password123',
+        role: 'ADMIN',
+      });
+      const foreignEmail = uniqueEmail('rt-cal-tenant-b');
+      await sysPrisma.user.create({
+        data: {
+          tenantId: TENANT_B_ID,
+          email: foreignEmail,
+          passwordHash: await argon2.hash('Password123'),
+          role: 'ADMIN',
+        },
+      });
+      const foreignTokens = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: foreignEmail, password: 'Password123', tenant: TENANT_B_SLUG })
+        .expect(200);
+      const foreignSocket = await connect(
+        (foreignTokens.body as { tokens: { accessToken: string } }).tokens.accessToken,
+      );
+      const foreignSeen = collect(foreignSocket);
+
+      await request(app.getHttpServer())
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${organizer.tokens.accessToken}`)
+        .send({ title: 'RT isolation', startsAt: CAL_START, endsAt: CAL_END })
+        .expect(201);
+
+      await sleep(250);
+      // Room-и мають tenant-префікс, тому однакові id юзерів у різних тенантах
+      // не можуть перетнутись (docs/realtime-internals.md § «Room-и»)
+      expect(foreignSeen).toHaveLength(0);
+    });
   });
 });

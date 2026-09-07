@@ -42,31 +42,39 @@ model Tenant {
   customerContacts        CustomerContact[]
   numberSequences         NumberSequence[]
   numberSeries            NumberSeries[]
+  calendarEvents          CalendarEvent[]
+  calendarEventAttendees  CalendarEventAttendee[]
+  calendarReminders       CalendarReminder[]
+  scheduledNotifications  ScheduledNotification[]
 
   @@map("tenants")
 }
 
 // Base user model for the CRM template
 model User {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   // MT-1: заповнюється DB-default-ом current_setting('app.tenant_id') — доменний код його НЕ передає
-  tenantId     String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  tenantId     String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
   email        String
   name         String?
-  passwordHash String?  @map("password_hash")
-  role         Role     @default(USER)
-  isActive     Boolean  @default(true) @map("is_active")
+  passwordHash String?   @map("password_hash")
+  role         Role      @default(USER)
+  isActive     Boolean   @default(true) @map("is_active")
   // I18N-3: локаль для server-rendered тексту (email); UI-перемикач мови — I18N-4
-  locale       String   @default("en")
+  locale       String    @default("en")
+  // Календар: IANA-зона юзера (docs/calendar.md §6.1). NULL = «як в організації»
+  // (settings.calendar.timeZone). Окремо від locale свідомо: локаль задає ФОРМАТ,
+  // зона — який саме це момент; людина в Берліні з англійським UI — норма
+  timeZone     String?   @map("time_zone")
   // Телефон завжди в E.164 (валідує PhoneNumberSchema в contracts). phoneCountry потрібен
   // окремо, бо за кодом країни номер не відновлюється однозначно: +1 — це US, CA і десяток
   // карибських країн, і без збереженого вибору UI показав би не той прапор при редагуванні
   phone        String?
-  phoneCountry String?  @map("phone_country") @db.Char(2)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  phoneCountry String?   @map("phone_country") @db.Char(2)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
   // Демо-споживач файлової підсистеми (Files v1)
-  avatarFileId String?  @map("avatar_file_id")
+  avatarFileId String?   @map("avatar_file_id")
   // RT-3: найпізніший момент, коли система ТОЧНО знала про живе socket-зʼєднання юзера
   // (high-water mark, а НЕ «момент дисконекту»: у режимах відмов дисконект не настає
   // взагалі). NULL — жодного разу не підключався. Пишеться ТІЛЬКИ presence-шаром
@@ -86,6 +94,10 @@ model User {
   avatarFile              File?                    @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   uploadedFiles           File[]                   @relation("UploadedFiles")
   ownedCustomers          Customer[]               @relation("CustomerOwner")
+  organizedEvents         CalendarEvent[]          @relation("CalendarEventOwner")
+  eventAttendances        CalendarEventAttendee[]
+  calendarReminders       CalendarReminder[]
+  scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationRecipient")
 
   // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
   @@unique([tenantId, email])
@@ -377,9 +389,11 @@ model Customer {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  owner    User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  contacts CustomerContact[]
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner          User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts       CustomerContact[]
+  // Зустрічі й дзвінки з цим контрагентом: блок «Upcoming» на картці + стрічка
+  calendarEvents CalendarEvent[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, externalId])
@@ -464,8 +478,8 @@ model NumberSeries {
   tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
   name     String
 
-  prefix  String @default("")
-  padding Int    @default(0)
+  prefix      String            @default("")
+  padding     Int               @default(0)
   // Перший номер у КОЖНОМУ новому періоді. На вже початий лічильник не впливає —
   // для нього є окрема монотонна операція «наступний номер = N»
   startValue  Int               @default(1) @map("start_value")
@@ -493,4 +507,219 @@ model ProcessedJob {
   processedAt DateTime @default(now()) @map("processed_at")
 
   @@map("processed_jobs")
+}
+
+// ============================================================================
+// Календар (docs/calendar.md). Іменування з кваліфікатором: слово Event у цьому
+// репозиторії зайняте messaging-повідомленнями, socket-подіями і журналом.
+// ============================================================================
+
+model CalendarEvent {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  title       String
+  description String?
+  location    String?
+
+  kind       CalendarEventKind       @default(MEETING)
+  // CANCELLED замість soft delete: учасник мусить побачити «скасовано», а не
+  // «зникло». Тому скасування — окремий ендпоінт (подія), а DELETE лишається
+  // виправленням щойно зробленої помилки
+  status     CalendarEventStatus     @default(CONFIRMED)
+  visibility CalendarEventVisibility @default(DEFAULT)
+  // TRANSP із RFC 5545: чи рахувати подію зайнятістю при перевірці накладань
+  busy       Boolean                 @default(true)
+
+  // UTC-інстанти. ends_at ЕКСКЛЮЗИВНИЙ: подія — пів-інтервал [starts_at, ends_at),
+  // тому перетин із вікном — starts_at < :to AND ends_at > :from (обидва строгі).
+  // Одноденна all-day = [06.09 00:00, 07.09 00:00) у time_zone події
+  startsAt DateTime @map("starts_at")
+  endsAt   DateTime @map("ends_at")
+  // IANA-зона, В ЯКІЙ час задали (Europe/Kyiv), а НЕ offset: offset — властивість
+  // моменту, після переходу на зимовий час він інший, і «щовівторка о 10:00»
+  // поїхало б на годину. Потрібна і для all-day, і для повторень (CAL-4)
+  timeZone String   @map("time_zone")
+  // true = час ігнорується: межі нормалізовані до опівночі в time_zone події,
+  // а рендер бере ДАТУ в зоні ПОДІЇ, не глядача (docs/calendar.md §6.2)
+  allDay   Boolean  @default(false) @map("all_day")
+
+  // Організатор. NULLABLE + SetNull — як Customer.owner (рішення 2026-09-06):
+  // історія команди мусить пережити звільнення людини, а Restrict перетворив би
+  // офбординг на квест. Подію без організатора редагує ADMIN — ЄДИНИЙ випадок,
+  // коли він має права на чужу подію
+  ownerId String? @map("owner_id")
+
+  // Контекст CRM. Конкретна колонка, а не поліморфний лінк: другого типу
+  // контрагента поки немає, а рівень непрямості без споживача — борг (та сама
+  // логіка, що відкинула party-модель у customers.md §2)
+  customerId String? @map("customer_id")
+
+  // Снапшот автора; без FK — юзера можуть видалити, подія лишається
+  createdById String? @map("created_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // FK НЕ композитний — та сама причина, що в Customer.owner і User.avatarFile:
+  // Prisma не вміє SET NULL з переліком колонок і занулила б заодно tenant_id.
+  // Крос-tenant захист — RLS на обох таблицях
+  owner     User?                   @relation("CalendarEventOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  // FK НЕ композитний — рівно та сама грабля, що в Customer.owner: Prisma не вміє
+  // SET NULL з переліком колонок і занулила б заодно tenant_id (prisma validate
+  // це навіть попереджає). Крос-tenant захист — RLS на обох таблицях.
+  // Саме SetNull, а не Restrict: «зустріч, яка була» не має зникати чи блокувати
+  // видалення картки клієнта — журнал переживає сутність
+  customer  Customer?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  attendees CalendarEventAttendee[]
+  reminders CalendarReminder[]
+
+  // Опора під композитні FK дочірніх таблиць
+  @@unique([tenantId, id])
+  // Головний запит модуля — вікно
+  @@index([tenantId, startsAt, endsAt])
+  @@index([tenantId, ownerId, startsAt])
+  @@index([tenantId, customerId, startsAt])
+  @@map("calendar_events")
+}
+
+enum CalendarEventKind {
+  MEETING
+  CALL
+  DEADLINE
+  OUT_OF_OFFICE
+  OTHER
+}
+
+enum CalendarEventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+enum CalendarEventVisibility {
+  DEFAULT
+  PRIVATE
+}
+
+// Учасник події. У V1 — тільки юзер тенанта: зовнішній учасник вимагає листа,
+// а email-канал у цьому ході свідомо не вмикаємо (CAL-3).
+model CalendarEventAttendee {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  eventId  String @map("event_id")
+  userId   String @map("user_id")
+
+  role        CalendarAttendeeRole     @default(REQUIRED)
+  // PARTSTAT із RFC 5545
+  response    CalendarAttendeeResponse @default(NEEDS_ACTION)
+  // Коли відповів — потрібне організатору («досі не відповів третій день»)
+  respondedAt DateTime?                @map("responded_at")
+  comment     String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитні FK: учасник не може вказати ні на подію, ні на юзера чужого тенанта
+  event  CalendarEvent @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+  user   User          @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  // Двічі запросити ту саму людину неможливо
+  @@unique([tenantId, eventId, userId])
+  // «Мій календар» = події, де я учасник: цей індекс несе головний список
+  @@index([tenantId, userId])
+  @@map("calendar_event_attendees")
+}
+
+enum CalendarAttendeeRole {
+  REQUIRED
+  OPTIONAL
+}
+
+enum CalendarAttendeeResponse {
+  NEEDS_ACTION
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+// ДЕКЛАРАЦІЯ нагадування («за 30 хв»), персональна: організатор і учасник мають
+// у тій самій події різні нагадування (як reminders.overrides у Google).
+// Момент спрацювання тут НЕ зберігається — він рахується і матеріалізується
+// в scheduled_notifications (docs/calendar.md §8.1). Пара «конфіг + розрахований
+// стан» — той самий поділ, що number_series / number_sequences.
+model CalendarReminder {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  eventId  String @map("event_id")
+  userId   String @map("user_id")
+
+  // Хвилини ДО початку, а не абсолютний момент: подію переносять, і абсолютний
+  // час довелося б перераховувати на кожен зсув (а частину — забути)
+  minutesBefore Int    @map("minutes_before")
+  // Ключ (type, channel) закладений під email; у V1 живий рівно 'in_app'
+  channel       String @default("in_app")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event  CalendarEvent @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+  user   User          @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  // Два однакові нагадування на ту саму подію — помилка вводу, не дані
+  @@unique([tenantId, eventId, userId, minutesBefore, channel])
+  @@index([tenantId, eventId])
+  @@map("calendar_reminders")
+}
+
+// ============================================================================
+// Відкладені сповіщення — СПІЛЬНА інфраструктура (docs/notifications.md
+// § «Обмеження V1 / беклог», roadmap §2.1), а не частина календаря: жодного
+// calendar_ у назвах. Календар — її перший споживач.
+//
+// Чому не pg-boss із startAfter (docs/calendar.md §8.2): pgboss.* поза RLS —
+// тенант не має права читати таблицю черги, тож ні показати «мої нагадування»,
+// ні скасувати їх із доменного коду було б неможливо. Плюс ретеншн черги,
+// скасування як друге джерело правди і гонки при перепрануванні.
+// ============================================================================
+
+model ScheduledNotification {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  // Коли доставити. Сканер бере рядки з fire_at <= now() атомарним claim-ом
+  fireAt    DateTime @map("fire_at")
+  // Ключ ідемпотентності МАТЕРІАЛІЗАЦІЇ: 'calendar_reminder:{id}:{occurrenceStart}'.
+  // Повторна матеріалізація (ретрай, дві вкладки) не плодить дублів
+  dedupeKey String   @map("dedupe_key")
+
+  // Форма рядка дзеркалить notifications: сканер просто передає це в recorder
+  recipientId String  @map("recipient_id")
+  type        String
+  payload     Json
+  targetKind  String? @map("target_kind")
+  targetId    String? @map("target_id")
+  groupKey    String? @map("group_key")
+  actorType   String  @default("system") @map("actor_type")
+  actorId     String? @map("actor_id")
+  actorLabel  String? @map("actor_label")
+
+  // Захоплено сканером. Окремо від delivered_at: захоплений рядок уже в роботі,
+  // і перепланування його НЕ видаляє (доставка — правда про минуле)
+  claimedAt     DateTime? @map("claimed_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  // 'stale' — дозріло більш ніж grace тому (воркер лежав). Нагадування «зустріч
+  // за 30 хв», отримане через годину після початку, гірше за мовчання
+  skippedReason String?   @map("skipped_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient User   @relation("ScheduledNotificationRecipient", fields: [tenantId, recipientId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, recipientId, fireAt])
+  // Частковий індекс сканера (WHERE ще не доставлено) — сирим SQL у міграції
+  @@map("scheduled_notifications")
 }

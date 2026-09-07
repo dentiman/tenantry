@@ -1,5 +1,9 @@
 import type { Tenant } from '@saas-skeleton/database';
-import type { SettingsBootstrap, GeneralSettingsResponse } from '@saas-skeleton/contracts';
+import type {
+  CalendarSettings,
+  SettingsBootstrap,
+  GeneralSettingsResponse,
+} from '@saas-skeleton/contracts';
 
 /**
  * Назовні йдуть ТІЛЬКИ поля, які тенант має бачити. `isActive` і `settings`
@@ -15,7 +19,10 @@ export function toGeneralSettingsResponse(tenant: Tenant): GeneralSettingsRespon
   };
 }
 
-export function toSettingsBootstrap(tenant: Tenant): SettingsBootstrap {
+export function toSettingsBootstrap(
+  tenant: Tenant,
+  calendar: CalendarSettings,
+): SettingsBootstrap {
   return {
     general: {
       name: tenant.name,
@@ -23,6 +30,9 @@ export function toSettingsBootstrap(tenant: Tenant): SettingsBootstrap {
       locale: tenant.locale,
       currency: tenant.currency,
     },
+    // Без цих полів неможливо намалювати сітку першим рендером (перший день
+    // тижня і робочі години), а другий запит дав би стрибок розкладки
+    calendar,
     // V1 порожня: ключ закладений, щоб feature-gating не вимагав нового ендпоінта
     features: {},
   };

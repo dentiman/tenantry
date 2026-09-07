@@ -379,6 +379,66 @@ regexp_replace(...)`; разом із колонкою переживає й у�
   роуту** і TS його перевіряє (`/app/users/$userId` → `/app/workspace/users/$userId`), а от
   `Crumb.to` типізований як `string` — крихти компілятор НЕ ловить, їх правили руками.
   Деталі — `docs/frontend/app-shell.md`.
+  **Календар CAL-1 завершений і перевірений** (2026-09-07): події користувача за
+  `docs/calendar.md` — друга бізнес-сутність після кастомерів і перша, де зʼявився ЧАС.
+  Ім'я **`CalendarEvent`**, а не `Event`: слово зайняте messaging-повідомленнями
+  (`defineEvent`), socket-подіями і журналом, тож доменна сутність під ним зробила б
+  нечитабельним кожне друге речення (та сама історія, що `Account` → `Customer`).
+  Три таблиці — `calendar_events` (пів-відкритий інтервал `[starts_at, ends_at)` за
+  RFC 5545 + IANA-`time_zone` ПОРУЧ з UTC-інстантом, `all_day` із рендером у зоні ПОДІЇ,
+  а не глядача), `calendar_event_attendees` (RSVP-`PARTSTAT`; **організатор — теж рядок
+  учасника**, як у Google/Graph) і `calendar_reminders` (ДЕКЛАРАЦІЯ «за N хв», персональна) —
+  плюс `users.time_zone`; усі з RLS ENABLE/FORCE за шаблоном MT-2. **Читання ВІКНОМ**
+  (`from`/`to`, стеля 62 дні, без `page`/`total` — «сторінка 7 календаря» не означає
+  нічого), курсорна `GET /calendar/agenda` окремо. **Елемент відповіді — ВХОДЖЕННЯ**
+  (`occurrenceStart`/`occurrenceEnd`, `recurringEventId: null`) з першого дня: з появою
+  повторень (CAL-4) один рядок почне давати N елементів, і без цих полів довелося б міняти
+  контракт. **Доступ визначає УЧАСТЬ, а не роль** — єдиний модуль, де `@Roles` не годиться:
+  `CalendarAccessService` (одне місце на фільтр списку і на перевірку рядка), сторонньому
+  404 а не 403, учаснику 403 на редагування, ADMIN бачить лише БЕЗХАЗЯЙНІ події
+  (`owner_id IS NULL` після видалення юзера) і НЕ бачить чужих приватних; подія, привʼязана
+  до кастомера, видима колегам — інакше «Історія зустрічей» на картці клієнта показувала б
+  кожному лише його власні дзвінки. **Нагадування end-to-end без email**: спільна
+  `scheduled_notifications` (та сама, що планувалась у roadmap §2.1 — жодного `calendar_` у
+  назвах) + cron `notifications.dispatch-scheduled` раз на хвилину зі scope `system`,
+  атомарний `claim` (`FOR UPDATE SKIP LOCKED`) як єдине джерело exactly-once (inbox не
+  потрібен), перепланування/скасування в ТІЙ САМІЙ транзакції, що доменна зміна, і політика
+  `stale` (10 хв) проти доставки «навздогін» після простою. **Чому не `pg-boss startAfter`**:
+  `pgboss.*` поза RLS (той самий аргумент, що переніс `/jobs` у platform-api), ретеншн черги,
+  скасування як друге джерело правди, гонки при перепрануванні. Інтеграції — без жодного
+  нового наскрізного механізму: 8 типів активностей із лінком `role: 'context'` на кастомера
+  (його фід отримує зустрічі БЕЗ нового ендпоінта), 5 типів сповіщень і нова категорія
+  `calendar` (`cancelled` — немутабельний), дифування складу учасників (той самий склад =
+  нуль сповіщень), секція `/settings/calendar` у `Tenant.settings` JSON — перший реальний
+  споживач гібридного сховища. Фронт: пʼята area `/calendar` (друга колонка — контейнер
+  вигляду з міні-місяцем, як у чата), Day/Week/Month/Agenda на ВЛАСНИХ `TimeGrid`/`MonthGrid`
+  (готові бібліотеки приносять другий движок і другу тему; `react-day-picker` — рівно як
+  date-picker), панель події в `Sheet` з RSVP і вкладкою Activity, блок «Upcoming» на картці
+  кастомера, таймзона в Profile. `date-fns` + `@date-fns/tz` — ТІЛЬКИ на фронті; бекенд
+  тримає 30 рядків на `Intl` (`calendar-time.ts`).
+  **CAL-2 почато того ж дня — realtime-дельти**: `calendar.event-changed.v1` в особисті
+  room-и УЧАСНИКІВ (не broadcast у tenant-room: інакше час і факт існування чужої
+  зустрічі летіли б усьому тенанту), payload БЕЗ стану (`{eventId, change, startsAt,
+  endsAt}` — клієнт лише вирішує, чи чіпає зміна відкрите вікно, і перечитує його
+  цілком), **перенесення шле ДВІ дельти** (нова межа + стара, інакше на старому місці
+  лишалась би дірка), прибраний учасник отримує дельту через обʼєднання складів, клієнт
+  інвалідує ЛИШЕ перетнуті вікна (`predicate` по живих ключах кеша).
+  203 tenant-e2e (+32) і 11 platform-e2e;
+  лінт/тайпчек/білд чисті. **Браузерна перевірка (2026-09-07) знайшла 8 дефектів,
+  яких не бачили ні типи, ні 203 e2e** — головний блокував увесь екран:
+  **`TZDate.toISOString()` віддає час ЗІ ЗСУВОМ** (`…+03:00`), а `z.iso.datetime()`
+  приймає лише `Z` → кожен вікновий запит 400. Тепер дати виходять на дріт ЛИШЕ
+  через `toInstantIso()`. Решта: міні-місяць підсвічував сусідній день
+  (`TZDate` проти локальних днів `react-day-picker`), сторінка не вміщалась у вікно
+  (шел скролить ВІКНО — сітка мусить обмежити себе сама, ідіом `ActivityPanel`),
+  підпис місяця брався з країв сітки («October» над вереснем), agenda показувала
+  вигаданий діапазон, нативні `type="time"` у вузькій панелі обрізали «14:00» до
+  «14:», у 30-хвилинній плитці обрізався рядок часу, а на холодному старті летіли ДВА
+  запити вікна (до bootstrap-у зона — фолбек на пристрій; тепер запит притримує `isReady`). Живий прогін:
+  нагадування «за 1 хв» матеріалізувалось,
+  cron-тік доставив його в інбокс (`1 delivered, 0 stale`), all-day 10–12.09 у Києві дав
+  `[09.09 21:00Z, 11.09 21:00Z)`, перенесення переставило нагадування і НЕ зачепило вже
+  доставлений рядок. Розбіжності з дизайном — `docs/calendar.md` §18.
   Документи: `docs/architecture-proposal.md` (усі рішення з обґрунтуванням), `docs/roadmap.md` (фази),
   `docs/error-handling.md` (наскрізна обробка помилок: таблиці нормалізації і каналів реакції),
   `docs/i18n-plan.md` (мультиязичність: зафіксовані рішення + фази I18N-1…4),
@@ -429,13 +489,14 @@ regexp_replace(...)`; разом із колонкою переживає й у�
   «особисте vs організаційне», огляд ринкових патернів іменування і чому «Settings» належить
   компанії, форма API (документ / колекція / операція), доступ і зародок RBAC, гібридне
   сховище колонка-vs-JSON, історія перейменувань),
-  `docs/calendar.md` (календар і події користувача — ПРОЄКТНИЙ документ 2026-09-06, не
-  реалізовано: `CalendarEvent` замість зайнятого слова `Event`, пів-відкритий інтервал і
-  IANA-зона поруч із UTC-інстантом, читання вікном замість пагінації, входження замість
-  рядків із першого дня, нагадування як «декларація → матеріалізація → cron-сканер»
-  (чому НЕ `pg-boss startAfter`: `pgboss.*` поза RLS), інтеграція з activities/notifications/
-  realtime/settings/customers, добірка shadcn-компонентів і власні `TimeGrid`/`MonthGrid`,
-  фази CAL-1…CAL-4; 10 ключових рішень зафіксовано 2026-09-06 — §15.1 там же),
+  `docs/calendar.md` (календар і події користувача — **CAL-1 РЕАЛІЗОВАНО й перевірено
+  2026-09-07**: як сутність зветься в RFC 5545 / Google / Graph / Cal.com і чому в нас
+  `CalendarEvent`, 50 фіч розкладені по фазах CAL-1…CAL-4, пів-відкритий інтервал і зони
+  (§6 — найдорожчий розділ), дизайн повторень і чому вони окремою фазою, механіка
+  нагадувань і чому НЕ `pg-boss startAfter` (§8), інтеграція з activities/notifications/
+  realtime/settings/customers (§9), поверхня API, фронт із добіркою shadcn-компонентів і
+  власними сітками (§11), 17 підводних каменів, 10 рішень §15.1 і **§18 — 20 розбіжностей
+  із дизайном, спійманих реалізацією**),
   **`docs/frontend/`** — уся документація UI-шару, ВИНЕСЕНА ОКРЕМО (2026-08-26):
   `README.md` (вхідна точка + **єдиний список відкритих питань фронту**: репозиторний
   `pnpm format`, вага `country-flag-icons`, ліцензія ReUI, хардкод «Close», відсутність
@@ -488,12 +549,16 @@ pnpm openapi:generate     # apps/api/openapi.json (ts-node, потрібен .en
 pnpm web:codegen          # orval: openapi.json → apps/web/src/api/generated
 pnpm platform:web:codegen # orval: apps/platform-api/openapi.json → apps/platform-web/src/api/generated
 pnpm lint && pnpm typecheck && pnpm build
-pnpm api:test:e2e         # 171 тест tenant-api (rls, tenant-isolation, slug-login, messaging,
-                          # realtime + last-seen, notifications, account, customers, numbering, settings);
+pnpm api:test:e2e         # 199 тестів tenant-api (rls, tenant-isolation, slug-login, messaging,
+                          # realtime + last-seen, notifications, account, customers, numbering,
+                          # settings, calendar + scheduled-нагадування);
                           # ВИМАГАЄ Postgres І Valkey (presence-тести ходять до живих Lua-скриптів;
                           # ізоляція — окремий REALTIME_KEY_PREFIX на jest-worker, не окреме сховище).
                           # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
-                          # і мігрує під saas_migrator; тести ходять під saas_app) — dev-дані не чіпає
+                          # і мігрує під saas_migrator; тести ходять під saas_app) — dev-дані не чіпає.
+                          # НЕ ганяти з піднятим dev-стеком: 14 сьютів × 2 клієнти впираються в
+                          # max_connections разом із api/worker, і падає ВИПАДКОВИЙ сусідній сьют
+                          # (спіймано 2026-09-07: 3 падіння → після pkill api/worker 203/203)
 pnpm platform:test:e2e    # 11 тестів control plane (operator auth, tenants CRUD, jobs, cross-plane 401)
 pnpm db:roles             # MT-0: ідемпотентно створює ролі saas_migrator/saas_app/saas_platform і гранти
                           # (для НАЯВНОЇ БД; свіжий volume отримує їх сам з docker/postgres/init)
@@ -514,11 +579,14 @@ apps/api        NestJS 11 (webpack-збірка). Модулі: auth, users, acc
                 акаунт»: профіль/пароль/«вийти звідусіль»; id у шляхах НЕМАЄ),
                 customers (ЕТАЛОННИЙ доменний модуль: контрагенти + контактні особи;
                 написаний без жодної згадки tenantId), settings (налаштування ОРГАНІЗАЦІЇ:
-                секція general + нумерація + журнал змін; запис під @Roles(ADMIN)),
+                секції general і calendar + нумерація + журнал змін; запис під @Roles(ADMIN)),
                 files (presigned upload/download),
                 activities, notifications (персональний інбокс: курсорний список, summary,
                 стани, преференси), realtime (Socket.IO-gateway namespace /tenant + presence + last-seen
                 + емісія сповіщень в особистий room),
+                calendar (події користувача: вікновий GET + курсорна agenda, учасники з
+                RSVP, персональні нагадування; доступ за УЧАСТЮ через CalendarAccessService,
+                а не через @Roles),
                 health (jobs-моніторинг переїхав у platform-api на MT-3).
                 Pino, AllExceptionsFilter (configureApp() в app.setup.ts — спільний сетап для main.ts і e2e)
 apps/platform-api  NestJS 11 (MT-3, control plane, :3002): platform-auth (platform_users, окремий
@@ -551,9 +619,16 @@ apps/web        React 19 + Vite 7, TanStack Router/Query v5, Zustand, Tailwind 4
                 **Customers** (грід) і картка `/workspace/customers/$customerId` — та сама розкладка,
                 вкладки лишились (Overview | Contacts: контактні особи — окремий розділ,
                 а не блок); форк копіює її, а не вигадує.
-                **Особисті `/user-settings`** (Profile — індексний, Account, Security,
-                Notifications, Appearance) і **`/settings` організації** (General / Numbering
-                / Activity, гейт `requireAdmin`) — тепер ОКРЕМІ area: їхні під-розділи
+                **Календар** — area `/calendar/$view` (day|week|month|agenda; період у
+                `?date=`) + deep link `/calendar/events/$eventId`. Сітки ВЛАСНІ
+                (`components/calendar/`: `TimeGrid`, `MonthGrid`, чиста `layoutOverlaps`),
+                `react-day-picker` — тільки міні-місяць і поля дати. Панель події — `Sheet`
+                з RSVP, учасниками, нагадуваннями і вкладкою Activity; на картці кастомера —
+                блок «Upcoming» тим самим agenda-ендпоінтом. Арифметика дат —
+                `date-fns` + `@date-fns/tz` (`lib/calendar-date.ts`), форматування — `Intl`.
+                **Особисті `/user-settings`** (Profile — індексний, з таймзоною; Account,
+                Security, Notifications, Appearance) і **`/settings` організації**
+                (General / Calendar / Numbering / Activity, гейт `requireAdmin`) — тепер ОКРЕМІ area: їхні під-розділи
                 рендеряться в КОЛОНЦІ ШЕЛА, а не бічною навігацією всередині сторінки
                 (`SectionNav` знятий, від `components/section/` лишився `ContentSection`)
 apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, проксі на :3002), АЛЕ інша
@@ -568,7 +643,10 @@ apps/platform-web  Той самий каркас, що apps/web (MT-3, :5174, �
                 юзерів і джоб тенанта теж немає — відповідних ендпоінтів у platform-api не
                 існує. Jobs (перенесено з web 1:1, createDataGrid). Auth-стор: access-токен (60m, без refresh) напряму в
                 localStorage (не тільки в пам'яті, як web) — інакше сесія губилась би на F5
-libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod)
+libs/contracts  Zod 4 схеми + z.infer типи — ЄДИНЕ джерело правди типів API (залежить лише від zod).
+                `time/` — примітиви часу (IANA-зона перевіряється самим `Intl`, «HH:mm»,
+                перший день тижня): спільні для календаря і налаштувань, тому окремий
+                модуль, а не поле в `calendar.schema` (взаємні імпорти секцій = цикл)
 libs/database   Prisma 7 (adapter-pg): schema, migrations, seed, PrismaService/PrismaModule (@Global).
                 MT: `src/tenant/` — TenancyModule.forRoot({resolver}), TenantContextService (CLS),
                 TenantTransactions.withTenantTx, tenant-extension (set_config); SystemPrismaService (BYPASSRLS)
@@ -587,7 +665,12 @@ libs/ui         Спільний UI-шар фронтів (UI-0, 2026-08-24; sou
                 у застосунку лишається тільки те, що справді різне: `app-layout` (навігація й бренд),
                 `toast-host` (у web два регіони тостів, у platform-web один), `api/http-client`,
                 `i18n/index`, `init-auth`, стор і роутер
-libs/shared     Нумерація (`numbering/`): NumberingService — цілі людські номери, свої в
+libs/shared     Відкладені сповіщення (`notifications/scheduled-notification.service.ts`,
+                CAL-1): ScheduledNotificationService — schedule/cancel/claimDue/markDelivered
+                поверх СПІЛЬНОЇ `scheduled_notifications` (не календарної). Ключ
+                ідемпотентності матеріалізації — `dedupeKey` домену; exactly-once дає
+                атомарний claim, а не черга.
+                Нумерація (`numbering/`): NumberingService — цілі людські номери, свої в
                 кожного тенанта, безрозривні (конфіг серії + лічильник із бакетом періоду);
                 перший споживач — customers, наступний — документи.
                 Повідомлення (`messaging/`, EDA-1): defineEvent/defineCommand (Zod payload),
@@ -877,6 +960,7 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 | Навігація (`web`) | **Два рівні: смуга іконок area + колонка активної area** (модель VS Code / Slack / JetBrains, реєстровий предок `sidebar-09`). Імена: `AppShell` / `AppRail` / **area** / `AreaSidebar` — «Activity Bar» відпадає (`Activity` = журнал подій), `Section` зайняте `components/section/`, `Panel` — `ActivityPanel`, `Workspace` — назвою однієї з area. **Друга колонка — контейнер вигляду, а не підменю**: area віддає компонент, тому чат малює там список розмов; хто є меню — беруть спільний `AreaNav`. **Префікс URL на кожну area**, активна area = чиста функція від pathname, дубльованого стану немає; «останній роут в area» і окремий стан згортання на area свідомо НЕ робимо. Бренд і профіль — у рейлі (належать сесії, не area), назва продукту — в підказці плитки. У `platform-web` лишається один рівень: одна area, рейл був би декорацією. Реалізовано 2026-09-06, `docs/frontend/app-shell.md` |
 | Налаштування      | **Дві різні сутності, а не один розділ**: організаційне (`/settings` + API `/settings/*`) лишається КОМПАНІЇ, особисте (`/user-settings` + API `/account/*`) йде за ЛЮДИНОЮ; тест межі — «якщо юзер піде, налаштування піде з ним?». **Словом «Settings» володіє організація** — домінантний B2B-патерн (GitLab, Stripe, Notion, HubSpot); особисте — «User settings», а не «Preferences» (пароль і сесії не преференції). «Workspace» відкинуто (зайняте фронтом), «Organization» — теж (зайняте `CustomerKind`). **Id у шляху немає в обох** — суб'єкт із токена. Дієслова диктує форма ресурсу: документ → `GET/PUT`, колекція → REST, операція → `POST` на дієслівний під-ресурс. Запис — ADMIN через `@Roles`+`RolesGuard` (зародок, який ЗАМІНИТЬ повний RBAC). Реалізовано й перевірено 2026-09-01, `docs/settings.md`                                                                                                                                                                                                                                                                                                                                                                                        |
 | Кастомери         | **`Customer` + `kind` (ORGANIZATION\|PERSON) + вкладені `CustomerContact`** — не `Account` (ім'я зайняте self-service модулем `apps/api/src/account/`) і не party-модель (SAP BP / Odoo `res.partner`: правильна кінцева форма для ERP, але заводиться разом із ДРУГИМ типом контрагента, не наперед). Стадій продажу в `status` немає — воронка це стан УГОДИ, не контрагента. Людський номер — ЦІЛЕ число, своє в кожного тенанта, видається таблицею-лічильником (НЕ `SEQUENCE`: та поза RLS, спільна на БД і дає дірки через невідкатний `nextval`; і не `MAX+1`: після видалення номер перевикористався б). Префікс/нулі — конфіг тенанта, не частина ідентичності; для документів лейбл заморожуватиметься в колонку. Початковий номер задається, зсув живого лічильника — тільки вгору. Soft delete НЕ робимо — архів це `status`, а цілісність боронить `Restrict` з документів. Кастомних полів на тенанта немає: скелетон форкають, форк додає КОЛОНКИ. Реалізовано й перевірено 2026-09-01, `docs/customers.md`                                                                                                                                                                                           |
+| Календар          | **`CalendarEvent` + учасники з RSVP + персональні нагадування** (`docs/calendar.md`, CAL-1 2026-09-07). Ім'я з кваліфікатором — слово `Event` зайняте messaging/socket/журналом. Інтервал ПІВ-ВІДКРИТИЙ `[starts_at, ends_at)` (RFC 5545), UTC-інстант + окрема IANA-зона (не offset — він властивість моменту), all-day рендериться в зоні ПОДІЇ. Читання ВІКНОМ, не сторінками; елемент — ВХОДЖЕННЯ з першого дня (інакше повторення зламають контракт). Доступ — за УЧАСТЮ, не за роллю: ADMIN не бачить чужих приватних подій (асиметрія в часі — видати доступ потім легко, забрати ні). Скасування ≠ видалення. Нагадування — «декларація → матеріалізація → cron-сканер із атомарним claim» у СПІЛЬНІЙ `scheduled_notifications`; НЕ `pg-boss startAfter` (`pgboss.*` поза RLS, ретеншн, скасування як друге джерело правди). Повторення (RRULE) — окрема фаза CAL-4, бо її помилки не лікуються міграцією. Календарні сітки — власні, зовнішні бібліотеки приносять другий движок і другу тему |
 | i18n              | **Бекенд — коди, текст рендерить споживач** (API не читає Accept-Language; ApiError.message — en-діагностика, юзеру не показується). i18next: react-i18next на фронтах + той самий i18next у worker (email). JSON у репо: спільне — `libs/i18n`, фічеве — `apps/*/locales`; TMS відкладено до другої мови. Стартово тільки `en`. Деталі і фази — `docs/i18n-plan.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## Беклог фази 2 (пріоритети — див. docs/roadmap.md)
@@ -906,12 +990,16 @@ Controller (HTTP + Swagger-метадані). Відповіді: сутніст
 - RBAC: permissions-рядки (`tickets:write`) + `@RequirePermissions()` guard (після MT-2, поверх
   готового tenant-контексту).
 - Доменні модулі: ✅ customers (еталонний CRUD) — зроблено 2026-09-01 (`docs/customers.md`,
-  беклог сутності — §12 там же); далі tickets (workflow + події) → billing
+  беклог сутності — §12 там же); ✅ calendar CAL-1 (події користувача + нагадування) —
+  зроблено 2026-09-07 (`docs/calendar.md`; далі CAL-2 — drag&drop, undo, хоткеї,
+  realtime-дельти); далі tickets (workflow + події) → billing
   (PaymentProvider інтерфейс + fake-провайдер → Stripe). Пишуться вже на шарі `messaging`:
   billing — це EDA-3, еталон події з 5 підписниками (`invoice.paid.v1`, `ledger_entries`,
   claim-before-send для листів, relay-підписник). Окремого `audit-log` НЕ робимо —
   його роль виконує Activity Log; in-app notifications — `docs/notifications.md`.
 - ✅ Realtime (Valkey + gateway + presence) — зроблено 2026-08-15; ✅ in-app сповіщення
-  (EDA-4) — зроблено 2026-08-16. Наступне за roadmap: **заплановані сповіщення**
-  (нагадування — власна таблиця + cron, вони ж розблоковують email як канал),
-  далі System Settings, див. `docs/roadmap.md`.
+  (EDA-4) — зроблено 2026-08-16; ✅ **заплановані сповіщення** (`scheduled_notifications` +
+  cron-сканер) — зроблено 2026-09-07 разом із календарем, який і був їхнім першим
+  споживачем. Лишився **email як другий канал** (схема преференсів несе `channel`,
+  відкладений тригер уже є — бракує доставки і claim-before-send), далі System Settings,
+  див. `docs/roadmap.md`.

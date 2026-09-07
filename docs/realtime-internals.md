@@ -42,9 +42,17 @@
 | server → client | `auth.expiring.v1`            | Просить оновити access-токен до завершення `exp` |
 | client → server | `auth.update.v1`              | Новий токен + acknowledgement із результатом     |
 | server → client | `realtime.resync-required.v1` | Стан міг розʼїхатись — перечитай snapshot        |
+| server → client | `notification.created.v1` · `notification.changed.v1` | Інбокс: новий рядок / зміна стану (в особистий room) |
+| server → client | `calendar.event-changed.v1`   | `{ eventId, change, startsAt, endsAt, occurredAt }` — в особисті room-и УЧАСНИКІВ події |
 
 Версія в імені (`.v1`) — та сама доктрина, що в `defineEvent`: зміна форми payload-у це
 **нове імʼя**, а не тихо інша структура під старим.
+
+`calendar.event-changed.v1` — єдина подія, яка йде НЕ в tenant-room і не в room одного
+юзера, а в особисті room-и **переліку** людей (учасників події): broadcast розсилав би
+всьому тенанту сам факт існування чужої зустрічі разом із її часом. Вона ж єдина, яка
+свідомо НЕ везе стан — тільки межі, щоб клієнт вирішив, чи чіпає зміна відкрите вікно
+(docs/calendar.md §9.3).
 
 Усі client → server payload-и валідуються Zod-ом рантайму. HTTP-фільтр
 `AllExceptionsFilter` socket-події **не охоплює** (він ловить exception-и HTTP-контексту),

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
+  CalendarSettings,
   SettingsBootstrap,
   GeneralSettingsResponse,
 } from '@saas-skeleton/contracts';
@@ -14,6 +15,7 @@ import { toActivityResponse } from '../activities/activities.mapper';
 import { ActivityListResponseDto } from '../activities/dto/activity-response.dto';
 import {
   SettingsBootstrapDto,
+  CalendarSettingsDto,
   GeneralSettingsDto,
   GeneralSettingsResponseDto,
 } from './dto/settings.dto';
@@ -49,7 +51,8 @@ export class SettingsController {
   @Get('bootstrap')
   @ApiOkResponse({ type: SettingsBootstrapDto.Output })
   async bootstrap(): Promise<SettingsBootstrap> {
-    return toSettingsBootstrap(await this.settings.current());
+    const organization = await this.settings.current();
+    return toSettingsBootstrap(organization, this.settings.parseCalendar(organization.settings));
   }
 
   @Get('general')
@@ -71,6 +74,27 @@ export class SettingsController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<GeneralSettingsResponse> {
     return toGeneralSettingsResponse(await this.settings.updateGeneral(dto, actor));
+  }
+
+  /**
+   * Секція календаря — теж документ (`GET`/`PUT`), просто зберігається в
+   * `settings` JSON, а не в колонках (docs/calendar.md §9.5). Для клієнта
+   * різниці немає — у цьому й сенс секційної абстракції.
+   */
+  @Get('calendar')
+  @ApiOkResponse({ type: CalendarSettingsDto.Output })
+  async calendar(): Promise<CalendarSettings> {
+    return this.settings.calendar();
+  }
+
+  @Put('calendar')
+  @Roles(Role.ADMIN)
+  @ApiOkResponse({ type: CalendarSettingsDto.Output })
+  async updateCalendar(
+    @Body() dto: CalendarSettingsDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<CalendarSettings> {
+    return this.settings.updateCalendar(dto, actor);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
 import { CountryCodeSchema, PhoneNumberSchema } from '../phone/phone.schema';
+import { TimeZoneSchema } from '../time/time.schema';
 
 /**
  * Локаль для server-rendered тексту (email у worker) — окрема закрита множина від
@@ -16,6 +17,15 @@ export const UserSchema = z.object({
   role: z.enum(['ADMIN', 'USER']),
   isActive: z.boolean(),
   locale: UserLocaleSchema,
+  /**
+   * IANA-зона юзера (docs/calendar.md §6.1). `null` — «як в організації»:
+   * фолбек на `settings.calendar.timeZone`, а не порожній календар.
+   *
+   * Окреме поле від `locale` свідомо: локаль задає ФОРМАТ («6 вер. 2026, 14:00»),
+   * зона — який саме це момент. Людина в Берліні з англійським інтерфейсом —
+   * норма, і без зони її зустріч показувалась би не в той час.
+   */
+  timeZone: z.string().nullable(),
   // У response — навмисно М'ЯКО (просто рядок): суворий PhoneNumberSchema тут означав би,
   // що оновлення метаданих libphonenumber може зробити вже збережений номер невалідним
   // і завалити ВІДДАЧУ даних. Сувора перевірка — на вході (Create/Update)
@@ -46,6 +56,8 @@ export const CreateUserSchema = z.object({
   name: z.string().nullable().optional(),
   role: z.enum(['ADMIN', 'USER']).default('USER').optional(),
   locale: UserLocaleSchema.default('en').optional(),
+  /** Зона нового юзера; не передали → успадкує дефолт організації (null у БД) */
+  timeZone: TimeZoneSchema.nullable().optional(),
   // Телефон приходить уже в E.164 — національний формат і маски існують ТІЛЬКИ в UI.
   // phoneCountry опційний: якщо клієнт його не прислав, сервіс виведе країну з номера
   // (пара тримається узгодженою в одному місці — UsersService, а не крос-полевим refine,

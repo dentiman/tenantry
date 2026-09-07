@@ -22,6 +22,16 @@ export const NOTIFICATION_TYPES = [
   // НЕ розсилаємо всім адмінам, як user.created: юзерів заводять десятками на рік,
   // кастомерів — десятками на день, і це перше, що змусить вимкнути сповіщення взагалі
   'customer.assigned',
+  // --- Календар (docs/calendar.md §9.2). Адресат тут — не роль, а УЧАСТЬ:
+  // сповіщення йдуть тим, хто в події, а не «всім адмінам»
+  'calendar_event.invited',
+  'calendar_event.rescheduled',
+  'calendar_event.cancelled',
+  // організатору: учасник відповів
+  'calendar_event.rsvp_changed',
+  // нагадування — єдиний тип, який народжується не з дії людини, а з розкладу
+  // (scheduled_notifications + cron-сканер, §8 доку)
+  'calendar_event.reminder',
 ] as const;
 export const NotificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
@@ -36,6 +46,36 @@ export const NOTIFICATION_PAYLOAD_SCHEMAS = {
   'user.password_changed': z.object({}),
   'user.welcome': z.object({ tenant: z.string().min(1) }),
   'customer.assigned': z.object({ customer: EntityRefSchema }),
+  // startsAt у payload-і, а не join на подію: рядок інбокса рендериться без
+  // звертання до живих таблиць (те саме правило, що в activities), а «коли»
+  // тут — половина сенсу повідомлення
+  'calendar_event.invited': z.object({
+    event: EntityRefSchema, // kind: 'calendar_event'
+    startsAt: z.iso.datetime(),
+    allDay: z.boolean(),
+  }),
+  'calendar_event.rescheduled': z.object({
+    event: EntityRefSchema,
+    startsAt: z.iso.datetime(),
+    allDay: z.boolean(),
+  }),
+  'calendar_event.cancelled': z.object({
+    event: EntityRefSchema,
+    startsAt: z.iso.datetime(),
+    allDay: z.boolean(),
+  }),
+  'calendar_event.rsvp_changed': z.object({
+    event: EntityRefSchema,
+    attendee: EntityRefSchema,
+    response: z.enum(['NEEDS_ACTION', 'ACCEPTED', 'DECLINED', 'TENTATIVE']),
+  }),
+  'calendar_event.reminder': z.object({
+    event: EntityRefSchema,
+    startsAt: z.iso.datetime(),
+    allDay: z.boolean(),
+    /** «за 30 хв» — рядок інбокса підписує, ЧОМУ він прийшов саме зараз */
+    minutesBefore: z.number().int().nonnegative(),
+  }),
 } as const satisfies Record<NotificationType, z.ZodType>;
 
 /**
@@ -46,10 +86,16 @@ export const NOTIFICATION_CHANNELS = ['in_app'] as const;
 export const NotificationChannelSchema = z.enum(NOTIFICATION_CHANNELS);
 export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;
 
-// 'organization' — усе, що стосується компанії; 'security' — особиста безпека.
+// 'organization' — усе, що стосується компанії; 'security' — особиста безпека;
+// 'calendar' — мій час (запрошення, перенесення, нагадування).
 // Слово 'workspace' свідомо не вживаємо: воно зарезервоване за навігаційним
-// поняттям у сайдбарі (docs/settings.md § «Іменування»)
-export const NotificationCategorySchema = z.enum(['organization', 'security']);
+// поняттям у сайдбарі (docs/settings.md § «Іменування»).
+//
+// Календар отримав СВОЮ категорію, а не рядок в 'organization' (рішення
+// 2026-09-06): категорія — це заголовок групи на екрані преференсів, і
+// «нагадування про зустріч» поруч зі «створено юзера» — неправильна ментальна
+// модель. Ціна нульова: категорії живуть у коді, міграції не потребують
+export const NotificationCategorySchema = z.enum(['organization', 'security', 'calendar']);
 export type NotificationCategory = z.infer<typeof NotificationCategorySchema>;
 
 export interface NotificationTypeMeta {
@@ -72,6 +118,14 @@ export const NOTIFICATION_TYPE_META = {
   'user.password_changed': { category: 'security', defaultEnabled: true, muteable: false },
   'user.welcome': { category: 'organization', defaultEnabled: true, muteable: true },
   'customer.assigned': { category: 'organization', defaultEnabled: true, muteable: true },
+  'calendar_event.invited': { category: 'calendar', defaultEnabled: true, muteable: true },
+  'calendar_event.rescheduled': { category: 'calendar', defaultEnabled: true, muteable: true },
+  // НЕмутабельне: «зустріч скасовано» мусить дійти навіть до того, хто вимкнув
+  // усе інше — інакше людина приїде на скасовану зустріч. Той самий клас, що
+  // 'user.password_changed'
+  'calendar_event.cancelled': { category: 'calendar', defaultEnabled: true, muteable: false },
+  'calendar_event.rsvp_changed': { category: 'calendar', defaultEnabled: true, muteable: true },
+  'calendar_event.reminder': { category: 'calendar', defaultEnabled: true, muteable: true },
 } as const satisfies Record<NotificationType, NotificationTypeMeta>;
 
 // ---------------------------------------------------------------- читання

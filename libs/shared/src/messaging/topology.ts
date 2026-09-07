@@ -7,6 +7,7 @@ import {
   cleanupExpiredTokensCommand,
   cleanupProcessedJobsCommand,
 } from './definitions/maintenance.messages';
+import { dispatchScheduledNotificationsCommand } from './definitions/notifications.messages';
 import { userRegisteredEvent } from './definitions/users.messages';
 
 /**
@@ -70,6 +71,18 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     definition: cleanupProcessedJobsCommand,
     consumers: [{ id: 'inbox-cleaner', retryLimit: 1 }],
     cron: '15 3 * * *',
+  },
+  {
+    // Єдиний рядок, який календар додає в топологію (docs/calendar.md §9.4):
+    // подій `calendar.*` тут поки немає свідомо — маніфест валить старт воркера
+    // на оголошену подію без класу-споживача, тому вони зʼявляться разом зі
+    // своїм першим підписником (розсилка інвайтів / зовнішня синхра, CAL-3+).
+    //
+    // retryLimit 1: пропущений тік нічого не втрачає — наступний за хвилину
+    // побачить ті самі дозрілі рядки (джерело правди — таблиця, не job)
+    definition: dispatchScheduledNotificationsCommand,
+    consumers: [{ id: 'scheduled-dispatcher', retryLimit: 1 }],
+    cron: '* * * * *',
   },
 ];
 

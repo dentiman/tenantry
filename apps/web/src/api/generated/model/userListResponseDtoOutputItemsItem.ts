@@ -19,6 +19,8 @@ export type UserListResponseDtoOutputItemsItem = {
   isActive: boolean;
   locale: UserListResponseDtoOutputItemsItemLocale;
   /** @nullable */
+  timeZone: string | null;
+  /** @nullable */
   phone: string | null;
   /** @nullable */
   phoneCountry: string | null;

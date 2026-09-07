@@ -19,6 +19,14 @@ const KNOWN_TYPES = [
   'customer.deleted',
   'settings.updated',
   'settings.numbering_shifted',
+  'calendar_event.created',
+  'calendar_event.rescheduled',
+  'calendar_event.cancelled',
+  'calendar_event.restored',
+  'calendar_event.deleted',
+  'calendar_event.attendee_added',
+  'calendar_event.attendee_removed',
+  'calendar_event.rsvp_changed',
 ] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
@@ -81,6 +89,11 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
           user: refLabel(payload, 'user'),
           customer: refLabel(payload, 'customer'),
           owner: refLabel(payload, 'owner'),
+          // Календар: назва події — снапшот, учасник — теж EntityRef.
+          // Дати сюди НЕ інтерполюються (доктрина: час рендериться окремо через Intl)
+          event: refLabel(payload, 'event'),
+          attendee: refLabel(payload, 'attendee'),
+          response: strField(payload, 'response'),
           // Налаштування — не сутність із EntityRef: у payload прості скаляри
           section: strField(payload, 'section'),
           series: strField(payload, 'series'),

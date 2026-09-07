@@ -13,6 +13,7 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
 import { FilesModule } from './files/files.module';
@@ -41,6 +42,7 @@ import { loggerConfig } from './common/logger';
     AuthModule,
     UsersModule,
     CustomersModule,
+    CalendarModule,
     SettingsModule,
     AccountModule,
     FilesModule,

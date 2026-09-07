@@ -14,6 +14,11 @@ interface FormTextareaFieldProps<T extends FieldValues> {
   label: string;
   description?: string;
   placeholder?: string;
+  /**
+   * Режим перегляду: та сама форма, але без права змінювати (напр. подія
+   * календаря, яку редагує лише організатор).
+   */
+  disabled?: boolean;
   rows?: number;
 }
 
@@ -24,6 +29,7 @@ export function FormTextareaField<T extends FieldValues>({
   label,
   description,
   placeholder,
+  disabled,
   rows = 4,
 }: FormTextareaFieldProps<T>) {
   const id = useId();
@@ -37,6 +43,7 @@ export function FormTextareaField<T extends FieldValues>({
         name={field.name}
         rows={rows}
         placeholder={placeholder}
+        disabled={disabled}
         aria-invalid={fieldState.invalid || undefined}
         value={field.value ?? ''}
         onChange={field.onChange}

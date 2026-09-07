@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { SettingsBootstrapDtoOutputGeneral } from './settingsBootstrapDtoOutputGeneral';
+import type { SettingsBootstrapDtoOutputCalendar } from './settingsBootstrapDtoOutputCalendar';
 import type { SettingsBootstrapDtoOutputFeatures } from './settingsBootstrapDtoOutputFeatures';
 
 export interface SettingsBootstrapDtoOutput {
   general: SettingsBootstrapDtoOutputGeneral;
+  calendar: SettingsBootstrapDtoOutputCalendar;
   features: SettingsBootstrapDtoOutputFeatures;
 }

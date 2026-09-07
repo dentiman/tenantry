@@ -2,6 +2,7 @@
   "title": "Settings",
   "nav": {
     "general": "General",
+    "calendar": "Calendar",
     "numbering": "Numbering",
     "activity": "Activity"
   },
@@ -19,6 +20,29 @@
     "slug": "Sign-in identifier: {{slug}} — changed by the platform operator only.",
     "save": "Save changes",
     "saved": "Settings saved"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "description": "Defaults for everyone in the organization. People can override their own time zone in user settings.",
+    "loading": "Loading calendar settings",
+    "timeZone": "Default time zone",
+    "timeZoneHint": "IANA name, e.g. Europe/Kyiv. Used for people who have not set their own.",
+    "weekStartsOn": "Week starts on",
+    "weekDays": {
+      "0": "Sunday",
+      "1": "Monday",
+      "6": "Saturday"
+    },
+    "workDayStart": "Work day starts",
+    "workDayEnd": "Work day ends",
+    "duration": "Default event length (minutes)",
+    "durationHint": "Used when a new event is created from the grid.",
+    "reminder": "Default reminder (minutes before)",
+    "reminderHint": "Applied to new timed events. Set 0 to remind at the start.",
+    "allDayReminder": "Default all-day reminder (minutes before)",
+    "allDayReminderHint": "900 means 09:00 on the previous day — the same default Google uses.",
+    "save": "Save calendar settings",
+    "saved": "Calendar settings saved"
   },
   "numbering": {
     "title": "Numbering",

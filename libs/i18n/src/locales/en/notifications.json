@@ -30,7 +30,8 @@
     "always": "Always on",
     "category": {
       "organization": "Organization",
-      "security": "Security"
+      "security": "Security",
+      "calendar": "Calendar"
     },
     "label": {
       "user": {
@@ -40,6 +41,13 @@
       },
       "customer": {
         "assigned": "Customers assigned to me"
+      },
+      "calendar_event": {
+        "invited": "Invitations to events",
+        "rescheduled": "Event time changes",
+        "cancelled": "Event cancellations",
+        "rsvp_changed": "Replies to my events",
+        "reminder": "Event reminders"
       }
     }
   },
@@ -53,6 +61,16 @@
     "customer": {
       "assigned_one": "<b>{{actor}}</b> assigned you <a>{{customer}}</a>",
       "assigned_other": "<b>{{actor}}</b> assigned you {{count}} customers, latest <a>{{customer}}</a>"
+    },
+    "calendar_event": {
+      "invited_one": "<b>{{actor}}</b> invited you to <a>{{event}}</a>",
+      "invited_other": "<b>{{actor}}</b> invited you to {{count}} events, latest <a>{{event}}</a>",
+      "rescheduled_one": "<b>{{actor}}</b> moved <a>{{event}}</a>",
+      "rescheduled_other": "<b>{{actor}}</b> moved <a>{{event}}</a> {{count}} times",
+      "cancelled": "<b>{{actor}}</b> cancelled <a>{{event}}</a>",
+      "rsvp_changed_one": "<b>{{actor}}</b> replied to <a>{{event}}</a>",
+      "rsvp_changed_other": "{{count}} replies to <a>{{event}}</a>, latest from <b>{{actor}}</b>",
+      "reminder": "<a>{{event}}</a> starts soon"
     }
   },
   "unknown": "You have a new notification",

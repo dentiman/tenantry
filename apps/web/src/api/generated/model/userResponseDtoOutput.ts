@@ -19,6 +19,8 @@ export interface UserResponseDtoOutput {
   isActive: boolean;
   locale: UserResponseDtoOutputLocale;
   /** @nullable */
+  timeZone: string | null;
+  /** @nullable */
   phone: string | null;
   /** @nullable */
   phoneCountry: string | null;

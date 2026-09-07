@@ -81,6 +81,7 @@ function ProfileForm({ user }: { user: UserResponse }) {
       phone: user.phone,
       phoneCountry: user.phoneCountry,
       locale: user.locale,
+      timeZone: user.timeZone,
     },
   });
   const {
@@ -127,6 +128,17 @@ function ProfileForm({ user }: { user: UserResponse }) {
           label={t('profile.language')}
           // Мов поки одна; список свідомо тут, а не в contracts — це підписи UI
           options={[{ id: 'en', label: 'English' }]}
+        />
+        {/* Таймзона — атрибут ПРОФІЛЮ, поруч із локаллю: обидві їдуть за
+            людиною, якщо вона змінить компанію. Порожнє поле = «як в
+            організації», тому окремої особистої секції «Calendar» під одне
+            поле не заводимо (docs/calendar.md §9.5) */}
+        <FormTextField
+          control={control}
+          name="timeZone"
+          label={t('profile.timeZone')}
+          placeholder={t('profile.timeZonePlaceholder')}
+          description={t('profile.timeZoneHint')}
         />
       </FieldGroup>
       <p className="text-sm text-muted-foreground">{t('profile.languageHint')}</p>

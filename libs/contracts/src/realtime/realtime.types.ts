@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type {
   AuthExpiringSchema,
+  CalendarEventChangedSchema,
   AuthUpdateResultSchema,
   AuthUpdateSchema,
   NotificationChangedSchema,
@@ -25,6 +26,7 @@ export type ResyncReason = z.infer<typeof ResyncReasonSchema>;
 export type ResyncRequired = z.infer<typeof ResyncRequiredSchema>;
 export type NotificationCreated = z.infer<typeof NotificationCreatedSchema>;
 export type NotificationChanged = z.infer<typeof NotificationChangedSchema>;
+export type CalendarEventChanged = z.infer<typeof CalendarEventChangedSchema>;
 export type RealtimeErrorCode = z.infer<typeof RealtimeErrorCodeSchema>;
 export type RealtimeError = z.infer<typeof RealtimeErrorSchema>;
 
@@ -38,6 +40,7 @@ export interface ServerToClientEvents {
   [REALTIME_EVENTS.resyncRequired]: (payload: ResyncRequired) => void;
   [REALTIME_EVENTS.notificationCreated]: (payload: NotificationCreated) => void;
   [REALTIME_EVENTS.notificationChanged]: (payload: NotificationChanged) => void;
+  [REALTIME_EVENTS.calendarEventChanged]: (payload: CalendarEventChanged) => void;
 }
 
 export interface ClientToServerEvents {

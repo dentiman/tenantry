@@ -11,15 +11,23 @@
  * Префікс URL кожної area. Він же її «домівка»: клік у рейлі веде саме на префікс,
  * а індексний роут area вирішує, що там показати.
  */
-export type AreaPrefix = '/workspace' | '/chat' | '/settings' | '/playground' | '/user-settings';
+export type AreaPrefix =
+  | '/workspace'
+  | '/calendar'
+  | '/chat'
+  | '/settings'
+  | '/playground'
+  | '/user-settings';
 
 /** Усі адресовані пункти другої колонки (включно з префіксами area — це індексні пункти). */
 export type NavPath =
   | '/workspace'
   | '/workspace/users'
   | '/workspace/customers'
+  | '/calendar'
   | '/chat'
   | '/settings'
+  | '/settings/calendar'
   | '/settings/numbering'
   | '/settings/activity'
   | '/playground'

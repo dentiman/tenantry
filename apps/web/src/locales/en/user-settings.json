@@ -19,6 +19,9 @@
     "phone": "Phone",
     "language": "Language",
     "languageHint": "Language of the emails we send you.",
+    "timeZone": "Time zone",
+    "timeZonePlaceholder": "Europe/Kyiv",
+    "timeZoneHint": "Leave empty to follow the organization default. Your calendar is drawn in this zone.",
     "saved": "Profile updated",
     "avatar": {
       "title": "Avatar",

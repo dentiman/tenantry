@@ -15,4 +15,9 @@ export const NotificationListResponseDtoOutputItemsItemType = {
   userpassword_changed: 'user.password_changed',
   userwelcome: 'user.welcome',
   customerassigned: 'customer.assigned',
+  calendar_eventinvited: 'calendar_event.invited',
+  calendar_eventrescheduled: 'calendar_event.rescheduled',
+  calendar_eventcancelled: 'calendar_event.cancelled',
+  calendar_eventrsvp_changed: 'calendar_event.rsvp_changed',
+  calendar_eventreminder: 'calendar_event.reminder',
 } as const;

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type {
+  CalendarEventChanged,
   NotificationChanged,
   NotificationCreated,
   PresenceChanged,
@@ -70,5 +71,22 @@ export class RealtimeEmitter implements NotificationDispatcher {
 
   changed(tenantId: string, recipientId: string, payload: NotificationChanged): void {
     this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationChanged, payload);
+  }
+
+  // ---- календар: в особисті room-и учасників (docs/calendar.md §9.3) ----
+
+  /**
+   * Один виклик на КОЖНОГО учасника, а не broadcast у tenant-room: подію бачать
+   * лише її учасники, тож і дельта не має долітати до сторонніх — інакше сам
+   * факт існування чужої зустрічі (з часом!) розсилався б усьому тенанту.
+   */
+  calendarEventChanged(
+    tenantId: string,
+    recipientIds: readonly string[],
+    payload: CalendarEventChanged,
+  ): void {
+    for (const recipientId of recipientIds) {
+      this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.calendarEventChanged, payload);
+    }
   }
 }

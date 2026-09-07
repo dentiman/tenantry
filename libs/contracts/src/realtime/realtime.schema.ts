@@ -48,6 +48,7 @@ export const REALTIME_EVENTS = {
   resyncRequired: 'realtime.resync-required.v1',
   notificationCreated: 'notification.created.v1',
   notificationChanged: 'notification.changed.v1',
+  calendarEventChanged: 'calendar.event-changed.v1',
 } as const;
 
 // ---------------------------------------------------------------- presence
@@ -122,6 +123,34 @@ export const NotificationChangedSchema = z.object({
   unreadCount: z.number().int().nonnegative(),
   newCount: z.number().int().nonnegative(),
   revision: z.number().int().nonnegative(),
+  occurredAt: z.iso.datetime(),
+});
+
+// ---------------------------------------------------------------- calendar
+
+/**
+ * Зміна події календаря (docs/calendar.md §9.3). Летить в особисті room-и ВСІХ
+ * учасників, включно з тим, хто дію зробив: у нього можуть бути інші вкладки, і
+ * правило «стан не живе тільки в сокеті» вимагає, щоб усі вони зійшлися на тому
+ * самому REST-джерелі.
+ *
+ * Чотири поля, а НЕ повний рядок події (на відміну від `notification.created.v1`):
+ * клієнту достатньо вирішити, чи потрапляє зміна у ВІДКРИТЕ вікно, а саме вікно
+ * він однак перечитує цілком — зсув однієї події міняє розкладку сусідніх.
+ * Плюс так у сокет не їде ні назва приватної події, ні склад учасників.
+ */
+export const CalendarEventChangeSchema = z.enum(['created', 'updated', 'deleted']);
+
+export const CalendarEventChangedSchema = z.object({
+  eventId: z.uuid(),
+  change: CalendarEventChangeSchema,
+  /**
+   * Межі ПІСЛЯ зміни (для `deleted` — ті, що були): по них клієнт розуміє, чи
+   * перетинає подія його вікно. Для перенесеної події старе вікно теж мусить
+   * перемалюватись, тому сервер шле дві дельти — див. §9.3.
+   */
+  startsAt: z.iso.datetime(),
+  endsAt: z.iso.datetime(),
   occurredAt: z.iso.datetime(),
 });
 

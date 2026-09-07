@@ -1,4 +1,4 @@
-import { Building2, Hash, History } from 'lucide-react';
+import { Building2, CalendarCog, Hash, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AreaNav } from '../area-nav';
 
@@ -16,6 +16,7 @@ export function SettingsSidebar() {
     <AreaNav
       items={[
         { to: '/settings', label: t('nav.general'), icon: <Building2 />, match: 'exact' },
+        { to: '/settings/calendar', label: t('nav.calendar'), icon: <CalendarCog /> },
         { to: '/settings/numbering', label: t('nav.numbering'), icon: <Hash /> },
         { to: '/settings/activity', label: t('nav.activity'), icon: <History /> },
       ]}

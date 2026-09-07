@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import {
   Blocks,
+  CalendarDays,
   LayoutGrid,
   MessagesSquare,
   Settings,
@@ -9,13 +10,20 @@ import {
 } from 'lucide-react';
 import type { UserResponse } from '@saas-skeleton/contracts';
 import { isUnder, type AreaPrefix } from './paths';
+import { CalendarSidebar } from './areas/calendar-sidebar';
 import { ChatSidebar } from './areas/chat-sidebar';
 import { PlaygroundSidebar } from './areas/playground-sidebar';
 import { SettingsSidebar } from './areas/settings-sidebar';
 import { UserSettingsSidebar } from './areas/user-settings-sidebar';
 import { WorkspaceSidebar } from './areas/workspace-sidebar';
 
-export type AreaId = 'workspace' | 'chat' | 'settings' | 'playground' | 'user-settings';
+export type AreaId =
+  | 'workspace'
+  | 'calendar'
+  | 'chat'
+  | 'settings'
+  | 'playground'
+  | 'user-settings';
 
 export interface AppArea {
   id: AreaId;
@@ -58,6 +66,15 @@ const WORKSPACE_AREA: AppArea = {
  */
 export const APP_AREAS: readonly AppArea[] = [
   WORKSPACE_AREA,
+  {
+    // Календар — власна area, а не пункт у Workspace: у нього своя друга
+    // колонка (міні-місяць, а не меню) і власний URL-простір із періодами
+    id: 'calendar',
+    prefix: '/calendar',
+    labelKey: 'areas.calendar',
+    icon: CalendarDays,
+    Sidebar: CalendarSidebar,
+  },
   {
     id: 'chat',
     prefix: '/chat',
