@@ -29,7 +29,15 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "group/calendar bg-background p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
+        // ЛОКАЛЬНА ПРАВКА реєстру: знято `bg-background` з кореня — сітка
+        // ПРОЗОРА і бере поверхню того, хто її вставив. Реєстр малює власний фон,
+        // а потім гасить його двома винятками (`in-data-[slot=card-content]`,
+        // `in-data-[slot=popover-content]`) — тобто перелічує місця, де компонент
+        // усе одно не має власної поверхні. Список неповний: у нас календар живе
+        // ще й у колонці шела на `bg-sidebar`, де світлий `--background` читався
+        // як біла пляма, а в темній темі — як чужий тон. Разом із фоном пішли й
+        // обидва гасіння: без нього вони мертвий код.
+        "group/calendar p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)]",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
