@@ -94,6 +94,7 @@
     "customerClear": "Clear customer",
     "customerSearch": "Search customers",
     "customerNotFound": "No customers found",
+    "customerRefine": "Showing {{shown}} of {{total}} — refine your search",
     "location": "Location",
     "description": "Notes",
     "private": "Private",
