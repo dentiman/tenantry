@@ -145,19 +145,25 @@ export function UserMultiList({
 
                   <div className="flex min-w-0 flex-1 items-center">
                     {isResolved(option) ? (
+                      // Аватар СТАНДАРТНИЙ (32px), а не `sm`: рядок тут 48px, і
+                      // в нього поміщається звичайна метрика зі звичайним
+                      // кеглем — компактний варіант заводили для чипа 28px, де
+                      // іншого виходу немає. Один список — одна метрика
+                      // ідентичності з таблицею юзерів
                       <UserIdentity
-                        size="sm"
                         email={option.email}
                         name={option.name}
                         avatarUrl={option.avatarUrl}
                         badge={<UserPresenceBadge userId={option.id} />}
                       />
                     ) : (
+                      // Скелет тримає ТУ САМУ геометрію, що ідентичність поруч:
+                      // інакше рядок сіпався б у мить, коли приїхали імена
                       <span className="flex items-center gap-3">
-                        <Skeleton className="size-6 rounded-full" />
-                        <span className="flex flex-col gap-1">
-                          <Skeleton className="h-3 w-24" />
-                          <Skeleton className="h-2.5 w-32" />
+                        <Skeleton className="size-8 rounded-full" />
+                        <span className="flex flex-col gap-1.5">
+                          <Skeleton className="h-3.5 w-24" />
+                          <Skeleton className="h-3 w-32" />
                         </span>
                       </span>
                     )}
