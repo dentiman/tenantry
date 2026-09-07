@@ -1,7 +1,8 @@
 {
   "title": "Component playground",
   "nav": {
-    "buttons": "Buttons"
+    "buttons": "Buttons",
+    "userSelect": "User select"
   },
   "eyebrow": "Design system",
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
@@ -111,5 +112,25 @@
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
       }
     }
+  },
+  "userSelect": {
+    "title": "Multi user select",
+    "description": "Two layouts for picking several users. Both share one data source — server-side search over active users of the tenant — and one popup; only the container differs.",
+    "guests": "Guests",
+    "organiser": "Organiser",
+    "pending": "No reply",
+    "reorderable": "Allow reordering",
+    "inline": {
+      "title": "Inline — chips in the field",
+      "description": "Keeps the 36 px control rhythm of the surrounding form. The search caret lives in the field, so Backspace on an empty field drops the last chip.",
+      "hint": "Best while the list stays short: six users already wrap the field onto three rows."
+    },
+    "stacked": {
+      "title": "Stacked — a list of rows",
+      "description": "Each row has a right edge, so it can carry per-user state a chip has no room for. Empty state is a single dashed slot the size of a row.",
+      "hint": "The first user added stands in for the organiser: no remove, no grip, pinned first. The round dot is anything that would not fit on a 48 px row."
+    },
+    "comment": "Comment",
+    "commentSample": "Joining from the road — I might be ten minutes late to the call."
   }
 }

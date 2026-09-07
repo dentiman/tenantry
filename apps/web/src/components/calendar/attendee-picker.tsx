@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { XIcon } from 'lucide-react';
+import { MessageSquareTextIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
-import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Field, FieldLabel } from '@saas-skeleton/ui/components/ui/field';
-import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { formatDateTime } from '@saas-skeleton/ui/lib/format';
-import { UserSelect } from '../user-select';
+import { UserMultiList, UserRowNote } from '../user-multi-select';
 
 type Attendee = CalendarEventResponse['attendees'][number];
 
@@ -22,13 +20,21 @@ interface AttendeePickerProps {
 }
 
 /**
- * Вибір учасників. Свідомо НЕ multi-combobox: додаємо по одному через наявний
- * `UserSelect` (той самий серверний пошук, гідрація і фільтр неактивних), а
- * вибране показуємо списком із хрестиком.
+ * Вибір учасників події — тонка обгортка над `UserMultiList`
+ * (`docs/frontend/multi-user-select.md`).
  *
- * Причина не в лінощах: multi-режим Base UI довелося б обгортати своїм тригером
- * із чипами, тобто дублювати `UserSelect`. А «додав → бачу в списку» ще й
- * читабельніше на десятку людей, ніж чипи в один рядок.
+ * До 2026-09-07 тут жила власна конструкція «додаємо по одному через `UserSelect`,
+ * вибране показуємо списком нижче»: поле завжди стояло порожнім, і єдиною його
+ * роботою було ЗНИКАТИ значення після кожного вибору. Тепер поля немає взагалі —
+ * список і є контролом.
+ *
+ * Доменного тут лишилось рівно три речі, і всі три їдуть у слоти:
+ * організатор (`lockedIds`), відповідь на запрошення і коментар до неї
+ * (`renderRowEnd`). Про учасників, RSVP і календар компонент списку не знає нічого.
+ *
+ * **`reorderable` свідомо не вмикається**: сервер віддає склад відсортованим, і
+ * порядок, у якому людина розставила рядки, нікуди не збережеться — ручка
+ * обіцяла б те, чого API не робить.
  */
 export function AttendeePicker({
   value,
@@ -43,71 +49,45 @@ export function AttendeePicker({
   return (
     <Field>
       <FieldLabel>{t('attendees.label')}</FieldLabel>
-      <UserSelect
-        value={null}
-        allowUnassigned={false}
-        placeholder={t('attendees.add')}
+      <UserMultiList
+        value={value}
+        onChange={onChange}
         disabled={disabled}
-        onChange={(userId) => {
-          if (userId && !value.includes(userId)) {
-            onChange([...value, userId]);
+        addLabel={t('attendees.add')}
+        removeLabel={t('attendees.remove')}
+        lockedIds={ownerId ? [ownerId] : []}
+        // Аватара в `CalendarUserRefSchema` немає: presigned URL на кожного
+        // учасника — це запит у сховище на рядок, і воно того не варте, доки
+        // список короткий. Якщо юзер трапиться і в результатах пошуку, кеш
+        // ідентичностей візьме звідти багатшу версію — з аватаром
+        known={known.map((attendee) => ({
+          id: attendee.user.id,
+          email: attendee.user.email,
+          name: attendee.user.name,
+          avatarUrl: null,
+        }))}
+        renderRowEnd={(option) => {
+          const attendee = byId.get(option.id);
+          // Щойно доданий: сервер ще не знає про нього, тож ні відповіді, ні
+          // коментаря не існує — правий край рядка лишається порожнім
+          if (!attendee) {
+            return null;
           }
+          return (
+            <>
+              {attendee.comment && (
+                <UserRowNote
+                  label={t('attendees.comment')}
+                  icon={<MessageSquareTextIcon />}
+                >
+                  {attendee.comment}
+                </UserRowNote>
+              )}
+              <RsvpBadge response={attendee.response} respondedAt={attendee.respondedAt} />
+            </>
+          );
         }}
       />
-      {value.length > 0 && (
-        <ul className="flex flex-col gap-1 pt-1">
-          {value.map((userId) => {
-            const attendee = byId.get(userId);
-            const isOwner = userId === ownerId;
-            return (
-              <li key={userId} className="flex items-start justify-between gap-2 rounded-md px-1 py-0.5">
-                {attendee ? (
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <UserIdentity
-                      size="sm"
-                      email={attendee.user.email}
-                      name={attendee.user.name}
-                      // Аватара в `CalendarUserRefSchema` поки немає: presigned URL
-                      // на кожного учасника — це запит у сховище на рядок, і воно
-                      // того не варте, доки список короткий. Вкладена форма це
-                      // дозволяє додати одним полем, коли знадобиться
-                      avatarUrl={null}
-                    />
-                    {/* Примітка до відповіді — те, що людина дописала до RSVP */}
-                    {attendee.comment && (
-                      <span className="truncate pl-7 text-xs text-muted-foreground">
-                        “{attendee.comment}”
-                      </span>
-                    )}
-                  </span>
-                ) : (
-                  // Щойно доданий — сервер ще не віддав його ідентичність
-                  <span className="text-sm text-muted-foreground">{t('attendees.added')}</span>
-                )}
-                <span className="flex shrink-0 items-center gap-1">
-                  {attendee && (
-                    <RsvpBadge response={attendee.response} respondedAt={attendee.respondedAt} />
-                  )}
-                  {!isOwner && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t('attendees.remove')}
-                      disabled={disabled}
-                      onClick={() => {
-                        onChange(value.filter((item) => item !== userId));
-                      }}
-                    >
-                      <XIcon />
-                    </Button>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </Field>
   );
 }

@@ -60,8 +60,8 @@
   "attendees": {
     "label": "Guests",
     "add": "Add a guest",
-    "added": "Added",
-    "remove": "Remove guest"
+    "remove": "Remove guest",
+    "comment": "Comment"
   },
   "reminders": {
     "label": "Reminders",

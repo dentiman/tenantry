@@ -1,0 +1,64 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 560,
+      "h": 600,
+      "title": "Inline · chips in the field",
+      "is_interactive": true
+    },
+    {
+      "file": "Stacked.dc.html",
+      "x": 660,
+      "y": 0,
+      "w": 560,
+      "h": 720,
+      "title": "Stacked · reorderable list",
+      "is_interactive": true
+    },
+    {
+      "file": "States.dc.html",
+      "x": 0,
+      "y": 860,
+      "w": 1220,
+      "h": 1400,
+      "title": "States & numbers"
+    },
+    {
+      "file": "Dark.dc.html",
+      "x": 0,
+      "y": 2400,
+      "w": 1220,
+      "h": 480,
+      "title": "Dark theme"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 1300,
+      "y": 0,
+      "w": 300,
+      "text": "Both variants sit on the same two pieces:\n\n• UserIdentity (libs/ui) — avatar + two lines\n• the UserSelect popup — server search, 20 rows, honest \"showing N of 46\" footer\n\nOnly the container differs: a chips field vs a list of rows."
+    },
+    {
+      "id": "recommendation",
+      "x": 1300,
+      "y": 300,
+      "w": 300,
+      "text": "Where each one earns its place\n\nInline — dense forms, few guests, no per-person state to show. Keeps the 36px row rhythm.\n\nStacked — the event sheet, where each guest carries an RSVP badge and the organiser is an exception the row shape can hold.\n\nThey are not rivals: one component, two layouts."
+    },
+    {
+      "id": "open",
+      "x": 1300,
+      "y": 640,
+      "w": 300,
+      "text": "Still open\n\n1. Does guest order mean anything? Drag needs a stored position, otherwise it is a promise the API does not keep.\n\n2. Reorder from the keyboard (Alt + arrows) — drag alone locks out anyone not using a mouse.\n\n3. Avatars in the calendar contract: attendees currently carry no avatarUrl, so every face is initials."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

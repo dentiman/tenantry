@@ -31,7 +31,19 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
 }
 
-function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Trigger.Props) {
+/**
+ * ЛОКАЛЬНА ПРАВКА реєстру: `showChevron`. Реєстровий тригер завжди дописує
+ * шеврон після вмісту — і це правильно, доки тригер ВИГЛЯДАЄ як поле. Але
+ * комбобокс можна відкривати і кнопкою-дією («+ Add a guest» у
+ * `UserMultiList`), де шеврон означав би розкривний список замість дії.
+ * Поведінка частини не змінена — тільки видимість вбудованої іконки.
+ */
+function ComboboxTrigger({
+  className,
+  children,
+  showChevron = true,
+  ...props
+}: ComboboxPrimitive.Trigger.Props & { showChevron?: boolean }) {
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
@@ -39,7 +51,9 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
       {...props}
     >
       {children}
-      <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+      {showChevron && (
+        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+      )}
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -220,13 +234,22 @@ function ComboboxChips({
   );
 }
 
+/**
+ * ЛОКАЛЬНА ПРАВКА реєстру: `removeLabel`. Кнопка зняття чипа в реєстрі несе лише
+ * іконку і НЕ отримує від Base UI жодного дефолтного `aria-label` — тобто в
+ * дерева доступності лишається безіменною. Ззовні її не дістати: `...props`
+ * ідуть на сам чип, а не на кнопку всередині. Підпис доменний («Remove guest»),
+ * тому не хардкодиться, а приходить пропом.
+ */
 function ComboboxChip({
   className,
   children,
   showRemove = true,
+  removeLabel,
   ...props
 }: ComboboxPrimitive.Chip.Props & {
   showRemove?: boolean;
+  removeLabel?: string;
 }) {
   return (
     <ComboboxPrimitive.Chip
@@ -240,6 +263,7 @@ function ComboboxChip({
       {children}
       {showRemove && (
         <ComboboxPrimitive.ChipRemove
+          aria-label={removeLabel}
           render={<Button variant="ghost" size="icon-xs" radius="full" />}
           className="-ml-1 opacity-50 hover:opacity-100"
           data-slot="combobox-chip-remove"

@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <style>
+  /* Темна половина теми `libs/ui/src/styles.css` — не інверсія світлої:
+     тіні тут майже зникають (--overlay-shadow стає внутрішнім хайлайтом),
+     а глибину дає світліша поверхня картки над темнішим полотном. */
+  :root {
+    --background: oklch(0.129 0.042 264.695);
+    --foreground: oklch(0.984 0.003 247.858);
+    --card: oklch(0.208 0.042 265.755);
+    --popover: oklch(0.208 0.042 265.755);
+    --field: oklch(0.208 0.042 265.755);
+    --muted: oklch(0.279 0.041 260.031);
+    --secondary: oklch(0.279 0.041 260.031);
+    --accent: oklch(0.279 0.041 260.031);
+    --border: oklch(0.279 0.041 260.031);
+    --muted-foreground: oklch(0.704 0.04 256.788);
+    --input: oklch(0.372 0.044 257.287);
+    --primary: oklch(0.623 0.214 259.815);
+    --ring: var(--primary);
+    --success: oklch(0.696 0.17 162.48);
+    --warning: oklch(0.769 0.188 70.08);
+    --destructive: oklch(0.594 0.1967 24.63);
+    --radius: 10px; --radius-md: 8px; --radius-sm: 6px; --radius-xl: 14px;
+    --overlay-shadow: inset 0 0 1px 0 rgb(255 255 255 / 30%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--background); color: var(--foreground);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { color: color-mix(in oklab, var(--primary) 80%, white 20%); text-decoration: underline; }
+  .spec-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .spec-note { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .spec-tag {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 26px;
+    background: color-mix(in oklab, var(--primary) 18%, transparent); color: var(--primary);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .cell-key { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: color-mix(in oklab, var(--foreground) 55%, transparent); }
+  .field-label { font-size: 14px; line-height: 1; font-weight: 500; }
+  .field-desc { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+  .avatar { position: relative; display: flex; align-items: center; justify-content: center; flex: none; border-radius: 999px; background: var(--secondary); color: var(--muted-foreground); font-weight: 500; }
+  .avatar::after { content: ''; position: absolute; inset: 0; border-radius: 999px; border: 1px solid var(--border); mix-blend-mode: lighten; }
+  .avatar-24 { width: 24px; height: 24px; font-size: 12px; }
+  .ident { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ident-text { display: flex; flex-direction: column; min-width: 0; }
+  .ident-name { font-size: 12px; line-height: 1.15; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ident-mail { font-size: 11px; line-height: 1.15; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 26px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge-secondary { background: var(--secondary); color: var(--foreground); }
+  .badge-success { background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); }
+  .badge-warning { background: color-mix(in oklab, var(--warning) 10%, transparent); color: var(--warning); }
+  .icon-btn { display: flex; align-items: center; justify-content: center; flex: none; border: 0; background: transparent; color: var(--muted-foreground); border-radius: 999px; }
+  .icon-sq { width: 32px; height: 32px; border-radius: var(--radius-md); }
+
+  .chips { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 36px; padding: 3px 32px 3px 3px; border: 1px solid var(--input); border-radius: var(--radius); background: var(--field); }
+  .chips-chevron { position: absolute; top: 9px; right: 9px; color: var(--muted-foreground); }
+  .chips-ph { flex: 1 1 64px; padding: 0 6px; font-size: 14px; color: var(--muted-foreground); }
+  .is-focus { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+  .chip { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 2px; border-radius: 999px; background: var(--muted); border: 1px solid transparent; white-space: nowrap; }
+  .chip-av { width: 24px; height: 24px; font-size: 11px; background: color-mix(in oklab, var(--foreground) 14%, transparent); }
+  .chip-name { font-size: 14px; }
+  .chip-x { width: 20px; height: 20px; }
+
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 4px 0 2px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+  .row-drag { border-color: var(--ring); box-shadow: var(--overlay-shadow); }
+  .handle { display: flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 32px; color: var(--input); }
+  .row-body { display: flex; align-items: center; flex: 1; min-width: 0; }
+  .row-end { display: flex; align-items: center; gap: 4px; flex: none; }
+  /* Примітка до рядка: БЕЙДЖ, ЯКИЙ УТРАТИВ ТЕКСТ — та сама висота 20px і та
+     сама м'яка поверхня, що в сусіднього статусу, тільки коло замість пігулки,
+     бо всередині знак, а не слово. Ховає те, що не вміщається в 48px рядка. */
+  .note-dot {
+    display: flex; align-items: center; justify-content: center; flex: none;
+    width: 20px; height: 20px; border-radius: 999px;
+    background: var(--secondary); color: var(--muted-foreground); cursor: default;
+  }
+  .note-dot-open { background: var(--accent); color: var(--foreground); }
+  .note-pop {
+    display: flex; flex-direction: column; gap: 4px; width: 256px; padding: 10px;
+    border-radius: var(--radius); background: var(--popover);
+    box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+  .note-pop-title { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+  .note-pop-body { font-size: 14px; line-height: 20px; }
+  .add-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 48px; border: 1px dashed var(--input); border-radius: var(--radius-md); background: color-mix(in oklab, var(--muted) 60%, transparent); color: var(--muted-foreground); font-size: 14px; font-weight: 500; }
+
+  .popup { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius); background: var(--popover); box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent); }
+  .popup-search { display: flex; padding: 4px; border-bottom: 1px solid var(--border); }
+  .search-group { display: flex; align-items: center; gap: 8px; flex: 1; height: 32px; padding: 0 10px; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--field); color: var(--muted-foreground); font-size: 14px; }
+  .popup-list { padding: 4px; display: flex; flex-direction: column; }
+  .popup-foot { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); margin: 0; }
+  .opt { position: relative; display: flex; align-items: center; gap: 12px; padding: 4px 32px 4px 6px; border-radius: var(--radius-sm); }
+  .opt-hl { background: var(--accent); }
+  .opt-check { position: absolute; right: 8px; color: var(--foreground); }
+  </style>
+</helmet>
+<div style="display: flex; flex-direction: column; gap: 22px; width: 1220px; padding: 28px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span class="spec-tag">DARK</span>
+      <p class="spec-title">Both variants on the dark half of the theme</p>
+    </div>
+    <p class="spec-note">Card sits above the canvas instead of casting onto it: the lifted row keeps the ring and swaps the drop shadow for the inset highlight the theme uses in the dark.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+    <div class="col">
+      <span class="cell-key">Inline</span>
+      <span class="field-label">Guests</span>
+      <div class="chips is-focus">
+        <span class="chip"><span class="avatar chip-av">MR</span><span class="chip-name">Marcus Reyes</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">PN</span><span class="chip-name">Priya Nair</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chips-ph"></span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="field-desc">Ada Lovelace (you) organises this event.</p>
+      <div class="chips" style="margin-top: 6px">
+        <span class="chips-ph">Add a guest</span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="cell-key">Stacked</span>
+      <span class="field-label">Guests</span>
+      <div class="list">
+        <div class="row">
+          <span class="handle" style="opacity: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+          <span class="row-body"><span class="ident"><span class="avatar avatar-24">AL</span><span class="ident-text"><span class="ident-name">Ada Lovelace</span><span class="ident-mail">ada.lovelace@northwind.io</span></span></span></span>
+          <span class="row-end"><span class="badge badge-secondary">Organiser</span></span>
+        </div>
+        <div class="row row-drag">
+          <span class="handle" style="color: var(--muted-foreground)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+          <span class="row-body"><span class="ident"><span class="avatar avatar-24">MR</span><span class="ident-text"><span class="ident-name">Marcus Reyes</span><span class="ident-mail">m.reyes@northwind.io</span></span></span></span>
+          <span class="row-end"><span class="badge badge-success">Going</span><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        </div>
+        <div class="row">
+          <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+          <span class="row-body"><span class="ident"><span class="avatar avatar-24">PN</span><span class="ident-text"><span class="ident-name">Priya Nair</span><span class="ident-mail">priya.nair@northwind.io</span></span></span></span>
+          <span class="row-end"><span class="note-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg></span><span class="badge badge-warning">Maybe</span><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        </div>
+      </div>
+      <div class="add-btn" style="margin-top: 6px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+        Add a guest
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="cell-key">Search popup — shared by both</span>
+      <div class="popup">
+        <div class="popup-search">
+          <span class="search-group">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span style="color: var(--muted-foreground)">Search by name or email…</span>
+          </span>
+        </div>
+        <div class="popup-list">
+          <div class="opt"><span class="ident"><span class="avatar avatar-24">SD</span><span class="ident-text"><span class="ident-name">Selina Duarte</span><span class="ident-mail">selina@northwind.io</span></span></span></div>
+          <div class="opt opt-hl"><span class="ident"><span class="avatar avatar-24">JW</span><span class="ident-text"><span class="ident-name">Jonas Weber</span><span class="ident-mail">jonas.weber@northwind.io</span></span></span></div>
+          <div class="opt"><span class="ident"><span class="avatar avatar-24">PN</span><span class="ident-text"><span class="ident-name">Priya Nair</span><span class="ident-mail">priya.nair@northwind.io</span></span></span>
+            <svg class="opt-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          </div>
+          <div class="opt"><span class="ident"><span class="avatar avatar-24">YD</span><span class="ident-text"><span class="ident-name">Yusuf Demir</span><span class="ident-mail">yusuf.demir@northwind.io</span></span></span></div>
+        </div>
+        <p class="popup-foot">Showing 20 of 46 — refine your search</p>
+      </div>
+      <p class="spec-note">Server-side search, 20 rows, honest footer — lifted from <code>UserSelect</code> without a change. Only the check mark is new.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1220,"height":480}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

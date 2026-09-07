@@ -33,7 +33,10 @@
     "notFound": "No users found",
     "unassigned": "Unassigned",
     "clear": "Clear selection",
-    "refine": "Showing {{shown}} of {{total}} — refine your search"
+    "refine": "Showing {{shown}} of {{total}} — refine your search",
+    "add": "Add a user",
+    "remove": "Remove user",
+    "reorder": "Reorder user"
   },
   "dropzone": {
     "prompt": "Drop a file here or choose one",

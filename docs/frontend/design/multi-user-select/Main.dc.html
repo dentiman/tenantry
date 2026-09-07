@@ -1,0 +1,349 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <style>
+  :root {
+    --background: oklch(0.984 0.003 247.858);
+    --foreground: oklch(0.208 0.042 265.755);
+    --card: oklch(1 0 0);
+    --popover: oklch(1 0 0);
+    --field: oklch(1 0 0);
+    --muted: oklch(0.968 0.007 247.896);
+    --muted-foreground: oklch(0.554 0.046 257.417);
+    --secondary: oklch(0.929 0.013 255.508);
+    --accent: oklch(0.929 0.013 255.508);
+    --border: oklch(0.929 0.013 255.508);
+    --input: oklch(0.869 0.022 252.894);
+    --primary: oklch(0.546 0.245 262.881);
+    --primary-foreground: oklch(0.984 0.003 247.858);
+    --ring: var(--primary);
+    --success: oklch(0.51 0.145 163.225);
+    --warning: oklch(0.545 0.179 58.318);
+    --destructive: oklch(0.6532 0.2328 25.74);
+    --radius: 10px;
+    --radius-md: 8px;
+    --radius-sm: 6px;
+    --radius-xl: 14px;
+    --surface-shadow: 0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+    --overlay-shadow: 0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { color: color-mix(in oklab, var(--primary) 80%, black 20%); text-decoration: underline; }
+  button { font: inherit; color: inherit; }
+  svg { flex: none; }
+
+  /* ── специфікаційні підписи (лише на канві, не частина компонента) ── */
+  .spec-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .spec-note { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .spec-tag {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    border-radius: 26px; background: color-mix(in oklab, var(--primary) 10%, transparent);
+    color: var(--primary); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+
+  /* ── поле форми ── */
+  .field-label { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1; font-weight: 500; }
+  .field-desc { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .control {
+    width: 100%; height: 36px; padding: 0 12px;
+    border: 1px solid var(--input); border-radius: var(--radius);
+    background: var(--field); font-size: 14px; color: var(--foreground); outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .control::placeholder { color: var(--muted-foreground); }
+  .control:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+
+  /* ── попап пошуку (ComboboxContent) ── */
+  .popup {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius); background: var(--popover);
+    box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+  .popup-search { display: flex; padding: 4px; border-bottom: 1px solid var(--border); }
+  .search-group {
+    display: flex; align-items: center; gap: 8px; flex: 1; height: 32px; padding: 0 10px;
+    border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--field);
+    color: var(--muted-foreground);
+  }
+  .search-group input {
+    flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+    font-size: 14px; color: var(--foreground);
+  }
+  .search-group input::placeholder { color: var(--muted-foreground); }
+  .popup-list { max-height: 244px; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; }
+  .popup-empty { padding: 16px 0; text-align: center; font-size: 14px; color: var(--muted-foreground); }
+  .popup-foot { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); }
+  .opt {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 4px 32px 4px 6px; border: 0; border-radius: var(--radius-sm);
+    background: transparent; text-align: left; cursor: default;
+  }
+  .opt:hover { background: var(--accent); }
+  .opt-check { position: absolute; right: 8px; color: var(--foreground); }
+
+  /* ── UserIdentity (libs/ui) ── */
+  .ident { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .avatar {
+    position: relative; display: flex; align-items: center; justify-content: center; flex: none;
+    border-radius: 999px; background: var(--secondary); color: var(--muted-foreground);
+    font-weight: 500; overflow: hidden;
+  }
+  .avatar::after {
+    content: ''; position: absolute; inset: 0; border-radius: 999px;
+    border: 1px solid var(--border); mix-blend-mode: darken;
+  }
+  .avatar-24 { width: 24px; height: 24px; font-size: 12px; }
+  .avatar-32 { width: 32px; height: 32px; font-size: 14px; }
+  .ident-text { display: flex; flex-direction: column; min-width: 0; }
+  .ident-name { font-size: 12px; line-height: 1.15; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ident-mail { font-size: 11px; line-height: 1.15; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── бейдж ── */
+  .badge {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 26px;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .badge-secondary { background: var(--secondary); color: var(--foreground); }
+  .badge-success { background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); }
+  .badge-warning { background: color-mix(in oklab, var(--warning) 10%, transparent); color: var(--warning); }
+  .badge-muted { background: var(--muted); color: var(--muted-foreground); }
+
+  /* ── іконкова кнопка ── */
+  .icon-btn {
+    display: flex; align-items: center; justify-content: center; flex: none;
+    border: 0; background: transparent; color: var(--muted-foreground);
+    border-radius: 999px; cursor: pointer; transition: background-color 120ms ease, color 120ms ease;
+  }
+  .icon-btn:hover { background: color-mix(in oklab, var(--foreground) 8%, transparent); color: var(--foreground); }
+
+  /* ── ІНЛАЙНОВИЙ ВАРІАНТ: поле-чипи (ComboboxChips) ───────────────────── */
+  .chips-shell { position: relative; }
+  .chips {
+    position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    min-height: 36px; padding: 3px 32px 3px 3px;
+    border: 1px solid var(--input); border-radius: var(--radius); background: var(--field);
+    cursor: text; transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .chips:hover { border-color: color-mix(in oklab, var(--input) 70%, var(--foreground) 30%); }
+  .chips:focus-within { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+  .chips-chevron { position: absolute; top: 9px; right: 9px; color: var(--muted-foreground); pointer-events: none; }
+  .chips-input {
+    flex: 1 1 64px; min-width: 64px; height: 28px; padding: 0 6px;
+    border: 0; background: transparent; outline: none; font-size: 14px; color: var(--foreground);
+  }
+  .chips-input::placeholder { color: var(--muted-foreground); }
+
+  /* Чип = ідентичність + хрестик. Висота 28px — рівно поле (36) мінус падінги (2×3)
+     мінус межа: перший рядок чипів не розтягує поле понад метрику 36px. */
+  .chip {
+    display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 2px 0 3px;
+    border-radius: 999px; background: var(--muted); border: 1px solid transparent;
+    max-width: 100%; white-space: nowrap;
+  }
+  .chip-av { width: 24px; height: 24px; font-size: 11px; background: var(--secondary); }
+  .chip-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+  .chip-x { width: 20px; height: 20px; }
+  /* Варіант оформлення чипа: контурний. Той самий об'єкт, інша поверхня —
+     на білому полі (--field) заливка muted майже не читається, межа читається завжди. */
+  .chips-outline .chip { background: var(--card); border-color: var(--border); }
+  .chips-outline .chip-av { background: var(--muted); }
+
+  .panel {
+    display: flex; flex-direction: column; gap: 20px;
+    padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-xl);
+    background: var(--card); box-shadow: var(--surface-shadow);
+  }
+  .form-row { display: flex; flex-direction: column; gap: 8px; }
+  .legend { display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+  .legend-key {
+    flex: none; min-width: 74px; font-weight: 600; font-size: 11px; letter-spacing: 0.02em;
+    text-transform: uppercase; color: color-mix(in oklab, var(--foreground) 55%, transparent);
+  }
+  .scrim { position: fixed; inset: 0; z-index: 20; }
+  </style>
+</helmet>
+<div style="display: flex; flex-direction: column; gap: 20px; width: 560px; padding: 28px; --primary: {{accent}}">
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span class="spec-tag">INLINE</span>
+      <p class="spec-title">Guests — chips in the field</p>
+    </div>
+    <p class="spec-note">Base UI <code>ComboboxChips</code> + <code>UserIdentity</code>. 36 = 28px chip + 2×3px padding + borders, so it sits in the row rhythm of every other control without a special case.</p>
+  </div>
+
+  <div class="panel">
+    <div class="form-row">
+      <label class="field-label" for="ev-title">Title</label>
+      <input class="control" id="ev-title" value="Weekly sync" readonly>
+    </div>
+
+    <div class="form-row">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <label class="field-label">Guests</label>
+        <span class="badge badge-muted">{{count}}</span>
+      </div>
+
+      <div class="chips-shell">
+        <div class="chips chips-{{chipVariant}}" onClick="{{openPopup}}">
+          <sc-for list="{{chips}}" as="chip" hint-placeholder-count="3">
+            <span class="chip" title="{{chip.email}}">
+              <span class="avatar chip-av">{{chip.initials}}</span>
+              <span class="chip-name">{{chip.name}}</span>
+              <button type="button" class="icon-btn chip-x" aria-label="Remove guest" onClick="{{chip.remove}}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+              </button>
+            </span>
+          </sc-for>
+          <input class="chips-input" placeholder="{{placeholder}}" value="{{query}}" onChange="{{onQuery}}" onKeyDown="{{onKey}}" onFocus="{{openPopup}}">
+          <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </div>
+
+        <sc-if value="{{isOpen}}" hint-placeholder-val="{{ true }}">
+          <div class="popup">
+            <div class="popup-list">
+              <sc-for list="{{options}}" as="opt" hint-placeholder-count="4">
+                <button type="button" class="opt" onClick="{{opt.toggle}}">
+                  <span class="ident">
+                    <span class="avatar avatar-24">{{opt.initials}}</span>
+                    <span class="ident-text">
+                      <span class="ident-name">{{opt.name}}</span>
+                      <span class="ident-mail">{{opt.email}}</span>
+                    </span>
+                  </span>
+                  <sc-if value="{{opt.picked}}" hint-placeholder-val="{{ true }}">
+                    <svg class="opt-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                  </sc-if>
+                </button>
+              </sc-for>
+              <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+                <p class="popup-empty">No users found</p>
+              </sc-if>
+            </div>
+            <p class="popup-foot">{{footer}}</p>
+          </div>
+        </sc-if>
+      </div>
+
+      <p class="field-desc">Ada Lovelace (you) organises this event.</p>
+    </div>
+
+    <div class="form-row">
+      <label class="field-label" for="ev-loc">Location</label>
+      <input class="control" id="ev-loc" placeholder="Room, link or address" readonly>
+    </div>
+  </div>
+
+  <div class="legend">
+    <p class="legend-item"><span class="legend-key">Search</span><span>Lives in the field, not in the popup — chips already give it a caret, and Backspace on an empty field drops the last guest.</span></p>
+    <p class="legend-item"><span class="legend-key">Popup</span><span>Stays open while you pick; the check mark is the only state that moves.</span></p>
+    <p class="legend-item"><span class="legend-key">Organiser</span><span>Never a chip: an un-removable chip with no × reads as broken. It moves to the hint line under the field.</span></p>
+  </div>
+
+  <sc-if value="{{isOpen}}" hint-placeholder-val="{{ false }}">
+    <div class="scrim" onClick="{{closePopup}}"></div>
+  </sc-if>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"chipVariant":{"editor":"enum","options":["filled","outline"],"default":"filled","section":"Chip"},"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f172a","#0d9488","#7c3aed"],"section":"Theme"},"$preview":{"width":560,"height":600}}'>
+const PEOPLE = [
+  { id: 'u1', name: 'Marcus Reyes', email: 'm.reyes@northwind.io' },
+  { id: 'u2', name: 'Priya Nair', email: 'priya.nair@northwind.io' },
+  { id: 'u3', name: 'Tom Kowalski', email: 't.kowalski@northwind.io' },
+  { id: 'u4', name: 'Selina Duarte', email: 'selina@northwind.io' },
+  { id: 'u5', name: 'Jonas Weber', email: 'jonas.weber@northwind.io' },
+  { id: 'u6', name: 'Hanna Mueller', email: 'hanna.m@northwind.io' },
+  { id: 'u7', name: 'Yusuf Demir', email: 'yusuf.demir@northwind.io' },
+  { id: 'u8', name: 'Nora Ellis', email: 'nora.ellis@northwind.io' },
+];
+
+function initials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length > 1) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].slice(0, 2).toUpperCase();
+}
+
+class Component extends DCLogic {
+  state = { picked: ['u1', 'u2', 'u5'], query: '', open: false };
+
+  renderVals() {
+    const picked = this.state.picked;
+    const q = this.state.query.trim().toLowerCase();
+    const matches = PEOPLE.filter(
+      (p) => !q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q),
+    );
+
+    return {
+      accent: this.props.accent ?? '#2563eb',
+      chipVariant: this.props.chipVariant ?? 'filled',
+      count: String(picked.length),
+      query: this.state.query,
+      isOpen: this.state.open,
+      placeholder: picked.length === 0 ? 'Add a guest' : '',
+      noResults: matches.length === 0,
+      footer: 'Showing ' + matches.length + ' of 46 — refine your search',
+      chips: picked.map((id) => {
+        const person = PEOPLE.find((p) => p.id === id);
+        return {
+          name: person.name,
+          email: person.email,
+          initials: initials(person.name),
+          remove: (event) => {
+            event.stopPropagation();
+            this.setState({ picked: this.state.picked.filter((x) => x !== id) });
+          },
+        };
+      }),
+      options: matches.map((person) => ({
+        name: person.name,
+        email: person.email,
+        initials: initials(person.name),
+        picked: picked.includes(person.id),
+        toggle: () => {
+          const has = this.state.picked.includes(person.id);
+          this.setState({
+            picked: has
+              ? this.state.picked.filter((x) => x !== person.id)
+              : [...this.state.picked, person.id],
+          });
+        },
+      })),
+      openPopup: () => {
+        if (!this.state.open) this.setState({ open: true });
+      },
+      closePopup: () => {
+        this.setState({ open: false, query: '' });
+      },
+      onQuery: (event) => {
+        this.setState({ query: event.target.value, open: true });
+      },
+      onKey: (event) => {
+        if (event.key === 'Backspace' && this.state.query === '' && this.state.picked.length > 0) {
+          this.setState({ picked: this.state.picked.slice(0, -1) });
+        }
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

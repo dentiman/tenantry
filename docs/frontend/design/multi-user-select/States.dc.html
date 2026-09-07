@@ -1,0 +1,438 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <style>
+  :root {
+    --background: oklch(0.984 0.003 247.858);
+    --foreground: oklch(0.208 0.042 265.755);
+    --card: oklch(1 0 0);
+    --popover: oklch(1 0 0);
+    --field: oklch(1 0 0);
+    --muted: oklch(0.968 0.007 247.896);
+    --muted-foreground: oklch(0.554 0.046 257.417);
+    --secondary: oklch(0.929 0.013 255.508);
+    --accent: oklch(0.929 0.013 255.508);
+    --border: oklch(0.929 0.013 255.508);
+    --input: oklch(0.869 0.022 252.894);
+    --primary: oklch(0.546 0.245 262.881);
+    --primary-foreground: oklch(0.984 0.003 247.858);
+    --ring: var(--primary);
+    --success: oklch(0.51 0.145 163.225);
+    --warning: oklch(0.545 0.179 58.318);
+    --destructive: oklch(0.6532 0.2328 25.74);
+    --radius: 10px;
+    --radius-md: 8px;
+    --radius-sm: 6px;
+    --radius-xl: 14px;
+    --surface-shadow: 0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+    --overlay-shadow: 0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { color: color-mix(in oklab, var(--primary) 80%, black 20%); text-decoration: underline; }
+  button { font: inherit; color: inherit; }
+  svg { flex: none; }
+
+  /* ── специфікаційні підписи (лише на канві, не частина компонента) ── */
+  .spec-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .spec-note { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .spec-tag {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    border-radius: 26px; background: color-mix(in oklab, var(--primary) 10%, transparent);
+    color: var(--primary); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+
+  /* ── поле форми ── */
+  .field-label { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1; font-weight: 500; }
+  .field-desc { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .control {
+    width: 100%; height: 36px; padding: 0 12px;
+    border: 1px solid var(--input); border-radius: var(--radius);
+    background: var(--field); font-size: 14px; color: var(--foreground); outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .control::placeholder { color: var(--muted-foreground); }
+  .control:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+
+  /* ── попап пошуку (ComboboxContent) ── */
+  .popup {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius); background: var(--popover);
+    box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+  .popup-search { display: flex; padding: 4px; border-bottom: 1px solid var(--border); }
+  .search-group {
+    display: flex; align-items: center; gap: 8px; flex: 1; height: 32px; padding: 0 10px;
+    border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--field);
+    color: var(--muted-foreground);
+  }
+  .search-group input {
+    flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+    font-size: 14px; color: var(--foreground);
+  }
+  .search-group input::placeholder { color: var(--muted-foreground); }
+  .popup-list { max-height: 244px; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; }
+  .popup-empty { padding: 16px 0; text-align: center; font-size: 14px; color: var(--muted-foreground); }
+  .popup-foot { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); }
+  .opt {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 4px 32px 4px 6px; border: 0; border-radius: var(--radius-sm);
+    background: transparent; text-align: left; cursor: default;
+  }
+  .opt:hover { background: var(--accent); }
+  .opt-check { position: absolute; right: 8px; color: var(--foreground); }
+
+  /* ── UserIdentity (libs/ui) ── */
+  .ident { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .avatar {
+    position: relative; display: flex; align-items: center; justify-content: center; flex: none;
+    border-radius: 999px; background: var(--secondary); color: var(--muted-foreground);
+    font-weight: 500; overflow: hidden;
+  }
+  .avatar::after {
+    content: ''; position: absolute; inset: 0; border-radius: 999px;
+    border: 1px solid var(--border); mix-blend-mode: darken;
+  }
+  .avatar-24 { width: 24px; height: 24px; font-size: 12px; }
+  .avatar-32 { width: 32px; height: 32px; font-size: 14px; }
+  .ident-text { display: flex; flex-direction: column; min-width: 0; }
+  .ident-name { font-size: 12px; line-height: 1.15; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ident-mail { font-size: 11px; line-height: 1.15; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── бейдж ── */
+  .badge {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 26px;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .badge-secondary { background: var(--secondary); color: var(--foreground); }
+  .badge-success { background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); }
+  .badge-warning { background: color-mix(in oklab, var(--warning) 10%, transparent); color: var(--warning); }
+  .badge-muted { background: var(--muted); color: var(--muted-foreground); }
+
+  /* ── іконкова кнопка ── */
+  .icon-btn {
+    display: flex; align-items: center; justify-content: center; flex: none;
+    border: 0; background: transparent; color: var(--muted-foreground);
+    border-radius: 999px; cursor: pointer; transition: background-color 120ms ease, color 120ms ease;
+  }
+  .icon-btn:hover { background: color-mix(in oklab, var(--foreground) 8%, transparent); color: var(--foreground); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 24px; }
+  .cell { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .cell-key {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--foreground) 55%, transparent);
+  }
+  .cell-note { font-size: 12px; line-height: 17px; color: var(--muted-foreground); margin: 0; }
+  .rule { height: 1px; background: var(--border); border: 0; margin: 0; }
+
+  /* поле-чипи */
+  .chips {
+    position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    min-height: 36px; padding: 3px 32px 3px 3px;
+    border: 1px solid var(--input); border-radius: var(--radius); background: var(--field);
+  }
+  .chips-chevron { position: absolute; top: 9px; right: 9px; color: var(--muted-foreground); }
+  .chips-ph { flex: 1 1 64px; padding: 0 6px; font-size: 14px; color: var(--muted-foreground); }
+  .chips-caret { flex: 1 1 40px; padding: 0 6px; font-size: 14px; color: var(--foreground); }
+  .is-focus { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+  .is-invalid { border-color: var(--destructive); box-shadow: 0 0 0 2px color-mix(in oklab, var(--destructive) 60%, transparent); }
+  .is-disabled { background: var(--muted); opacity: 0.5; }
+  .err { font-size: 14px; color: var(--destructive); margin: 0; }
+
+  .chip {
+    display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 2px 0 3px;
+    border-radius: 999px; background: var(--muted); border: 1px solid transparent; white-space: nowrap;
+  }
+  .chip-av { width: 24px; height: 24px; font-size: 11px; background: var(--secondary); }
+  .chip-name { font-size: 14px; }
+  .chip-x { width: 20px; height: 20px; }
+  .chip-outline { background: var(--card); border-color: var(--border); }
+  .chip-outline .chip-av { background: var(--muted); }
+  .chip-more { height: 28px; padding: 0 10px; border-radius: 999px; background: var(--muted); font-size: 12px; font-weight: 500; color: var(--muted-foreground); display: flex; align-items: center; }
+
+  /* список */
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .row {
+    display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 4px 0 2px;
+    border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card);
+  }
+  .row-hover { background: var(--muted); }
+  .row-drag { border-color: var(--ring); box-shadow: var(--overlay-shadow); background: var(--card); }
+  .slot { height: 48px; border: 1px dashed var(--input); border-radius: var(--radius-md); background: color-mix(in oklab, var(--muted) 60%, transparent); }
+  .handle { display: flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 32px; color: var(--input); }
+  .handle-on { color: var(--muted-foreground); }
+  .row-body { display: flex; align-items: center; flex: 1; min-width: 0; }
+  .row-end { display: flex; align-items: center; gap: 4px; flex: none; }
+  .icon-sq { width: 32px; height: 32px; border-radius: var(--radius-md); }
+  .list-flat { gap: 0; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+  .list-flat .row { border-color: transparent; background: transparent; height: 44px; }
+  .list-flat .row-hover { background: var(--muted); }
+
+  .add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 48px;
+    border: 1px dashed var(--input); border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--muted) 60%, transparent);
+    color: var(--muted-foreground); font-size: 14px; font-weight: 500;
+  }
+  .add-hover { background: var(--muted); color: var(--foreground); border-color: var(--muted-foreground); }
+
+  .opt-static { position: relative; display: flex; align-items: center; gap: 12px; padding: 4px 32px 4px 6px; border-radius: var(--radius-sm); }
+  .opt-hl { background: var(--accent); }
+  .popup-static { padding: 4px; border-radius: var(--radius); background: var(--popover); box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent); }
+
+  .note-dot {
+    display: flex; align-items: center; justify-content: center; flex: none;
+    width: 20px; height: 20px; border-radius: 999px;
+    background: var(--secondary); color: var(--muted-foreground);
+  }
+  .note-dot-open { background: var(--accent); color: var(--foreground); }
+  .note-pop {
+    display: flex; flex-direction: column; gap: 4px; width: 256px; padding: 10px;
+    border-radius: var(--radius); background: var(--popover);
+    box-shadow: var(--overlay-shadow), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+  .note-pop-title { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+  .note-pop-body { font-size: 14px; line-height: 20px; }
+  .spec-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .spec-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 18px; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+  .spec-row span:first-child { color: var(--muted-foreground); }
+  .spec-row span:last-child { font-variant-numeric: tabular-nums; font-weight: 500; }
+  </style>
+</helmet>
+<div style="display: flex; flex-direction: column; gap: 24px; width: 1220px; padding: 28px">
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span class="spec-tag">STATES</span>
+      <p class="spec-title">Both variants — every state the form can reach</p>
+    </div>
+    <p class="spec-note">Same tokens as the app: 36px control metric, 10px field radius, slate-300 border, blue-600 ring, overlay shadow on anything that floats.</p>
+  </div>
+
+  <hr class="rule">
+
+  <div class="grid">
+    <div class="cell">
+      <span class="cell-key">Inline · empty</span>
+      <div class="chips">
+        <span class="chips-ph">Add a guest</span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="cell-note">Reads as a normal 36px field. Nothing hints at multi-select until the first chip lands — which is fine: the label already says “Guests”.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · focused</span>
+      <div class="chips is-focus">
+        <span class="chip">
+          <span class="avatar chip-av">MR</span><span class="chip-name">Marcus Reyes</span>
+          <span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+        </span>
+        <span class="chips-caret">pri|</span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="cell-note">1px ring, not 2px: this is a field, and fields in this system take <code>ring-1</code>. Buttons take the 2px offset ring.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · invalid</span>
+      <div class="chips is-invalid">
+        <span class="chips-ph">Add a guest</span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="err">Invite at least one guest</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · chip fill A / B</span>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div class="chips">
+          <span class="chip"><span class="avatar chip-av">PN</span><span class="chip-name">Priya Nair</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          <span class="chip"><span class="avatar chip-av">TK</span><span class="chip-name">Tom Kowalski</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        </div>
+        <div class="chips">
+          <span class="chip chip-outline"><span class="avatar chip-av">PN</span><span class="chip-name">Priya Nair</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          <span class="chip chip-outline"><span class="avatar chip-av">TK</span><span class="chip-name">Tom Kowalski</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        </div>
+      </div>
+      <p class="cell-note"><b>A</b> slate-100 fill — the registry chip. <b>B</b> white on a 1px border — separates on a white field, and the grey avatar stops fighting a grey chip.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · six guests, wrapped</span>
+      <div class="chips">
+        <span class="chip"><span class="avatar chip-av">MR</span><span class="chip-name">Marcus Reyes</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">PN</span><span class="chip-name">Priya Nair</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">TK</span><span class="chip-name">Tom Kowalski</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">SD</span><span class="chip-name">Selina Duarte</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">JW</span><span class="chip-name">Jonas Weber</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">HM</span><span class="chip-name">Hanna Mueller</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="cell-note">Three rows tall inside a 384px sheet. This is where the inline variant starts costing more vertical space than the stacked one — and it still hides the RSVP.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · capped at two rows</span>
+      <div class="chips">
+        <span class="chip"><span class="avatar chip-av">MR</span><span class="chip-name">Marcus Reyes</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">PN</span><span class="chip-name">Priya Nair</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip"><span class="avatar chip-av">TK</span><span class="chip-name">Tom Kowalski</span><span class="icon-btn chip-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        <span class="chip-more">+3 more</span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="cell-note">The counter keeps the field at a fixed height, at the price of hiding three people behind a number. Take it only if the field must not move the fields below it.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Inline · disabled</span>
+      <div class="chips is-disabled">
+        <span class="chip"><span class="avatar chip-av">MR</span><span class="chip-name">Marcus Reyes</span></span>
+        <svg class="chips-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <p class="cell-note">The × disappears rather than greying out — a dead control on a chip is noise.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Popup · item states</span>
+      <div class="popup-static">
+        <div class="opt-static">
+          <span class="ident"><span class="avatar avatar-24">SD</span><span class="ident-text"><span class="ident-name">Selina Duarte</span><span class="ident-mail">selina@northwind.io</span></span></span>
+        </div>
+        <div class="opt-static opt-hl">
+          <span class="ident"><span class="avatar avatar-24">JW</span><span class="ident-text"><span class="ident-name">Jonas Weber</span><span class="ident-mail">jonas.weber@northwind.io</span></span></span>
+        </div>
+        <div class="opt-static">
+          <span class="ident"><span class="avatar avatar-24">PN</span><span class="ident-text"><span class="ident-name">Priya Nair</span><span class="ident-mail">priya.nair@northwind.io</span></span></span>
+          <svg class="opt-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </div>
+      </div>
+      <p class="cell-note">Idle · highlighted (slate-200) · already a guest. One popup serves both variants — it is the existing <code>UserSelect</code> list, unchanged.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Stacked · empty</span>
+      <button type="button" class="add-btn add-hover">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+        Add a guest
+      </button>
+      <p class="cell-note">The empty state is one slot: same 48px, same radius and same dashed line as the hole a dragged row leaves behind, so it reads as the next unfilled row rather than a control below the list. Hover shown.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Stacked · mid-drag</span>
+      <div style="position: relative; height: 156px">
+        <div class="list">
+          <div class="row">
+            <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">MR</span><span class="ident-text"><span class="ident-name">Marcus Reyes</span><span class="ident-mail">m.reyes@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="badge badge-success">Going</span><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+          <div class="slot"></div>
+          <div class="row">
+            <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">TK</span><span class="ident-text"><span class="ident-name">Tom Kowalski</span><span class="ident-mail">t.kowalski@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="badge badge-secondary">No reply</span><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+        </div>
+        <div class="row row-drag" style="position: absolute; top: 48px; left: 6px; right: -6px">
+          <span class="handle handle-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+          <span class="row-body"><span class="ident"><span class="avatar avatar-24">PN</span><span class="ident-text"><span class="ident-name">Priya Nair</span><span class="ident-mail">priya.nair@northwind.io</span></span></span></span>
+          <span class="row-end"><span class="badge badge-warning">Maybe</span><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+        </div>
+      </div>
+      <p class="cell-note">The lifted row keeps its own surface and takes the ring + overlay shadow; the hole it left is a dashed slot, the same dashed language as a pending event chip.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Stacked · row shape A / B</span>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="list">
+          <div class="row">
+            <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">MR</span><span class="ident-text"><span class="ident-name">Marcus Reyes</span><span class="ident-mail">m.reyes@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+          <div class="row"><span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">TK</span><span class="ident-text"><span class="ident-name">Tom Kowalski</span><span class="ident-mail">t.kowalski@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+        </div>
+        <div class="list list-flat">
+          <div class="row row-hover">
+            <span class="handle handle-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">MR</span><span class="ident-text"><span class="ident-name">Marcus Reyes</span><span class="ident-mail">m.reyes@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+          <div class="row">
+            <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+            <span class="row-body"><span class="ident"><span class="avatar avatar-24">TK</span><span class="ident-text"><span class="ident-name">Tom Kowalski</span><span class="ident-mail">t.kowalski@northwind.io</span></span></span></span>
+            <span class="row-end"><span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></span>
+          </div>
+        </div>
+      </div>
+      <p class="cell-note"><b>A</b> cards, 48px, gap 6 — each row is a thing you can pick up. <b>B</b> flat 44px rows inside one bordered box — quieter at ten guests, but the draggable object only appears once you drag it.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Stacked · row note</span>
+      <div class="list">
+        <div class="row">
+          <span class="handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+          <span class="row-body"><span class="ident"><span class="avatar avatar-24">PN</span><span class="ident-text"><span class="ident-name">Priya Nair</span><span class="ident-mail">priya.nair@northwind.io</span></span></span></span>
+          <span class="row-end">
+            <span class="note-dot note-dot-open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg></span>
+            <span class="badge badge-warning">Maybe</span>
+            <span class="icon-btn icon-sq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+          </span>
+        </div>
+      </div>
+      <div class="note-pop" style="margin-left: auto">
+        <span class="note-pop-title">Comment</span>
+        <span class="note-pop-body">Joining from the road — I might be ten minutes late to the call.</span>
+      </div>
+      <p class="cell-note">A badge that lost its text: same 20px, same soft surface as the status beside it, a circle because it holds a sign and not a word. Opens on hover, on tap and on Enter — so the row keeps its 48px and nothing is hidden from touch or keyboard.</p>
+    </div>
+
+    <div class="cell">
+      <span class="cell-key">Numbers</span>
+      <div class="spec-list">
+        <p class="spec-row"><span>Field / control height</span><span>36px</span></p>
+        <p class="spec-row"><span>Chip height · radius</span><span>28px · full</span></p>
+        <p class="spec-row"><span>Chip avatar · label</span><span>24px · 14px</span></p>
+        <p class="spec-row"><span>Chip × hit area</span><span>20px</span></p>
+        <p class="spec-row"><span>Row height · gap</span><span>48px · 6px</span></p>
+        <p class="spec-row"><span>Row avatar · lines</span><span>24px · 12/11px</span></p>
+        <p class="spec-row"><span>Grip · remove hit area</span><span>24×32 · 32px</span></p>
+        <p class="spec-row"><span>Row note dot · icon</span><span>20px · 12px</span></p>
+        <p class="spec-row"><span>Note popup width</span><span>256px</span></p>
+        <p class="spec-row"><span>Field radius · row radius</span><span>10px · 8px</span></p>
+        <p class="spec-row"><span>Popup list max height</span><span>244px</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1220,"height":1080}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

@@ -49,7 +49,7 @@ import {
 import { ActivityFeed } from '../activity/activity-feed';
 import { useAuthStore } from '../../stores/auth.store';
 import { applyServerError, FormSelect, FormTextField, FormTextareaField } from '../form';
-import { AttendeePicker, RsvpBadge } from './attendee-picker';
+import { AttendeePicker } from './attendee-picker';
 import { CustomerSelect } from './customer-select';
 import { ReminderRows } from './reminder-rows';
 import { dayKey, formatDateTime, toInstantIso } from '../../lib/calendar-date';
@@ -671,5 +671,3 @@ function valuesOf(event: CalendarEventResponse, timeZone: string): FormValues {
     reminders: event.reminders.map((reminder) => reminder.minutesBefore),
   };
 }
-
-export { RsvpBadge };

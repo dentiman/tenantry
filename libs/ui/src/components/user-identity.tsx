@@ -20,6 +20,13 @@ interface UserIdentityProps {
   className?: string;
   /** Класи текстового блоку — escape hatch для респонсивності: `hidden sm:flex` ховає підписи, лишаючи аватар */
   textClassName?: string;
+  /**
+   * Другий рядок (пошта). Вимикається там, де ідентичність мусить лишитись
+   * ОДНОрядковою через геометрію контейнера, а не через брак місця під текст:
+   * чип у полі має 28px висоти — два рядки туди не влазять фізично.
+   * Не `size='xs'`: кегль і аватар лишаються ті самі, зникає рівно один рядок.
+   */
+  showEmail?: boolean;
 }
 
 /**
@@ -74,10 +81,12 @@ export function UserIdentity({
   badge,
   className,
   textClassName,
+  showEmail = true,
 }: UserIdentityProps) {
   const displayName = name?.trim() ? name.trim() : null;
   const primary = displayName ?? email;
-  const secondary = displayName ? email : null;
+  // Без імені в першому рядку вже стоїть пошта — ховати «другий рядок» нічого
+  const secondary = displayName && showEmail ? email : null;
 
   return (
     // flex-nowrap: стоковий Item переносить вміст, і у вузькому контейнері
