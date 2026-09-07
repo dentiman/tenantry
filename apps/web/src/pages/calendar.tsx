@@ -4,6 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { Alert, AlertDescription, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/toggle-group';
@@ -15,10 +25,14 @@ import {
   getCalendarFindWindowQueryKey,
   useCalendarFindOne,
   useCalendarFindWindow,
+  useCalendarRemove,
+  useCalendarSetRsvp,
+  useCalendarSetStatus,
   useCalendarUpdate,
 } from '../api/generated/api';
 import type { CalendarEventListResponseDtoOutput } from '../api/generated/model/calendarEventListResponseDtoOutput';
 import type { DragCommit } from '../components/calendar/use-event-drag';
+import type { EventIntent } from '../components/calendar/event-context-menu';
 import { AgendaList } from '../components/calendar/agenda-list';
 import { EventSheet, type EventSheetTarget } from '../components/calendar/event-sheet';
 import { MonthGrid } from '../components/calendar/month-grid';
@@ -96,6 +110,11 @@ export function CalendarPage() {
 
   const queryClient = useQueryClient();
   const updateEvent = useCalendarUpdate();
+  const setStatus = useCalendarSetStatus();
+  const setRsvp = useCalendarSetRsvp();
+  const removeEvent = useCalendarRemove();
+  /** Подія, для якої відкрито підтвердження видалення (null — діалог закритий) */
+  const [pendingDelete, setPendingDelete] = useState<CalendarEventResponse | null>(null);
 
   const refreshCalendar = async (): Promise<void> => {
     await Promise.all([
@@ -194,6 +213,70 @@ export function CalendarPage() {
           endsAt ?? new Date(startsAt.getTime() + preferences.defaultEventDurationMinutes * 60_000),
       },
     });
+  };
+
+  /**
+   * Дії контекстного меню плитки. Виконує СТОРІНКА, а не плитка: кожна з них —
+   * мутація з тостом, а видалення ще й із підтвердженням, і тримати це в кожній
+   * з тридцяти плиток на екрані означало б тридцять копій того самого стану.
+   *
+   * Видалення тут єдине, що не робиться одразу: скасування (`cancel`) зворотне
+   * і лишає історію, а `DELETE` — ні, тому воно проходить через той самий
+   * `alert-dialog`, що й у панелі події.
+   */
+  const applyIntent = (event: CalendarEventResponse, intent: EventIntent): void => {
+    switch (intent.kind) {
+      case 'open':
+        setTarget({ event });
+        return;
+      case 'duplicate':
+        // Копія відкривається ФОРМОЮ, а не створюється тихо: у дубліката майже
+        // завжди міняють час або назву, і зберегти його одним кліком означало б
+        // отримати другу однакову зустріч у тому самому слоті
+        setTarget({
+          event: null,
+          draft: {
+            startsAt: new Date(event.startsAt),
+            endsAt: new Date(event.endsAt),
+            template: event,
+          },
+        });
+        return;
+      case 'delete':
+        setPendingDelete(event);
+        return;
+      case 'cancel':
+      case 'restore':
+        void runIntent(
+          setStatus.mutateAsync({
+            id: event.id,
+            data: { status: intent.kind === 'cancel' ? 'CANCELLED' : 'CONFIRMED' },
+          }),
+          t(intent.kind === 'cancel' ? 'menu.cancelled' : 'menu.restored'),
+        );
+        return;
+      case 'rsvp':
+        void runIntent(
+          setRsvp.mutateAsync({ id: event.id, data: { response: intent.response } }),
+          t('menu.rsvpSaved'),
+        );
+        return;
+    }
+  };
+
+  /**
+   * Спільний хвіст усіх дій меню: успіх — тост і перечитування, помилку показує
+   * глобальний обробник мутацій (той самий контракт, що в решті застосунку).
+   * Оптимістичного патчу тут свідомо немає: на відміну від перетягування, плитка
+   * не рухається під курсором, тож затримка в 200 мс нічого не ламає
+   */
+  const runIntent = async (mutation: Promise<unknown>, message: string): Promise<void> => {
+    try {
+      await mutation;
+      toast.add({ type: 'success', title: message });
+    } finally {
+      await refreshCalendar();
+    }
   };
 
   const goto = (nextView: CalendarView, nextAnchor: string): void => {
@@ -354,6 +437,7 @@ export function CalendarPage() {
             setTarget({ event });
           }}
           onCreate={openDraft}
+          onIntent={applyIntent}
           onShowDay={(key) => {
             goto('day', key);
           }}
@@ -369,9 +453,45 @@ export function CalendarPage() {
           }}
           onCreate={openDraft}
           onDragCommit={applyDragCommit}
+          onIntent={applyIntent}
         />
       )}
       </div>
+
+      {/* Підтвердження видалення живе на СТОРІНЦІ, поруч із обробником інтентів:
+          плитка про нього не знає, а діалог у застосунку один, а не по одному
+          на кожну подію в сітці */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('menu.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('menu.deleteHint', { title: pendingDelete?.title ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('menu.deleteCancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const event = pendingDelete;
+                setPendingDelete(null);
+                if (event) {
+                  void runIntent(removeEvent.mutateAsync({ id: event.id }), t('menu.deleted'));
+                }
+              }}
+            >
+              {t('menu.deleteConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ShortcutsDialog
         isOpen={isHelpOpen}

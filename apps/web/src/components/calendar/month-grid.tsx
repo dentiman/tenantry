@@ -4,6 +4,7 @@ import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { dayKey, displayZoneFor, formatWeekday, todayKey } from '../../lib/calendar-date';
 import { EventChip } from './event-chip';
+import type { EventIntent } from './event-context-menu';
 
 /** Скільки плиток показуємо в клітинці, решта — «+N more» */
 const MAX_PER_CELL = 3;
@@ -17,6 +18,8 @@ interface MonthGridProps {
   onSelect: (event: CalendarEventResponse) => void;
   onCreate: (startsAt: Date) => void;
   onShowDay: (key: string) => void;
+  /** Дія з контекстного меню плитки; виконує сторінка */
+  onIntent?: (event: CalendarEventResponse, intent: EventIntent) => void;
 }
 
 export function MonthGrid({
@@ -27,6 +30,7 @@ export function MonthGrid({
   onSelect,
   onCreate,
   onShowDay,
+  onIntent,
 }: MonthGridProps) {
   const { t } = useTranslation('calendar');
   const today = todayKey(timeZone);
@@ -96,6 +100,7 @@ export function MonthGrid({
                   event={event}
                   timeZone={timeZone}
                   onSelect={onSelect}
+                  onIntent={onIntent}
                 />
               ))}
               {hidden > 0 && (

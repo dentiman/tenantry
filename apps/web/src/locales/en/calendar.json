@@ -68,13 +68,14 @@
     "add": "Add a reminder",
     "remove": "Remove reminder",
     "atStart": "At the start",
-    "minutes": "{{count}} minutes before",
-    "hours": "{{count}} hour before",
-    "hours_plural": "{{count}} hours before",
-    "days": "{{count}} day before",
-    "days_plural": "{{count}} days before",
-    "weeks": "{{count}} week before",
-    "weeks_plural": "{{count}} weeks before"
+    "minutes_one": "{{count}} minute before",
+    "minutes_other": "{{count}} minutes before",
+    "hours_one": "{{count}} hour before",
+    "hours_other": "{{count}} hours before",
+    "days_one": "{{count}} day before",
+    "days_other": "{{count}} days before",
+    "weeks_one": "{{count}} week before",
+    "weeks_other": "{{count}} weeks before"
   },
   "form": {
     "createTitle": "New event",
@@ -128,5 +129,32 @@
       "help": "Show this help",
       "close": "Close panel or dialog"
     }
+  },
+  "conflicts": {
+    "title_one": "Overlaps with another event",
+    "title_other": "Overlaps with {{count}} other events",
+    "more": "and {{count}} more"
+  },
+  "peek": {
+    "guests_one": "{{count}} guest",
+    "guests_other": "{{count}} guests",
+    "accepted_one": "{{count}} going",
+    "accepted_other": "{{count}} going",
+    "myResponse": "Your answer: {{response}}"
+  },
+  "menu": {
+    "open": "Open event",
+    "duplicate": "Duplicate",
+    "cancelled": "Event cancelled",
+    "restored": "Event restored",
+    "deleted": "Event deleted",
+    "rsvpSaved": "Your answer is saved",
+    "deleteTitle": "Delete this event?",
+    "deleteHint": "“{{title}}” will be removed for everyone. Cancel the event instead if you want to keep the history.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Keep it"
+  },
+  "presence": {
+    "online": "Online now"
   }
 }

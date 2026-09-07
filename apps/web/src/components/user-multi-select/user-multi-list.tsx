@@ -10,6 +10,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/combobox';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
+import { UserPresenceBadge } from '../presence-dot';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { UserPickerList } from './user-picker-list';
 import { useRowReorder } from './use-row-reorder';
@@ -149,6 +150,7 @@ export function UserMultiList({
                         email={option.email}
                         name={option.name}
                         avatarUrl={option.avatarUrl}
+                        badge={<UserPresenceBadge userId={option.id} />}
                       />
                     ) : (
                       <span className="flex items-center gap-3">

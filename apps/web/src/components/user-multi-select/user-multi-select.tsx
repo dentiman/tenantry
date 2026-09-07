@@ -10,6 +10,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/combobox';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
+import { UserPresenceBadge } from '../presence-dot';
 import { UserPickerList } from './user-picker-list';
 import { useUserDirectory } from './use-user-directory';
 import { isResolved, type PickedOption, type UserOption } from './user-option';
@@ -129,6 +130,7 @@ export function UserMultiSelect({
                   email={option.email}
                   name={option.name}
                   avatarUrl={option.avatarUrl}
+                  badge={<UserPresenceBadge userId={option.id} />}
                 />
               ) : (
                 <span className="flex items-center gap-3">

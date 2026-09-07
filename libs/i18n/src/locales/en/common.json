@@ -55,5 +55,8 @@
   "empty": "No results found",
   "filters": {
     "reset": "Reset"
+  },
+  "presence": {
+    "online": "Online now"
   }
 }

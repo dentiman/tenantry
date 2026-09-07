@@ -6,6 +6,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/combobox';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
+import { UserPresenceBadge } from '../presence-dot';
 import type { UserOption } from './user-option';
 
 interface UserPickerListProps {
@@ -49,6 +50,7 @@ export function UserPickerList({ shown, total, isFetching, lockedIds }: UserPick
               email={option.email}
               name={option.name}
               avatarUrl={option.avatarUrl}
+              badge={<UserPresenceBadge userId={option.id} />}
             />
           </ComboboxItem>
         )}

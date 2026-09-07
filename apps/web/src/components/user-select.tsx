@@ -14,6 +14,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/combobox';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
+import { UserPresenceBadge } from './presence-dot';
 import { useDebouncedValue } from '@saas-skeleton/ui/hooks/use-debounced-value';
 import { useUsersFindAll, useUsersFindOne } from '../api/generated/api';
 
@@ -162,6 +163,7 @@ export function UserSelect({
                 email={selected.email}
                 name={selected.name}
                 avatarUrl={selected.avatarUrl}
+                badge={<UserPresenceBadge userId={selected.id} />}
               />
             ) : isHydrating ? (
               <span className="flex items-center gap-2 text-muted-foreground">
@@ -212,6 +214,7 @@ export function UserSelect({
                   email={option.email}
                   name={option.name}
                   avatarUrl={option.avatarUrl}
+                  badge={<UserPresenceBadge userId={option.id} />}
                 />
               </ComboboxItem>
             ) : (

@@ -37,12 +37,13 @@
 
 ---
 
-## 2. Що вже вендеровано у нас (38 примітивів)
+## 2. Що вже вендеровано у нас (40 примітивів)
 
 `libs/ui/src/components/ui/`: alert · alert-dialog · avatar · badge · breadcrumb · button ·
-calendar · card · checkbox · collapsible · combobox · dialog · dropdown-menu · empty · field ·
-input · input-group · item · kbd · label · pagination · popover · progress · scroll-area · select ·
-separator · sheet · sidebar · skeleton · spinner · switch · table · tabs · textarea · toast ·
+calendar · card · checkbox · collapsible · combobox · context-menu · dialog · dropdown-menu ·
+empty · field ·
+hover-card · input · input-group · item · kbd · label · pagination · popover · progress ·
+scroll-area · select · separator · sheet · sidebar · skeleton · spinner · switch · table · tabs · textarea · toast ·
 toggle · toggle-group · tooltip
 
 **alert · calendar · collapsible · popover** додані 2026-09-07 разом із календарем
@@ -51,6 +52,20 @@ toggle · toggle-group · tooltip
 утиліта; замінено на `@saas-skeleton/ui/lib/utils`, пакет прибраний із залежностей;
 (2) `calendar` тягне `react-day-picker` + `date-fns` — **перша дата-бібліотека в репозиторії**,
 і використовується вона рівно як date-picker: сітки тижня й місяця свої.
+
+**context-menu** доданий 2026-09-07 під правий клік на події календаря. Дві речі, які
+варто знати: (1) `ContextMenuLabel` — це `GroupLabel` Base UI, тобто **без `ContextMenuGroup`
+навколо він падає в РАНТАЙМІ** (та сама пастка, що з `DropdownMenuLabel`); (2) два тригери
+на одному елементі складаються ланцюжком `render`
+(`ContextMenuTrigger` → `HoverCardTrigger` → кнопка), і корені обох мусять бути ВИЩЕ за свої
+тригери — вони не рендерять елементів, тому DOM-пропси, покладені на них, тихо зникають.
+
+**hover-card** доданий 2026-09-07 під peek події по наведенню. **Головне, що варто знати
+наперед: у Base UI він зветься `PreviewCard`** (шукати «HoverCard» у їхніх доках марно), і
+його `Trigger` малює `<a>` — тобто будь-який інший елемент передається через
+`render={<button/>}`. Затримки (`delay`/`closeDelay`) живуть на ТРИГЕРІ, а не на корені;
+корінь — контрольований (`open`/`onOpenChange`), і саме через нього картка гаситься на
+час перетягування.
 
 **kbd** доданий 2026-09-07 під довідку гарячих клавіш календаря (`?` → діалог зі списком).
 Грабля з `import { cn } from "cn"` повторилась і тут — **вважаємо її постійною поведінкою
@@ -91,11 +106,10 @@ CLI для нових примітивів**: після кожного `add` п
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [accordion](https://ui.shadcn.com/docs/components/accordion) (`collapsible` — уже в §2)                                                                                                                                                                                                                                                                                                                                                                                                                              | згортні групи в сайдбарі, коли доменних модулів стане більше |
 | [command](https://ui.shadcn.com/docs/components/command)                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ⌘K-пошук по тенантах/юзерах                                  |
-| [hover-card](https://ui.shadcn.com/docs/components/hover-card) (`popover` — уже в §2)                                                                                                                                                                                                                                                                                                                                                                                                                                | картка юзера при наведенні в гріді, peek події (CAL-2)       |
 | [chart](https://ui.shadcn.com/docs/components/chart)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | дашборд, статистика черг                                     |
 | [radio-group](https://ui.shadcn.com/docs/components/radio-group) · [slider](https://ui.shadcn.com/docs/components/slider) · [form](https://ui.shadcn.com/docs/forms)                                                                                                                                                                                                                                                                                                                                                 | форми налаштувань; `radio-group` — «це / це і наступні» (CAL-4) |
 | [drawer](https://ui.shadcn.com/docs/components/drawer)                                                                                                                                                                                                                                                                                                                                                                                                                                                               | мобільний варіант панелей (у нас зараз `sheet`)              |
-| [context-menu](https://ui.shadcn.com/docs/components/context-menu) · [menubar](https://ui.shadcn.com/docs/components/menubar) · [navigation-menu](https://ui.shadcn.com/docs/components/navigation-menu)                                                                                                                                                                                                                                                                                                             | `context-menu` — правий клік на події (CAL-2); решта без споживача |
+| [menubar](https://ui.shadcn.com/docs/components/menubar) · [navigation-menu](https://ui.shadcn.com/docs/components/navigation-menu)                                                                                                                                                                                                                                                                                                             | без споживача                                                     |
 | [button-group](https://ui.shadcn.com/docs/components/button-group) · [input-otp](https://ui.shadcn.com/docs/components/input-otp) · [carousel](https://ui.shadcn.com/docs/components/carousel) · [resizable](https://ui.shadcn.com/docs/components/resizable) · [aspect-ratio](https://ui.shadcn.com/docs/components/aspect-ratio) · [sonner](https://ui.shadcn.com/docs/components/toast) · [native-select](https://ui.shadcn.com/docs/components/native-select) | за потреби                                                   |
 
 ### 3.2 `@coss` — те, чого в `@shadcn` НЕМАЄ

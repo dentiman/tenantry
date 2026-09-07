@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Field,
@@ -39,6 +40,7 @@ import {
   getCalendarAgendaQueryKey,
   getCalendarFindWindowQueryKey,
   useCalendarCreate,
+  useCalendarFindWindow,
   useCalendarRemove,
   useCalendarSetAttendees,
   useCalendarSetReminders,
@@ -52,7 +54,8 @@ import { applyServerError, FormSelect, FormTextField, FormTextareaField } from '
 import { AttendeePicker } from './attendee-picker';
 import { CustomerSelect } from './customer-select';
 import { ReminderRows } from './reminder-rows';
-import { dayKey, formatDateTime, toInstantIso } from '../../lib/calendar-date';
+import { findConflicts } from './find-conflicts';
+import { dayKey, formatTime, formatDateTime, toInstantIso } from '../../lib/calendar-date';
 
 /**
  * Форма події. Схема ЛОКАЛЬНА, а не з `contracts`, свідомо: у формі час живе
@@ -117,7 +120,18 @@ function inclusiveEndKey(event: CalendarEventResponse, timeZone: string): string
 export interface EventSheetTarget {
   /** Наявна подія або чернетка з передзаповненим часом */
   event: CalendarEventResponse | null;
-  draft?: { startsAt: Date; endsAt: Date; customerId?: string | null };
+  draft?: {
+    startsAt: Date;
+    endsAt: Date;
+    customerId?: string | null;
+    /**
+     * Подія-джерело для «Duplicate»: форма відкривається як НОВА, але з усіма
+     * полями оригіналу (включно з учасниками й нагадуваннями). Саме `template`,
+     * а не `event`: id, статус і RSVP не копіюються — дублікат не успадковує ні
+     * історії оригіналу, ні відповідей його гостей
+     */
+    template?: CalendarEventResponse;
+  };
 }
 
 interface EventSheetProps {
@@ -169,6 +183,15 @@ export function EventSheet({
     formState: { isSubmitting, errors },
   } = form;
   const allDay = watch('allDay');
+  const conflicts = useConflicts({
+    isOpen: target !== null,
+    allDay,
+    date: watch('date'),
+    startTime: watch('startTime'),
+    endTime: watch('endTime'),
+    timeZone,
+    excludeId: event?.id ?? null,
+  });
 
   // Форма перезаряджається на кожну зміну цілі: панель живе в дереві постійно
   // (як ActivityDrawer), тому без цього друга подія показувала б першу
@@ -179,7 +202,14 @@ export function EventSheet({
     reset(
       target.event
         ? valuesOf(target.event, timeZone)
-        : draftValues(target.draft, timeZone, defaultDurationMinutes, defaultReminderMinutes),
+        : target.draft?.template
+          ? // Дублікат: поля оригіналу + межі з чернетки (у V1 вони збігаються,
+            // але саме чернетка лишається джерелом правди про час)
+            {
+              ...valuesOf(target.draft.template, timeZone),
+              ...pickDates(target.draft, timeZone, target.draft.template.allDay),
+            }
+          : draftValues(target.draft, timeZone, defaultDurationMinutes, defaultReminderMinutes),
     );
     setRsvpComment(
       target.event?.attendees.find((attendee) => attendee.user.id === currentUserId)?.comment ?? '',
@@ -421,6 +451,34 @@ export function EventSheet({
                         />
                       </Field>
                     </div>
+                    {conflicts.length > 0 && (
+                      // ПОПЕРЕДЖЕННЯ, а не помилка: збереження не блокується, тому
+                      // це `Alert` під полями часу, а не `FieldError` і не
+                      // `errors.root` — форма лишається валідною
+                      <Alert>
+                        <AlertTitle>
+                          {t('conflicts.title', { count: conflicts.length })}
+                        </AlertTitle>
+                        <AlertDescription>
+                          <ul className="list-none">
+                            {conflicts.slice(0, CONFLICTS_SHOWN).map((conflict) => (
+                              <li key={conflict.id} className="truncate">
+                                {formatTime(conflict.startsAt, timeZone)}
+                                {' – '}
+                                {formatTime(conflict.endsAt, timeZone)} · {conflict.title}
+                              </li>
+                            ))}
+                            {conflicts.length > CONFLICTS_SHOWN && (
+                              <li>
+                                {t('conflicts.more', {
+                                  count: conflicts.length - CONFLICTS_SHOWN,
+                                })}
+                              </li>
+                            )}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </>
                 )}
 
@@ -651,6 +709,24 @@ function draftValues(
   };
 }
 
+/** Дата й час із чернетки у форматі полів форми */
+function pickDates(
+  draft: { startsAt: Date; endsAt: Date },
+  timeZone: string,
+  allDay: boolean,
+): Pick<FormValues, 'date' | 'endDate' | 'startTime' | 'endTime'> {
+  const date = dayKey(draft.startsAt, timeZone);
+  return {
+    date,
+    // All-day кінець у моделі ексклюзивний, а в полі — останній день ВКЛЮЧНО
+    endDate: allDay
+      ? dayKey(new Date(draft.endsAt.getTime() - 86_400_000), timeZone)
+      : dayKey(draft.endsAt, timeZone),
+    startTime: timeOf(draft.startsAt.toISOString(), timeZone),
+    endTime: timeOf(draft.endsAt.toISOString(), timeZone),
+  };
+}
+
 function valuesOf(event: CalendarEventResponse, timeZone: string): FormValues {
   // All-day читається в зоні ПОДІЇ (§6.2) — інакше редагування зсунуло б дату
   const zone = event.allDay ? event.timeZone : timeZone;
@@ -670,4 +746,54 @@ function valuesOf(event: CalendarEventResponse, timeZone: string): FormValues {
     attendeeIds: event.attendees.map((attendee) => attendee.user.id),
     reminders: event.reminders.map((reminder) => reminder.minutesBefore),
   };
+}
+
+/** Скільки конфліктів показуємо списком, доки решта не згорнеться в «+N» */
+const CONFLICTS_SHOWN = 3;
+
+/**
+ * Конфлікти для поточних значень форми.
+ *
+ * Вікно — РІВНО одна доба, а не тиждень сторінки: подія редагується в межах дня
+ * (багатоденну робить кінцева дата, і там попередження втрачає сенс), а окремий
+ * ключ кешу на добу перевикористовується між відкриттями панелі. Дані беруться
+ * тим самим `GET /calendar/events`, чий дефолт `mine` — «де я організатор або
+ * учасник»: конфлікт — це моя зайнятість, а не чиясь.
+ */
+function useConflicts({
+  isOpen,
+  allDay,
+  date,
+  startTime,
+  endTime,
+  timeZone,
+  excludeId,
+}: {
+  isOpen: boolean;
+  allDay: boolean;
+  date: string;
+  startTime: string;
+  endTime: string;
+  timeZone: string;
+  excludeId: string | null;
+}): { id: string; title: string; startsAt: string; endsAt: string }[] {
+  const isReady = isOpen && !allDay && date !== '' && startTime !== '' && endTime !== '';
+  const dayStart = isReady ? toIso(date, '00:00', timeZone) : '';
+  const dayEnd = isReady ? nextDayIso(date, timeZone) : '';
+
+  const { data } = useCalendarFindWindow(
+    { from: dayStart, to: dayEnd },
+    // Порожні межі до готовності форми не відправляємо: контракт вимагає ISO,
+    // і `enabled` тут не косметика, а умова коректності запиту
+    { query: { enabled: isReady } },
+  );
+
+  if (!isReady || !data) {
+    return [];
+  }
+  return findConflicts(
+    { startsAt: toIso(date, startTime, timeZone), endsAt: toIso(date, endTime, timeZone) },
+    data.items,
+    excludeId,
+  );
 }

@@ -1,7 +1,15 @@
+import { useState } from 'react';
 import { LockIcon, VideoIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@saas-skeleton/ui/components/ui/hover-card';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { formatTime } from '../../lib/calendar-date';
+import { EventContextMenu, type EventIntent } from './event-context-menu';
+import { EventPeekContent } from './event-peek';
 
 /**
  * Колір несе ТИП події (`kind`), а не персональний вибір: інакше в тенанті за
@@ -32,6 +40,10 @@ interface EventChipProps {
    */
   compact?: boolean;
   style?: React.CSSProperties;
+  /** Картка по наведенню; вимикається там, де поруч уже видно все (напр. агенда) */
+  peek?: boolean;
+  /** Контекстне меню на правий клік; немає обробника — немає й меню */
+  onIntent?: (event: CalendarEventResponse, intent: EventIntent) => void;
   /**
    * `fromKeyboard` — активація з Enter/Space, а не мишею. Сітка на ній НЕ
    * перевіряє «а це не хвіст перетягування?»: pointer-жесту не було взагалі
@@ -44,6 +56,8 @@ export function EventChip({
   timeZone,
   variant = 'inline',
   compact = false,
+  peek = true,
+  onIntent,
   style,
   onSelect,
   onDragStart,
@@ -59,7 +73,15 @@ export function EventChip({
   // 403 уже після того, як плитка «переїхала» під курсором
   const isDraggable = onDragStart !== undefined && event.canEdit && variant === 'absolute';
 
-  return (
+  /**
+   * Peek — КОНТРОЛЬОВАНИЙ, і рівно з двох причин:
+   * 1. під час перетягування картка мусить зникнути — інакше вона висить над
+   *    плиткою, яка вже поїхала, і показує старий час;
+   * 2. клік відкриває панель події, а картка по наведенню лишалась би позаду неї.
+   */
+  const [isPeekOpen, setPeekOpen] = useState(false);
+
+  const chip = (
     <button
       type="button"
       style={style}
@@ -70,11 +92,13 @@ export function EventChip({
       onPointerDown={
         isDraggable
           ? (pointer) => {
+              setPeekOpen(false);
               onDragStart(pointer, 'move');
             }
           : undefined
       }
       onClick={(clickEvent) => {
+        setPeekOpen(false);
         // `detail === 0` буває рівно у клавіатурної активації: мишачий клік
         // завжди несе номер натискання
         onSelect(event, clickEvent.detail === 0);
@@ -109,6 +133,7 @@ export function EventChip({
           role="presentation"
           onPointerDown={(pointer) => {
             pointer.stopPropagation();
+            setPeekOpen(false);
             onDragStart(pointer, 'resize');
           }}
           className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 hover:opacity-100"
@@ -118,4 +143,54 @@ export function EventChip({
       )}
     </button>
   );
+
+  /**
+   * Два тригери на ОДНІЙ плитці складаються ланцюжком `render`:
+   * `ContextMenuTrigger` рендерить `HoverCardTrigger`, а той — саму кнопку.
+   * Обернути кнопку в `div` було не можна: у сітці вона позиціонована абсолютно,
+   * і обгортка забрала б у неї геометрію.
+   *
+   * `HoverCardTrigger` при цьому МУСИТЬ лишитись усередині свого кореня
+   * (`HoverCard` не рендерить елемента взагалі — він лише контекст), тому
+   * вкладеність саме така: корінь картки → корінь меню → тригер меню → тригер
+   * картки → кнопка. Спроба віддати меню вже готовий `<HoverCard>` як тригер
+   * тихо загубила б `onContextMenu`: класти DOM-пропси на компонент без
+   * елемента нікуди.
+   */
+  const trigger = peek ? (
+    // `render` обовʼязковий: `PreviewCard.Trigger` за замовчуванням малює `<a>`,
+    // а плитка — кнопка. Затримка 400 мс замість стокових 600: у сітці курсор
+    // проходить над сусідніми плитками дорогою до потрібної, і надто швидка
+    // картка блимала б, а надто повільна змушувала б чекати
+    <HoverCardTrigger render={chip} delay={PEEK_DELAY_MS} />
+  ) : (
+    chip
+  );
+
+  const withMenu = onIntent ? (
+    <EventContextMenu event={event} trigger={trigger} onIntent={onIntent} />
+  ) : (
+    trigger
+  );
+
+  if (!peek) {
+    return withMenu;
+  }
+
+  return (
+    <HoverCard
+      open={isPeekOpen && !isDragging}
+      onOpenChange={(next) => {
+        setPeekOpen(next);
+      }}
+    >
+      {withMenu}
+      <HoverCardContent side="right" align="start" className="w-72">
+        <EventPeekContent event={event} timeZone={timeZone} />
+      </HoverCardContent>
+    </HoverCard>
+  );
 }
+
+/** Скільки тримати курсор на плитці, щоб картка зʼявилась */
+const PEEK_DELAY_MS = 400;

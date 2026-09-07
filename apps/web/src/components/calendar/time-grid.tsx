@@ -15,6 +15,7 @@ import {
 import { EventChip } from './event-chip';
 import { layoutOverlaps, slotStyle, type OverlapInput } from './layout-overlaps';
 import { useEventDrag, type DragCommit, type DragMode } from './use-event-drag';
+import type { EventIntent } from './event-context-menu';
 import { useRangeDraft, type RangeDraft } from './use-range-draft';
 
 /**
@@ -60,6 +61,8 @@ interface TimeGridProps {
    * відкатом і undo). Немає — сітка лишається нерухомою
    */
   onDragCommit?: (commit: DragCommit) => void;
+  /** Дія з контекстного меню плитки; виконує сторінка (мутації, тости, підтвердження) */
+  onIntent?: (event: CalendarEventResponse, intent: EventIntent) => void;
 }
 
 export function TimeGrid({
@@ -70,6 +73,7 @@ export function TimeGrid({
   onSelect,
   onCreate,
   onDragCommit,
+  onIntent,
 }: TimeGridProps) {
   const { t } = useTranslation('calendar');
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -217,6 +221,7 @@ export function TimeGrid({
                         event={event}
                         timeZone={timeZone}
                         onSelect={onSelect}
+                        onIntent={onIntent}
                       />
                     ))}
                   </div>
@@ -340,6 +345,7 @@ export function TimeGrid({
                           : {}),
                       }}
                       isDragging={isDragging}
+                      onIntent={onIntent}
                       onDragStart={(pointer, mode) => {
                         startDrag(pointer, event, mode);
                       }}
