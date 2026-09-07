@@ -327,6 +327,7 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 | `ui/card.tsx`                       | HeroUI `surface-shadow` без зовнішнього border; стокові spacing, size та композиція частин                                             |
 | `ui/select.tsx`                     | `alignItemWithTrigger: false` — попап відкривається ПІД тригером, а не накриває його; `align="start"`; ширина `min-w-(--anchor-width)` |
 | `ui/input.tsx`                      | глушник autofill + скидання `::-webkit-search-cancel-button`                                                                           |
+| `ui/calendar.tsx`                   | знято `bg-background` з кореня — сітка прозора і бере поверхню споживача; разом із фоном пішли й обидва гасіння (`in-data-[slot=card-content]`, `in-data-[slot=popover-content]`), бо без нього це мертвий код |
 | **наскрізна:** form controls        | суцільний semantic focus `ring-1`; error-state — `ring-2`                                                                              |
 
 Про `alignItemWithTrigger`: дефолт Base UI `true` — це macOS-поведінка, коли попап
