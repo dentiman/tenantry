@@ -28,6 +28,12 @@
     "createOn": "Create an event on {{date}}",
     "more": "+{{count}} more"
   },
+  "drag": {
+    "moved": "Moved to {{time}}",
+    "resized": "Duration changed",
+    "undo": "Undo",
+    "failed": "Could not move the event"
+  },
   "agenda": {
     "empty": "Nothing scheduled ahead"
   },
@@ -105,5 +111,21 @@
     "upcoming": "Upcoming",
     "empty": "No meetings scheduled",
     "create": "Schedule a meeting"
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "hint": "Shortcuts work while the calendar is open and no field is focused.",
+    "action": {
+      "today": "Go to today",
+      "day": "Day view",
+      "week": "Week view",
+      "month": "Month view",
+      "agenda": "Agenda view",
+      "previous": "Previous period",
+      "next": "Next period",
+      "create": "New event",
+      "help": "Show this help",
+      "close": "Close panel or dialog"
+    }
   }
 }

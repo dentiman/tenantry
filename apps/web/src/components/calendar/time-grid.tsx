@@ -14,6 +14,8 @@ import {
 } from '../../lib/calendar-date';
 import { EventChip } from './event-chip';
 import { layoutOverlaps, slotStyle, type OverlapInput } from './layout-overlaps';
+import { useEventDrag, type DragCommit, type DragMode } from './use-event-drag';
+import { useRangeDraft, type RangeDraft } from './use-range-draft';
 
 /**
  * Сітка дня/тижня. Власний компонент, а не зовнішня бібліотека календаря
@@ -38,6 +40,8 @@ const COMPACT_MINUTES = 45;
  * підписі це закриває і 12-годинні локалі, і 24-годинні (там підпис коротший).
  */
 const HOUR_GUTTER = '4rem';
+/** Те саме число в пікселях: арифметиці перенесення потрібна саме воно */
+const HOUR_GUTTER_PX = 64;
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 interface TimeGridProps {
@@ -46,8 +50,16 @@ interface TimeGridProps {
   timeZone: string;
   workDayStart: string;
   onSelect: (event: CalendarEventResponse) => void;
-  /** Клік по порожньому місцю — створення на цю хвилину */
-  onCreate: (startsAt: Date) => void;
+  /**
+   * Створення по порожньому місцю. Клік дає лише початок (тривалість візьметься
+   * з налаштувань), протягування — обидві межі: людина вже сказала, доки саме
+   */
+  onCreate: (startsAt: Date, endsAt?: Date) => void;
+  /**
+   * Перетягування завершено — сторінка застосовує зміну (оптимістично, з
+   * відкатом і undo). Немає — сітка лишається нерухомою
+   */
+  onDragCommit?: (commit: DragCommit) => void;
 }
 
 export function TimeGrid({
@@ -57,10 +69,75 @@ export function TimeGrid({
   workDayStart,
   onSelect,
   onCreate,
+  onDragCommit,
 }: TimeGridProps) {
   const { t } = useTranslation('calendar');
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const today = todayKey(timeZone);
+
+  const drag = useEventDrag(timeZone, onDragCommit ?? (() => undefined));
+
+  /**
+   * Створення протягуванням. День адресується ключем, а не індексом: колонки
+   * перемальовуються при зміні періоду, а ключ лишається тим самим значенням,
+   * яким сітка вже групує події.
+   */
+  const rangeDraft = useRangeDraft((created) => {
+    const day = days.find((item) => dayKey(item, timeZone) === created.dayKey);
+    if (!day) {
+      return;
+    }
+    const dayStart = startOfDay(day, timeZone).getTime();
+    onCreate(
+      new Date(dayStart + created.startMinutes * 60_000),
+      new Date(dayStart + created.endMinutes * 60_000),
+    );
+  });
+
+  const beginRangeDraft = (pointer: React.PointerEvent<HTMLDivElement>, key: string, total: number): void => {
+    // Натискання по плитці належить перенесенню, а не створенню
+    if (pointer.target instanceof Element && pointer.target.closest('[data-calendar-chip]')) {
+      return;
+    }
+    rangeDraft.begin(pointer, {
+      dayKey: key,
+      column: pointer.currentTarget,
+      minutesInDay: total,
+    });
+  };
+
+  /**
+   * Геометрію міряємо на КОЖЕН pointerdown, а не тримаємо в стані: колонка
+   * змінює ширину і від згортання сайдбара, і від ресайзу вікна, а застаріле
+   * значення дало б перенос не в той день.
+   */
+  const measure = (): { hourHeight: number; columnWidth: number } => {
+    const grid = gridRef.current;
+    const columns = grid ? (grid.clientWidth - HOUR_GUTTER_PX) / days.length : 0;
+    return { hourHeight: HOUR_HEIGHT, columnWidth: days.length > 1 ? columns : 0 };
+  };
+
+  const startDrag = (
+    pointer: React.PointerEvent,
+    event: CalendarEventResponse,
+    mode: DragMode,
+  ): void => {
+    if (!onDragCommit) {
+      return;
+    }
+    drag.begin(
+      pointer,
+      {
+        key: `${event.id}:${event.occurrenceStart}`,
+        eventId: event.id,
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+      },
+      mode,
+      measure(),
+    );
+  };
 
   // Скрол до робочих годин при відкритті: без цього тиждень відкривається на
   // 00:00, і перше, що бачить людина, — порожня ніч
@@ -91,8 +168,11 @@ export function TimeGrid({
        * прокрутки тепер зовні сітки і однаково впливає на обидва ряди. Перша
        * колонка — жолоб годин (`3.5rem`), далі дні.
        */}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      {/* `select-none`: протягування по сітці не має підсвічувати текст підписів
+          годин — виділення читалось би як збій, а не як створення події */}
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto select-none">
         <div
+          ref={gridRef}
           className="grid"
           style={{
             gridTemplateColumns: `${HOUR_GUTTER} repeat(${String(days.length)}, minmax(0, 1fr))`,
@@ -172,13 +252,32 @@ export function TimeGrid({
             const slots = layoutOverlaps(inputs);
 
             return (
-              <div key={`body-${key}`} className="relative border-r last:border-r-0">
+              <div
+                key={`body-${key}`}
+                className="relative border-r last:border-r-0"
+                onPointerDown={(pointer) => {
+                  beginRangeDraft(pointer, key, total);
+                }}
+              >
                 {HOURS.map((hour) => (
                   <button
                     key={hour}
                     type="button"
                     aria-label={t('grid.createAt', { time: formatHour(hour, timeZone) })}
-                    onClick={() => {
+                    onClick={(clickEvent) => {
+                      // Протягування завершується `pointerup`, який усе одно
+                      // породжує клік по комірці, з якої почали: без цієї
+                      // перевірки поруч із протягнутою подією створювалась би
+                      // друга — на цілу годину.
+                      //
+                      // `detail > 0` обовʼязково: активація з КЛАВІАТУРИ дає
+                      // клік без жодного pointer-жесту (`detail === 0`), і
+                      // прапорець протягування, який лишився з попереднього
+                      // жесту, проглинув би її — сітка перестала б працювати
+                      // з Enter саме після перетягування мишею
+                      if (clickEvent.detail > 0 && rangeDraft.consumeDragged()) {
+                        return;
+                      }
                       onCreate(
                         new TZDate(
                           day.getFullYear(),
@@ -194,12 +293,22 @@ export function TimeGrid({
                     style={{ height: HOUR_HEIGHT }}
                   />
                 ))}
+                {rangeDraft.draft?.dayKey === key && (
+                  <DraftBox
+                    draft={rangeDraft.draft}
+                    day={day}
+                    timeZone={timeZone}
+                    minutesInDay={total}
+                  />
+                )}
                 {inputs.map((input, index) => {
                   const event = dayEvents[index];
                   const slot = slots.get(input.id);
                   if (!event || !slot) {
                     return null;
                   }
+                  const isDragging = drag.preview?.key === input.id;
+                  const geometry = measure();
                   return (
                     <EventChip
                       key={input.id}
@@ -207,8 +316,42 @@ export function TimeGrid({
                       timeZone={timeZone}
                       variant="absolute"
                       compact={input.endMinutes - input.startMinutes < COMPACT_MINUTES}
-                      style={slotStyle(input, slot, total)}
-                      onSelect={onSelect}
+                      style={{
+                        ...slotStyle(input, slot, total),
+                        // Прев'ю — `translate` поверх уже порахованої позиції:
+                        // так плитка йде за курсором прилипаючи до 15 хв, і при
+                        // цьому не треба перераховувати розкладку накладань
+                        ...(isDragging && drag.preview
+                          ? {
+                              transform: `translate(${String(
+                                drag.preview.dayShift * geometry.columnWidth,
+                              )}px, ${String(
+                                (drag.preview.mode === 'move' ? drag.preview.minutes : 0) /
+                                  60 *
+                                  HOUR_HEIGHT,
+                              )}px)`,
+                              height:
+                                drag.preview.mode === 'resize'
+                                  ? `calc(${slotStyle(input, slot, total).height} + ${String(
+                                      (drag.preview.minutes / 60) * HOUR_HEIGHT,
+                                    )}px)`
+                                  : slotStyle(input, slot, total).height,
+                            }
+                          : {}),
+                      }}
+                      isDragging={isDragging}
+                      onDragStart={(pointer, mode) => {
+                        startDrag(pointer, event, mode);
+                      }}
+                      onSelect={(selected, fromKeyboard) => {
+                        // Після перенесення `pointerup` усе одно породжує клік —
+                        // без цієї перевірки панель відкривалась би щоразу.
+                        // Клавіатурна активація приходить із прапорцем і жест
+                        // не перевіряє: хвостом перетягування вона бути не може
+                        if (fromKeyboard || !drag.consumeDragged()) {
+                          onSelect(selected);
+                        }
+                      }}
                     />
                   );
                 })}
@@ -218,6 +361,45 @@ export function TimeGrid({
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Прямокутник чернетки — те, що людина бачить під курсором, доки тягне. Малюємо
+ * САМІ, а не показуємо панель одразу: форма, що відкривається на першому ж
+ * пікселі руху, приховала б сітку саме тоді, коли по ній ще вибирають час.
+ *
+ * Підпис — обидві межі: без нього прилипання до 15 хв лишається невидимим, і
+ * людина не знає, що саме отримає, поки не відпустить.
+ */
+function DraftBox({
+  draft,
+  day,
+  timeZone,
+  minutesInDay: total,
+}: {
+  draft: RangeDraft;
+  day: TZDate;
+  timeZone: string;
+  minutesInDay: number;
+}) {
+  const dayStart = startOfDay(day, timeZone).getTime();
+  const from = new Date(dayStart + draft.startMinutes * 60_000);
+  const to = new Date(dayStart + draft.endMinutes * 60_000);
+  return (
+    <div
+      // `pointer-events-none` обовʼязково: інакше прямокутник, що зростає під
+      // курсором, сам почав би ловити pointer-події і жест урвався б
+      className="pointer-events-none absolute inset-x-0 z-20 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-xs text-primary"
+      style={{
+        top: `${String((draft.startMinutes / total) * 100)}%`,
+        height: `${String(((draft.endMinutes - draft.startMinutes) / total) * 100)}%`,
+      }}
+    >
+      <span className="truncate">
+        {formatTime(from, timeZone)} – {formatTime(to, timeZone)}
+      </span>
     </div>
   );
 }
@@ -250,13 +432,17 @@ function formatHour(hour: number, timeZone: string): string {
  * Багатоденна подія обрізається межею доби: у сітці вона малюється в кожному
  * своєму дні окремим фрагментом, а не однією плиткою через кілька колонок.
  */
+function startOfDay(day: TZDate, timeZone: string): TZDate {
+  return new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), timeZone);
+}
+
 function clampEnd(
   event: CalendarEventResponse,
   day: TZDate,
   timeZone: string,
   total: number,
 ): number {
-  const dayStart = new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), timeZone).getTime();
+  const dayStart = startOfDay(day, timeZone).getTime();
   const end = new Date(event.occurrenceEnd).getTime();
   const minutes = (end - dayStart) / 60_000;
   return Math.min(minutes, total);

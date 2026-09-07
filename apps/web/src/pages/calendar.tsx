@@ -8,15 +8,29 @@ import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/toggle-group';
 import { PageBreadcrumbs, type Crumb } from '@saas-skeleton/ui/components/page-breadcrumbs';
-import { useCalendarFindOne, useCalendarFindWindow } from '../api/generated/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@saas-skeleton/ui/components/ui/toast';
+import {
+  getCalendarAgendaQueryKey,
+  getCalendarFindWindowQueryKey,
+  useCalendarFindOne,
+  useCalendarFindWindow,
+  useCalendarUpdate,
+} from '../api/generated/api';
+import type { CalendarEventListResponseDtoOutput } from '../api/generated/model/calendarEventListResponseDtoOutput';
+import type { DragCommit } from '../components/calendar/use-event-drag';
 import { AgendaList } from '../components/calendar/agenda-list';
 import { EventSheet, type EventSheetTarget } from '../components/calendar/event-sheet';
 import { MonthGrid } from '../components/calendar/month-grid';
+import { ShortcutsDialog } from '../components/calendar/shortcuts-dialog';
 import { TimeGrid } from '../components/calendar/time-grid';
 import { useCalendarPreferences } from '../components/calendar/use-calendar-preferences';
+import { useCalendarHotkeys } from '../components/calendar/use-calendar-hotkeys';
 import {
   CALENDAR_VIEWS,
   daysOfRange,
+  defaultCreateStart,
+  formatDateTime,
   formatRangeLabel,
   parseDayKey,
   shiftAnchor,
@@ -47,15 +61,20 @@ export function CalendarPage() {
   const { from, to } = viewRange(view, anchor, timeZone, preferences.weekStartsOn);
 
   const [target, setTarget] = useState<EventSheetTarget | null>(null);
+  const [isHelpOpen, setHelpOpen] = useState(false);
+
+  // Параметри вікна лежать окремою змінною: ними ж адресується кеш при
+  // оптимістичному патчі перетягування (`getCalendarFindWindowQueryKey`)
+  const windowParams = {
+    // Саме `toInstantIso`, а не `from.toISOString()`: `from` — це `TZDate`,
+    // і його `toISOString` дає форму зі зсувом, яку контракт відхиляє
+    from: toInstantIso(from),
+    to: toInstantIso(to),
+    includeCancelled: 'true' as const,
+  };
 
   const { data, isPending, isError } = useCalendarFindWindow(
-    {
-      // Саме `toInstantIso`, а не `from.toISOString()`: `from` — це `TZDate`,
-      // і його `toISOString` дає форму зі зсувом, яку контракт відхиляє
-      from: toInstantIso(from),
-      to: toInstantIso(to),
-      includeCancelled: 'true',
-    },
+    windowParams,
     // Agenda ходить власним курсорним ендпоінтом — для неї вікно не потрібне.
     // `isReady` притримує запит до приходу дефолтів: без нього вікно рахується
     // в зоні ПРИСТРОЮ і після bootstrap-у перезапитується в зоні організації
@@ -75,6 +94,108 @@ export function CalendarPage() {
     }
   }, [linked]);
 
+  const queryClient = useQueryClient();
+  const updateEvent = useCalendarUpdate();
+
+  const refreshCalendar = async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getCalendarFindWindowQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getCalendarAgendaQueryKey() }),
+    ]);
+  };
+
+  /**
+   * Перетягування завершено. Оптимістичний патч ОБОВʼЯЗКОВИЙ: без нього плитка
+   * стрибала б назад і за 200 мс уперед, а перша ж 403-ка лишала б її «висіти»
+   * в новому місці (docs/calendar.md §11.5 п.2).
+   */
+  const applyDragCommit = (commit: DragCommit): void => {
+    const key = getCalendarFindWindowQueryKey(windowParams);
+    const snapshot = queryClient.getQueryData<CalendarEventListResponseDtoOutput>(key);
+
+    queryClient.setQueryData<CalendarEventListResponseDtoOutput>(key, (current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === commit.eventId
+                ? {
+                    ...item,
+                    startsAt: commit.next.startsAt,
+                    endsAt: commit.next.endsAt,
+                    // Входження рухається разом із рядком: у V1 це те саме
+                    occurrenceStart: commit.next.startsAt,
+                    occurrenceEnd: commit.next.endsAt,
+                  }
+                : item,
+            ),
+          }
+        : current,
+    );
+
+    void (async () => {
+      try {
+        await updateEvent.mutateAsync({
+          id: commit.eventId,
+          data: { startsAt: commit.next.startsAt, endsAt: commit.next.endsAt },
+        });
+        // Обʼєкт-тримач, а не `let`: id тоста потрібен усередині його ж
+        // `onClick`, а посилатися на змінну до її присвоєння не можна
+        const handle: { id?: string } = {};
+        handle.id = toast.add({
+          type: 'success',
+          title: t(commit.mode === 'move' ? 'drag.moved' : 'drag.resized', {
+            time: formatDateTime(commit.next.startsAt, timeZone),
+          }),
+          // `actionProps` — першокласна опція менеджера тостів Base UI, тож
+          // undo не вимагав правок примітива. Повертає РІВНО ті межі, що були
+          // до перетягування — вони приїхали в самому коміті
+          actionProps: {
+            children: t('drag.undo'),
+            onClick: () => {
+              // Закриваємо ОДРАЗУ: інакше тост лишається висіти з підписом
+              // «Moved to …», який після відкату вже неправда (спіймано в
+              // браузері)
+              if (handle.id) {
+                toast.close(handle.id);
+              }
+              void (async () => {
+                await updateEvent.mutateAsync({
+                  id: commit.eventId,
+                  data: { startsAt: commit.startsAt, endsAt: commit.endsAt },
+                });
+                await refreshCalendar();
+              })();
+            },
+          },
+        });
+      } catch {
+        // Відкат: сервер не прийняв зміну, отже плитка мусить повернутись туди,
+        // де була. Текст помилки покаже глобальний обробник мутацій
+        queryClient.setQueryData(key, snapshot);
+        toast.add({ type: 'error', title: t('drag.failed') });
+      } finally {
+        await refreshCalendar();
+      }
+    })();
+  };
+
+  /**
+   * Відкрити форму на нову подію. `endsAt` приходить лише з протягування — коли
+   * людина вже показала тривалість; клік дає тільки початок, і тоді довжину
+   * бере налаштування організації
+   */
+  const openDraft = (startsAt: Date, endsAt?: Date): void => {
+    setTarget({
+      event: null,
+      draft: {
+        startsAt,
+        endsAt:
+          endsAt ?? new Date(startsAt.getTime() + preferences.defaultEventDurationMinutes * 60_000),
+      },
+    });
+  };
+
   const goto = (nextView: CalendarView, nextAnchor: string): void => {
     void navigate({
       to: '/calendar/$view',
@@ -82,6 +203,33 @@ export function CalendarPage() {
       search: { date: nextAnchor },
     });
   };
+
+  /**
+   * Клавіші глушаться, доки відкрита панель події або довідка: усередині них
+   * `W` і `N` — це літери, які людина набирає, а не команди календаря. Другий
+   * запобіжник (фокус у полі) живе в самому хуку — модалка не єдиний спосіб
+   * потрапити в інпут
+   */
+  useCalendarHotkeys(target === null && !isHelpOpen, (action) => {
+    switch (action.kind) {
+      case 'today':
+        goto(view, todayKey(timeZone));
+        break;
+      case 'view':
+        goto(action.view, anchor);
+        break;
+      case 'shift':
+        goto(view, shiftAnchor(view, anchor, timeZone, action.direction));
+        break;
+      case 'create':
+        // Без позиції курсора час бере те саме правило, що й кнопка тулбара
+        openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
+        break;
+      case 'help':
+        setHelpOpen(true);
+        break;
+    }
+  });
 
   const crumbs: Crumb[] = [{ label: t('title') }];
   const days = daysOfRange(from, to, timeZone);
@@ -149,7 +297,7 @@ export function CalendarPage() {
           <Button
             size="sm"
             onClick={() => {
-              setTarget({ event: null });
+              openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
             }}
           >
             <PlusIcon />
@@ -205,17 +353,7 @@ export function CalendarPage() {
           onSelect={(event) => {
             setTarget({ event });
           }}
-          onCreate={(startsAt) => {
-            setTarget({
-              event: null,
-              draft: {
-                startsAt,
-                endsAt: new Date(
-                  startsAt.getTime() + preferences.defaultEventDurationMinutes * 60_000,
-                ),
-              },
-            });
-          }}
+          onCreate={openDraft}
           onShowDay={(key) => {
             goto('day', key);
           }}
@@ -229,20 +367,18 @@ export function CalendarPage() {
           onSelect={(event) => {
             setTarget({ event });
           }}
-          onCreate={(startsAt) => {
-            setTarget({
-              event: null,
-              draft: {
-                startsAt,
-                endsAt: new Date(
-                  startsAt.getTime() + preferences.defaultEventDurationMinutes * 60_000,
-                ),
-              },
-            });
-          }}
+          onCreate={openDraft}
+          onDragCommit={applyDragCommit}
         />
       )}
       </div>
+
+      <ShortcutsDialog
+        isOpen={isHelpOpen}
+        onClose={() => {
+          setHelpOpen(false);
+        }}
+      />
 
       <EventSheet
         target={target}

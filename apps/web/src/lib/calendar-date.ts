@@ -76,6 +76,42 @@ export function toInstantIso(date: Date): string {
   return new Date(date.getTime()).toISOString();
 }
 
+/**
+ * Початок нової події, коли позиції курсора немає — «New event» у тулбарі і
+ * хоткей `N`.
+ *
+ * Правило: на СЬОГОДНІ — найближчий слот від «зараз» (округлення ВГОРУ: подія в
+ * минулому за пів хвилини нікому не потрібна), на іншій добі — початок робочого
+ * дня з налаштувань. Спіймано в браузері: без цього форма відкривалась із
+ * «13:33 – 14:03», тобто пропонувала людині час, який вона однаково перебиває
+ * руками.
+ *
+ * Округлення робиться по ІНСТАНТУ, а не в календарі зони: усі сучасні
+ * IANA-зсуви кратні 15 хвилинам (навіть Непал +05:45), тож межа слота
+ * збігається в обох системах координат.
+ */
+export function defaultCreateStart(
+  anchor: string,
+  timeZone: string,
+  workDayStart: string,
+  now: Date = new Date(),
+): Date {
+  if (anchor === dayKey(now, timeZone)) {
+    const slotMs = SLOT_MINUTES * 60_000;
+    return new Date(Math.ceil(now.getTime() / slotMs) * slotMs);
+  }
+  const [hour, minute] = workDayStart.split(':').map((part) => Number.parseInt(part, 10));
+  const day = parseDayKey(anchor, timeZone);
+  return new TZDate(
+    day.getFullYear(),
+    day.getMonth(),
+    day.getDate(),
+    hour ?? 9,
+    minute ?? 0,
+    timeZone,
+  );
+}
+
 export function todayKey(timeZone: string): string {
   return dayKey(new Date(), timeZone);
 }

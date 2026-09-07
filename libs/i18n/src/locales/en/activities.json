@@ -17,7 +17,7 @@
   },
   "calendar_event": {
     "created": "<b>{{actor}}</b> scheduled <b>{{event}}</b>",
-    "rescheduled": "<b>{{actor}}</b> moved <b>{{event}}</b>",
+    "rescheduled": "<b>{{actor}}</b> changed the time of <b>{{event}}</b>",
     "cancelled": "<b>{{actor}}</b> cancelled <b>{{event}}</b>",
     "restored": "<b>{{actor}}</b> restored <b>{{event}}</b>",
     "deleted": "<b>{{actor}}</b> deleted <b>{{event}}</b>",

@@ -19,6 +19,10 @@ const KIND_CLASSES: Record<CalendarEventResponse['kind'], string> = {
 interface EventChipProps {
   event: CalendarEventResponse;
   timeZone: string;
+  /** Перетягування (CAL-2). Немає — плитка нерухома, як у місяці й агенді */
+  onDragStart?: (pointer: React.PointerEvent, mode: 'move' | 'resize') => void;
+  /** Тягнуть саму цю плитку: підіймаємо над сусідами і додаємо тінь */
+  isDragging?: boolean;
   /** `absolute` — у сітці часу; `inline` — у клітинці місяця й у списку */
   variant?: 'absolute' | 'inline';
   /**
@@ -28,7 +32,11 @@ interface EventChipProps {
    */
   compact?: boolean;
   style?: React.CSSProperties;
-  onSelect: (event: CalendarEventResponse) => void;
+  /**
+   * `fromKeyboard` — активація з Enter/Space, а не мишею. Сітка на ній НЕ
+   * перевіряє «а це не хвіст перетягування?»: pointer-жесту не було взагалі
+   */
+  onSelect: (event: CalendarEventResponse, fromKeyboard: boolean) => void;
 }
 
 export function EventChip({
@@ -38,6 +46,8 @@ export function EventChip({
   compact = false,
   style,
   onSelect,
+  onDragStart,
+  isDragging = false,
 }: EventChipProps) {
   const isCancelled = event.status === 'CANCELLED';
   // Не відповів — плитка контурна: «я ще не сказав, чи буду» мусить бути видно
@@ -45,12 +55,29 @@ export function EventChip({
   const isPending = event.myResponse === 'NEEDS_ACTION';
   const isDeclined = event.myResponse === 'DECLINED';
 
+  // Тягнути можна лише те, що дозволено змінювати: інакше сервер відповів би
+  // 403 уже після того, як плитка «переїхала» під курсором
+  const isDraggable = onDragStart !== undefined && event.canEdit && variant === 'absolute';
+
   return (
     <button
       type="button"
       style={style}
-      onClick={() => {
-        onSelect(event);
+      // За цим атрибутом сітка відрізняє натискання по плитці від натискання по
+      // порожньому місцю: створення протягуванням слухає pointerdown на всій
+      // колонці дня, і без маркера почалось би поверх наявної події
+      data-calendar-chip=""
+      onPointerDown={
+        isDraggable
+          ? (pointer) => {
+              onDragStart(pointer, 'move');
+            }
+          : undefined
+      }
+      onClick={(clickEvent) => {
+        // `detail === 0` буває рівно у клавіатурної активації: мишачий клік
+        // завжди несе номер натискання
+        onSelect(event, clickEvent.detail === 0);
       }}
       // aria-label несе і час, і назву: у сітці візуальний контекст дає позиція,
       // а скрінрідер її не бачить
@@ -60,6 +87,8 @@ export function EventChip({
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
         KIND_CLASSES[event.kind],
         variant === 'absolute' && 'absolute',
+        isDraggable && 'cursor-grab active:cursor-grabbing',
+        isDragging && 'z-30 shadow-lg ring-2 ring-primary/40',
         isPending && 'border-dashed',
         (isCancelled || isDeclined) && 'opacity-60',
       )}
@@ -71,6 +100,21 @@ export function EventChip({
       </span>
       {!event.allDay && variant === 'absolute' && !compact && (
         <span className="truncate opacity-80">{formatTime(event.startsAt, timeZone)}</span>
+      )}
+      {/* Ручка тривалості. `div` у `button` — легально (phrasing-контент не
+          порушено), а `stopPropagation` обовʼязковий: без нього той самий
+          pointerdown спершу почав би ПЕРЕНОС плитки */}
+      {isDraggable && !event.allDay && (
+        <div
+          role="presentation"
+          onPointerDown={(pointer) => {
+            pointer.stopPropagation();
+            onDragStart(pointer, 'resize');
+          }}
+          className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 hover:opacity-100"
+        >
+          <div className="mx-auto h-0.5 w-6 rounded-full bg-current" />
+        </div>
       )}
     </button>
   );

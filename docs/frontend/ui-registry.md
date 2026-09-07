@@ -37,11 +37,11 @@
 
 ---
 
-## 2. Що вже вендеровано у нас (37 примітивів)
+## 2. Що вже вендеровано у нас (38 примітивів)
 
 `libs/ui/src/components/ui/`: alert · alert-dialog · avatar · badge · breadcrumb · button ·
 calendar · card · checkbox · collapsible · combobox · dialog · dropdown-menu · empty · field ·
-input · input-group · item · label · pagination · popover · progress · scroll-area · select ·
+input · input-group · item · kbd · label · pagination · popover · progress · scroll-area · select ·
 separator · sheet · sidebar · skeleton · spinner · switch · table · tabs · textarea · toast ·
 toggle · toggle-group · tooltip
 
@@ -51,6 +51,13 @@ toggle · toggle-group · tooltip
 утиліта; замінено на `@saas-skeleton/ui/lib/utils`, пакет прибраний із залежностей;
 (2) `calendar` тягне `react-day-picker` + `date-fns` — **перша дата-бібліотека в репозиторії**,
 і використовується вона рівно як date-picker: сітки тижня й місяця свої.
+
+**kbd** доданий 2026-09-07 під довідку гарячих клавіш календаря (`?` → діалог зі списком).
+Грабля з `import { cn } from "cn"` повторилась і тут — **вважаємо її постійною поведінкою
+CLI для нових примітивів**: після кожного `add` перевіряти перший рядок файлу і `git diff`
+на `package.json` (пакет `cn` там зайвий). У самому примітиві є дрібниця реєстру, яку ми
+НЕ правили: `KbdGroup` рендерить `<kbd>` навколо `<kbd>`-ів — вкладеність легальна, вона
+означає «комбінація клавіш».
 
 Хуки: `hooks/use-mobile.ts`. Власні (не з реєстру): `theme-switcher.tsx`, `user-identity.tsx`,
 `page-header-slot.tsx`, `page-breadcrumbs.tsx`, `not-found-page.tsx`, `components/data-grid/**`,
@@ -89,7 +96,7 @@ toggle · toggle-group · tooltip
 | [radio-group](https://ui.shadcn.com/docs/components/radio-group) · [slider](https://ui.shadcn.com/docs/components/slider) · [form](https://ui.shadcn.com/docs/forms)                                                                                                                                                                                                                                                                                                                                                 | форми налаштувань; `radio-group` — «це / це і наступні» (CAL-4) |
 | [drawer](https://ui.shadcn.com/docs/components/drawer)                                                                                                                                                                                                                                                                                                                                                                                                                                                               | мобільний варіант панелей (у нас зараз `sheet`)              |
 | [context-menu](https://ui.shadcn.com/docs/components/context-menu) · [menubar](https://ui.shadcn.com/docs/components/menubar) · [navigation-menu](https://ui.shadcn.com/docs/components/navigation-menu)                                                                                                                                                                                                                                                                                                             | `context-menu` — правий клік на події (CAL-2); решта без споживача |
-| [button-group](https://ui.shadcn.com/docs/components/button-group) · [kbd](https://ui.shadcn.com/docs/components/kbd) · [input-otp](https://ui.shadcn.com/docs/components/input-otp) · [carousel](https://ui.shadcn.com/docs/components/carousel) · [resizable](https://ui.shadcn.com/docs/components/resizable) · [aspect-ratio](https://ui.shadcn.com/docs/components/aspect-ratio) · [sonner](https://ui.shadcn.com/docs/components/toast) · [native-select](https://ui.shadcn.com/docs/components/native-select) | за потреби                                                   |
+| [button-group](https://ui.shadcn.com/docs/components/button-group) · [input-otp](https://ui.shadcn.com/docs/components/input-otp) · [carousel](https://ui.shadcn.com/docs/components/carousel) · [resizable](https://ui.shadcn.com/docs/components/resizable) · [aspect-ratio](https://ui.shadcn.com/docs/components/aspect-ratio) · [sonner](https://ui.shadcn.com/docs/components/toast) · [native-select](https://ui.shadcn.com/docs/components/native-select) | за потреби                                                   |
 
 ### 3.2 `@coss` — те, чого в `@shadcn` НЕМАЄ
 
