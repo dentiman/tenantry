@@ -16,6 +16,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/item';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
 import { formatDateTime } from '@saas-skeleton/ui/lib/format';
+import { cn } from '@saas-skeleton/ui/lib/utils';
 import { NotificationMessage } from './notification-message';
 
 type Notification = NotificationResponseDtoOutput;
@@ -44,6 +45,13 @@ interface NotificationCardProps {
   };
   /** Без посилань на сутність: у тості вся картка — одна ціль кліку */
   plain?: boolean;
+  /**
+   * Картка висить НАД сторінкою (тост), а не лежить рядком у списку. Різниця
+   * не косметична: спливна поверхня несе власний фон і тінь оверлея, рядок
+   * списку — ні. Доки цієї межі не було, кожен рядок центру кидав тінь рівня
+   * «попап» і носив `bg-popover` поверх такого самого фону панелі.
+   */
+  floating?: boolean;
   className?: string;
 }
 
@@ -71,6 +79,7 @@ export function NotificationCard({
   closeLabel,
   menu,
   plain = false,
+  floating = false,
   className = '',
 }: NotificationCardProps) {
   const { t } = useTranslation('notifications');
@@ -86,11 +95,22 @@ export function NotificationCard({
         variant="outline"
         size="sm"
         render={asButton ? <button type="button" /> : undefined}
-        className={`w-full items-start bg-popover text-left shadow-lg transition-colors ${
-          menu ? 'pr-10' : ''
-        } ${isUnread ? 'bg-accent' : ''} ${
-          isInteractive ? 'cursor-pointer hover:border-primary/50' : ''
-        }`}
+        className={cn(
+          'w-full items-start text-left transition-colors',
+          // Тост — спливна поверхня: власний фон і тінь оверлея. Рядок центру
+          // лежить на фоні панелі й не має ні того, ні того
+          floating && 'bg-popover shadow-lg',
+          // Непрочитане показуємо накладкою — тією самою, що виділяє пункт меню
+          // чи рядок таблиці (docs/frontend/theming.md §1.3.3). У тості її
+          // немає навмисно: щойно спливле й так непрочитане, а `bg-accent`
+          // поверх `bg-popover` просто замінив би фон, а не ліг на нього
+          !floating && isUnread && 'bg-accent',
+          menu && 'pr-10',
+          // Наведення НЕ міняє колір: блакитна обводка `hover:border-primary/50`
+          // тут читалась як стан «вибрано» — брендовий колір у списку означає
+          // дію, а не «під курсором». Клікабельність показує курсор
+          isInteractive && 'cursor-pointer',
+        )}
         onClick={onOpen}
       >
         {/* Крапка непрочитаного — замість рамки збоку: у тості рамки немає, а

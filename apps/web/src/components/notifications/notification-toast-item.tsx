@@ -46,6 +46,7 @@ export function NotificationToastList() {
             className="w-full"
             // Без лінків на сутність: уся картка тут — одна ціль кліку «відкрити центр»
             plain
+            floating
             onOpen={() => {
               openPanel();
               clearNotificationToasts();
