@@ -165,6 +165,33 @@ describe('Calendar API (e2e)', () => {
     expect(event.recurringEventId).toBeNull();
   });
 
+  /**
+   * Регресія 2026-09-08: `.partial()` у Zod НЕ знімає `.default()`, тож PATCH,
+   * який ніс лише час (звичайне перетягування!), приходив у сервіс із
+   * `kind: 'MEETING'` і `visibility: 'DEFAULT'` — тип події скидався, а
+   * ПРИВАТНА ставала видимою колегам. Тест б'є саме по цьому: одне поле в тілі,
+   * решта мусить лишитись недоторканою.
+   */
+  it('patching only the time keeps kind and visibility untouched', async () => {
+    const admin = await login('patch-defaults');
+    const event = await createEvent(admin.headers, {
+      kind: 'OUT_OF_OFFICE',
+      visibility: 'PRIVATE',
+    });
+    expect(event.visibility).toBe('PRIVATE');
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/api/calendar/events/${event.id}`)
+      .set(admin.headers)
+      .send({ startsAt: '2027-03-10T13:00:00.000Z', endsAt: '2027-03-10T14:00:00.000Z' })
+      .expect(200);
+
+    const body = patched.body as EventBody & { kind: string };
+    expect(body.startsAt).toBe('2027-03-10T13:00:00.000Z');
+    expect(body.kind).toBe('OUT_OF_OFFICE');
+    expect(body.visibility).toBe('PRIVATE');
+  });
+
   // ------------------------------------------------------------ час і all-day
 
   it('rejects an event that ends before it starts, pointing at the field', async () => {

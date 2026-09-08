@@ -5,7 +5,7 @@ import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import {
   dayKey,
-  displayZoneFor,
+  isWeekend,
   formatTime,
   formatWeekday,
   minutesFromDayStart,
@@ -13,8 +13,9 @@ import {
   todayKey,
 } from '../../lib/calendar-date';
 import { EventChip } from './event-chip';
+import { allDaySpans, layoutSpans } from './layout-spans';
 import { layoutOverlaps, slotStyle, type OverlapInput } from './layout-overlaps';
-import { useEventDrag, type DragCommit, type DragMode } from './use-event-drag';
+import { snapDelta, useEventDrag, type DragCommit, type DragMode } from './use-event-drag';
 import type { EventIntent } from './event-context-menu';
 import { useRangeDraft, type RangeDraft } from './use-range-draft';
 
@@ -41,6 +42,16 @@ const COMPACT_MINUTES = 45;
  * підписі це закриває і 12-годинні локалі, і 24-годинні (там підпис коротший).
  */
 const HOUR_GUTTER = '4rem';
+
+/**
+ * Висота шапки днів — ФІКСОВАНА і саме тому константа, а не «як вийде»:
+ * рядок all-day прилипає під шапкою (`top`), і зсув мусить точно дорівнювати її
+ * висоті. Складається з `py-2` (8+8) і боксу числа `size-6` (24), плюс межа.
+ */
+const HEADER_HEIGHT_PX = 41;
+
+/** Висота однієї доріжки all-day смуг */
+const SPAN_ROW_PX = 22;
 /** Те саме число в пікселях: арифметиці перенесення потрібна саме воно */
 const HOUR_GUTTER_PX = 64;
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -61,6 +72,12 @@ interface TimeGridProps {
    * відкатом і undo). Немає — сітка лишається нерухомою
    */
   onDragCommit?: (commit: DragCommit) => void;
+  /**
+   * Перегорнути період, коли подію тримають біля краю сітки. Виконує СТОРІНКА:
+   * період живе в URL, і навігація — її справа (той самий контракт, що з
+   * інтентами контекстного меню)
+   */
+  onEdgeNavigate?: (direction: -1 | 1) => void;
   /** Дія з контекстного меню плитки; виконує сторінка (мутації, тости, підтвердження) */
   onIntent?: (event: CalendarEventResponse, intent: EventIntent) => void;
 }
@@ -73,6 +90,7 @@ export function TimeGrid({
   onSelect,
   onCreate,
   onDragCommit,
+  onEdgeNavigate,
   onIntent,
 }: TimeGridProps) {
   const { t } = useTranslation('calendar');
@@ -80,7 +98,12 @@ export function TimeGrid({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const today = todayKey(timeZone);
 
-  const drag = useEventDrag(timeZone, onDragCommit ?? (() => undefined));
+  const drag = useEventDrag(
+    timeZone,
+    onDragCommit ?? (() => undefined),
+    scrollRef,
+    onEdgeNavigate,
+  );
 
   /**
    * Створення протягуванням. День адресується ключем, а не індексом: колонки
@@ -130,6 +153,7 @@ export function TimeGrid({
     if (!onDragCommit) {
       return;
     }
+    const geometry = measure();
     drag.begin(
       pointer,
       {
@@ -139,7 +163,7 @@ export function TimeGrid({
         endsAt: event.endsAt,
       },
       mode,
-      measure(),
+      (dx, dy) => snapDelta(dx, dy, geometry, mode),
     );
   };
 
@@ -151,9 +175,16 @@ export function TimeGrid({
     scrollRef.current?.scrollTo({ top: target * HOUR_HEIGHT });
   }, [workDayStart]);
 
-  const allDayByDay = useMemo(() => groupAllDay(events, days, timeZone), [events, days, timeZone]);
+  /**
+   * All-day події тижня — СМУГАМИ через колонки, а не плиткою в кожному дні:
+   * «відпустка 14–16» читалась як три різні відпустки (docs/calendar.md §11.9).
+   */
+  const allDay = useMemo(() => {
+    const { inputs, byId } = allDaySpans(events, days, timeZone);
+    return { layout: layoutSpans(inputs), byId };
+  }, [events, days, timeZone]);
   const timedByDay = useMemo(() => groupTimed(events, days, timeZone), [events, days, timeZone]);
-  const hasAllDay = [...allDayByDay.values()].some((list) => list.length > 0);
+  const allDayRows = allDay.layout.rows;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
@@ -184,7 +215,10 @@ export function TimeGrid({
         >
           {/* Кут над жолобом: теж sticky і теж непрозорий, інакше крізь нього
               просвічували б години, що проїжджають під шапкою */}
-          <div className="sticky top-0 z-20 border-r border-b bg-card" />
+          <div
+            className="sticky top-0 z-20 border-r border-b bg-card"
+            style={{ height: HEADER_HEIGHT_PX }}
+          />
           {days.map((day) => {
             const key = dayKey(day, timeZone);
             const isToday = key === today;
@@ -192,6 +226,7 @@ export function TimeGrid({
               <div
                 key={`head-${key}`}
                 className="sticky top-0 z-20 border-r border-b bg-card last:border-r-0"
+                style={{ height: HEADER_HEIGHT_PX }}
               >
                 {/* Геометрія однакова в КОЖНІЙ комірці: бокс числа завжди
                     `size-6`, а «сьогодні» додає лише колір. Доки плитку мав
@@ -213,22 +248,86 @@ export function TimeGrid({
                     {day.getDate()}
                   </span>
                 </div>
-                {hasAllDay && (
-                  <div className="flex min-h-7 flex-col gap-0.5 border-t px-1 py-1">
-                    {(allDayByDay.get(key) ?? []).map((event) => (
-                      <EventChip
-                        key={`${event.id}:${event.occurrenceStart}`}
-                        event={event}
-                        timeZone={timeZone}
-                        onSelect={onSelect}
-                        onIntent={onIntent}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             );
           })}
+
+          {/* Рядок all-day — ОКРЕМИЙ ряд сітки на всю ширину, бо смуга мусить
+              перетинати колонки, а комірка шапки її б обрізала. Всередині —
+              власна сітка з ТИМИ САМИМИ треками: жолоб фіксований, дні по
+              `1fr` від тієї самої ширини, тож розходження колонок неможливе.
+
+              `sticky` зі зсувом рівно на висоту шапки (`HEADER_HEIGHT_PX`):
+              смуги лишаються на екрані разом із днями, поки прокручуються
+              години — саме так поводяться Google Calendar і Notion */}
+          {allDayRows > 0 && (
+            <div
+              className="sticky z-19 col-span-full grid border-b bg-card"
+              style={{
+                top: HEADER_HEIGHT_PX,
+                gridTemplateColumns: `${HOUR_GUTTER} repeat(${String(days.length)}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${String(allDayRows)}, ${String(SPAN_ROW_PX)}px)`,
+              }}
+            >
+              <div
+                className="flex items-start justify-end border-r pt-0.5 pr-1.5 text-[11px] text-muted-foreground"
+                style={{ gridRow: `1 / span ${String(allDayRows)}` }}
+              >
+                {t('allDay')}
+              </div>
+              {[...allDay.layout.slots].map(([key, slot]) => {
+                const event = allDay.byId.get(key);
+                if (!event) {
+                  return null;
+                }
+                return (
+                  <div
+                    key={key}
+                    className="min-w-0 px-0.5"
+                    style={{
+                      // +2: перша колонка сітки — жолоб годин, а `gridColumnEnd`
+                      // ексклюзивний, тому останній день додає ще одиницю
+                      gridColumn: `${String(slot.startIndex + 2)} / ${String(slot.endIndex + 3)}`,
+                      gridRow: slot.row + 1,
+                    }}
+                  >
+                    <EventChip
+                      event={event}
+                      timeZone={timeZone}
+                      segment={slot.segment}
+                      spanResize
+                      isDragging={drag.preview?.key === key}
+                      // Смуга живе в календарі ДНІВ: і перенос, і краї міряються
+                      // добами, тому тут своя арифметика, а не `snapDelta`
+                      onDragStart={
+                        onDragCommit
+                          ? (pointer, mode) => {
+                              const columnWidth = measure().columnWidth;
+                              drag.begin(
+                                pointer,
+                                {
+                                  key,
+                                  eventId: event.id,
+                                  startsAt: event.startsAt,
+                                  endsAt: event.endsAt,
+                                },
+                                mode,
+                                (dx) => ({
+                                  minutes: 0,
+                                  dayShift: columnWidth > 0 ? Math.round(dx / columnWidth) : 0,
+                                }),
+                              );
+                            }
+                          : undefined
+                      }
+                      onSelect={onSelect}
+                      onIntent={onIntent}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Жолоб годин — той самий ряд сітки, що й колонки днів */}
           <div className="border-r">
@@ -259,7 +358,10 @@ export function TimeGrid({
             return (
               <div
                 key={`body-${key}`}
-                className="relative border-r last:border-r-0"
+                className={cn(
+                  'relative border-r last:border-r-0',
+                  isWeekend(day, timeZone) && 'bg-calendar-weekend',
+                )}
                 onPointerDown={(pointer) => {
                   beginRangeDraft(pointer, key, total);
                 }}
@@ -294,7 +396,7 @@ export function TimeGrid({
                         ),
                       );
                     }}
-                    className="block w-full border-b hover:bg-accent/40"
+                    className="block w-full border-b hover:bg-calendar-day-hover"
                     style={{ height: HOUR_HEIGHT }}
                   />
                 ))}
@@ -323,25 +425,16 @@ export function TimeGrid({
                       compact={input.endMinutes - input.startMinutes < COMPACT_MINUTES}
                       style={{
                         ...slotStyle(input, slot, total),
-                        // Прев'ю — `translate` поверх уже порахованої позиції:
-                        // так плитка йде за курсором прилипаючи до 15 хв, і при
-                        // цьому не треба перераховувати розкладку накладань
+                        // Прев'ю — `translate`/`height` поверх уже порахованої
+                        // позиції: так плитка йде за курсором прилипаючи до
+                        // 15 хв, і при цьому не треба перераховувати розкладку
+                        // накладань
                         ...(isDragging && drag.preview
-                          ? {
-                              transform: `translate(${String(
-                                drag.preview.dayShift * geometry.columnWidth,
-                              )}px, ${String(
-                                (drag.preview.mode === 'move' ? drag.preview.minutes : 0) /
-                                  60 *
-                                  HOUR_HEIGHT,
-                              )}px)`,
-                              height:
-                                drag.preview.mode === 'resize'
-                                  ? `calc(${slotStyle(input, slot, total).height} + ${String(
-                                      (drag.preview.minutes / 60) * HOUR_HEIGHT,
-                                    )}px)`
-                                  : slotStyle(input, slot, total).height,
-                            }
+                          ? previewStyle(
+                              drag.preview,
+                              slotStyle(input, slot, total).height,
+                              geometry.columnWidth,
+                            )
                           : {}),
                       }}
                       isDragging={isDragging}
@@ -379,6 +472,31 @@ export function TimeGrid({
  * Підпис — обидві межі: без нього прилипання до 15 хв лишається невидимим, і
  * людина не знає, що саме отримає, поки не відпустить.
  */
+/**
+ * Геометрія плитки під час жесту. Три режими — три різні перетворення:
+ * перенос рухає плитку цілком, `resize-end` тягне низ (міняється лише висота),
+ * `resize-start` тягне верх — а це ОДРАЗУ і зсув, і висота у протилежні боки.
+ */
+function previewStyle(
+  preview: { mode: DragMode; minutes: number; dayShift: number },
+  baseHeight: string,
+  columnWidth: number,
+): React.CSSProperties {
+  const offset = (preview.minutes / 60) * HOUR_HEIGHT;
+  if (preview.mode === 'move') {
+    return {
+      transform: `translate(${String(preview.dayShift * columnWidth)}px, ${String(offset)}px)`,
+    };
+  }
+  if (preview.mode === 'resize-end') {
+    return { height: `calc(${baseHeight} + ${String(offset)}px)` };
+  }
+  return {
+    transform: `translate(0px, ${String(offset)}px)`,
+    height: `calc(${baseHeight} - ${String(offset)}px)`,
+  };
+}
+
 function DraftBox({
   draft,
   day,
@@ -452,30 +570,6 @@ function clampEnd(
   const end = new Date(event.occurrenceEnd).getTime();
   const minutes = (end - dayStart) / 60_000;
   return Math.min(minutes, total);
-}
-
-function groupAllDay(
-  events: CalendarEventResponse[],
-  days: TZDate[],
-  timeZone: string,
-): Map<string, CalendarEventResponse[]> {
-  const map = new Map<string, CalendarEventResponse[]>(days.map((day) => [dayKey(day, timeZone), []]));
-  for (const event of events) {
-    if (!event.allDay) {
-      continue;
-    }
-    // All-day розкладається по датах у зоні ПОДІЇ (§6.2), тому день рахується
-    // її зоною, а не зоною глядача
-    const zone = displayZoneFor(event, timeZone);
-    let cursor = new TZDate(new Date(event.occurrenceStart), zone);
-    const end = new Date(event.occurrenceEnd).getTime();
-    while (cursor.getTime() < end) {
-      const key = dayKey(cursor, timeZone);
-      map.get(key)?.push(event);
-      cursor = new TZDate(cursor.getTime() + 86_400_000, zone);
-    }
-  }
-  return map;
 }
 
 function groupTimed(

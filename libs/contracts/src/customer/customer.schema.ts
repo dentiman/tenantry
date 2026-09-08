@@ -109,7 +109,13 @@ export const CreateCustomerSchema = z.object({
  * посилаються в листуванні й у документах). `status` — теж: це подія, у неї
  * окремий ендпоінт.
  */
-export const UpdateCustomerSchema = CreateCustomerSchema.partial();
+export const UpdateCustomerSchema = CreateCustomerSchema.partial().extend({
+  // Без дефолтів: `.partial()` їх не знімає, тож PATCH з одним полем
+  // перетворював контакт-ПЕРСОНУ на ORGANIZATION і скидав мову листів на 'en'
+  // (та сама грабля, що в календарі; docs/calendar.md §18.17)
+  kind: CustomerKindSchema.optional(),
+  locale: UserLocaleSchema.optional(),
+});
 
 /** Зміна статусу — подія, яку читають у журналі, а не редагування атрибута */
 export const SetCustomerStatusSchema = z.object({

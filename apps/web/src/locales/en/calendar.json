@@ -35,7 +35,12 @@
     "failed": "Could not move the event"
   },
   "agenda": {
-    "empty": "Nothing scheduled ahead"
+    "empty": "Nothing scheduled ahead",
+    "emptyHint": "Events you create or get invited to show up here, starting with the next one.",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "dayEvents_one": "{{count}} event",
+    "dayEvents_other": "{{count}} events"
   },
   "kind": {
     "MEETING": "Meeting",

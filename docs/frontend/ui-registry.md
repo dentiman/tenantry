@@ -179,6 +179,14 @@ navigation і опційні лінії вкладеності. Репозито
 [Галерея](https://reui.io/blocks) · JSON блоку віддає **401** без `REUI_LICENSE_KEY`.
 Стиль `base-nova` підтримують, тобто після покупки лягли б у наш стек.
 
+**Уточнення 2026-09-07: платні лише БЛОКИ (`registry:block`), не компоненти.** Перевірено
+під час пошуку компонентів для agenda-вигляду календаря: `event-calendar-1.json` і
+`schedule-1.json` — 401, а `registry:ui` `@reui/event-calendar` віддається вільно (348 KB,
+13 файлів, залежності `@base-ui/react` + `date-fns` + `@date-fns/tz` — наш стек), і
+[репозиторій ReUI — MIT](https://github.com/keenthemes/reui/blob/main/LICENSE.md). Тобто
+напрям «взяти в ReUI готовий складний компонент» відкритий і без покупки; ліцензійне питання
+стосується лише сторінкових блоків. Розбір конкретного компонента — `../calendar.md` §11.8.
+
 | Категорія                                     | К-сть      | Посилання                                                                                                                                                                            |
 | --------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | App Shell (каркаси застосунку)                | 20         | [/application/app-shell](https://reui.io/blocks/application/app-shell)                                                                                                               |
@@ -304,8 +312,45 @@ navigation і опційні лінії вкладеності. Репозито
 | [21st.dev](https://21st.dev)                                                            | спільнотний каталог                                                                                                                                                                     | безкоштовно     |
 | [Tremor Blocks](https://blocks.tremor.so)                                               | дашборди й KPI                                                                                                                                                                          | частково платно |
 | [tailark.com](https://tailark.com/blocks)                                               | велика бібліотека переважно marketing-блоків; для адмінок нижчий пріоритет                                                                                                              | платно          |
+| [ReUI Event Calendar](https://reui.io/docs/components/base/event-calendar)              | headless-календар на Base UI + date-fns з окремим agenda-view; найближчий до нашого стека референс month/week/day/agenda                                                               | безкоштовно (MIT) |
+| [origin-space/event-calendar](https://github.com/origin-space/event-calendar)           | agenda-view зі sticky-мітками днів; [FullCalendar List View](https://fullcalendar.io/docs/list-view) — канонічна анатомія «day header + рядки»                                          | безкоштовно     |
+| [calendarcn](https://calendarcn.xyz/) ([код](https://github.com/vmnog/calendarcn))      | клон Notion Calendar: Next 16 + Radix, MIT. Референс ВЗАЄМОДІЇ (автоскрол і edge-nav при drag, resize за два краї, all-day рядок, drag у місяці, ⌘K); як бібліотеку не беремо — розбір у `../calendar.md` §11.9 | безкоштовно (MIT) |
 
 ---
+
+### 4.8 «Картка з кольоровою смужкою ліворуч» — як це зветься і де його немає (2026-09-08)
+
+Питання виникло з календарної агенди (`../calendar.md` §11.8): чи існує стандартний компонент
+під таку форму, і чи це `Alert`.
+
+**У наших реєстрах — немає.** Перевірено: `@shadcn` `alert` — рамка навколо + `role="alert"`,
+варіантів зі смужкою нема; `@reui/alert` додає `success`/`warning`/`info`/`invert`, але теж без
+смужки; у `@coss` `alert` той самий, а `callout` не існує взагалі (404).
+
+**Назви патерну в індустрії** (усі посилання перевірені):
+
+| Система                                                                                     | Як зветься                                        |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [Chakra UI](https://chakra-ui.com/docs/components/alert) ([v2](https://v2.chakra-ui.com/docs/components/alert)) | `Alert variant="left-accent"` — найближче до канонічної назви |
+| [Radix Themes](https://www.radix-ui.com/themes/docs/components/callout)                      | `Callout`                                         |
+| [Mantine](https://mantine.dev/core/alert/) · [Notification](https://mantine.dev/core/notification/) | `Alert` / `Notification` (смужка — у нотифікації) |
+| [Docusaurus](https://docusaurus.io/docs/markdown-features/admonitions) · [MkDocs Material](https://squidfunk.github.io/mkdocs-material/reference/admonitions/) | **admonition** (класична ліва смужка в доках)     |
+| [GitHub Markdown](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) | «Alerts» на основі blockquote — смужка + іконка   |
+| [Bootstrap](https://getbootstrap.com/docs/5.3/components/alerts/)                            | `.alert` + утиліти `border-start border-4`        |
+| [MUI](https://mui.com/material-ui/react-alert/) · [Atlassian](https://atlassian.design/components/section-message/examples) · [Primer](https://primer.style/product/components/banner/) · [Carbon](https://carbondesignsystem.com/components/notification/usage/) · [Spectrum](https://spectrum.adobe.com/page/in-line-alert/) | `Alert` / `SectionMessage` / `Banner` / inline notification — смужки в них немає |
+| [Tailwind Plus](https://tailwindcss.com/plus/ui-blocks/application-ui/feedback/alerts) · [shadcnui-blocks](https://www.shadcnui-blocks.com/components/alert) | готові alert-блоки; у других серед 10 варіантів є «Callout» |
+
+**Семантика важливіша за вигляд.** `Alert` — це `role="alert"`, тобто `aria-live`: скрінрідер
+зачитує його поза чергою. Ставити цю роль на елемент списку неправильно — при кожному
+довантаженні курсору агенда починала б «кричати». Тому наша картка події лишається `Item`
+(картка-кнопка), а смужка — просто оформлення. Заводити власний `Callout` сенсу поки немає:
+єдиний споживач — календар, і там це не повідомлення, а рядок даних.
+
+**Що зроблено 2026-09-08.** Там, де це СПРАВДІ повідомлення, форма тепер є: у `ui/alert.tsx`
+доданий варіант `warning` і вимір `accent="left"` (смужка 3px, колір бере `compoundVariants` від
+варіанта). Споживачі — банер «час показано в зоні X» на сторінці календаря і попередження про
+накладання в панелі події; обидва з `TriangleAlertIcon`. Окремого `Callout` так і не заводили:
+різниця між ним і `Alert` — саме в `role`, а обидва наші випадки — повідомлення.
 
 ## 5. Чекліст: беремо компонент НЕ з `@shadcn`
 

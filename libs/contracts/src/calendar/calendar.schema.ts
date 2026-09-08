@@ -129,7 +129,19 @@ export const UpdateCalendarEventSchema = CreateCalendarEventSchema.omit({
   status: true,
   attendees: true,
   reminders: true,
-}).partial();
+})
+  .partial()
+  // `.partial()` НЕ знімає `.default()` — Zod застосовує дефолт до відсутнього
+  // ключа й повертає його як значення. Через це PATCH, що ніс лише час
+  // (перетягування!), приходив у сервіс із `kind: 'MEETING'` і
+  // `visibility: 'DEFAULT'` — тип події скидався, а ПРИВАТНА подія ставала
+  // видимою для колег. Тому в UPDATE-схемі ці поля перевизначені без дефолтів:
+  // «не передали» тут мусить означати «не чіпай», а не «постав звичайне»
+  // (спіймано 2026-09-08, docs/calendar.md §18.17)
+  .extend({
+    kind: CalendarEventKindSchema.optional(),
+    visibility: CalendarEventVisibilitySchema.optional(),
+  });
 
 /** Скасування/відновлення — подія, яку читають у журналі, а не редагування поля */
 export const SetCalendarEventStatusSchema = z.object({

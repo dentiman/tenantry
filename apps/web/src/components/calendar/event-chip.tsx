@@ -9,30 +9,44 @@ import {
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { formatTime } from '../../lib/calendar-date';
 import { EventContextMenu, type EventIntent } from './event-context-menu';
+import { KIND_LINE_WIDTH, KIND_STYLES } from './event-kind';
+import type { SpanSegment } from './layout-spans';
 import { EventPeekContent } from './event-peek';
+import type { DragMode } from './use-event-drag';
 
 /**
- * Колір несе ТИП події (`kind`), а не персональний вибір: інакше в тенанті за
- * пів року буде 40 подій вісьмома відтінками без жодної системи
- * (docs/calendar.md §5.1). Токени — семантичні, тому обидві теми працюють самі.
+ * Закруглення за сегментом смуги. Порожнього варіанта немає навмисно: `full`
+ * теж мусить бути в таблиці, інакше одноденна плитка залежала б від дефолту в
+ * базових класах — і будь-яка зміна там тихо ламала б смуги.
  */
-const KIND_CLASSES: Record<CalendarEventResponse['kind'], string> = {
-  MEETING: 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/15',
-  CALL: 'bg-success/10 text-success border-success/30 hover:bg-success/15',
-  DEADLINE: 'bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/15',
-  OUT_OF_OFFICE: 'bg-warning/10 text-warning border-warning/30 hover:bg-warning/15',
-  OTHER: 'bg-muted text-muted-foreground border-border hover:bg-accent',
+const SEGMENT_CLASSES: Record<SpanSegment, string> = {
+  full: 'rounded-sm',
+  start: 'rounded-l-sm',
+  middle: 'rounded-none',
+  end: 'rounded-r-sm',
 };
 
 interface EventChipProps {
   event: CalendarEventResponse;
   timeZone: string;
   /** Перетягування (CAL-2). Немає — плитка нерухома, як у місяці й агенді */
-  onDragStart?: (pointer: React.PointerEvent, mode: 'move' | 'resize') => void;
+  onDragStart?: (pointer: React.PointerEvent, mode: DragMode) => void;
   /** Тягнуть саму цю плитку: підіймаємо над сусідами і додаємо тінь */
   isDragging?: boolean;
   /** `absolute` — у сітці часу; `inline` — у клітинці місяця й у списку */
   variant?: 'absolute' | 'inline';
+  /**
+   * Частина багатоденної смуги. Кути закруглюються лише там, де подія СПРАВДІ
+   * починається чи закінчується: рівний край читається як «продовжується за
+   * межу вікна» (`layout-spans.ts`).
+   */
+  segment?: SpanSegment;
+  /**
+   * Смуга в календарі днів (all-day рядок тижня, ряд місяця) — тоді краї
+   * тягнуться ГОРИЗОНТАЛЬНО і міняють ДАТИ. Ручка малюється лише на тому краю,
+   * який справді є краєм події: у сегменті `middle` тягнути нічого
+   */
+  spanResize?: boolean;
   /**
    * Плитка надто низька для двох рядків — тоді час не показуємо. Спіймано в
    * браузері: у 30-хвилинної події (24px при годині 48px) другий рядок
@@ -55,6 +69,8 @@ export function EventChip({
   event,
   timeZone,
   variant = 'inline',
+  segment = 'full',
+  spanResize = false,
   compact = false,
   peek = true,
   onIntent,
@@ -70,8 +86,13 @@ export function EventChip({
   const isDeclined = event.myResponse === 'DECLINED';
 
   // Тягнути можна лише те, що дозволено змінювати: інакше сервер відповів би
-  // 403 уже після того, як плитка «переїхала» під курсором
-  const isDraggable = onDragStart !== undefined && event.canEdit && variant === 'absolute';
+  // 403 уже після того, як плитка «переїхала» під курсором.
+  // Варіант плитки тут НЕ при чому: у місяці плитки `inline`, і їх теж
+  // переносять — просто зсув там міряється днями, а не хвилинами
+  const isDraggable = onDragStart !== undefined && event.canEdit;
+  // Ручки тривалості — лише в часовій сітці: у місяці немає координати години,
+  // тягнути «нижній край» нікуди
+  const hasResizeHandles = isDraggable && !event.allDay && variant === 'absolute';
 
   /**
    * Peek — КОНТРОЛЬОВАНИЙ, і рівно з двох причин:
@@ -80,6 +101,11 @@ export function EventChip({
    * 2. клік відкриває панель події, а картка по наведенню лишалась би позаду неї.
    */
   const [isPeekOpen, setPeekOpen] = useState(false);
+
+  const kindStyle = KIND_STYLES[event.kind];
+  // Смужка = «подія починається тут». У сегментах `middle`/`end` початок лежить
+  // за межею вікна, тому носієм кольору лишається сама заливка
+  const hasLine = segment === 'full' || segment === 'start';
 
   const chip = (
     <button
@@ -107,16 +133,39 @@ export function EventChip({
       // а скрінрідер її не бачить
       aria-label={`${event.allDay ? '' : `${formatTime(event.startsAt, timeZone)} `}${event.title}`}
       className={cn(
-        'flex w-full flex-col overflow-hidden rounded-md border px-1.5 py-0.5 text-left text-xs transition-colors',
+        'relative flex w-full flex-col overflow-hidden py-0.5 pr-1.5 text-left text-xs transition-colors',
+        SEGMENT_CLASSES[segment],
+        // Відступ ліворуч тримає смужку; там, де смуги немає (продовження
+        // смуги з попереднього вікна), він зайвий
+        hasLine ? 'pl-2.5' : 'pl-1.5',
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-        KIND_CLASSES[event.kind],
+        // Заливка — прямо на кнопці. Спершу вона лежала окремим шаром із
+        // `-z-10`, і в сітці плитка виглядала ПОРОЖНЬОЮ: у кнопки немає свого
+        // стекового контексту, тож негативний z-index провалював шар під фон
+        // колонки дня. Окремий шар тут узагалі не потрібен — на відміну від
+        // Notion, наші заливки непрозорі, і підкладку їм підміняти нічим
+        kindStyle.bg,
+        kindStyle.bgHover,
+        kindStyle.text,
         variant === 'absolute' && 'absolute',
         isDraggable && 'cursor-grab active:cursor-grabbing',
         isDragging && 'z-30 shadow-lg ring-2 ring-primary/40',
-        isPending && 'border-dashed',
+        // Немає відповіді — плитка контурна: «я ще не сказав, чи буду» мусить
+        // бути видно без відкривання картки. Рамка тут ЄДИНИЙ випадок, коли
+        // плитка її має, тому й `border` живе в цій умові, а не в базі
+        isPending && 'border border-dashed border-current',
         (isCancelled || isDeclined) && 'opacity-60',
       )}
     >
+      {/* Смужка типу — той самий носій, що ліва межа рядка в агенді. У
+          продовженні багатоденної смуги її немає: там лівий край не є початком
+          події, і маркер брехав би */}
+      {hasLine && (
+        <span
+          aria-hidden="true"
+          className={cn('absolute inset-y-0 left-0 rounded-l-sm', KIND_LINE_WIDTH, kindStyle.line)}
+        />
+      )}
       <span className={cn('flex items-center gap-1 truncate font-medium', isCancelled && 'line-through')}>
         {event.visibility === 'PRIVATE' && <LockIcon className="size-3 shrink-0" />}
         {event.kind === 'CALL' && <VideoIcon className="size-3 shrink-0" />}
@@ -125,21 +174,70 @@ export function EventChip({
       {!event.allDay && variant === 'absolute' && !compact && (
         <span className="truncate opacity-80">{formatTime(event.startsAt, timeZone)}</span>
       )}
-      {/* Ручка тривалості. `div` у `button` — легально (phrasing-контент не
-          порушено), а `stopPropagation` обовʼязковий: без нього той самий
-          pointerdown спершу почав би ПЕРЕНОС плитки */}
-      {isDraggable && !event.allDay && (
-        <div
-          role="presentation"
-          onPointerDown={(pointer) => {
-            pointer.stopPropagation();
-            setPeekOpen(false);
-            onDragStart(pointer, 'resize');
-          }}
-          className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 hover:opacity-100"
-        >
-          <div className="mx-auto h-0.5 w-6 rounded-full bg-current" />
-        </div>
+      {/* Ручки тривалості — ДВІ: верхня рухає початок, нижня кінець («почалось
+          раніше» трапляється не рідше, ніж «затягнулось»). `div` у `button` —
+          легально (phrasing-контент не порушено), а `stopPropagation`
+          обовʼязковий: без нього той самий pointerdown спершу почав би ПЕРЕНОС
+          плитки. Обидві ручки видно лише на наведення — у сітці по тридцять
+          плиток, і постійні смужки читались би як частина розмітки */}
+      {/* Краї смуги: тягнуться по горизонталі й міняють дати. Ручка є лише там,
+          де подія справді починається/закінчується — у продовженні смуги
+          (`middle`, і відповідний край у `start`/`end`) її немає */}
+      {isDraggable && spanResize && (
+        <>
+          {(segment === 'full' || segment === 'start') && (
+            <div
+              role="presentation"
+              onPointerDown={(pointer) => {
+                pointer.stopPropagation();
+                setPeekOpen(false);
+                onDragStart(pointer, 'resize-start');
+              }}
+              className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize opacity-0 hover:opacity-100"
+            >
+              <div className="my-auto h-3 w-0.5 rounded-full bg-current" />
+            </div>
+          )}
+          {(segment === 'full' || segment === 'end') && (
+            <div
+              role="presentation"
+              onPointerDown={(pointer) => {
+                pointer.stopPropagation();
+                setPeekOpen(false);
+                onDragStart(pointer, 'resize-end');
+              }}
+              className="absolute inset-y-0 right-0 flex w-1.5 cursor-ew-resize items-center opacity-0 hover:opacity-100"
+            >
+              <div className="mx-auto h-3 w-0.5 rounded-full bg-current" />
+            </div>
+          )}
+        </>
+      )}
+      {hasResizeHandles && (
+        <>
+          <div
+            role="presentation"
+            onPointerDown={(pointer) => {
+              pointer.stopPropagation();
+              setPeekOpen(false);
+              onDragStart(pointer, 'resize-start');
+            }}
+            className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 hover:opacity-100"
+          >
+            <div className="mx-auto h-0.5 w-6 rounded-full bg-current" />
+          </div>
+          <div
+            role="presentation"
+            onPointerDown={(pointer) => {
+              pointer.stopPropagation();
+              setPeekOpen(false);
+              onDragStart(pointer, 'resize-end');
+            }}
+            className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 hover:opacity-100"
+          >
+            <div className="mx-auto h-0.5 w-6 rounded-full bg-current" />
+          </div>
+        </>
       )}
     </button>
   );

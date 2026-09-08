@@ -286,6 +286,21 @@ pnpm build
 
 ## Тести
 
+### `pnpm test` / `pnpm web:test`
+
+```bash
+pnpm test       # → turbo run test  (зараз єдиний споживач — apps/web)
+pnpm web:test   # → pnpm --filter @saas-skeleton/web test  (vitest run)
+```
+
+Unit-тести фронту (Vitest, заведено 2026-09-08). Нічого не піднімають: `environment: 'node'`,
+жодного DOM і жодної БД — покриті ЧИСТІ функції, передусім календарна арифметика часу
+(`docs/calendar.md` §13). Тести лежать поруч із джерелом (`src/**/*.test.ts`); режим
+спостереження — `pnpm --filter @saas-skeleton/web test:watch`.
+
+Компонентних тестів немає свідомо (`jsdom` не встановлений): приймання UI лишається
+браузерним, а раннер заведений під те, чого оком не перевіриш.
+
 ### `pnpm api:test:e2e`
 
 ```bash

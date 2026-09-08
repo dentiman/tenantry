@@ -10,10 +10,35 @@ const alertVariants = cva(
         default: "bg-card text-card-foreground",
         destructive:
           "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+        // ЛОКАЛЬНА ПРАВКА реєстру: варіант `warning` — попередження, яке НЕ є
+        // помилкою («час показано в іншій зоні»). Реєстр пропонує робити це
+        // хардкодом `bg-amber-50 dark:bg-amber-950` на місці використання
+        // (розділ «Custom Colors» у документації) — ми беремо той самий намір,
+        // але через наш токен `--warning`: інакше дві теми й dark-режим
+        // доводилось би розписувати в кожному виклику. Мʼякий фон і opacity
+        // опису — ті самі, що в `badge` варіанті `warning`
+        warning:
+          "border-warning/30 bg-warning/10 text-warning *:data-[slot=alert-description]:text-warning/90 *:[svg]:text-current",
+      },
+      // ЛОКАЛЬНА ПРАВКА реєстру: кольорова смужка ліворуч. У реєстрі такого
+      // виміру немає — найближчий аналог в індустрії зветься
+      // `Alert variant="left-accent"` (Chakra UI) або `Callout`; довідник назв
+      // і посилання — docs/frontend/ui-registry.md §4.8
+      accent: {
+        none: "",
+        left: "border-l-[3px]",
       },
     },
+    compoundVariants: [
+      // Колір смужки — колір самого варіанта; окремим виміром задається лише
+      // ТОВЩИНА, інакше `border-l-<колір>` фарбував би й звичайну 1px межу
+      { variant: "default", accent: "left", class: "border-l-border" },
+      { variant: "destructive", accent: "left", class: "border-l-destructive" },
+      { variant: "warning", accent: "left", class: "border-l-warning" },
+    ],
     defaultVariants: {
       variant: "default",
+      accent: "none",
     },
   }
 )
@@ -21,13 +46,14 @@ const alertVariants = cva(
 function Alert({
   className,
   variant,
+  accent,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
   return (
     <div
       data-slot="alert"
       role="alert"
-      className={cn(alertVariants({ variant }), className)}
+      className={cn(alertVariants({ variant, accent }), className)}
       {...props}
     />
   )

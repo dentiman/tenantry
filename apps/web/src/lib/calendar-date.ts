@@ -112,6 +112,19 @@ export function defaultCreateStart(
   );
 }
 
+/**
+ * Субота/неділя в зоні глядача. Тижневі кінці фарбуються на півсходинки
+ * щільніше за полотно (`--calendar-weekend`, патерн Notion Calendar): робочий
+ * тиждень читається як основне поле, а не як сім однакових колонок.
+ *
+ * Свідомо НЕ залежить від `weekStartsOn`: перший день тижня — це де ПОЧИНАЄТЬСЯ
+ * сітка, а «вихідний» — властивість самого дня.
+ */
+export function isWeekend(day: Date, timeZone: string): boolean {
+  const weekday = new TZDate(day, timeZone).getDay();
+  return weekday === 0 || weekday === 6;
+}
+
 export function todayKey(timeZone: string): string {
   return dayKey(new Date(), timeZone);
 }
@@ -241,6 +254,35 @@ export function formatWeekday(instant: Date | string, timeZone: string): string 
 
 export function formatFullDate(instant: Date | string, timeZone: string): string {
   return formatter(timeZone, { dateStyle: 'full' }).format(new Date(instant));
+}
+
+/** Тільки день тижня словом — ліва половина заголовка дня в агенді */
+export function formatWeekdayLong(instant: Date | string, timeZone: string): string {
+  return formatter(timeZone, { weekday: 'long' }).format(new Date(instant));
+}
+
+/**
+ * Дата без дня тижня — права половина того самого заголовка. Разом із
+ * `formatWeekdayLong` це `formatFullDate`, розібраний надвоє: у заголовку дня
+ * половини стоять по різних краях бару, і зліпити їх в один рядок не можна.
+ */
+export function formatDateLong(instant: Date | string, timeZone: string): string {
+  return formatter(timeZone, { year: 'numeric', month: 'long', day: 'numeric' }).format(
+    new Date(instant),
+  );
+}
+
+/**
+ * Скільки КАЛЕНДАРНИХ діб від сьогодні (0 — сьогодні, 1 — завтра, -1 — вчора)
+ * у зоні глядача. Саме календарних, а не «різниця в мілісекундах / 86400000»:
+ * подія о 23:30 сьогодні і о 00:30 завтра розділені годиною, але це різні дні,
+ * а доба переходу на зимовий час до того ж має 25 годин.
+ */
+export function daysFromToday(instant: Date | string, timeZone: string): number {
+  return differenceInCalendarDays(
+    new TZDate(new Date(instant), timeZone),
+    new TZDate(new Date(), timeZone),
+  );
 }
 
 export function formatMonthYear(instant: Date | string, timeZone: string): string {

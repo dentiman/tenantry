@@ -161,6 +161,10 @@ vite не читає tsconfig paths.
 | Другорядний текст                            | `text-muted-foreground` (`--muted` — це _фон_, не текст)                                          |
 | Небезпека: текст / суцільна заливка / мʼяка  | `text-destructive` / `bg-destructive text-destructive-foreground` / `Badge variant="destructive"` |
 | Успіх, попередження                          | наше розширення `--success` / `--warning`                                                         |
+| Попередження, яке НЕ помилка                 | `Alert variant="warning" accent="left"` + `TriangleAlertIcon` (банер зони календаря, накладання подій) |
+| Подія календаря (заливка / смужка типу / текст) | палітра подій Notion: `bg-event-<колір>-bg` / `bg-event-<колір>-line` / `text-event-<колір>` — **не semantic-роль**, а іменований колір; мапінг «тип події → колір» живе в `apps/web/src/components/calendar/event-kind.ts` |
+| Вихідні в сітці календаря                    | `bg-calendar-weekend`                                                                             |
+| Період, відкритий у сітці (у міні-календарі) | `bg-calendar-in-view`; наведення на день — `bg-calendar-day-hover`                                |
 | Бренд                                        | `text-primary`                                                                                    |
 | Посилання в тексті                           | `text-primary underline underline-offset-4`                                                       |
 | Присутність offline                          | `bg-muted-foreground/40` (`bg-muted` — світлий фон, крапка була б невидима)                       |
@@ -316,6 +320,7 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 | `ui/toast.tsx`                      | позиції регіонів (`position` на `Toaster`/`ToastViewport`, `anchor` на `Toast`)                                                        |
 | `ui/checkbox.tsx`                   | `MinusIcon` у стані `indeterminate` (реєстр знає лише галочку); focus `ring-1`                                                         |
 | `ui/badge.tsx`                      | `success`/`warning`; opacity мʼяких фонів обмежена так, щоб дрібний текст тримав 4.5:1                                                 |
+| `ui/alert.tsx`                      | варіант **`warning`** (мʼякий фон `bg-warning/10` + `text-warning`, як у `badge`) і вимір **`accent="left"`** — кольорова смужка 3px ліворуч; товщину задає `accent`, колір бере `compoundVariants` від варіанта. Реєстр радить робити це хардкодом `bg-amber-50 dark:bg-amber-950` на місці використання («Custom Colors»), що розписувало б dark у кожному виклику |
 | `ui/button.tsx`                     | суцільний `destructive`, HeroUI hover, метрика 28/32/36/40px, `radius="full"` і суцільний focus ring                                   |
 | `ui/{input,select,input-group}.tsx` | висота 36px і `px-3`; `bg-field` / `border-input`, без тіні, тонкий primary-blue focus `ring-1`                                        |
 | `ui/textarea.tsx`                   | `px-3`, `bg-field`, без тіні, `ring-1`; стокова багаторядкова мінімальна висота `min-h-16`                                             |

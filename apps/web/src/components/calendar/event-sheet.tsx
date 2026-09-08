@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { CalendarOffIcon, TrashIcon } from 'lucide-react';
+import { CalendarOffIcon, TrashIcon, TriangleAlertIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import {
   AlertDialog,
@@ -454,8 +454,11 @@ export function EventSheet({
                     {conflicts.length > 0 && (
                       // ПОПЕРЕДЖЕННЯ, а не помилка: збереження не блокується, тому
                       // це `Alert` під полями часу, а не `FieldError` і не
-                      // `errors.root` — форма лишається валідною
-                      <Alert>
+                      // `errors.root` — форма лишається валідною. Варіант
+                      // `warning` зі смужкою — та сама форма, що банер зони на
+                      // сторінці календаря: мова попереджень у модулі одна
+                      <Alert variant="warning" accent="left">
+                        <TriangleAlertIcon />
                         <AlertTitle>
                           {t('conflicts.title', { count: conflicts.length })}
                         </AlertTitle>

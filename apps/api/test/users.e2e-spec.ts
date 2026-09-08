@@ -319,6 +319,38 @@ describe('Users API (e2e)', () => {
     );
   });
 
+  /**
+   * Регресія 2026-09-08: `.partial()` не знімає `.default()` у Zod, тож PATCH
+   * без `role` приходив у сервіс із `role: 'USER'` — зміна ІМЕНІ знімала з
+   * юзера роль ADMIN. Той самий клас багу спіймали в календарі (kind і
+   * visibility) і в кастомерах (kind).
+   */
+  it('patching only the name keeps the role and locale untouched', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-defaults-admin`);
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({
+        email: `defaults-${Date.now()}@example.com`,
+        password: 'SecurePass123',
+        name: 'Before',
+        role: 'ADMIN',
+      })
+      .expect(201);
+    const user = created.body as { id: string; role: string; locale: string };
+    expect(user.role).toBe('ADMIN');
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/api/users/${user.id}`)
+      .set(headers)
+      .send({ name: 'After' })
+      .expect(200);
+
+    expect(patched.body).toEqual(
+      expect.objectContaining({ name: 'After', role: 'ADMIN', locale: user.locale }),
+    );
+  });
+
   it('deletes a user', async () => {
     const headers = await createAuthHeaders(`${Date.now()}-delete-admin`);
     const user = await prisma.user.create({

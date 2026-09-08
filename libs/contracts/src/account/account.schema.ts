@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CreateUserSchema, PasswordSchema } from '../user/user.schema';
+import { CreateUserSchema, PasswordSchema, UserLocaleSchema } from '../user/user.schema';
 
 /**
  * Self-service редагування власного профілю. Свідомо ПІДМНОЖИНА UpdateUserSchema,
@@ -24,6 +24,9 @@ export const UpdateAccountProfileSchema = CreateUserSchema.pick({
   .extend({
     // Той самий контракт, що в UpdateUserSchema: файл має бути READY і зображенням
     avatarFileId: z.uuid().nullable().optional(),
+    // Без `.default('en')`: `.partial()` дефолти не знімає, і зміна лише імені
+    // скидала б локаль на англійську (docs/calendar.md §18.17)
+    locale: UserLocaleSchema.optional(),
   });
 
 /**

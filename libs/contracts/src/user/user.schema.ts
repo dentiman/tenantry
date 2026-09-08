@@ -87,6 +87,12 @@ export const SetUserStatusSchema = z.object({
 export const UpdateUserSchema = CreateUserSchema.omit({ password: true }).partial().extend({
   // Демо-споживач файлової підсистеми: файл має бути READY і бути зображенням (перевіряє сервіс)
   avatarFileId: z.uuid().nullable().optional(),
+  // Без `.default()`: `.partial()` дефолти НЕ знімає, і PATCH, який ніс лише
+  // ім'я чи аватар, приходив із `role: 'USER'` — тобто зміна імені знімала з
+  // юзера роль ADMIN. «Не передали» = «не чіпай» (та сама грабля, що в
+  // календарі; docs/calendar.md §18.17)
+  role: z.enum(['ADMIN', 'USER']).optional(),
+  locale: UserLocaleSchema.optional(),
 });
 
 export const UserQuerySchema = listQuerySchema([

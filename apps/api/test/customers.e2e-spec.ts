@@ -19,6 +19,7 @@ interface CustomerBody {
   ownerId: string | null;
   owner: { id: string; email: string } | null;
   currency: string;
+  locale: string;
   tags: string[];
   email: string | null;
   externalId: string | null;
@@ -233,6 +234,27 @@ describe('Customers API (e2e)', () => {
 
     const types = (feed.body as { items: { type: string }[] }).items.map((i) => i.type);
     expect(types).toEqual(['customer.restored', 'customer.archived', 'customer.created']);
+  });
+
+  /**
+   * Регресія 2026-09-08 (той самий клас, що в календарі й users): `.partial()`
+   * зберігає `.default()`, тож PATCH з одним полем перетворював контакт-ПЕРСОНУ
+   * на ORGANIZATION.
+   */
+  it('patching one field keeps kind and locale untouched', async () => {
+    const { headers } = await admin(`${Date.now()}-defaults`);
+    const person = await createCustomer(headers, { name: 'Jane Roe', kind: 'PERSON' });
+    expect(person.kind).toBe('PERSON');
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/api/customers/${person.id}`)
+      .set(headers)
+      .send({ notes: 'called back' })
+      .expect(200);
+
+    expect(patched.body).toEqual(
+      expect.objectContaining({ kind: 'PERSON', locale: person.locale }),
+    );
   });
 
   it('records owner changes only, not ordinary field edits', async () => {

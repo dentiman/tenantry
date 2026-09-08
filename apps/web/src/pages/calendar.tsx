@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { Alert, AlertDescription, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
 import {
@@ -296,13 +296,22 @@ export function CalendarPage() {
   useCalendarHotkeys(target === null && !isHelpOpen, (action) => {
     switch (action.kind) {
       case 'today':
-        goto(view, todayKey(timeZone));
+      case 'shift':
+        // В агенді періоду не існує: фід курсорний і завжди починається від
+        // «зараз», тому `T` і стрілки там не мають чого зсувати. Мовчазний
+        // no-op, а не зсув `?date=`, який нічого не змінює на екрані — той
+        // самий аргумент, що прибрав ці кнопки з тулбара (docs/calendar.md §11.8)
+        if (view !== 'agenda') {
+          goto(
+            view,
+            action.kind === 'today'
+              ? todayKey(timeZone)
+              : shiftAnchor(view, anchor, timeZone, action.direction),
+          );
+        }
         break;
       case 'view':
         goto(action.view, anchor);
-        break;
-      case 'shift':
-        goto(view, shiftAnchor(view, anchor, timeZone, action.direction));
         break;
       case 'create':
         // Без позиції курсора час бере те саме правило, що й кнопка тулбара
@@ -324,35 +333,43 @@ export function CalendarPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              goto(view, todayKey(timeZone));
-            }}
-          >
-            {t('toolbar.today')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('toolbar.previous')}
-            onClick={() => {
-              goto(view, shiftAnchor(view, anchor, timeZone, -1));
-            }}
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('toolbar.next')}
-            onClick={() => {
-              goto(view, shiftAnchor(view, anchor, timeZone, 1));
-            }}
-          >
-            <ChevronRightIcon />
-          </Button>
+          {/* «Today» і стрілки керують ПЕРІОДОМ, а періоду в агенді немає:
+              фід курсорний і завжди починається від «зараз», тож у цьому
+              перегляді кнопки не робили нічого (docs/calendar.md §11.8).
+              Мертвий контрол гірший за відсутній — він обіцяє дію */}
+          {view !== 'agenda' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  goto(view, todayKey(timeZone));
+                }}
+              >
+                {t('toolbar.today')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('toolbar.previous')}
+                onClick={() => {
+                  goto(view, shiftAnchor(view, anchor, timeZone, -1));
+                }}
+              >
+                <ChevronLeftIcon />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('toolbar.next')}
+                onClick={() => {
+                  goto(view, shiftAnchor(view, anchor, timeZone, 1));
+                }}
+              >
+                <ChevronRightIcon />
+              </Button>
+            </>
+          )}
           <h1 className="text-base font-medium">
             {view === 'agenda'
               ? t('toolbar.upcoming')
@@ -393,7 +410,11 @@ export function CalendarPage() {
           час»; банер зʼявляється лише коли профільна зона розходиться з зоною
           пристрою (докладно — docs/calendar.md §11.5 п.10) */}
       {preferences.isDeviceZoneDifferent && (
-        <Alert>
+        // Це попередження, а не нейтральна довідка: людина може прийти на
+        // зустріч не в той час. Тому `warning` зі смужкою — та сама форма, що
+        // «Alert left-accent» в індустрії (docs/frontend/ui-registry.md §4.8)
+        <Alert variant="warning" accent="left">
+          <TriangleAlertIcon />
           <AlertTitle>{t('zoneBanner.title', { zone: timeZone })}</AlertTitle>
           <AlertDescription>
             {t('zoneBanner.hint')}{' '}
@@ -426,6 +447,10 @@ export function CalendarPage() {
           onSelect={(event) => {
             setTarget({ event });
           }}
+          onCreate={() => {
+            openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
+          }}
+          onIntent={applyIntent}
         />
       ) : view === 'month' ? (
         <MonthGrid
@@ -438,6 +463,7 @@ export function CalendarPage() {
           }}
           onCreate={openDraft}
           onIntent={applyIntent}
+          onDragCommit={applyDragCommit}
           onShowDay={(key) => {
             goto('day', key);
           }}
@@ -453,6 +479,9 @@ export function CalendarPage() {
           }}
           onCreate={openDraft}
           onDragCommit={applyDragCommit}
+          onEdgeNavigate={(direction) => {
+            goto(view, shiftAnchor(view, anchor, timeZone, direction));
+          }}
           onIntent={applyIntent}
         />
       )}

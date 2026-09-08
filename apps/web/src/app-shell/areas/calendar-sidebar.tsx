@@ -10,8 +10,11 @@ import {
 import {
   asWeekStart,
   CALENDAR_VIEWS,
+  dayKey,
+  daysOfRange,
   parseDayKeyAsLocalDate,
   todayKey,
+  viewRange,
   type CalendarView,
 } from '../../lib/calendar-date';
 import { useCalendarPreferences } from '../../components/calendar/use-calendar-preferences';
@@ -43,6 +46,32 @@ export function CalendarSidebar() {
   // дубльованого стану «який перегляд відкрито» в застосунку немає
   const activeView = CALENDAR_VIEWS.find((view) => pathname.endsWith(`/${view}`)) ?? 'week';
   const selectedKey = search.date ?? todayKey(viewerTimeZone);
+
+  /**
+   * Дні, які ЗАРАЗ відкриті в сітці, підсвічуються в міні-календарі суцільною
+   * смугою (патерн Notion Calendar, docs/calendar.md §11.9): у тижневому
+   * перегляді це головна підказка «де я», бо сам тиждень із міні-місяця не
+   * читається — там видно лише вибраний день.
+   *
+   * Тільки `day` і `week`. Для `month` смуга накрила б майже весь міні-місяць,
+   * нічого не повідомивши (той місяць і так відкритий), а в `agenda` періоду не
+   * існує взагалі — фід курсорний.
+   *
+   * Дати — ЛОКАЛЬНІ (`parseDayKeyAsLocalDate`), а не `TZDate`: `react-day-picker`
+   * будує свої дні в зоні пристрою і порівнює через `isSameDay`, тож зонний
+   * інстант підсвітив би сусідній день (та сама грабля, що з `selected`).
+   */
+  const inViewDays: Date[] =
+    activeView === 'day' || activeView === 'week'
+      ? (() => {
+          const { from, to } = viewRange(activeView, selectedKey, viewerTimeZone, weekStartsOn);
+          return daysOfRange(from, to, viewerTimeZone).map((day) =>
+            parseDayKeyAsLocalDate(dayKey(day, viewerTimeZone)),
+          );
+        })()
+      : [];
+  const firstInView = inViewDays.at(0);
+  const lastInView = inViewDays.at(-1);
 
   const go = (view: CalendarView, date: string): void => {
     void navigate({ to: '/calendar/$view', params: { view }, search: { date } });
@@ -87,6 +116,19 @@ export function CalendarSidebar() {
             classNames={{ root: 'w-full' }}
             weekStartsOn={asWeekStart(weekStartsOn)}
             selected={parseDayKeyAsLocalDate(selectedKey)}
+            // Кастомні модифікатори RDP: смуга і два її кінці. Закруглення
+            // окремими модифікаторами, бо «перший день у смузі» — не стан дня, а
+            // його місце в періоді, і сам `inView` про це не знає
+            modifiers={{
+              inView: inViewDays,
+              ...(firstInView ? { inViewStart: [firstInView] } : {}),
+              ...(lastInView ? { inViewEnd: [lastInView] } : {}),
+            }}
+            modifiersClassNames={{
+              inView: 'rounded-none bg-calendar-in-view',
+              inViewStart: 'rounded-l-(--cell-radius)',
+              inViewEnd: 'rounded-r-(--cell-radius)',
+            }}
             onSelect={(day: Date | undefined) => {
               if (day) {
                 const month = String(day.getMonth() + 1).padStart(2, '0');

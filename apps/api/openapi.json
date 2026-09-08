@@ -2942,7 +2942,6 @@
             "nullable": true
           },
           "role": {
-            "default": "USER",
             "type": "string",
             "enum": [
               "ADMIN",
@@ -2950,7 +2949,6 @@
             ]
           },
           "locale": {
-            "default": "en",
             "type": "string",
             "enum": [
               "en"
@@ -3580,7 +3578,6 @@
         "type": "object",
         "properties": {
           "kind": {
-            "default": "ORGANIZATION",
             "type": "string",
             "enum": [
               "ORGANIZATION",
@@ -3623,7 +3620,6 @@
             "type": "string"
           },
           "locale": {
-            "default": "en",
             "type": "string",
             "enum": [
               "en"
@@ -5413,7 +5409,6 @@
             "nullable": true
           },
           "kind": {
-            "default": "MEETING",
             "type": "string",
             "enum": [
               "MEETING",
@@ -5424,7 +5419,6 @@
             ]
           },
           "visibility": {
-            "default": "DEFAULT",
             "type": "string",
             "enum": [
               "DEFAULT",
@@ -5609,7 +5603,6 @@
             "nullable": true
           },
           "locale": {
-            "default": "en",
             "type": "string",
             "enum": [
               "en"
