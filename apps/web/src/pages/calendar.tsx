@@ -358,6 +358,22 @@ export function CalendarPage() {
               >
                 <ChevronLeftIcon />
               </Button>
+              {/* Заголовок періоду стоїть МІЖ стрілками: вони керують саме ним,
+                  і поставлений збоку він змушував очі стрибати «кнопка →
+                  результат → кнопка».
+
+                  `min-w-40` — це резерв рівно під ЗВИЧАЙНИЙ підпис
+                  («September 2026»), а не під найдовший можливий. Довші
+                  випадки є — тиждень через межу місяців дає
+                  «September 2026 — October 2026», день дає
+                  «Wednesday, September 30, 2026», — і на них бокс просто
+                  РОСТЕ, розсуваючи стрілки. Резервувати ширину під них
+                  постійно означало б тримати 10rem порожнечі навколо підпису в
+                  усі інші дні року. `text-center` + `tabular-nums` лишаються:
+                  вони прибирають сіпання цифр усередині одного формату. */}
+              <h1 className="min-w-40 text-center text-base font-medium tabular-nums">
+                {formatRangeLabel(view, anchor, from, to, timeZone)}
+              </h1>
               <Button
                 variant="ghost"
                 size="icon"
@@ -370,11 +386,9 @@ export function CalendarPage() {
               </Button>
             </>
           )}
-          <h1 className="text-base font-medium">
-            {view === 'agenda'
-              ? t('toolbar.upcoming')
-              : formatRangeLabel(view, anchor, from, to, timeZone)}
-          </h1>
+          {view === 'agenda' && (
+            <h1 className="text-base font-medium">{t('toolbar.upcoming')}</h1>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -397,8 +411,9 @@ export function CalendarPage() {
               ))}
             </TabsList>
           </Tabs>
+          {/* Дефолтний розмір (36px) — рівно висота `TabsList` поруч: кнопка й
+              таби стоять в одному рядку тулбара, і `sm` робив їх різними */}
           <Button
-            size="sm"
             onClick={() => {
               openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
             }}

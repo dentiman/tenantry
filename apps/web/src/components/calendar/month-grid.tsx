@@ -144,7 +144,7 @@ export function MonthGrid({
         {weekDays.map((day) => (
           <div
             key={dayKey(day, timeZone)}
-            className="border-r py-2 text-center text-xs text-muted-foreground uppercase last:border-r-0"
+            className="border-r py-2 text-center text-[11px] font-medium text-icon last:border-r-0"
           >
             {formatWeekday(day, timeZone)}
           </div>
@@ -301,7 +301,7 @@ function MonthWeekRow({
             // Порядок важливий: «не цей місяць» перебиває підсвітку вихідних —
             // берег сітки не мусить конкурувати за увагу з її тілом
             isWeekend(day, timeZone) && 'bg-calendar-weekend',
-            day.getMonth() !== anchorMonth && 'bg-muted/30',
+            day.getMonth() !== anchorMonth && 'bg-calendar-weekend',
             // …а мішень перетягування перебиває все: поки жест триває, вона
             // єдине, що має значення
             dropColumn === index && 'bg-primary/10',

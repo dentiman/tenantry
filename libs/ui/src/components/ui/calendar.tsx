@@ -96,7 +96,12 @@ function Calendar({
         month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-muted-foreground select-none",
+          // ЛОКАЛЬНА ПРАВКА реєстру: метрика підпису знята з Notion Calendar —
+          // 10px/500 і колір рівня 600 шкали (`--icon`, у них той самий рівень
+          // обслуговує і `--text-body`, і знаки). Реєстрові 0.8rem/400 у
+          // `muted-foreground` читались як другий ряд ДАНИХ поруч із числами,
+          // а це підпис колонки
+          "flex-1 rounded-(--cell-radius) text-[10px] font-medium text-icon select-none",
           defaultClassNames.weekday
         ),
         week: cn("mt-2 flex w-full", defaultClassNames.week),
@@ -109,7 +114,10 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
+          // ЛОКАЛЬНА ПРАВКА реєстру: `aspect-square` знято — клітинка ширша за
+          // висоту (у Notion 32×28), бо смуга «відкритий тиждень» малюється
+          // саме на клітинці й мусить змикатись із сусідніми без розривів
+          "group/day relative h-(--cell-size) w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
           props.showWeekNumber
             ? "[&:nth-child(2)[data-selected=true]_button]:rounded-l-(--cell-radius)"
             : "[&:first-child[data-selected=true]_button]:rounded-l-(--cell-radius)",
@@ -125,7 +133,13 @@ function Calendar({
           defaultClassNames.range_end
         ),
         today: cn(
-          "rounded-(--cell-radius) bg-muted text-foreground data-[selected=true]:rounded-none",
+          // ЛОКАЛЬНА ПРАВКА реєстру: заливки НЕМАЄ. Реєстровий `bg-muted` —
+          // суцільний фон НА КЛІТИНЦІ, тобто на тому самому шарі, що й смуга
+          // відкритого тижня: сьогоднішній день вирізав у смузі дірку свого
+          // кольору. Заливка в цьому календарі належить ВИБОРУ (`primary`), а
+          // «сьогодні» лишається кольором цифри — воно доповнює вибір, а не
+          // конкурує з ним
+          "font-medium text-primary data-[selected=true]:text-primary-foreground",
           defaultClassNames.today
         ),
         outside: cn(
@@ -223,7 +237,15 @@ function CalendarDayButton({
         // переїжджало на інший день під час навігації. Індикатор для КЛАВІАТУРИ
         // при цьому зберігся: `:focus-visible` браузер ставить лише тоді, коли
         // фокус приїхав не від мишки
-        "relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 leading-none font-normal focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground [&>span]:text-xs [&>span]:opacity-70",
+        // ЛОКАЛЬНА ПРАВКА реєстру №2: заливка дня переїхала з САМОЇ кнопки на
+        // псевдоелемент `before:` з інсетом. Конструкція скопійована з Notion
+        // Calendar (він теж на react-day-picker): клітинка клікається на всю
+        // ширину — інакше в сітці лишались би мертві щілини між днями, — але
+        // фарбується вужчий бейдж усередині неї. Це те, що робить смугу
+        // відкритого тижня і позначку дня двома РІЗНИМИ шарами: смуга йде
+        // краями клітинок і змикається, бейдж стоїть усередині неї з відступом.
+        // Метрика їхня: клітинка 32×28, бейдж ≈27×23, радіус 6px.
+        "relative isolate z-10 flex size-auto h-(--cell-size) w-full min-w-(--cell-size) flex-col gap-1 border-0 text-[13px] leading-none font-normal before:absolute before:inset-x-[3px] before:inset-y-[2px] before:-z-10 before:rounded-sm before:transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring hover:bg-transparent hover:before:bg-accent data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-transparent data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:before:bg-primary [&>span]:text-xs [&>span]:opacity-70",
         defaultClassNames.day,
         className
       )}

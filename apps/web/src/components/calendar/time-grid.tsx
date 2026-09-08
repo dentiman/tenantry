@@ -98,6 +98,21 @@ export function TimeGrid({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const today = todayKey(timeZone);
 
+  /**
+   * Позиція індикатора «зараз» у відсотках висоти доби — або `null`, якщо
+   * сьогоднішній день не входить у показаний період. Рахується ОДИН раз і
+   * роздається обом частинам індикатора (лінії в колонках, мітці в жолобі):
+   * два незалежні `new Date()` розійшлися б на піксель у мить зміни хвилини.
+   *
+   * Знаменник береться з дня, у якому «зараз» і настає: у добу переходу на
+   * літній час у ній 1380 або 1500 хвилин, і сітка позиціонує саме у відсотках
+   * від цієї величини.
+   */
+  const todayInView = days.find((day) => dayKey(day, timeZone) === today);
+  const nowTop = todayInView
+    ? (minutesFromDayStart(new Date(), timeZone) / minutesInDay(todayInView, timeZone)) * 100
+    : null;
+
   const drag = useEventDrag(
     timeZone,
     onDragCommit ?? (() => undefined),
@@ -236,12 +251,17 @@ export function TimeGrid({
                     текстового рядка. Тому й `items-center`: вирівнювання не
                     має залежати від того, що саме лежить у комірці */}
                 <div className="flex items-center justify-center gap-1.5 py-2">
-                  <span className="text-xs text-muted-foreground uppercase">
+                  {/* Метрика підпису знята з Notion Calendar: 11px/500 кольором рівня 600
+                      шкали (`--icon` — у них той самий рівень несе і `--text-body`, і
+                      знаки), звичайним регістром. `text-xs` у `muted-foreground`
+                      капсом важив стільки ж, скільки число поруч, і шапка читалась
+                      як два рівноправні написи замість «підпис + дата» */}
+                  <span className="text-[11px] font-medium text-icon">
                     {formatWeekday(day, timeZone)}
                   </span>
                   <span
                     className={cn(
-                      'flex size-6 items-center justify-center rounded-full text-sm font-medium',
+                      'flex size-6 items-center justify-center rounded-md text-[13px] font-medium',
                       isToday && 'bg-primary text-primary-foreground',
                     )}
                   >
@@ -330,11 +350,12 @@ export function TimeGrid({
           )}
 
           {/* Жолоб годин — той самий ряд сітки, що й колонки днів */}
-          <div className="border-r">
+          <div className="relative border-r">
+            {nowTop !== null && <NowLabel top={nowTop} timeZone={timeZone} />}
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="relative border-b text-right"
+                className="relative border-b border-b-calendar-grid-line text-right"
                 style={{ height: HOUR_HEIGHT }}
               >
                 <span className="absolute -top-2 right-1.5 bg-card px-0.5 text-[11px] whitespace-nowrap text-muted-foreground">
@@ -396,7 +417,7 @@ export function TimeGrid({
                         ),
                       );
                     }}
-                    className="block w-full border-b hover:bg-calendar-day-hover"
+                    className="block w-full border-b border-b-calendar-grid-line hover:bg-calendar-day-hover"
                     style={{ height: HOUR_HEIGHT }}
                   />
                 ))}
@@ -454,7 +475,12 @@ export function TimeGrid({
                     />
                   );
                 })}
-                {key === today && <NowLine timeZone={timeZone} minutesInDay={total} />}
+                {/* Лінія «зараз» малюється в КОЖНІЙ колонці тижня, а не лише в
+                    сьогоднішній: поточний момент — горизонталь через увесь
+                    період (так у Notion Calendar і Google), і саме вона дає
+                    зрозуміти, скільки дня лишилось у сусідніх днях. Мітку часу
+                    несе жолоб — одну на весь тиждень, а не сім однакових */}
+                {nowTop !== null && <NowLine top={nowTop} />}
               </div>
             );
           })}
@@ -532,18 +558,36 @@ function DraftBox({
  * Лінія «зараз» рахується за КЛІЄНТСЬКИМ часом — і це нормально: вона показує,
  * де людина в своєму дні. Доставка нагадувань, навпаки, живе на серверному часі,
  * і це принципово (docs/calendar.md §12 п.14).
+ *
+ * Позицію рахує сторінка (`nowTop`) і роздає обом частинам індикатора: лінії в
+ * колонках і мітці в жолобі. Інакше кожна з них рахувала б `new Date()` окремо
+ * і в мить переходу хвилини вони розійшлися б на піксель.
  */
-function NowLine({ timeZone, minutesInDay: total }: { timeZone: string; minutesInDay: number }) {
-  const { t } = useTranslation('calendar');
-  const minutes = minutesFromDayStart(new Date(), timeZone);
+function NowLine({ top }: { top: number }) {
   return (
     <div
-      aria-label={t('grid.now')}
+      aria-hidden
       className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-destructive"
-      style={{ top: `${String((minutes / total) * 100)}%` }}
+      style={{ top: `${String(top)}%` }}
+    />
+  );
+}
+
+/**
+ * Мітка поточного часу — у жолобі, ОДНА на весь тиждень (патерн Notion
+ * Calendar). Вона ж несе `aria-label`: сім однакових ліній із підписом
+ * «зараз» скрінрідер зачитав би сім разів.
+ */
+function NowLabel({ top, timeZone }: { top: number; timeZone: string }) {
+  const { t } = useTranslation('calendar');
+  return (
+    <span
+      aria-label={t('grid.now')}
+      className="pointer-events-none absolute right-1 z-20 -translate-y-1/2 rounded-sm bg-destructive px-1 py-px text-[11px] leading-tight font-medium text-destructive-foreground"
+      style={{ top: `${String(top)}%` }}
     >
-      <span className="absolute -top-1 -left-1 size-2 rounded-full bg-destructive" />
-    </div>
+      {formatTime(new Date(), timeZone)}
+    </span>
   );
 }
 
