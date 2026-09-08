@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Field, FieldDescription, FieldLabel } from '@saas-skeleton/ui/components/ui/field';
 import { Input } from '@saas-skeleton/ui/components/ui/input';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { useAccountGetProfile } from '../../api/generated/api';
 import { ContentSection } from '../../components/section/content-section';
@@ -28,9 +28,10 @@ export function UserSettingsAccountPage() {
   const { data, isPending, isError } = useAccountGetProfile();
 
   return (
-    <ContentSection title={t('account.title')} description={t('account.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/user-settings' }, { label: t('account.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/user-settings' }, { label: t('account.title') }]}
+        subtitle={t('account.description')}
       />
       <SettingsStatus isPending={isPending} isError={isError || !data}>
         {data && (

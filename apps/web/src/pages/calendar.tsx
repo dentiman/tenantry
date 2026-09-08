@@ -17,7 +17,7 @@ import {
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
-import { PageBreadcrumbs, type Crumb } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import {
@@ -323,16 +323,55 @@ export function CalendarPage() {
     }
   });
 
-  const crumbs: Crumb[] = [{ label: t('title') }];
   const days = daysOfRange(from, to, timeZone);
   const anchorMonth = parseDayKey(anchor, timeZone).getMonth();
 
   return (
     <div className="flex flex-col gap-4">
-      <PageBreadcrumbs items={crumbs} />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      {/* Тулбар періоду живе В ХЕДЕРІ шела, а не над сіткою (2026-09-08).
+          Календар — єдина сторінка, чия ліва зона хедера не крихти: «де я» тут
+          виражає не назва розділу (вона й так стоїть у колонці area), а ПЕРІОД,
+          яким ці ж кнопки й керують. Портал лишає тулбар дитиною сторінки, тож
+          `goto` і `openDraft` дістаються до її стану без підняття вгору */}
+      <PageHeader
+        label="CalendarPage"
+        actions={
+          <>
+            {/* Таби — ті самі, що на картці кастомера (Overview | Contacts):
+                перемикач виглядів це РОЗДІЛИ одного екрана, а не набір
+                незалежних перемикачів, яким був `ToggleGroup`.
+                Контрольований URL-ом: `TabsContent` тут немає навмисно — сітку
+                малює сторінка нижче, бо вона важка і залежить від даних вікна */}
+            <Tabs
+              value={view}
+              onValueChange={(next) => {
+                goto(next as CalendarView, anchor);
+              }}
+            >
+              <TabsList size="sm">
+                {CALENDAR_VIEWS.map((item) => (
+                  <TabsTrigger key={item} value={item}>
+                    {t(`view.${item}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {/* `sm` (32px), а не дефолтні 36: у хедері шела кнопка стоїть в
+                одному ряду з дзвінком і перемикачем теми, і повна метрика
+                контрола робила б її на голову вищою за сусідів */}
+            <Button
+              size="sm"
+              onClick={() => {
+                openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
+              }}
+            >
+              <PlusIcon />
+              {t('toolbar.create')}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-1">
           {/* «Today» і стрілки керують ПЕРІОДОМ, а періоду в агенді немає:
               фід курсорний і завжди починається від «зараз», тож у цьому
               перегляді кнопки не робили нічого (docs/calendar.md §11.8).
@@ -350,7 +389,7 @@ export function CalendarPage() {
               </Button>
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 aria-label={t('toolbar.previous')}
                 onClick={() => {
                   goto(view, shiftAnchor(view, anchor, timeZone, -1));
@@ -371,12 +410,12 @@ export function CalendarPage() {
                   постійно означало б тримати 10rem порожнечі навколо підпису в
                   усі інші дні року. `text-center` + `tabular-nums` лишаються:
                   вони прибирають сіпання цифр усередині одного формату. */}
-              <h1 className="min-w-40 text-center text-base font-medium tabular-nums">
+              <h1 className="min-w-40 text-center text-sm font-medium tabular-nums">
                 {formatRangeLabel(view, anchor, from, to, timeZone)}
               </h1>
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 aria-label={t('toolbar.next')}
                 onClick={() => {
                   goto(view, shiftAnchor(view, anchor, timeZone, 1));
@@ -386,43 +425,9 @@ export function CalendarPage() {
               </Button>
             </>
           )}
-          {view === 'agenda' && (
-            <h1 className="text-base font-medium">{t('toolbar.upcoming')}</h1>
-          )}
+          {view === 'agenda' && <h1 className="text-sm font-medium">{t('toolbar.upcoming')}</h1>}
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* Таби — ті самі, що на картці кастомера (Overview | Contacts):
-              перемикач виглядів це РОЗДІЛИ одного екрана, а не набір
-              незалежних перемикачів, яким був `ToggleGroup`.
-              Контрольований URL-ом: `TabsContent` тут немає навмисно — сітку
-              малює сторінка нижче, бо вона важка і залежить від даних вікна */}
-          <Tabs
-            value={view}
-            onValueChange={(next) => {
-              goto(next as CalendarView, anchor);
-            }}
-          >
-            <TabsList>
-              {CALENDAR_VIEWS.map((item) => (
-                <TabsTrigger key={item} value={item}>
-                  {t(`view.${item}`)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          {/* Дефолтний розмір (36px) — рівно висота `TabsList` поруч: кнопка й
-              таби стоять в одному рядку тулбара, і `sm` робив їх різними */}
-          <Button
-            onClick={() => {
-              openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
-            }}
-          >
-            <PlusIcon />
-            {t('toolbar.create')}
-          </Button>
-        </div>
-      </div>
+      </PageHeader>
 
       {isError && (
         <Alert variant="destructive">
@@ -437,10 +442,10 @@ export function CalendarPage() {
 
           Скелет рівно на висоту сітки, а не спінер по центру: інакше розкладка
           стрибає на кожному переході між тижнями */}
-      {/* 10rem = хедер шела + тулбар + крихти + нижній відступ. Було 15rem,
-          доки над сіткою стояв банер зони — після його переїзду в колонку
-          (2026-09-08) знизу лишалась порожня смуга на сотню пікселів */}
-      <div className="flex h-[calc(100vh-10rem)] min-h-[28rem] flex-col">
+      {/* 6rem = хедер шела (3.5) + верхній (1) і нижній (1.5) відступи контенту.
+          Було 10rem, доки над сіткою стояв власний тулбар — після його переїзду
+          в хедер (2026-09-08) знизу лишалася б порожня смуга на 64px */}
+      <div className="flex h-[calc(100vh-6rem)] min-h-[28rem] flex-col">
       {isPending && view !== 'agenda' ? (
         <Skeleton className="min-h-0 flex-1 rounded-lg" />
       ) : view === 'agenda' ? (

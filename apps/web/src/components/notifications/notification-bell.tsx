@@ -34,9 +34,12 @@ export function NotificationBell() {
 
   return (
     <>
+      {/* icon-sm (32px) — метрика хедера шела: дзвінок стоїть в одному ряду з
+          перемикачем теми і зоною дій сторінки, і стокові 36px робили його
+          єдиним вищим елементом рядка */}
       <Button
         variant="ghost"
-        size="icon"
+        size="icon-sm"
         className="relative"
         aria-label={count > 0 ? t('unreadBadge', { count }) : t('open')}
         onClick={openPanel}

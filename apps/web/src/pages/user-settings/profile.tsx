@@ -16,7 +16,7 @@ import { Progress, ProgressLabel, ProgressValue } from '@saas-skeleton/ui/compon
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import {
   getAccountGetProfileQueryKey,
@@ -38,9 +38,10 @@ export function UserSettingsProfilePage() {
   const { data, isPending, isError } = useAccountGetProfile();
 
   return (
-    <ContentSection title={t('profile.title')} description={t('profile.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/user-settings' }, { label: t('profile.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/user-settings' }, { label: t('profile.title') }]}
+        subtitle={t('profile.description')}
       />
       <SettingsStatus isPending={isPending} isError={isError || !data}>
         {data && (

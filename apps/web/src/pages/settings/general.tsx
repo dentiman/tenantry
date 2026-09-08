@@ -7,7 +7,7 @@ import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { GeneralSettingsSchema, type GeneralSettings } from '@saas-skeleton/contracts';
 import {
   getSettingsBootstrapQueryKey,
@@ -56,9 +56,10 @@ export function SettingsGeneralPage() {
   const localeOptions = [{ id: 'en', label: t('general.locales.en') }];
 
   return (
-    <ContentSection title={t('general.title')} description={t('general.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/settings' }, { label: t('general.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/settings' }, { label: t('general.title') }]}
+        subtitle={t('general.description')}
       />
       {isLoading || !data ? (
         <Spinner aria-label={t('general.loading')} />

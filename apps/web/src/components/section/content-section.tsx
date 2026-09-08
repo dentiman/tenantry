@@ -1,26 +1,22 @@
-import { Separator } from '@saas-skeleton/ui/components/ui/separator';
+import type { ReactNode } from 'react';
 
 /**
- * Секція сторінки налаштувань: заголовок, опис, лінійка, вміст. Форма шаблону
- * satnaing/shadcn-admin (`content-section.tsx`) — плоска, без `Card`: картка
- * всередині двоколонкової розкладки давала б рамку в рамці.
+ * Секція сторінки налаштувань — тепер лише метрика розділу.
+ *
+ * Заголовок і опис звідси знято 2026-09-08: вони дублювали крихти в хедері
+ * («Settings › General» угорі й «General» першим рядком контенту — та сама
+ * дуплікація, що прибрана зі списків). Тепер назва і пояснення живуть у
+ * `PageHeader`, а контент починається одразу з форми. Разом із заголовком пішла
+ * й лінійка `Separator`: вона відділяла його від вмісту, а відділяти більше
+ * нічого.
+ *
+ * Компонент лишається, хоч і звівся до ширин: метрика розділу описана в одному
+ * місці, а не розповзлась по девʼятьох сторінках налаштувань. Форма шаблону —
+ * satnaing/shadcn-admin (`content-section.tsx`).
  */
-export function ContentSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+export function ContentSection({ children }: { children: ReactNode }) {
   return (
     <section className="flex w-full max-w-2xl flex-col">
-      <div className="flex-none">
-        <h2 className="text-lg font-medium">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Separator className="my-4 flex-none" />
       <div className="-mx-1 flex-1 px-1 py-1 lg:max-w-xl">{children}</div>
     </section>
   );

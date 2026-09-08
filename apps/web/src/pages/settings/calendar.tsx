@@ -8,7 +8,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from '@saas-skeleton/
 import { Input } from '@saas-skeleton/ui/components/ui/input';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import {
   CALENDAR_SETTINGS_DEFAULTS,
   CalendarSettingsSchema,
@@ -72,9 +72,10 @@ export function SettingsCalendarPage() {
   });
 
   return (
-    <ContentSection title={t('calendar.title')} description={t('calendar.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/settings' }, { label: t('calendar.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/settings' }, { label: t('calendar.title') }]}
+        subtitle={t('calendar.description')}
       />
       {isLoading || !data ? (
         <Spinner aria-label={t('calendar.loading')} />

@@ -17,7 +17,7 @@ import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { useAccountChangePassword, useAccountRevokeAllSessions } from '../../api/generated/api';
 import { ContentSection } from '../../components/section/content-section';
 import { applyServerError, FormPasswordField } from '../../components/form';
@@ -38,9 +38,10 @@ export function UserSettingsSecurityPage() {
   const { t } = useTranslation('user-settings');
 
   return (
-    <ContentSection title={t('security.title')} description={t('security.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/user-settings' }, { label: t('security.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/user-settings' }, { label: t('security.title') }]}
+        subtitle={t('security.description')}
       />
       <div className="flex flex-col gap-8">
         <PasswordForm />

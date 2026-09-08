@@ -75,7 +75,7 @@ CLI для нових примітивів**: після кожного `add` п
 означає «комбінація клавіш».
 
 Хуки: `hooks/use-mobile.ts`. Власні (не з реєстру): `theme-switcher.tsx`, `user-identity.tsx`,
-`page-header-slot.tsx`, `page-breadcrumbs.tsx`, `not-found-page.tsx`, `components/data-grid/**`,
+`page-header-slot.tsx`, `page-breadcrumbs.tsx`, `page-header.tsx`, `not-found-page.tsx`, `components/data-grid/**`,
 `components/form/**`.
 
 `not-found-page.tsx` — сторінка неіснуючого роуту обох фронтів. Окремого 404-блока в `@shadcn`
@@ -378,7 +378,7 @@ navigation і опційні лінії вкладеності. Репозито
 | Розкладка карток `/users/$userId` і `/tenants/$tenantId`                             | Tailwind Plus → Detail screens                                                             | `pages/user-detail.tsx`, `pages/tenant-detail.tsx`       |
 | Палітра slate, білі поверхні, `--radius`, стокові тіні                               | [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin) (`src/styles/theme.css`) | `libs/ui/src/styles.css`, UI-4                           |
 | Розкладка сторінок списків (шапка + рядок тулбара + `Reset`)                         | там само (`src/features/users`, `src/components/data-table/toolbar.tsx`)                   | `data-grid/filters.tsx`, сторінки списків, UI-6          |
-| Хлібні крихти в хедері                                                               | `@shadcn/breadcrumb` + власний портал                                                      | `page-header-slot.tsx`, `page-breadcrumbs.tsx`, UI-5     |
+| Хлібні крихти в хедері                                                               | `@shadcn/breadcrumb` + власний портал                                                      | `page-header-slot.tsx`, `page-breadcrumbs.tsx`, `page-header.tsx`, UI-5 |
 | Синій `--primary`/`--ring`, метрика контролів 36px                                   | наші свідомі відхилення від стоку (`ui-stack.md` §3)                                       | `ui/button.tsx`, поля                                    |
 | Ширина попапа `min-w-(--anchor-width)`, глушник autofill, скидання ✕ у `type=search` | `@coss` — точкові прийоми, не файли                                                        | `ui/select.tsx`, `ui/input.tsx`, UI-7                    |
 | Розкладка розділу `/settings` (липка бічна навігація + `ContentSection`)             | там само (`src/features/settings`)                                                         | `components/settings/*`, `pages/settings/*` (2026-08-29) |

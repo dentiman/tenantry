@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { ContentSection } from '../../components/section/content-section';
 import { NotificationPreferences } from '../../components/notifications/notification-preferences';
 
@@ -12,9 +12,10 @@ export function UserSettingsNotificationsPage() {
   const { t } = useTranslation('user-settings');
 
   return (
-    <ContentSection title={t('notifications.title')} description={t('notifications.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/user-settings' }, { label: t('notifications.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/user-settings' }, { label: t('notifications.title') }]}
+        subtitle={t('notifications.description')}
       />
       <NotificationPreferences />
     </ContentSection>

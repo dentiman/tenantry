@@ -1,4 +1,4 @@
-import { createContext, use, useState, type ReactNode } from 'react';
+import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -32,15 +32,53 @@ import { createPortal } from 'react-dom';
  *
  * Два окремі контексти навмисно: сеттер стабільний (не спричиняє зайвих ререндерів
  * споживачів), а вузол міняється рівно один раз — при монтуванні хедера.
+ *
+ * ── Ціна порталу: слот один, а порталів у нього може бути скільки завгодно ────
+ * Два `PageHeaderPortal` на одному екрані промалюються В ОДИН вузол ПОРУЧ — це
+ * не помилка React, а рівно те, про що його попросили. Симптом («крихти
+ * продубльовані», «дві кнопки New») видно тільки очима, тому провайдер тримає
+ * лічильник активних порталів: другий кричить у консоль із іменем. Контракт —
+ * рівно один `PageHeader`/`PageBreadcrumbs` на екран.
+ *
+ * Попередження НЕ загороджене прапорцем збірки: `import.meta.env` притягнув би
+ * у source-only пакет типи vite, а дубль у хедері лишається багом і в проді.
  */
 const HeaderSlotNodeContext = createContext<HTMLElement | null>(null);
 const HeaderSlotRefContext = createContext<((node: HTMLElement | null) => void) | null>(null);
+/** Реєстрація активних порталів — потрібна лише для dev-попередження про дубль */
+const HeaderSlotRegistryContext = createContext<((label: string) => () => void) | null>(null);
 
 export function PageHeaderSlotProvider({ children }: { children: ReactNode }) {
   const [node, setNode] = useState<HTMLElement | null>(null);
+  const active = useRef<string[]>([]);
+
+  // Мемо, а не інлайн: реєстратор їде контекстом у КОЖЕН портал, і нова функція
+  // на кожен рендер провайдера перезапускала б їхні ефекти
+  const register = useMemo(
+    () => (label: string) => {
+      active.current.push(label);
+      if (active.current.length > 1) {
+        console.error(
+          `[PageHeaderSlot] У хедер одночасно рендерять ${String(active.current.length)} портали ` +
+            `(${active.current.join(', ')}). Вони промалюються ПОРУЧ в одному вузлі. ` +
+            'На екран має бути рівно один PageHeader або PageBreadcrumbs.',
+        );
+      }
+      return () => {
+        const index = active.current.indexOf(label);
+        if (index !== -1) {
+          active.current.splice(index, 1);
+        }
+      };
+    },
+    [],
+  );
+
   return (
     <HeaderSlotRefContext value={setNode}>
-      <HeaderSlotNodeContext value={node}>{children}</HeaderSlotNodeContext>
+      <HeaderSlotRegistryContext value={register}>
+        <HeaderSlotNodeContext value={node}>{children}</HeaderSlotNodeContext>
+      </HeaderSlotRegistryContext>
     </HeaderSlotRefContext>
   );
 }
@@ -51,8 +89,22 @@ export function PageHeaderSlot({ className }: { className?: string }) {
   return <div ref={setNode} className={className} />;
 }
 
-/** Викликається зі сторінки: усе, що всередині, зʼявиться в хедері */
-export function PageHeaderPortal({ children }: { children: ReactNode }) {
+/**
+ * Викликається зі сторінки: усе, що всередині, зʼявиться в хедері.
+ *
+ * `label` іде тільки в попередження про другий портал — назвати сторінку
+ * дешевше, ніж потім шукати, хто саме продублював крихти.
+ */
+export function PageHeaderPortal({ children, label }: { children: ReactNode; label?: string }) {
   const node = use(HeaderSlotNodeContext);
+  const register = use(HeaderSlotRegistryContext);
+
+  useEffect(() => {
+    if (!register) {
+      return;
+    }
+    return register(label ?? 'PageHeaderPortal');
+  }, [register, label]);
+
   return node ? createPortal(children, node) : null;
 }

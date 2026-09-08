@@ -15,7 +15,7 @@ import type { CustomerListResponseDtoOutputItemsItem } from '../api/generated/mo
 import { CreateCustomerModal } from '../components/create-customer-modal';
 import { CustomerIdentity } from '../components/customer-identity';
 import { formatDate } from '@saas-skeleton/ui/lib/format';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import type { CustomersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
@@ -238,15 +238,12 @@ export function CustomersPage() {
     <Grid.Root
       useListQuery={(params, gridOptions) => useCustomersFindAll(params, { query: gridOptions })}
     >
-      <PageBreadcrumbs items={[{ label: t('title') }]} />
-
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-        </div>
-        <CreateCustomerModal />
-      </div>
+      <PageHeader
+        label="CustomersPage"
+        breadcrumbs={[{ label: t('title') }]}
+        subtitle={t('subtitle')}
+        actions={<CreateCustomerModal />}
+      />
 
       <Grid.Toolbar
         filters={filters}

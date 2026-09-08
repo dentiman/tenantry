@@ -8,7 +8,7 @@ import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import {
   SetNextNumberSchema,
   UpdateNumberSeriesSchema,
@@ -164,9 +164,10 @@ export function SettingsNumberingPage() {
   const { data, isLoading } = useNumberingList();
 
   return (
-    <ContentSection title={t('numbering.title')} description={t('numbering.description')}>
-      <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/settings' }, { label: t('numbering.title') }]}
+    <ContentSection>
+      <PageHeader
+        breadcrumbs={[{ label: t('title'), to: '/settings' }, { label: t('numbering.title') }]}
+        subtitle={t('numbering.description')}
       />
       {isLoading || !data ? (
         <Spinner aria-label={t('numbering.loading')} />

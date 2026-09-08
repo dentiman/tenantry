@@ -76,7 +76,9 @@ export function CreateUserModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={close}>
-      <DialogTrigger render={<Button />}>
+      {/* size="sm" — метрика ЗОНИ ДІЙ хедера: там кнопка стоїть в одному ряду з
+          дзвінком і перемикачем теми, і повні 36px робили б її вищою за сусідів */}
+      <DialogTrigger render={<Button size="sm" />}>
         {t('create.trigger')}
         <UserPlus />
       </DialogTrigger>

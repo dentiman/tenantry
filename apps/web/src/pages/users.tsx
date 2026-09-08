@@ -25,7 +25,7 @@ import { LastSeen } from '../components/last-seen';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { usePresence } from '../realtime/use-presence';
 import { formatDate } from '@saas-skeleton/ui/lib/format';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { CountryFlag } from '../components/form/phone/country-flag';
 import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
@@ -288,18 +288,15 @@ export function UsersPage() {
       useListQuery={(params, gridOptions) => useUsersFindAll(params, { query: gridOptions })}
       selection
     >
-      <PageBreadcrumbs items={[{ label: t('title') }]} />
-
-      {/* Розкладка списку — як у satnaing/shadcn-admin (features/users/index.tsx):
-          заголовок із підзаголовком і головна дія в одному рядку, а тулбар пошуку
-          й фільтрів — окремим рядком безпосередньо над таблицею */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-        </div>
-        <CreateUserModal />
-      </div>
+      {/* Ідентичність сторінки живе ТІЛЬКИ в хедері: заголовок і головна дія
+          переїхали туди, а контент починається одразу з тулбара фільтрів —
+          він належить таблиці, а не сторінці (див. PageHeader) */}
+      <PageHeader
+        label="UsersPage"
+        breadcrumbs={[{ label: t('title') }]}
+        subtitle={t('subtitle')}
+        actions={<CreateUserModal />}
+      />
 
       <Grid.Toolbar
         filters={filters}

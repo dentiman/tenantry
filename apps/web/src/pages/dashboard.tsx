@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { useAuthMe } from '../api/generated/api';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { formatDate } from '@saas-skeleton/ui/lib/format';
 
 export function DashboardPage() {
@@ -25,8 +25,7 @@ export function DashboardPage() {
 
   return (
     <div>
-      <PageBreadcrumbs items={[{ label: t('title') }]} />
-      <h1 className="mb-6 text-2xl font-semibold text-foreground">{t('title')}</h1>
+      <PageHeader label="DashboardPage" breadcrumbs={[{ label: t('title') }]} />
       <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((card) => (
           <Card key={card.label}>
