@@ -327,7 +327,10 @@ export function CalendarPage() {
   const anchorMonth = parseDayKey(anchor, timeZone).getMonth();
 
   return (
-    <div className="flex flex-col gap-4">
+    // Роут у режимі `bleed` (див. StaticDataRouteOption): полів шела немає, і
+    // сторінка роздає їх сама — сітці не дає жодних, бо вона полотно, а Alert
+    // і agenda отримують власні
+    <div className="flex flex-col">
       {/* Тулбар періоду живе В ХЕДЕРІ шела, а не над сіткою (2026-09-08).
           Календар — єдина сторінка, чия ліва зона хедера не крихти: «де я» тут
           виражає не назва розділу (вона й так стоїть у колонці area), а ПЕРІОД,
@@ -430,7 +433,7 @@ export function CalendarPage() {
       </PageHeader>
 
       {isError && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mx-6 mt-4">
           <AlertTitle>{t('loadError')}</AlertTitle>
         </Alert>
       )}
@@ -442,56 +445,60 @@ export function CalendarPage() {
 
           Скелет рівно на висоту сітки, а не спінер по центру: інакше розкладка
           стрибає на кожному переході між тижнями */}
-      {/* 6rem = хедер шела (3.5) + верхній (1) і нижній (1.5) відступи контенту.
-          Було 10rem, доки над сіткою стояв власний тулбар — після його переїзду
-          в хедер (2026-09-08) знизу лишалася б порожня смуга на 64px */}
-      <div className="flex h-[calc(100vh-6rem)] min-h-[28rem] flex-col">
-      {isPending && view !== 'agenda' ? (
-        <Skeleton className="min-h-0 flex-1 rounded-lg" />
-      ) : view === 'agenda' ? (
-        <AgendaList
-          timeZone={timeZone}
-          onSelect={(event) => {
-            setTarget({ event });
-          }}
-          onCreate={() => {
-            openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
-          }}
-          onIntent={applyIntent}
-        />
-      ) : view === 'month' ? (
-        <MonthGrid
-          days={days}
-          events={events}
-          timeZone={timeZone}
-          anchorMonth={anchorMonth}
-          onSelect={(event) => {
-            setTarget({ event });
-          }}
-          onCreate={openDraft}
-          onIntent={applyIntent}
-          onDragCommit={applyDragCommit}
-          onShowDay={(key) => {
-            goto('day', key);
-          }}
-        />
-      ) : (
-        <TimeGrid
-          days={days}
-          events={events}
-          timeZone={timeZone}
-          workDayStart={preferences.workDayStart}
-          onSelect={(event) => {
-            setTarget({ event });
-          }}
-          onCreate={openDraft}
-          onDragCommit={applyDragCommit}
-          onEdgeNavigate={(direction) => {
-            goto(view, shiftAnchor(view, anchor, timeZone, direction));
-          }}
-          onIntent={applyIntent}
-        />
-      )}
+      {/* 3.5rem = рівно хедер шела: відступів контенту більше немає (`bleed`),
+          тож сітка займає весь залишок вікна. Було 10rem із власним тулбаром і
+          6rem — після його переїзду в хедер (обидва того ж дня, 2026-09-08) */}
+      <div className="flex h-[calc(100vh-3.5rem)] min-h-[28rem] flex-col">
+        {isPending && view !== 'agenda' ? (
+          <Skeleton className="min-h-0 flex-1 rounded-none" />
+        ) : view === 'agenda' ? (
+          // Агенда — СПИСОК карток, а не сітка: полотном вона не є, тож поля їй
+          // потрібні так само, як будь-якому списку
+          <div className="flex min-h-0 flex-1 flex-col px-6 pt-4 pb-6">
+            <AgendaList
+              timeZone={timeZone}
+              onSelect={(event) => {
+                setTarget({ event });
+              }}
+              onCreate={() => {
+                openDraft(defaultCreateStart(anchor, timeZone, preferences.workDayStart));
+              }}
+              onIntent={applyIntent}
+            />
+          </div>
+        ) : view === 'month' ? (
+          <MonthGrid
+            days={days}
+            events={events}
+            timeZone={timeZone}
+            anchorMonth={anchorMonth}
+            onSelect={(event) => {
+              setTarget({ event });
+            }}
+            onCreate={openDraft}
+            onIntent={applyIntent}
+            onDragCommit={applyDragCommit}
+            onShowDay={(key) => {
+              goto('day', key);
+            }}
+          />
+        ) : (
+          <TimeGrid
+            days={days}
+            events={events}
+            timeZone={timeZone}
+            workDayStart={preferences.workDayStart}
+            onSelect={(event) => {
+              setTarget({ event });
+            }}
+            onCreate={openDraft}
+            onDragCommit={applyDragCommit}
+            onEdgeNavigate={(direction) => {
+              goto(view, shiftAnchor(view, anchor, timeZone, direction));
+            }}
+            onIntent={applyIntent}
+          />
+        )}
       </div>
 
       {/* Підтвердження видалення живе на СТОРІНЦІ, поруч із обробником інтентів:

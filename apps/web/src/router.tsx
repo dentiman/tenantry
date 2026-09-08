@@ -173,6 +173,7 @@ const usersRoute = createRoute({
   path: 'users',
   validateSearch: (search) => UsersSearchSchema.parse(search),
   component: UsersPage,
+  staticData: { layout: 'bleed' },
 });
 
 // Той самий контракт, що в /users: стан списку живе в URL, невалідні значення
@@ -195,6 +196,7 @@ const customersRoute = createRoute({
   path: 'customers',
   validateSearch: (search) => CustomersSearchSchema.parse(search),
   component: CustomersPage,
+  staticData: { layout: 'bleed' },
 });
 
 /** Картка кастомера: окремий роут — на неї дають посилання в листі й у тікеті */
@@ -255,6 +257,7 @@ const calendarViewRoute = createRoute({
     }
   },
   component: CalendarPage,
+  staticData: { layout: 'bleed' },
 });
 
 /**
@@ -265,6 +268,7 @@ const calendarEventRoute = createRoute({
   getParentRoute: () => calendarRoute,
   path: 'events/$eventId',
   component: CalendarPage,
+  staticData: { layout: 'bleed' },
 });
 
 /**
@@ -431,5 +435,23 @@ export const router = createRouter({ routeTree });
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
+  }
+
+  /**
+   * Розкладка контенту — властивість РОУТУ, а не сторінки.
+   *
+   * `padded` (дефолт) — відступи шела: сторінка компонує картки й форми в
+   * колонку, і поля навколо них потрібні. `bleed` — відступів немає зовсім:
+   * сторінка сама є одним великим полотном (таблиця гріда, сітка календаря),
+   * яке має впиратись у краї вікна, і власні поля вона роздає собі сама.
+   *
+   * Чому staticData, а не проп сторінки чи ще один портал: це СТАТИЧНА
+   * властивість екрана, вона не залежить від даних і не міняється в часі, тож
+   * її місце поруч із роутом — і в `routeTree` видно всі винятки одним
+   * поглядом. Портал тут був би зайвий: шел нічого не рендерить від сторінки,
+   * він лише вибирає клас контейнера.
+   */
+  interface StaticDataRouteOption {
+    layout?: 'padded' | 'bleed';
   }
 }

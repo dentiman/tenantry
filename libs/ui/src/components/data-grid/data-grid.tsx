@@ -10,6 +10,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { cn } from '../../lib/utils';
 import { pageItems } from '../../lib/page-items';
 import type { DataGridQueryResult } from './data-grid-query';
 import type { DataGridSelectionState } from './use-data-grid-selection';
@@ -85,11 +86,15 @@ interface DataGridProps<T extends { id: string }> {
   pageSizeOptions?: number[] | false;
 
   messages?: DataGridMessages;
-  /** bordered — legacy wrapper; card — flush table with inset separators on Card */
+  /**
+   * bordered — legacy wrapper; card — таблиця на `Card` з inset-розділювачами;
+   * flush — БЕЗ поверхні взагалі: таблиця сама є полотном сторінки (роут у
+   * режимі `bleed`) і впирається в краї вікна.
+   */
   surface?: DataGridSurface;
 }
 
-export type DataGridSurface = 'bordered' | 'card';
+export type DataGridSurface = 'bordered' | 'card' | 'flush';
 
 function DataGridTableSurface({
   children,
@@ -104,6 +109,13 @@ function DataGridTableSurface({
         <CardContent className="px-0">{children}</CardContent>
       </Card>
     );
+  }
+
+  if (surface === 'flush') {
+    // Ні рамки, ні фону — але крайні комірки отримують поле шела (24px), інакше
+    // текст першої колонки читався б приклеєним до краю вікна, а вміст таблиці
+    // розʼїхався б із крихтами хедера, які стоять рівно на цій вертикалі
+    return <div className="[&_tr>*:first-child]:pl-6 [&_tr>*:last-child]:pr-6">{children}</div>;
   }
 
   return <div className="overflow-hidden rounded-xl border border-border bg-card">{children}</div>;
@@ -368,7 +380,13 @@ export function DataGrid<T extends { id: string }>({
         </DataGridTableSurface>
 
         {/* Футер живе поза <table>: у shadcn таблиця — чиста розмітка, tfoot тут не при ділі */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div
+          className={cn(
+            'mt-3 flex flex-wrap items-center justify-between gap-3',
+            // У flush поля роздає сам грід — контейнер сторінки їх не має
+            surface === 'flush' && 'px-6 pb-6',
+          )}
+        >
           <span className="text-sm text-muted-foreground">{paginationSummary}</span>
           <Pagination className="mx-0 w-auto justify-end">
             <PaginationContent>

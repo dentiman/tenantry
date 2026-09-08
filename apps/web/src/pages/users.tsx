@@ -298,26 +298,37 @@ export function UsersPage() {
         actions={<CreateUserModal />}
       />
 
-      <Grid.Toolbar
-        filters={filters}
-        totalLabel={t('toolbar.total')}
-        selectedLabel={t('toolbar.selected')}
-        size="sm"
-        className="mb-3"
-        selectionActions={() => (
-          // Демонстраційний slot майбутніх bulk actions; свідомо disabled, доки
-          // немає окремого batch endpoint і confirm-flow.
-          <Button size="sm" disabled>
-            {t('toolbar.bulkAction')}
-          </Button>
-        )}
-      />
+      {/* Смуга на всю ширину, без відступів і скруглень: у режимі `bleed`
+          тулбар — не плитка НАД полотном, а його верхня стрічка. Поля тримає
+          сам `surface="band"`, тому обгортки з `px-6` тут немає.
+
+          Лінія знизу — на ОБГОРТЦІ, а не на тулбарі: вона розділяє смугу і
+          таблицю, тобто належить розкладці сторінки, а не компоненту фільтрів
+          (той самий `border-border`, що й межі шела — вони мусять читатись як
+          одна система ліній). Зверху лінії не малюємо: там уже стоїть `border-b`
+          хедера, і друга дала б подвійну */}
+      <div className="border-b border-border">
+        <Grid.Toolbar
+          surface="band"
+          filters={filters}
+          totalLabel={t('toolbar.total')}
+          selectedLabel={t('toolbar.selected')}
+          size="sm"
+          selectionActions={() => (
+            // Демонстраційний slot майбутніх bulk actions; свідомо disabled, доки
+            // немає окремого batch endpoint і confirm-flow.
+            <Button size="sm" disabled>
+              {t('toolbar.bulkAction')}
+            </Button>
+          )}
+        />
+      </div>
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
-        surface="card"
+        surface="flush"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />
 

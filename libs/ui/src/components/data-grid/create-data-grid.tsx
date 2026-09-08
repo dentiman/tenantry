@@ -5,7 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { DataGrid } from './data-grid';
 import type { DataGridSurface } from './data-grid';
 import { DataGridFilters, DataGridToolbar, defineFilters } from './filters';
-import type { DataGridFilterDef, DataGridFiltersSize, DataGridFiltersSurface } from './filters';
+import type {
+  DataGridFilterDef,
+  DataGridFiltersSize,
+  DataGridFiltersSurface,
+  DataGridToolbarSurface,
+} from './filters';
 import { gridQueryOptions, toGridQueryResult } from './data-grid-query';
 import type { DataGridListResponse, DataGridQueryResult } from './data-grid-query';
 import { useDataGridFilters } from './use-data-grid-filters';
@@ -77,6 +82,8 @@ interface DataGridToolbarSlotProps<TFilters extends DataGridFiltersBase, TItem> 
   selectedLabel: string;
   selectionActions?: (selection: DataGridSelectionState<TItem>) => ReactNode;
   size?: DataGridFiltersSize;
+  /** panel — плитка над таблицею (дефолт); band — смуга на всю ширину */
+  surface?: DataGridToolbarSurface;
   className?: string;
 }
 
@@ -194,6 +201,7 @@ export function createDataGrid<
     selectedLabel,
     selectionActions,
     size,
+    surface,
     className,
   }: DataGridToolbarSlotProps<TFilters, TItem>) {
     const { grid, list, selection } = useGridContext();
@@ -211,6 +219,7 @@ export function createDataGrid<
         selectionActions={selection ? selectionActions?.(selection) : undefined}
         onClearSelection={selection?.clear}
         size={size}
+        surface={surface}
         className={className}
       />
     );

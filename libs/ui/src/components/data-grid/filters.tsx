@@ -109,6 +109,12 @@ interface DataGridFiltersProps<TFilters extends DataGridFiltersBase> {
   className?: string;
 }
 
+/**
+ * `panel` — плаваюча плитка над таблицею (дефолт); `band` — смуга на всю ширину
+ * без скруглень, для сторінок у режимі `bleed`, де таблиця сама є полотном.
+ */
+export type DataGridToolbarSurface = 'panel' | 'band';
+
 interface DataGridToolbarProps<TFilters extends DataGridFiltersBase> {
   grid: DataGridFiltersState<TFilters>;
   filters: DataGridFilterDef<TFilters>[];
@@ -119,6 +125,7 @@ interface DataGridToolbarProps<TFilters extends DataGridFiltersBase> {
   selectionActions?: ReactNode;
   onClearSelection?: () => void;
   size?: DataGridFiltersSize;
+  surface?: DataGridToolbarSurface;
   className?: string;
 }
 
@@ -175,6 +182,7 @@ export function DataGridToolbar<TFilters extends DataGridFiltersBase>({
   selectionActions,
   onClearSelection,
   size = 'sm',
+  surface = 'panel',
   className,
 }: DataGridToolbarProps<TFilters>) {
   const { t } = useTranslation('common');
@@ -186,7 +194,25 @@ export function DataGridToolbar<TFilters extends DataGridFiltersBase>({
     <div
       data-slot="data-grid-toolbar"
       data-mode={isSelectionMode ? 'selection' : 'filters'}
-      className={cn('grid w-fit max-w-full rounded-lg bg-secondary p-1', className)}
+      data-surface={surface}
+      className={cn(
+        'grid max-w-full',
+        surface === 'panel'
+          ? // Плитка — КОНТРОЛ над полотном, їй належить виділятись: `secondary`
+            // це найконтрастніша нейтраль теми
+            'w-fit rounded-lg bg-secondary p-1'
+          : // Смуга — ШАСІ, а не контрол: краї віддані вікну, і фон мусить бути
+            // тихим. Звідси `sidebar`, а не `secondary`: розтягнутий на всю
+            // ширину, той кричав. Токен обраний за роллю — це та сама поверхня,
+            // що ліва колонка, тобто обрамлення робочої області; у темряві він
+            // до того ж дорівнює `card`, тобто шапці календарної сітки.
+            //
+            // Бокове поле — 16px, а не 24px шела: перший елемент (метрика) несе
+            // власні `pl-2`, і разом виходить рівно 24px — та сама вертикаль,
+            // що в комірок таблиці
+            'w-full rounded-none bg-sidebar px-4 py-1',
+        className,
+      )}
     >
       <div
         aria-hidden={isSelectionMode}

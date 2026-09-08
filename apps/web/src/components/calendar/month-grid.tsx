@@ -138,8 +138,9 @@ export function MonthGrid({
     return result;
   }, [days, events, timeZone]);
 
+  // Полотно, а не картка — див. той самий коментар у `TimeGrid`
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="grid shrink-0 grid-cols-7 border-b">
         {weekDays.map((day) => (
           <div

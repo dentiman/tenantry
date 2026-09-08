@@ -201,8 +201,12 @@ export function TimeGrid({
   const timedByDay = useMemo(() => groupTimed(events, days, timeZone), [events, days, timeZone]);
   const allDayRows = allDay.layout.rows;
 
+  // Без рамки й власного фону: сітка тепер САМА є полотном сторінки (роут у
+  // режимі `bleed`), а не карткою на ньому. Фон лишився там, де він
+  // функціональний — під `sticky` шапкою днів і all-day-смугою: без нього
+  // плитки просвічували б крізь них під час прокрутки
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/**
        * ОДНА сітка на шапку і на тіло, шапка — `sticky`.
        *
@@ -358,7 +362,9 @@ export function TimeGrid({
                 className="relative border-b border-b-calendar-grid-line text-right"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <span className="absolute -top-2 right-1.5 bg-card px-0.5 text-[11px] whitespace-nowrap text-muted-foreground">
+                {/* bg-background, а не bg-card: підпис вирізає діру в лінії
+                    години, тож мусить збігатися з фоном ПІД сіткою */}
+                <span className="absolute -top-2 right-1.5 bg-background px-0.5 text-[11px] whitespace-nowrap text-muted-foreground">
                   {hour === 0 ? '' : formatHour(hour, timeZone)}
                 </span>
               </div>

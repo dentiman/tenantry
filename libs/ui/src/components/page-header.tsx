@@ -82,7 +82,12 @@ export function PageHeader({ breadcrumbs, children, subtitle, actions, label }: 
                 orientation="vertical"
                 className="h-4 translate-y-px bg-border/60 data-vertical:self-center"
               />
-              <p className="min-w-0 truncate text-sm text-muted-foreground">{subtitle}</p>
+              {/* На тон тихіше за `muted`: у темі два рівні тексту, і опис
+                  сторінки мусить лягти НИЖЧЕ другого — він довідка, а не зміст.
+                  Третій токен заради цього не заводимо: рівень на одного
+                  споживача — виняток зі шкали, а не її щабель (той самий
+                  аргумент, що зняв `--accent-strong`) */}
+              <p className="min-w-0 truncate text-sm text-muted-foreground/70">{subtitle}</p>
             </>
           ) : null}
         </div>

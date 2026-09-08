@@ -14,7 +14,12 @@ export type {
 export type { DataGridSurface } from './data-grid';
 export type { DataGridFiltersState } from './use-data-grid-filters';
 export type { DataGridSelectionState } from './use-data-grid-selection';
-export type { DataGridFilterDef, DataGridFiltersSize, DataGridFiltersSurface } from './filters';
+export type {
+  DataGridFilterDef,
+  DataGridFiltersSize,
+  DataGridFiltersSurface,
+  DataGridToolbarSurface,
+} from './filters';
 export type { DataGridListResponse, DataGridQueryResult } from './data-grid-query';
 export type {
   DataGridColumn,

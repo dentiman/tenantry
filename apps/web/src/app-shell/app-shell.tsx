@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-import { Outlet } from '@tanstack/react-router';
+import { cn } from '@saas-skeleton/ui/lib/utils';
+import { Outlet, useMatches } from '@tanstack/react-router';
 import {
   Sidebar,
   SidebarInset,
@@ -46,6 +47,11 @@ import { AreaSidebar } from './area-sidebar';
  * і правої в рейла. Без них панель вийшла б 222px замість 224px.
  */
 export function AppShell() {
+  // Останній збіг перемагає: режим оголошує САМА сторінка, а не її area —
+  // `/workspace/users` полотно, а сусідня `/workspace/users/$userId` ні
+  const matches = useMatches();
+  const isBleed = matches.at(-1)?.staticData.layout === 'bleed';
+
   return (
     // Хедер тримає слот, який наповнюють сторінки (крихти) — див. page-header-slot.tsx
     <PageHeaderSlotProvider>
@@ -65,7 +71,7 @@ export function AppShell() {
         </Sidebar>
 
         <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border/70 bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
             <SidebarTrigger className="-ml-2" />
             <PageHeaderSlot className="min-w-0 flex-1" />
             <div className="ml-auto flex items-center gap-1">
@@ -76,9 +82,11 @@ export function AppShell() {
 
           {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
               і вкладений <main> був би невалідним */}
-          {/* На всю ширину з бічними відступами: у списках таблиці широкі, і
-              центрована колонка max-w-5xl зʼїдала б половину екрана */}
-          <div className="flex-1 px-6 pt-4 pb-6">
+          {/* На всю ширину: у списках таблиці широкі, і центрована колонка
+              max-w-5xl зʼїдала б половину екрана. Відступи — від роуту:
+              сторінка-полотно (грід, календар) бере `bleed` і впирається в краї,
+              решта лишається з полями шела (див. StaticDataRouteOption) */}
+          <div className={cn('flex-1', isBleed ? 'p-0' : 'px-6 pt-4 pb-6')}>
             <Outlet />
           </div>
         </SidebarInset>
