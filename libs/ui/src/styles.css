@@ -15,87 +15,107 @@
    `:root[data-theme='<id>']` (світло) і `:root[data-theme='<id>'].dark` (темрява);
    ці селектори важчі за базові нижче, тож порядок імпорту ролі не грає.
    Контракт, реєстр і план перемикача — `docs/frontend/theming.md`. */
+@import './themes/slate.css';
 @import './themes/gray.css';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Тема за замовчуванням: `slate` ───────────────────────────────────────
+  /* ── Тема за замовчуванням: `notion` ──────────────────────────────────────
      Живе прямо в `:root` / `.dark`, БЕЗ `[data-theme]`: атрибут на <html> може
      бути не виставлений (перший візит, вимкнений JS), і тоді має рендеритись
-     повноцінна тема, а не порожнеча. Перемикач, виставивши `data-theme="slate"`,
+     повноцінна тема, а не порожнеча. Перемикач, виставивши `data-theme="notion"`,
      теж потрапляє сюди — просто жоден інший блок тем не збігається.
 
-     ── Нейтраль — шкала Tailwind slate ───────────────────────────────────────
-     Прийнято 2026-09-06 замість zinc-подібних нейтралей HeroUI (варіант
-     «Slate classic»): полотно slate-50, навігаційні колонки slate-100, межі
-     slate-200, обводка полів slate-300, текст slate-900, вторинний slate-500,
-     картки — чистий білий. Тобто шкала поверхонь щільнішає ліворуч:
-     200 (наведення) → 100 (навігація) → 50 (полотно) → #fff (картки).
-     Головне: slate — НЕ «синюватий zinc», а інша нейтраль (hue ≈ 250…266,
-     chroma до 0.046), тому міняється весь блок разом, а не окремі токени —
-     інакше сірі в шелі й сірі в компонентах розійдуться.
-     Акцент — blue-600 (light) / blue-500 (dark), рідна пара цієї шкали.
-     --destructive лишається HeroUI danger, --success/--warning — наше
-     розширення: у slate відповідників немає. */
+     ── Джерело значень: САМ Notion ───────────────────────────────────────────
+     Це не «схоже на Notion», а їхні власні токени, зняті з живого CSS-бандла
+     app.notion.com (`_assets/84388-*.css`, вересень 2026): 404 змінні `--c-*` у
+     `:root,.notion-light-theme` і 265 перевизначень у `.notion-dark-theme`.
+     Кожен рядок нижче підписаний іменем токена-джерела, щоб значення можна було
+     перевірити, а не звіряти оком.
+
+     Скорочення Notion читаються так: `bac` background, `bor` border, `tex` text,
+     `ico` icon, `pal` palette; `Pri/Sec/Ter` — primary/secondary/tertiary,
+     `Ele` elevated, `Int` interactive, `Str` strong, `Dis` disabled.
+
+     ── Модель поверхонь ──────────────────────────────────────────────────────
+     Notion будує глибину ЧОТИРМА сходинками, і в світлі вона йде НАВПАКИ до
+     нашої попередньої slate: полотно сторінки — чисто біле (`bacPri`), а
+     навігація ТЕМНІША за нього (`bacSec`). Далі `bacInt` — приглушена поверхня,
+     `bacTer` — наведення й активний стан. У темряві порядок дзеркальний
+     (щільніше = світліше): полотно #191919 → сайдбар/картки #202020 →
+     приглушене #262626 → наведення #2c2c2b, а попапи ЩЕ світліші (#252525) —
+     висота передається світлом, і це головна впізнавана риса темного Notion.
+
+     Значення записані в hex саме як у джерелі: `oklch` тут нічого не додав би,
+     а звірку з Notion зробив би неможливою. Tailwind однаково вміє
+     `bg-primary/10` з будь-яким форматом (він рахує `color-mix` у oklab). */
   --radius: 0.625rem;
   color-scheme: light;
-  --background: oklch(0.984 0.003 247.858); /* slate-50  #f8fafc */
-  --foreground: oklch(0.208 0.042 265.755); /* slate-900 #0f172a */
-  --card: oklch(1 0 0);
+  --background: #ffffff; /* --c-bacPri  полотно сторінки */
+  --foreground: #2c2c2b; /* --c-texPri */
+  --card: #ffffff; /* --c-bacEle */
   --card-foreground: var(--foreground);
-  --popover: oklch(1 0 0);
+  --popover: #ffffff; /* --c-popBac */
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.546 0.245 262.881); /* blue-600 #2563eb */
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.929 0.013 255.508); /* slate-200 #e2e8f0 */
+  /* Синій Notion — той самий у світлі й темряві: це колір ДІЇ, а не поверхні.
+     Hover/press — їхні ж точні значення, тому тут не color-mix. */
+  --primary: #2383e2; /* --c-palUiBlu600 */
+  --primary-foreground: #ffffff;
+  --secondary: #f0efed; /* --c-bacTer  сіра кнопка */
   --secondary-foreground: var(--foreground);
-  --segment: oklch(1 0 0);
+  --segment: #ffffff; /* --c-bacEle  активний сегмент піднятий над жолобом */
   --segment-foreground: var(--foreground);
-  --muted: oklch(0.968 0.007 247.896); /* slate-100 #f1f5f9 */
-  --muted-foreground: oklch(0.554 0.046 257.417); /* slate-500 #64748b */
-  /* Поверхня наведення/активного стану — на сходинку щільніша за навігацію,
-     інакше hover у сайдбарі (він же slate-100) не було б видно взагалі. */
-  --accent: oklch(0.929 0.013 255.508); /* slate-200 */
+  --muted: #f4f3f3; /* --c-bacInt */
+  --muted-foreground: #7d7a75; /* --c-texSec */
+  /* Поверхня наведення — на сходинку щільніша за сайдбар (#f9f8f7), інакше
+     hover у навігації не було б видно взагалі. */
+  --accent: #f0efed; /* --c-bacTer */
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.6532 0.2328 25.74);
-  --destructive-foreground: oklch(0.9911 0 0);
+  --destructive: #cd3c3a; /* --c-inpRedFocRin / --c-pilIcoRed */
+  --destructive-foreground: #ffffff;
   /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
-     тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
-  --success: oklch(0.51 0.145 163.225);
-  --success-foreground: oklch(0.984 0.003 247.858);
-  --warning: oklch(0.545 0.179 58.318);
-  --warning-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508); /* slate-200 */
-  /* Фон поля та його обводка — різні ролі: поле біле, border на сходинку
-     контрастніший за звичайну межу, щоб форма читалась на світлому полотні. */
-  --field: oklch(1 0 0);
-  --input: oklch(0.869 0.022 252.894); /* slate-300 #cbd5e1 */
-  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
-  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+     тенанта інакше не передати. Значення — офіційні кольори родин Notion
+     (green / yellow), тобто та сама сходинка «акцент родини», що й у
+     --destructive: три статуси беруться з одного рівня системи, а не окремо. */
+  --success: #448361;
+  --success-foreground: #ffffff;
+  --warning: #cb912f;
+  --warning-foreground: #ffffff;
+  --border: #e6e5e3; /* --c-borPri */
+  /* Фон поля та його обводка — різні ролі: поле біле (`bacEle`), а обводка на
+     сходинку контрастніша за звичайну межу (`borStr`), щоб форма читалась на
+     білому полотні. Hover поля — точний Notion-hover білої кнопки. */
+  --field: #ffffff; /* --c-bacEle */
+  --input: #d4d3cf; /* --c-borStr */
+  --field-hover: #efefee; /* --c-whiButHovBac */
+  --primary-hover: #0077d4; /* --c-bluButHovBac */
   --destructive-hover: color-mix(
     in oklab,
     var(--destructive) 90%,
     var(--destructive-foreground) 10%
   );
-  --ring: var(--primary);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: var(--primary); /* --c-butBluFocRin будує кільце з того самого синього */
+  /* Графіки — родини Notion у порядку «синій, зелений, помаранчевий,
+     фіолетовий, рожевий» (споживачів поки немає, але тема оголошує всі п'ять:
+     інакше перший графік візьме кольори попередньої теми). */
+  --chart-1: #2383e2;
+  --chart-2: #448361;
+  --chart-3: #d9730d;
+  --chart-4: #9065b0;
+  --chart-5: #c14c8a;
   /* ── Календар ─────────────────────────────────────────────────────────────
      Палітра ПОДІЙ — узята з Notion Calendar (через MIT-клон calendarcn,
      docs/calendar.md §11.9). Це НЕ semantic-роль: `kind` події мапиться на
      іменований колір у `event-kind.ts`, як у Notion колір мапиться на календар.
      Тому трійка на колір: `-bg` (заливка плитки), `-line` (вертикальна смужка
      3px ліворуч) і сам токен — колір ТЕКСТУ на цій заливці.
-     Свідомо НЕ заведено п'ятий, «сірий» колір Notion (`#f6f4f3` — тепла
-     нейтраль): «без кольору» в нас уже виражають `muted`/`muted-foreground`, і
-     другий сірий поруч із slate-шкалою читався б як брудна пляма.
-     Службові тони сітки (нижче) — навпаки, НАШІ: підсвітка тижня і наведення
-     стоять поруч із рештою поверхонь шела, тож мусять бути того ж підтону, а
-     не теплого Notion-сірого. */
+     Свідомо НЕ заведено п'ятий, «сірий» колір Notion (`#f6f4f3`): «без кольору»
+     в нас уже виражають `muted`/`muted-foreground`.
+     Ці токени СПІЛЬНІ для всіх тем — колір зустрічі не залежить від палітри
+     шела, тож альтернативні теми їх не оголошують (docs/frontend/theming.md
+     §1.3.1). Службові тони сітки — навпаки, частина теми: вони стоять поруч із
+     рештою поверхонь шела. */
   --event-blue: #006cbf;
   --event-blue-line: #32a5e5;
   --event-blue-bg: #e2f9ff;
@@ -108,20 +128,15 @@
   --event-orange: #ad4517;
   --event-orange-line: #fe7132;
   --event-orange-bg: #ffe3c8;
-  /* Вихідні — на півсходинки щільніші за полотно: робочий тиждень читається як
-     основне поле, субота й неділя як його берег */
-  --calendar-weekend: oklch(0.976 0.005 247.858);
-  /* Дні, які ЗАРАЗ відкриті в сітці, — підсвічені в міні-календарі: головна
-     навігаційна підказка «де я». Тон ПРОМІЖНИЙ між slate-100 і slate-200, і це
-     не косметика: наведення на день малює `accent` (slate-200), тож рівні тони
-     зробили б hover поверх підсвіченого тижня невидимим. Notion вирішує це
-     четвертим токеном (`--calendar-day-hover-current-week`); нам достатньо
-     розвести два — менше токенів на ту саму поведінку */
-  --calendar-in-view: oklch(0.951 0.01 251.7);
-  --calendar-day-hover: oklch(0.929 0.013 255.508); /* slate-200 */
-  /* Навігація щільніша за полотно на одну сходинку — рівні шела читаються з
-     самих заливок, а не тільки з меж (рейл додає ще одну сходинку класом). */
-  --sidebar: oklch(0.968 0.007 247.896); /* slate-100 */
+  /* Три службові тони сітки = три сусідні сходинки поверхонь Notion. Порядок
+     важливий: `in-view` (тиждень, відкритий у сітці) мусить лишатись світлішим
+     за наведення, інакше hover поверх підсвіченого тижня став би невидимим. */
+  --calendar-weekend: #f9f8f7; /* --c-bacSec */
+  --calendar-in-view: #f4f3f3; /* --c-bacInt */
+  --calendar-day-hover: #f0efed; /* --c-bacTer, він же --accent */
+  /* Навігація ТЕМНІША за полотно — у Notion сайдбар відступає, а сторінка
+     виступає (у slate було навпаки). Рейл додає ще одну сходинку класом. */
+  --sidebar: #f9f8f7; /* --c-bacSec */
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -129,55 +144,59 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --surface-shadow:
-    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  /* Тіні — теж Notion: `--c-shaOutSm` для поверхонь і `--c-shaOutLg` для
+     floating overlays. Обидві несуть hairline-обводку першим шаром, тому
+     картка й попап мають контур навіть там, де межа не намальована класом. */
+  --surface-shadow: 0px 2px 4px 0px rgb(0 0 0 / 4%), 0px 0px 0px 1px rgb(42 28 0 / 7%);
   --overlay-shadow:
-    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+    0px 20px 24px 0px rgb(25 25 25 / 5%), 0px 5px 8px 0px rgb(25 25 25 / 2.7%),
+    0px 0px 0px 1px rgb(42 28 0 / 7%);
 }
 
 .dark {
-  /* Дзеркало світлої шкали на темних сходинках slate: полотно slate-950,
-     картки й навігація slate-900 (у темряві «щільніше» = світліше), поверхні
-     наведення slate-800, обводка полів slate-700, текст slate-50. */
+  /* Темний Notion: полотно #191919 (не чорне), сайдбар і картки #202020,
+     приглушене #262626, наведення #2c2c2b, попапи #252525 — тобто попап
+     СВІТЛІШИЙ за картку під ним. Текст — тепла off-white #f0efed, а не #fff:
+     чисто білий у Notion лишається тільки за кольором іконки-акценту. */
   color-scheme: dark;
-  --background: oklch(0.129 0.042 264.695); /* slate-950 #020617 */
-  --foreground: oklch(0.984 0.003 247.858); /* slate-50  #f8fafc */
-  --card: oklch(0.208 0.042 265.755); /* slate-900 #0f172a */
+  --background: #191919; /* --c-bacPri */
+  --foreground: #f0efed; /* --c-texPri */
+  --card: #202020; /* --c-bacEle */
   --card-foreground: var(--foreground);
-  --popover: oklch(0.208 0.042 265.755);
+  --popover: #252525; /* --c-popBac  висота передається світлом */
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.623 0.214 259.815); /* blue-500 #3b82f6 */
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.279 0.041 260.031); /* slate-800 #1e293b */
+  --primary: #2383e2; /* той самий синій, що у світлі */
+  --primary-foreground: #ffffff;
+  --secondary: #2f2f2f; /* --c-butGroBac */
   --secondary-foreground: var(--foreground);
-  --segment: oklch(0.372 0.044 257.287); /* slate-700 #334155 */
+  --segment: #383836; /* --c-bacTer */
   --segment-foreground: var(--foreground);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788); /* slate-400 #94a3b8 */
-  --accent: oklch(0.279 0.041 260.031);
+  --muted: #262626; /* --c-bacInt */
+  --muted-foreground: #ada9a3; /* --c-texSec */
+  --accent: #2c2c2b; /* --c-borSec / --c-graBacEle */
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.594 0.1967 24.63);
-  --destructive-foreground: oklch(0.9911 0 0);
-  --success: oklch(0.696 0.17 162.48);
+  --destructive: #de5550; /* --c-pilIcoRed (dark) */
+  --destructive-foreground: #ffffff;
+  --success: #529e72; /* --c-palGre900 (dark) */
   --success-foreground: var(--background);
-  --warning: oklch(0.769 0.188 70.08);
+  --warning: #d99e35; /* --c-palYel800 (dark) */
   --warning-foreground: var(--background);
-  --border: oklch(0.279 0.041 260.031); /* slate-800 */
-  --field: var(--card);
-  --input: oklch(0.372 0.044 257.287); /* slate-700 */
-  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
-  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --border: #383836; /* --c-borPri */
+  --field: #252525; /* --c-whiButBac (dark) */
+  --input: #5f5e59; /* --c-borStr */
+  --field-hover: #2f2f2f; /* --c-whiButHovBac (dark) */
+  --primary-hover: #0077d4; /* --c-bluButHovBac */
   --destructive-hover: color-mix(
     in oklab,
     var(--destructive) 90%,
     var(--destructive-foreground) 10%
   );
   --ring: var(--primary);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: #4fa7ff; /* --c-palUiBlu700 (dark) */
+  --chart-2: #529e72;
+  --chart-3: #c77d48;
+  --chart-4: #9d68d3;
+  --chart-5: #d15796;
   /* Календар: у темряві Notion робить смужку і текст ОДНИМ тоном (світлим), а
      заливку — глухим темним того ж відтінку */
   --event-blue: #4895c8;
@@ -192,10 +211,10 @@
   --event-orange: #e07040;
   --event-orange-line: #e07040;
   --event-orange-bg: #5f3524;
-  --calendar-weekend: oklch(0.16 0.04 264.695);
-  --calendar-in-view: oklch(0.243 0.041 262.3); /* між slate-900 і slate-800 */
-  --calendar-day-hover: oklch(0.279 0.041 260.031); /* slate-800 */
-  --sidebar: oklch(0.208 0.042 265.755); /* slate-900 */
+  --calendar-weekend: #1c1c1c; /* --c-dim-light_gray (dark) */
+  --calendar-in-view: #262626; /* --c-bacInt */
+  --calendar-day-hover: #2c2c2b; /* він же --accent */
+  --sidebar: #202020; /* --c-bacSec */
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -203,8 +222,13 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --surface-shadow: 0 0 0 0 transparent;
-  --overlay-shadow: inset 0 0 1px 0 rgb(255 255 255 / 30%);
+  /* `--c-shaBasSm` без обводки для поверхонь (межу вже малює --border) і
+     `--c-shaOutLg` з обводкою #383836 для оверлеїв — у темряві саме вона
+     відділяє попап від полотна, бо тінь на темному не читається. */
+  --surface-shadow: 0px 2px 4px 0px rgb(25 25 25 / 8%);
+  --overlay-shadow:
+    0px 0px 0px 1px #383836, 0px 14px 28px -6px rgb(25 25 25 / 20%),
+    0px 2px 4px -1px rgb(25 25 25 / 11.8%);
 }
 
 @theme inline {

@@ -10,7 +10,7 @@
  * Додати тему = файл CSS + `@import` у `styles.css` + рядок тут.
  * Контракт і план — `docs/frontend/theming.md`.
  */
-export type UiThemeId = 'slate' | 'gray';
+export type UiThemeId = 'notion' | 'slate' | 'gray';
 
 export interface UiTheme {
   id: UiThemeId;
@@ -22,6 +22,12 @@ export interface UiTheme {
    */
   swatch: readonly [string, string, string];
 }
+
+const NOTION_THEME: UiTheme = {
+  id: 'notion',
+  labelKey: 'theme.palettes.notion',
+  swatch: ['#f9f8f7', '#e6e5e3', '#2383e2'],
+};
 
 const SLATE_THEME: UiTheme = {
   id: 'slate',
@@ -40,9 +46,9 @@ const GRAY_THEME: UiTheme = {
 };
 
 /** Порядок = порядок пунктів у меню вибору */
-export const UI_THEMES: readonly UiTheme[] = [SLATE_THEME, GRAY_THEME];
+export const UI_THEMES: readonly UiTheme[] = [NOTION_THEME, SLATE_THEME, GRAY_THEME];
 
-export const DEFAULT_UI_THEME: UiThemeId = SLATE_THEME.id;
+export const DEFAULT_UI_THEME: UiThemeId = NOTION_THEME.id;
 
 /**
  * Валідація на КОЖНОМУ читанні ззовні (localStorage, атрибут): id теми може
@@ -55,5 +61,5 @@ export function isUiThemeId(value: unknown): value is UiThemeId {
 
 /** Тема за id з гарантованим фолбеком — щоб виклик не тягнув перевірку на undefined */
 export function getUiTheme(id: UiThemeId): UiTheme {
-  return UI_THEMES.find((theme) => theme.id === id) ?? SLATE_THEME;
+  return UI_THEMES.find((theme) => theme.id === id) ?? NOTION_THEME;
 }

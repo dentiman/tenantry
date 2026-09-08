@@ -69,6 +69,14 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  /* ── Службові тони календарної сітки ──────────────────────────────────────
+     Не плутати з палітрою ПОДІЙ (`--event-*`): та спільна для всіх тем і живе
+     в `styles.css`. Ці три — сходинки поверхонь шела, тож у кожної теми свої.
+     `in-view` (тиждень, відкритий у сітці) мусить лишатись світлішим за
+     наведення, інакше hover поверх підсвіченого тижня став би невидимим. */
+  --calendar-weekend: oklch(0.9584 0.0013 286.37);
+  --calendar-in-view: oklch(0.9524 0.0013 286.37);
+  --calendar-day-hover: oklch(0.94 0.001 286.375);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -123,6 +131,9 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  --calendar-weekend: oklch(0.15 0.005 285.823);
+  --calendar-in-view: oklch(0.257 0.0037 286.14);
+  --calendar-day-hover: oklch(0.274 0.006 286.033);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);

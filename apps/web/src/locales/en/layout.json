@@ -23,6 +23,7 @@
     "system": "System",
     "paletteLabel": "Switch color theme",
     "palettes": {
+      "notion": "Notion",
       "slate": "Slate",
       "gray": "Default gray"
     }
