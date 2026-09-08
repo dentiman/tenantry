@@ -1,7 +1,6 @@
-import { useNavigate, useRouterState } from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { PlusIcon } from 'lucide-react';
-import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { TriangleAlertIcon } from 'lucide-react';
 import { Calendar } from '@saas-skeleton/ui/components/ui/calendar';
 import {
   SidebarGroup,
@@ -34,13 +33,13 @@ import { useCalendarPreferences } from '../../components/calendar/use-calendar-p
  * (docs/calendar.md §11.3, застереження 2).
  */
 export function CalendarSidebar() {
-  const { t } = useTranslation('calendar');
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const search = useRouterState({ select: (state) => state.location.search }) as {
     date?: string;
   };
-  const { viewerTimeZone, weekStartsOn } = useCalendarPreferences();
+  const { t } = useTranslation('calendar');
+  const { viewerTimeZone, weekStartsOn, isDeviceZoneDifferent } = useCalendarPreferences();
 
   // Активний перегляд читається з ШЛЯХУ — та сама доктрина, що `resolveArea`:
   // дубльованого стану «який перегляд відкрито» в застосунку немає
@@ -79,22 +78,6 @@ export function CalendarSidebar() {
 
   return (
     <>
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <Button
-            className="w-full"
-            onClick={() => {
-              // Кнопка веде на сітку — саму панель створення відкриває сторінка
-              // (стан панелі належить їй, а не навігації)
-              go(activeView === 'agenda' ? 'week' : activeView, todayKey(viewerTimeZone));
-            }}
-          >
-            <PlusIcon />
-            {t('toolbar.today')}
-          </Button>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
       {/* Падінг тут — СТОКОВИЙ `p-2` групи, і саме він потрібен: 8px від стінки
           рівно стільки ж, скільки в кнопки «Today» вище і в пунктів «Views»
           нижче, тож міні-місяць стоїть із ними в одну вертикаль. Без падінгу
@@ -140,6 +123,36 @@ export function CalendarSidebar() {
         </SidebarGroupContent>
       </SidebarGroup>
 
+      {/* Зона глядача — ПІД міні-місяцем, а не банером над сіткою (перенесено
+          2026-09-08). У колонці підказка вузька і не з'їдає висоту календаря, а
+          головне — стоїть поруч із самим орієнтиром «яка зараза дата», якому й
+          належить.
+
+          Це `Link`, а не `Alert`: у сайдбарі підказка ПОСТІЙНА, а `role="alert"`
+          означає `aria-live` — скрінрідер зачитував би її при кожному
+          монтуванні колонки. Вигляд лишився той самий, що в `Alert
+          variant="warning" accent="left"`, бо це той самий сигнал; тепер
+          клікається весь блок, а не лише слова «Change your time zone» */}
+      {isDeviceZoneDifferent && (
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <Link
+              to="/user-settings"
+              className="flex gap-2 rounded-lg border border-warning/30 border-l-[3px] border-l-warning bg-warning/10 px-2 py-1.5 text-warning transition-colors hover:bg-warning/15"
+            >
+              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-xs leading-tight font-medium">
+                  {t('zoneBanner.title', { zone: viewerTimeZone })}
+                </span>
+                <span className="text-[11px] leading-tight underline underline-offset-2">
+                  {t('zoneBanner.action')}
+                </span>
+              </span>
+            </Link>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
     </>
   );
 }

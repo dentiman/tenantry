@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from 'lucide-react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
-import { Alert, AlertDescription, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
+import { Alert, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { PageBreadcrumbs, type Crumb } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
@@ -378,22 +378,25 @@ export function CalendarPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <ToggleGroup
-            value={[view]}
-            onValueChange={(next: string[]) => {
-              const chosen = next[0];
-              // Порожній масив = повторний клік по активному: перегляд лишається
-              if (chosen) {
-                goto(chosen as CalendarView, anchor);
-              }
+          {/* Таби — ті самі, що на картці кастомера (Overview | Contacts):
+              перемикач виглядів це РОЗДІЛИ одного екрана, а не набір
+              незалежних перемикачів, яким був `ToggleGroup`.
+              Контрольований URL-ом: `TabsContent` тут немає навмисно — сітку
+              малює сторінка нижче, бо вона важка і залежить від даних вікна */}
+          <Tabs
+            value={view}
+            onValueChange={(next) => {
+              goto(next as CalendarView, anchor);
             }}
           >
-            {CALENDAR_VIEWS.map((item) => (
-              <ToggleGroupItem key={item} value={item} aria-label={t(`view.${item}`)}>
-                {t(`view.${item}`)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <TabsList>
+              {CALENDAR_VIEWS.map((item) => (
+                <TabsTrigger key={item} value={item}>
+                  {t(`view.${item}`)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <Button
             size="sm"
             onClick={() => {
@@ -405,25 +408,6 @@ export function CalendarPage() {
           </Button>
         </div>
       </div>
-
-      {/* Зона видна ЗАВЖДИ — найдешевший спосіб не отримати «я прийшов не в той
-          час»; банер зʼявляється лише коли профільна зона розходиться з зоною
-          пристрою (докладно — docs/calendar.md §11.5 п.10) */}
-      {preferences.isDeviceZoneDifferent && (
-        // Це попередження, а не нейтральна довідка: людина може прийти на
-        // зустріч не в той час. Тому `warning` зі смужкою — та сама форма, що
-        // «Alert left-accent» в індустрії (docs/frontend/ui-registry.md §4.8)
-        <Alert variant="warning" accent="left">
-          <TriangleAlertIcon />
-          <AlertTitle>{t('zoneBanner.title', { zone: timeZone })}</AlertTitle>
-          <AlertDescription>
-            {t('zoneBanner.hint')}{' '}
-            <Link to="/user-settings" className="underline">
-              {t('zoneBanner.action')}
-            </Link>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {isError && (
         <Alert variant="destructive">
@@ -438,7 +422,10 @@ export function CalendarPage() {
 
           Скелет рівно на висоту сітки, а не спінер по центру: інакше розкладка
           стрибає на кожному переході між тижнями */}
-      <div className="flex h-[calc(100vh-15rem)] min-h-[28rem] flex-col">
+      {/* 10rem = хедер шела + тулбар + крихти + нижній відступ. Було 15rem,
+          доки над сіткою стояв банер зони — після його переїзду в колонку
+          (2026-09-08) знизу лишалась порожня смуга на сотню пікселів */}
+      <div className="flex h-[calc(100vh-10rem)] min-h-[28rem] flex-col">
       {isPending && view !== 'agenda' ? (
         <Skeleton className="min-h-0 flex-1 rounded-lg" />
       ) : view === 'agenda' ? (
