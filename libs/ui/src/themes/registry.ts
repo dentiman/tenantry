@@ -10,7 +10,7 @@
  * Додати тему = файл CSS + `@import` у `styles.css` + рядок тут.
  * Контракт і план — `docs/frontend/theming.md`.
  */
-export type UiThemeId = 'notion' | 'slate' | 'gray';
+export type UiThemeId = 'gray' | 'slate';
 
 export interface UiTheme {
   id: UiThemeId;
@@ -23,10 +23,15 @@ export interface UiTheme {
   swatch: readonly [string, string, string];
 }
 
-const NOTION_THEME: UiTheme = {
-  id: 'notion',
-  labelKey: 'theme.palettes.notion',
-  swatch: ['#f9f8f7', '#e6e5e3', '#2383e2'],
+/**
+ * Дефолт. Світлий режим — zinc-нейтралі HeroUI, темний — власні токени Notion
+ * (`styles.css`, `:root` / `.dark`). Асиметрія свідома: режими ніхто не бачить
+ * одночасно, спільним лишається контракт ролей, а не палітра.
+ */
+const GRAY_THEME: UiTheme = {
+  id: 'gray',
+  labelKey: 'theme.palettes.gray',
+  swatch: ['oklch(0.9702 0 0)', 'oklch(0.9 0.004 286.32)', 'oklch(0.6204 0.195 253.83)'],
 };
 
 const SLATE_THEME: UiTheme = {
@@ -39,16 +44,10 @@ const SLATE_THEME: UiTheme = {
   ],
 };
 
-const GRAY_THEME: UiTheme = {
-  id: 'gray',
-  labelKey: 'theme.palettes.gray',
-  swatch: ['oklch(0.9702 0 0)', 'oklch(0.9 0.004 286.32)', 'oklch(0.6204 0.195 253.83)'],
-};
-
 /** Порядок = порядок пунктів у меню вибору */
-export const UI_THEMES: readonly UiTheme[] = [NOTION_THEME, SLATE_THEME, GRAY_THEME];
+export const UI_THEMES: readonly UiTheme[] = [GRAY_THEME, SLATE_THEME];
 
-export const DEFAULT_UI_THEME: UiThemeId = NOTION_THEME.id;
+export const DEFAULT_UI_THEME: UiThemeId = GRAY_THEME.id;
 
 /**
  * Валідація на КОЖНОМУ читанні ззовні (localStorage, атрибут): id теми може
@@ -61,5 +60,5 @@ export function isUiThemeId(value: unknown): value is UiThemeId {
 
 /** Тема за id з гарантованим фолбеком — щоб виклик не тягнув перевірку на undefined */
 export function getUiTheme(id: UiThemeId): UiTheme {
-  return UI_THEMES.find((theme) => theme.id === id) ?? NOTION_THEME;
+  return UI_THEMES.find((theme) => theme.id === id) ?? GRAY_THEME;
 }

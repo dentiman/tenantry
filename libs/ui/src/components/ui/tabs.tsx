@@ -6,7 +6,8 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 /**
  * ЛОКАЛЬНА ПРАВКА реєстру: default Tabs повторює семантику HeroUI v3 —
  * neutral list, muted inactive foreground і окрема segment-поверхня active tab.
- * У light segment білий, у dark — піднятий світліший zinc; line variant
+ * У light segment білий, у dark ІНВЕРТОВАНИЙ у майже білий (див. `--segment`
+ * у `libs/ui/src/styles.css`); line variant
  * використовує primary як active indicator. Метрики й геометрія стокові.
  */
 
@@ -26,7 +27,11 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-secondary',
+        // ЛОКАЛЬНА ПРАВКА реєстру: жолоб — ПРОЗОРА накладка, а не суцільний
+        // `secondary`. Активний сегмент лежить прямо на ній, і суцільний фон
+        // жолоба довелося б підбирати під кожну поверхню, на якій стоять таби
+        // (картка, полотно, тулбар календаря)
+        default: 'bg-accent',
         line: 'gap-1 bg-transparent',
       },
     },

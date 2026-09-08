@@ -32,7 +32,9 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
 }
 
 const itemVariants = cva(
-  'group/item flex w-full flex-wrap items-center rounded-lg border text-sm transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring [a]:transition-colors [a]:hover:bg-muted',
+  // ЛОКАЛЬНА ПРАВКА реєстру: наведення на посилання — прозора накладка
+  // `bg-accent` замість суцільного `bg-muted` (docs/frontend/theming.md §1.3.3)
+  'group/item flex w-full flex-wrap items-center rounded-lg border text-sm transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring [a]:transition-colors [a]:hover:bg-accent',
   {
     variants: {
       variant: {

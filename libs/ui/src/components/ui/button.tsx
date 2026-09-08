@@ -22,15 +22,26 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
         outline:
-          'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+          "border-border bg-background hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-input dark:bg-input/30 [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
+          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         ghost:
-          'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
+          "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         toolbar:
-          'text-foreground hover:bg-background hover:text-foreground aria-expanded:bg-background aria-expanded:text-foreground',
+          "text-foreground hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive-hover focus-visible:border-destructive/40 focus-visible:ring-destructive/60 dark:focus-visible:ring-destructive/60',
+        /**
+         * «Піднята» кнопка — той самий матеріал, що активний сегмент табів
+         * (`--segment`): у світлій темі біла з обводкою й тінню, у темній
+         * ІНВЕРТОВАНА в майже білу з темним написом. Патерн Notion: у темряві
+         * «на сходинку світліший сірий» читається тьмяним, а не піднятим, тож
+         * підняття там передається протилежним ходом. Іконки тут свідомо БЕЗ
+         * `text-icon`: на світлій плитці в темній темі знак мусить бути
+         * темним, а `--icon` — світлий.
+         */
+        elevated:
+          'border-border bg-segment text-segment-foreground shadow-sm hover:bg-[color-mix(in_oklab,var(--segment),var(--segment-foreground)_8%)] aria-expanded:bg-[color-mix(in_oklab,var(--segment),var(--segment-foreground)_8%)]',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

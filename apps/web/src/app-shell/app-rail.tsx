@@ -63,16 +63,14 @@ const RAIL_NAV_BUTTON = 'size-8! justify-center group-data-[collapsible=icon]:si
  * на елементі, тож «на місці» його не перебити без `!`.
  */
 const RAIL_ANCHOR_BUTTON =
-  'size-10! justify-center p-0! [&_svg]:size-5 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0!';
-
-/**
- * Аватар — тригер, а не пункт меню, тому сірої підкладки на наведенні не має:
- * кнопка `rounded-md`, а аватар — коло, тож підкладка світилась би кутиками
- * навколо нього. Гасимо рівно ті стани, які дає `sidebarMenuButtonVariants`
- * (`hover`, `active` і `data-open:hover` — останній тримає фон, поки дропдаун
- * відкритий); focus-ring лишається — він потрібен клавіатурі.
- */
-const RAIL_AVATAR_BUTTON = `${RAIL_ANCHOR_BUTTON} hover:bg-transparent active:bg-transparent data-open:hover:bg-transparent`;
+  'size-10! justify-center p-0! [&_svg]:size-5 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! ' +
+  // Обидва якорі смуги — БЕЗ підкладки на наведенні. Вони не пункти меню, а
+  // вміст у них має власну форму: бренд — кольорова плитка `rounded-lg`,
+  // аватар — коло; прямокутна сіра підкладка `rounded-md` під ними світилась би
+  // кутиками навколо. Гасимо рівно ті стани, які дає `sidebarMenuButtonVariants`
+  // (`hover`, `active` і `data-open:hover` — останній тримає фон, поки дропдаун
+  // відкритий); focus-ring лишається — він потрібен клавіатурі.
+  'hover:bg-transparent active:bg-transparent data-open:hover:bg-transparent';
 
 /**
  * Перший рівень навігації — вузька смуга іконок area (Activity Bar у VS Code,
@@ -263,7 +261,7 @@ function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<SidebarMenuButton className={RAIL_AVATAR_BUTTON} aria-label={t('accountMenu')} />}
+        render={<SidebarMenuButton className={RAIL_ANCHOR_BUTTON} aria-label={t('accountMenu')} />}
       >
         <UserIdentity
           email={user?.email ?? ''}

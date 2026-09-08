@@ -383,7 +383,7 @@ function SidebarGroupLabel({
     props: mergeProps<'div'>(
       {
         className: cn(
-          'flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0',
+          "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg:not([class*='text-'])]:text-icon-muted",
           className,
         ),
       },
@@ -455,7 +455,17 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<'li'>) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  'peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate',
+  // ЛОКАЛЬНА ПРАВКА реєстру: знак бере шкалу іконок (`--icon` у спокої,
+  // `--icon-strong` під курсором і в активному пункті), а вибраний пункт —
+  // ту саму прозору накладку, що й наведення (docs/frontend/theming.md §1.3.2–3).
+  // Колірні правила знака навмисно на ПРЯМОГО нащадка (`[&>svg]`), а розмір —
+  // на будь-якого (`[&_svg]`). Селектор нащадка перебиває успадкування, тож
+  // ширший `[&_svg]:text-icon` фарбував би й ті знаки, що лежать усередині
+  // ВЛАСНОЇ кольорової поверхні: бренд-плитка рейлу — синій квадрат із
+  // `text-sidebar-primary-foreground`, і її логотип ставав сірим. Правило
+  // просте: на кольоровій підкладці знак бере foreground цієї підкладки, а
+  // шкала `--icon` керує лише знаками, що лежать прямо на кнопці.
+  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>svg:not([class*='text-'])]:text-icon hover:[&>svg:not([class*='text-'])]:text-icon-strong data-active:[&>svg:not([class*='text-'])]:text-icon-strong [&>span:last-child]:truncate",
   {
     variants: {
       variant: {

@@ -40,9 +40,12 @@ function ScrollBar({
       )}
       {...props}
     >
+      {/* ЛОКАЛЬНА ПРАВКА реєстру: повзунок бере `--icon-muted`, а не `--border`.
+          Межа в темній темі напівпрозора (5.5% білого) — на ній повзунок був би
+          невидимий; він же не розділювач, а керований елемент. */}
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="relative flex-1 rounded-full bg-icon-muted"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );

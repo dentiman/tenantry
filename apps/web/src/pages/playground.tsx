@@ -85,6 +85,11 @@ export function PlaygroundPage() {
       description: t('button.variants.outline.description'),
     },
     {
+      variant: 'elevated' as const,
+      label: t('button.variants.elevated.label'),
+      description: t('button.variants.elevated.description'),
+    },
+    {
       variant: 'ghost' as const,
       label: t('button.variants.ghost.label'),
       description: t('button.variants.ghost.description'),

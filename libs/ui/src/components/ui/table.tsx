@@ -62,7 +62,9 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'border-b transition-colors has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted',
+        // ЛОКАЛЬНА ПРАВКА реєстру: обидва стани рядка — та сама прозора накладка
+        // `bg-accent`, що й скрізь у темі, замість суцільного `bg-muted`
+        'border-b transition-colors has-aria-expanded:bg-accent data-[state=selected]:bg-accent',
         className,
       )}
       {...props}

@@ -59,6 +59,10 @@
         "label": "Outline",
         "description": "A neutral action that remains clearly bounded."
       },
+      "elevated": {
+        "label": "Elevated",
+        "description": "A raised surface action: white in light, inverted to near-white in dark."
+      },
       "ghost": {
         "label": "Ghost",
         "description": "A quiet action for toolbars and compact surfaces."
