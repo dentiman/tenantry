@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./api/*": "./src/api/*.ts",
+    "./components/context-panel-slot": "./src/components/context-panel-slot.tsx",
     "./components/data-grid": "./src/components/data-grid/index.ts",
     "./components/form": "./src/components/form/index.ts",
     "./components/not-found-page": "./src/components/not-found-page.tsx",

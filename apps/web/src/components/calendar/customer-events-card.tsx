@@ -3,11 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { CalendarPlusIcon } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
-import { Item, ItemContent, ItemDescription, ItemTitle } from '@saas-skeleton/ui/components/ui/item';
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from '@saas-skeleton/ui/components/ui/item';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { useCalendarAgenda } from '../../api/generated/api';
 import { formatDateTime } from '../../lib/calendar-date';
-import { EventSheet, type EventSheetTarget } from './event-sheet';
+import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
+import { EventPanel, type EventPanelTarget } from './event-panel';
 import { useCalendarPreferences } from './use-calendar-preferences';
 
 /** Скільки найближчих подій показуємо на картці клієнта */
@@ -30,7 +36,7 @@ export function CustomerEventsCard({
 }) {
   const { t } = useTranslation('calendar');
   const preferences = useCalendarPreferences();
-  const [target, setTarget] = useState<EventSheetTarget | null>(null);
+  const [target, setTarget] = useState<EventPanelTarget | null>(null);
 
   const { data, isPending } = useCalendarAgenda({ customerId, limit: LIMIT });
   const events = data?.items ?? [];
@@ -96,15 +102,21 @@ export function CustomerEventsCard({
         )}
       </CardContent>
 
-      <EventSheet
-        target={target}
-        timeZone={preferences.viewerTimeZone}
-        defaultDurationMinutes={preferences.defaultEventDurationMinutes}
-        defaultReminderMinutes={preferences.defaultReminderMinutes}
-        onClose={() => {
-          setTarget(null);
-        }}
-      />
+      {/* Та сама контекстна панель шела, що й у календарі: картка кастомера
+          лишається на екрані, поки поруч відкрита зустріч */}
+      {target !== null && (
+        <ContextPanelPortal contentKey={target.event?.id ?? 'draft'} label="CustomerEventsCard">
+          <EventPanel
+            target={target}
+            timeZone={preferences.viewerTimeZone}
+            defaultDurationMinutes={preferences.defaultEventDurationMinutes}
+            defaultReminderMinutes={preferences.defaultReminderMinutes}
+            onClose={() => {
+              setTarget(null);
+            }}
+          />
+        </ContextPanelPortal>
+      )}
       <span className="sr-only">{customerName}</span>
     </Card>
   );

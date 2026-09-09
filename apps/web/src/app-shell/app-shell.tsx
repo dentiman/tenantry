@@ -11,6 +11,11 @@ import {
   PageHeaderSlot,
   PageHeaderSlotProvider,
 } from '@saas-skeleton/ui/components/page-header-slot';
+import {
+  ContextPanelProvider,
+  ContextPanelSlot,
+  ContextPanelTrigger,
+} from '@saas-skeleton/ui/components/context-panel-slot';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../components/notifications/notification-bell';
 import { AppRail } from './app-rail';
@@ -53,44 +58,67 @@ export function AppShell() {
   const isBleed = matches.at(-1)?.staticData.layout === 'bleed';
 
   return (
-    // Хедер тримає слот, який наповнюють сторінки (крихти) — див. page-header-slot.tsx
+    // Хедер тримає слот, який наповнюють сторінки (крихти) — див. page-header-slot.tsx,
+    // а права колонка — той самий портальний слот для контекстної панелі
+    // (див. context-panel-slot.tsx)
     <PageHeaderSlotProvider>
-      <SidebarProvider
-        style={
-          { '--sidebar-width': 'calc(14rem + var(--sidebar-width-icon) + 2px)' } as CSSProperties
-        }
-      >
-        {/* collapsible="icon": згортання стискає контейнер до ширини рейлу, а
+      <ContextPanelProvider>
+        <SidebarProvider
+          style={
+            {
+              '--sidebar-width': 'calc(14rem + var(--sidebar-width-icon) + 2px)',
+              // Права колонка — 18rem/288px. Симетрія з лівою парою (рейл +
+              // колонка area = 274px) була першим значенням і виявилась тіснуватою
+              // для форми: 18rem дає ті ~14px, яких бракувало, і при цьому це не
+              // підібране число, а крок шкали (`w-72`) і константа реєстру
+              // (`SIDEBAR_WIDTH_MOBILE`). Змінна, а не клас, — бо ширина панелі
+              // стане тягучою (resizable), і тягнути треба буде саме її
+              '--context-panel-width': '18rem',
+            } as CSSProperties
+          }
+        >
+          {/* collapsible="icon": згортання стискає контейнер до ширини рейлу, а
             overflow-hidden відрізає панель. Тобто SidebarTrigger і Cmd+B тепер
             ховають ДРУГУ колонку, а рейл із брендом лишаються — поведінка VS Code */}
-        <Sidebar collapsible="icon" className="overflow-hidden">
-          <div className="flex min-h-0 flex-1">
-            <AppRail />
-            <AreaSidebar />
-          </div>
-        </Sidebar>
-
-        <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
-            <SidebarTrigger className="-ml-2" />
-            <PageHeaderSlot className="min-w-0 flex-1" />
-            <div className="ml-auto flex items-center gap-1">
-              <NotificationBell />
-              <ThemeSwitcher />
+          <Sidebar collapsible="icon" className="overflow-hidden">
+            <div className="flex min-h-0 flex-1">
+              <AppRail />
+              <AreaSidebar />
             </div>
-          </header>
+          </Sidebar>
 
-          {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
+          {/* `min-w-0`: без нього широка таблиця гріда не дає стиснути себе, і
+              відкрита контекстна панель виштовхнула б розкладку за край вікна */}
+          <SidebarInset className="min-w-0">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
+              <SidebarTrigger className="-ml-2" />
+              <PageHeaderSlot className="min-w-0 flex-1" />
+              <div className="ml-auto flex items-center gap-1">
+                <NotificationBell />
+                <ThemeSwitcher />
+                {/* Найправіший кут хедера — впритул до межі панелі, якою керує */}
+                <ContextPanelTrigger />
+              </div>
+            </header>
+
+            {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
               і вкладений <main> був би невалідним */}
-          {/* На всю ширину: у списках таблиці широкі, і центрована колонка
+            {/* На всю ширину: у списках таблиці широкі, і центрована колонка
               max-w-5xl зʼїдала б половину екрана. Відступи — від роуту:
               сторінка-полотно (грід, календар) бере `bleed` і впирається в краї,
               решта лишається з полями шела (див. StaticDataRouteOption) */}
-          <div className={cn('flex-1', isBleed ? 'p-0' : 'px-6 pt-4 pb-6')}>
-            <Outlet />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+            <div className={cn('flex-1', isBleed ? 'p-0' : 'px-6 pt-4 pb-6')}>
+              <Outlet />
+            </div>
+          </SidebarInset>
+
+          {/* Контекстна панель — СУСІД `SidebarInset`, а не його дитина: вона
+              йде від верху вікна до низу і підрізає хедер справа так само, як
+              лівий сайдбар підрізає його зліва. Порожня (сторінка нічого в неї
+              не поклала) вона не займає нічого. Деталі — context-panel-slot.tsx */}
+          <ContextPanelSlot />
+        </SidebarProvider>
+      </ContextPanelProvider>
     </PageHeaderSlotProvider>
   );
 }

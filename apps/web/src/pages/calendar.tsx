@@ -18,6 +18,7 @@ import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
+import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import {
@@ -34,7 +35,7 @@ import type { CalendarEventListResponseDtoOutput } from '../api/generated/model/
 import type { DragCommit } from '../components/calendar/use-event-drag';
 import type { EventIntent } from '../components/calendar/event-context-menu';
 import { AgendaList } from '../components/calendar/agenda-list';
-import { EventSheet, type EventSheetTarget } from '../components/calendar/event-sheet';
+import { EventPanel, type EventPanelTarget } from '../components/calendar/event-panel';
 import { MonthGrid } from '../components/calendar/month-grid';
 import { ShortcutsDialog } from '../components/calendar/shortcuts-dialog';
 import { TimeGrid } from '../components/calendar/time-grid';
@@ -74,7 +75,7 @@ export function CalendarPage() {
   const anchor = search.date ?? todayKey(timeZone);
   const { from, to } = viewRange(view, anchor, timeZone, preferences.weekStartsOn);
 
-  const [target, setTarget] = useState<EventSheetTarget | null>(null);
+  const [target, setTarget] = useState<EventPanelTarget | null>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
 
   // Параметри вікна лежать окремою змінною: ними ж адресується кеш при
@@ -543,25 +544,38 @@ export function CalendarPage() {
         }}
       />
 
-      <EventSheet
-        target={target}
-        timeZone={timeZone}
-        defaultDurationMinutes={preferences.defaultEventDurationMinutes}
-        defaultReminderMinutes={preferences.defaultReminderMinutes}
-        onClose={() => {
-          setTarget(null);
-          // Deep link відпрацював — прибираємо його з URL, щоб «назад» не
-          // відкривав панель знову
-          if (deepLinkId) {
-            void navigate({
-              to: '/calendar/$view',
-              params: { view: 'week' },
-              search: { date: todayKey(timeZone) },
-              replace: true,
-            });
-          }
-        }}
-      />
+      {/* Подія відкривається в КОНТЕКСТНІЙ ПАНЕЛІ шела, а не в драйвері поверх
+          сітки: календар — той випадок, де сусідні події і є контекстом
+          рішення, і закривати їх модалкою означало б відбирати саме те, заради
+          чого людина відкрила подію. Сітка при цьому стискається, а не
+          ховається. Портал лишає панель дитиною сторінки, тому `target`,
+          мутації й `refreshCalendar` доступні їй без підняття стану вгору.
+
+          `contentKey` — id показаної події: без нього клік по СУСІДНІЙ події
+          при згорнутій панелі не розкривав би її назад */}
+      {target !== null && (
+        <ContextPanelPortal contentKey={target.event?.id ?? 'draft'} label="CalendarPage">
+          <EventPanel
+            target={target}
+            timeZone={timeZone}
+            defaultDurationMinutes={preferences.defaultEventDurationMinutes}
+            defaultReminderMinutes={preferences.defaultReminderMinutes}
+            onClose={() => {
+              setTarget(null);
+              // Deep link відпрацював — прибираємо його з URL, щоб «назад» не
+              // відкривав панель знову
+              if (deepLinkId) {
+                void navigate({
+                  to: '/calendar/$view',
+                  params: { view: 'week' },
+                  search: { date: todayKey(timeZone) },
+                  replace: true,
+                });
+              }
+            }}
+          />
+        </ContextPanelPortal>
+      )}
     </div>
   );
 }

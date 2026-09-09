@@ -3,7 +3,12 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
-    "menu": "Row actions"
+    "menu": "Row actions",
+    "close": "Close"
+  },
+  "contextPanel": {
+    "show": "Show context panel",
+    "hide": "Hide context panel"
   },
   "pagination": {
     "summary": "Total: {{total}} · Page {{page}} of {{totalPages}}",
