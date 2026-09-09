@@ -122,6 +122,7 @@ export function UserDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <UserIdentity
+            id={user.id}
             email={user.email}
             name={user.name}
             avatarUrl={user.avatarUrl}
@@ -252,6 +253,7 @@ export function UserDetailPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-start gap-3">
               <UserIdentity
+                id={user.id}
                 email={user.email}
                 name={user.name}
                 avatarUrl={user.avatarUrl}

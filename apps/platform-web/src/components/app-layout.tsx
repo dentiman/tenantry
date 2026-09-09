@@ -104,6 +104,7 @@ export function AppLayout() {
                     render={<SidebarMenuButton size="lg" aria-label={t('accountMenu')} />}
                   >
                     <UserIdentity
+                      id={operator?.id ?? ''}
                       email={operator?.email ?? ''}
                       name={operator?.name}
                       className="min-w-0 flex-1"

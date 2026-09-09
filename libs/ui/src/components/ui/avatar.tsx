@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
 
+import { getAvatarTint } from '@saas-skeleton/ui/lib/avatar-color';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 
 function Avatar({
@@ -33,10 +34,19 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
   );
 }
 
-function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props) {
+function AvatarFallback({
+  className,
+  style,
+  colorSeed,
+  ...props
+}: AvatarPrimitive.Fallback.Props & {
+  /** ID сутності (юзер/кастомер) — детермінований колірний тінт замість `bg-muted`. Див. `getAvatarTint`. */
+  colorSeed?: string;
+}) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
+      style={colorSeed ? { backgroundColor: getAvatarTint(colorSeed) } : style}
       className={cn(
         'flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs',
         className,

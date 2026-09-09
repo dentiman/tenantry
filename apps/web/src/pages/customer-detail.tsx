@@ -150,6 +150,7 @@ export function CustomerDetailPage() {
               у шапці титул рівня сторінки, а під ним завжди номер (окремий
               mono-рядок над іменем прибрано — він і був цим другим рядком) */}
           <CustomerIdentity
+            id={customer.id}
             kind={customer.kind}
             name={customer.name}
             numberLabel={customer.numberLabel}

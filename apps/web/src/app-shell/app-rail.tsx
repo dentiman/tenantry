@@ -264,6 +264,7 @@ function AccountMenu() {
         render={<SidebarMenuButton className={RAIL_ANCHOR_BUTTON} aria-label={t('accountMenu')} />}
       >
         <UserIdentity
+          id={user?.id ?? ''}
           email={user?.email ?? ''}
           name={user?.name}
           avatarUrl={user?.avatarUrl}
@@ -280,6 +281,7 @@ function AccountMenu() {
           <DropdownMenuLabel className="p-0 font-normal">
             <div className="px-2 py-1.5">
               <UserIdentity
+                id={user?.id ?? ''}
                 email={user?.email ?? ''}
                 name={user?.name}
                 avatarUrl={user?.avatarUrl}

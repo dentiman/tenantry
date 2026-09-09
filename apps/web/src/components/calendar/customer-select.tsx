@@ -118,6 +118,7 @@ export function CustomerSelect({
           <span className="flex min-w-0 flex-1 items-center">
             {selected ? (
               <CustomerIdentity
+                id={selected.id}
                 size="sm"
                 kind={selected.kind}
                 name={selected.name}
@@ -162,6 +163,7 @@ export function CustomerSelect({
           {(option: CustomerOption) => (
             <ComboboxItem key={option.id} value={option} className="py-1.5">
               <CustomerIdentity
+                id={option.id}
                 size="sm"
                 kind={option.kind}
                 name={option.name}

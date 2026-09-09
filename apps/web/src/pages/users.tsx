@@ -119,6 +119,7 @@ export function UsersPage() {
           className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <UserIdentity
+            id={u.id}
             email={u.email}
             name={u.name}
             avatarUrl={u.avatarUrl}

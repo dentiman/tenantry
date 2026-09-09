@@ -9,6 +9,8 @@ import {
 } from '@saas-skeleton/ui/components/ui/item';
 
 interface UserIdentityProps {
+  /** Ключ колірного тінта fallback-аватара (`getAvatarTint`) — стабільний, на відміну від email/name */
+  id: string;
   email: string;
   name?: string | null;
   avatarUrl?: string | null;
@@ -74,6 +76,7 @@ function getInitials(name: string | null | undefined, email: string): string {
  *   зачитує ідентичність двічі.
  */
 export function UserIdentity({
+  id,
   email,
   name,
   avatarUrl,
@@ -105,7 +108,7 @@ export function UserIdentity({
       <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
         <Avatar size={size}>
           {avatarUrl && <AvatarImage alt="" src={avatarUrl} />}
-          <AvatarFallback>{getInitials(name, email)}</AvatarFallback>
+          <AvatarFallback colorSeed={id}>{getInitials(name, email)}</AvatarFallback>
           {badge}
         </Avatar>
       </ItemMedia>

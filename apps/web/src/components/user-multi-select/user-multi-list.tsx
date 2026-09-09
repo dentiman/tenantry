@@ -117,7 +117,14 @@ export function UserMultiList({
                   key={option.id}
                   data-row
                   className={cn(
-                    'group/row flex h-12 items-center gap-2 rounded-md border bg-card py-0 pr-1 transition-colors',
+                    // Фон — `bg-muted/60`, а НЕ `bg-card`: рядок стоїть усередині
+                    // `Card` (playground) чи панелі події, тобто на поверхні
+                    // ТОГО САМОГО кольору — `bg-card` зливав рядок із контейнером
+                    // і лишав межу єдиним розрізненням. Мінімальна прозорість
+                    // (60%) дає рівно ту саму заливку, що вже несе кнопка-слот
+                    // нижче (`bg-muted/60`), тож рядок і порожній слот читаються
+                    // як одна щабель.
+                    'group/row flex h-12 items-center gap-2 rounded-md border bg-muted/60 py-0 pr-1 transition-colors',
                     reorderable ? 'pl-0.5' : 'pl-2',
                     // Піднятий рядок лишає собі власну поверхню і бере кільце
                     // з тінню; hover на ньому вимкнений — під пальцем він і так
@@ -151,6 +158,7 @@ export function UserMultiList({
                       // іншого виходу немає. Один список — одна метрика
                       // ідентичності з таблицею юзерів
                       <UserIdentity
+                        id={option.id}
                         email={option.email}
                         name={option.name}
                         avatarUrl={option.avatarUrl}

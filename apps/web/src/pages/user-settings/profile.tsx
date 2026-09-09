@@ -194,7 +194,13 @@ function AvatarSection({ user }: { user: UserResponse }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-4">
-        <UserIdentity email={user.email} name={user.name} avatarUrl={user.avatarUrl} size="lg" />
+        <UserIdentity
+          id={user.id}
+          email={user.email}
+          name={user.name}
+          avatarUrl={user.avatarUrl}
+          size="lg"
+        />
         <div className="flex shrink-0 gap-2">
           <Button
             variant="secondary"

@@ -125,6 +125,7 @@ export function UserMultiSelect({
             >
               {isResolved(option) ? (
                 <UserIdentity
+                  id={option.id}
                   size="sm"
                   showEmail={false}
                   email={option.email}

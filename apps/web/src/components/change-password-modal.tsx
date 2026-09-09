@@ -94,6 +94,7 @@ export function ChangePasswordModal({ user, onClose }: ChangePasswordModalProps)
         >
           {user && (
             <UserIdentity
+              id={user.id}
               email={user.email}
               name={user.name}
               avatarUrl={user.avatarUrl}

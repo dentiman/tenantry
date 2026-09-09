@@ -321,15 +321,24 @@ function AgendaRow({
       }
       variant="outline"
       className={cn(
-        // Картка, а не рядок таблиці: `bg-card` + тінь поверхні + скруглення
-        // (та сама форма, що в центрі сповіщень). Скруглення робить і саму
-        // смужку заокругленою — `border-radius` застосовується до межі, тому
+        // Картка, а не рядок таблиці: тінь поверхні + скруглення (та сама
+        // форма, що в центрі сповіщень). Скруглення робить і саму смужку
+        // заокругленою — `border-radius` застосовується до межі, тому
         // окремого елемента під неї не потрібно.
+        // Заливка — `bgSoft` (мінімальна прозорість кольору типу), а НЕ
+        // `bg-card`: картка тут лежить і на полотні сторінки, і на
+        // `bg-card`-картці кастомера — той самий колір зливав би її з
+        // поверхнею, лишаючи межу єдиним розрізненням.
         // Смужка типу — ЛІВА МЕЖА: так роблять Outlook/Teams, Notion Calendar,
         // Fantastical. Крапка (шлях Google Calendar, FullCalendar list і ReUI)
         // вимагає власної колонки, а нам потрібна одна
-        'w-full items-center gap-2 border-l-[3px] bg-card py-1.5 pr-3 pl-2.5 shadow-sm',
-        'text-left transition-colors focus-visible:ring-inset hover:bg-accent/40',
+        // Наведення НЕ міняє фон: накладка `hover:bg-accent` перебивала б
+        // власний колір типу (`bgSoft`) нейтральним сірим — картка й так
+        // клікабельна кнопка з фокус-кільцем, додаткового hover-стану колір
+        // не потребує
+        'w-full items-center gap-2 border-l-[3px] py-1.5 pr-3 pl-2.5 shadow-sm',
+        'text-left transition-colors focus-visible:ring-inset',
+        KIND_STYLES[event.kind].bgSoft,
         KIND_STYLES[event.kind].borderLine,
         (isCancelled || isDeclined) && 'opacity-60',
       )}
@@ -357,18 +366,21 @@ function AgendaRow({
              тут коштувала б дорожче за саму крапку — склад гостей із їхньою
              присутністю показує панель події, де рядок гостя кнопкою не є.
 
-             Перекриття зняте зовсім (стокове `-space-x-2` перебивається
-             `space-x-0`): у 20-піксельному аватарі дві літери займають майже всю
-             ширину, і сусід разом зі своїм `ring-2` зрізав другу — на екрані
-             стояло «AC» замість «AD» */
-          <AvatarGroup aria-hidden="true" className="gap-0.5 space-x-0">
+             Перекриття (стокова стопка-«у чаті», що й дає `AvatarGroup` за
+             замовчуванням) раніше зривало 20-піксельний аватар: дві літери
+             займали майже всю ширину, і сусід разом зі своїм `ring-2` зрізав
+             другу («AD» читалось як «AC»). Тепер 24px і вужчий `ring-1` —
+             того самого перекриття вистачає для «стопки», а літери цілі */
+          <AvatarGroup aria-hidden="true" className="*:data-[slot=avatar]:ring-1">
             {guests.slice(0, VISIBLE_GUESTS).map((attendee) => (
-              <Avatar key={attendee.id} size="sm" className="size-5">
-                <AvatarFallback className="text-[9px]">{initialsOf(attendee.user)}</AvatarFallback>
+              <Avatar key={attendee.id} size="sm" className="size-6">
+                <AvatarFallback className="text-[10px]" colorSeed={attendee.user.id}>
+                  {initialsOf(attendee.user)}
+                </AvatarFallback>
               </Avatar>
             ))}
             {guests.length > VISIBLE_GUESTS && (
-              <AvatarGroupCount className="size-5 text-[9px]">
+              <AvatarGroupCount className="size-6 text-[10px]">
                 +{guests.length - VISIBLE_GUESTS}
               </AvatarGroupCount>
             )}

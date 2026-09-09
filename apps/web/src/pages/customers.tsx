@@ -115,6 +115,7 @@ export function CustomersPage() {
           className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <CustomerIdentity
+            id={c.id}
             kind={c.kind}
             name={c.name}
             email={c.email}

@@ -25,6 +25,15 @@ export interface EventKindStyle {
   bg: string;
   /** Наведення СВІТЛІШИТЬ заливку (крізь неї проступає колонка), як у Notion */
   bgHover: string;
+  /**
+   * Та сама заливка, але СПРАВДІ прозора (лінія кольору поверх `transparent`,
+   * а не поверх `--card`) — для поверхонь БЕЗ ліній сітки під плиткою (агенда,
+   * віджет на дашборді: обидва — той самий `AgendaList`). Без кольору картка
+   * там мала лише бордер зліва і фон `--card`, тобто зливалась із будь-якою
+   * поверхнею того самого кольору (сама сторінка, картка кастомера). Мінімальна
+   * інтенсивність (`/10`) навмисно: це підказка кольором, а не заливка типу.
+   */
+  bgSoft: string;
   /** Вертикальна смужка як окремий елемент — у сітці */
   line: string;
   /** Та сама смужка як ліва межа рядка — в агенді */
@@ -37,6 +46,7 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
   MEETING: {
     bg: 'bg-event-blue-bg',
     bgHover: 'hover:bg-event-blue-bg/70',
+    bgSoft: 'bg-event-blue-line/10',
     line: 'bg-event-blue-line',
     borderLine: 'border-l-event-blue-line',
     text: 'text-event-blue',
@@ -44,6 +54,7 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
   CALL: {
     bg: 'bg-event-green-bg',
     bgHover: 'hover:bg-event-green-bg/70',
+    bgSoft: 'bg-event-green-line/10',
     line: 'bg-event-green-line',
     borderLine: 'border-l-event-green-line',
     text: 'text-event-green',
@@ -51,6 +62,7 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
   DEADLINE: {
     bg: 'bg-event-red-bg',
     bgHover: 'hover:bg-event-red-bg/70',
+    bgSoft: 'bg-event-red-line/10',
     line: 'bg-event-red-line',
     borderLine: 'border-l-event-red-line',
     text: 'text-event-red',
@@ -58,6 +70,7 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
   OUT_OF_OFFICE: {
     bg: 'bg-event-orange-bg',
     bgHover: 'hover:bg-event-orange-bg/70',
+    bgSoft: 'bg-event-orange-line/10',
     line: 'bg-event-orange-line',
     borderLine: 'border-l-event-orange-line',
     text: 'text-event-orange',
@@ -70,6 +83,7 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
   OTHER: {
     bg: 'bg-muted',
     bgHover: 'hover:bg-muted/70',
+    bgSoft: 'bg-muted-foreground/10',
     line: 'bg-muted-foreground/40',
     borderLine: 'border-l-muted-foreground/40',
     text: 'text-muted-foreground',

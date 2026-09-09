@@ -159,6 +159,7 @@ export function UserSelect({
           <span className="flex min-w-0 flex-1 items-center">
             {selected ? (
               <UserIdentity
+                id={selected.id}
                 size="sm"
                 email={selected.email}
                 name={selected.name}
@@ -210,6 +211,7 @@ export function UserSelect({
             isUser(option) ? (
               <ComboboxItem key={option.id} value={option} className="py-1.5">
                 <UserIdentity
+                  id={option.id}
                   size="sm"
                   email={option.email}
                   name={option.name}

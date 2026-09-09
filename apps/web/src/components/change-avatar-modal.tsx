@@ -71,6 +71,7 @@ export function ChangeAvatarModal({ user, onClose }: ChangeAvatarModalProps) {
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
           {user && (
             <UserIdentity
+              id={user.id}
               email={user.email}
               name={user.name}
               avatarUrl={user.avatarUrl}

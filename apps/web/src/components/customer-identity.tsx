@@ -11,6 +11,8 @@ import {
 import { formatForDisplay } from './form/phone/phone-format';
 
 interface CustomerIdentityProps {
+  /** Ключ колірного тінта fallback-аватара (`getAvatarTint`) — стабільний, на відміну від імені */
+  id: string;
   /** Дискримінатор сутності: від нього залежить і форма медіа, і його вміст */
   kind: CustomerKind;
   name: string;
@@ -89,6 +91,7 @@ function getInitials(name: string): string {
  *   була б готовим кодом без споживача.
  */
 export function CustomerIdentity({
+  id,
   kind,
   name,
   email,
@@ -122,7 +125,10 @@ export function CustomerIdentity({
         {/* rounded-md перекриває rounded-full примітива (і його рамку в ::after) —
             тому tailwind-merge, а не власна верстка аватара */}
         <Avatar size={size} className={isOrganization ? 'rounded-md after:rounded-md' : undefined}>
-          <AvatarFallback className={isOrganization ? 'rounded-md' : undefined}>
+          <AvatarFallback
+            colorSeed={id}
+            className={isOrganization ? 'rounded-md' : undefined}
+          >
             {isOrganization ? (
               // Декоративна: тип уже названо текстом у гріді/картці
               <Building2 aria-hidden className={ICON_SIZE[size]} />

@@ -46,6 +46,7 @@ export function UserPickerList({ shown, total, isFetching, lockedIds }: UserPick
             className="py-1.5"
           >
             <UserIdentity
+              id={option.id}
               size="sm"
               email={option.email}
               name={option.name}
