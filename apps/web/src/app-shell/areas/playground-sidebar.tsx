@@ -1,4 +1,4 @@
-import { MousePointerClick, UsersRound } from 'lucide-react';
+import { MousePointerClick, PanelTopIcon, UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AreaNav } from '../area-nav';
 
@@ -24,6 +24,12 @@ export function PlaygroundSidebar() {
           to: '/playground/multi-user-select',
           label: t('nav.userSelect'),
           icon: <UsersRound />,
+          match: 'exact',
+        },
+        {
+          to: '/playground/dialog',
+          label: t('nav.dialog'),
+          icon: <PanelTopIcon />,
           match: 'exact',
         },
       ]}

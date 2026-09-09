@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { TZDate } from '@date-fns/tz';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import {
   dayKey,
@@ -113,12 +114,7 @@ export function TimeGrid({
     ? (minutesFromDayStart(new Date(), timeZone) / minutesInDay(todayInView, timeZone)) * 100
     : null;
 
-  const drag = useEventDrag(
-    timeZone,
-    onDragCommit ?? (() => undefined),
-    scrollRef,
-    onEdgeNavigate,
-  );
+  const drag = useEventDrag(timeZone, onDragCommit ?? (() => undefined), scrollRef, onEdgeNavigate);
 
   /**
    * Створення протягуванням. День адресується ключем, а не індексом: колонки
@@ -137,7 +133,11 @@ export function TimeGrid({
     );
   });
 
-  const beginRangeDraft = (pointer: React.PointerEvent<HTMLDivElement>, key: string, total: number): void => {
+  const beginRangeDraft = (
+    pointer: React.PointerEvent<HTMLDivElement>,
+    key: string,
+    total: number,
+  ): void => {
     // Натискання по плитці належить перенесенню, а не створенню
     if (pointer.target instanceof Element && pointer.target.closest('[data-calendar-chip]')) {
       return;
@@ -222,9 +222,16 @@ export function TimeGrid({
        * прокрутки тепер зовні сітки і однаково впливає на обидва ряди. Перша
        * колонка — жолоб годин (`3.5rem`), далі дні.
        */}
-      {/* `select-none`: протягування по сітці не має підсвічувати текст підписів
+      {/* `ScrollArea`, а не нативний `overflow-y-auto`: смуга прокрутки в сітці
+          лежить ПОВЕРХ вмісту і зникає, коли нею не користуються — інакше вона
+          або постійно ріже останню колонку дня (macOS «always show scrollbars»),
+          або зʼявляється ривком і зсуває треки. `viewportRef` — той самий
+          елемент, що й раніше: `scrollTo` на «зараз» і автоскрол перетягування
+          працюють без змін.
+
+          `select-none`: протягування по сітці не має підсвічувати текст підписів
           годин — виділення читалось би як збій, а не як створення події */}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto select-none">
+      <ScrollArea className="min-h-0 flex-1" viewportRef={scrollRef} contentClassName="select-none">
         <div
           ref={gridRef}
           className="grid"
@@ -491,7 +498,7 @@ export function TimeGrid({
             );
           })}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }
@@ -627,7 +634,9 @@ function groupTimed(
   days: TZDate[],
   timeZone: string,
 ): Map<string, CalendarEventResponse[]> {
-  const map = new Map<string, CalendarEventResponse[]>(days.map((day) => [dayKey(day, timeZone), []]));
+  const map = new Map<string, CalendarEventResponse[]>(
+    days.map((day) => [dayKey(day, timeZone), []]),
+  );
   for (const event of events) {
     if (event.allDay) {
       continue;

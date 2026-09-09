@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@saas-skeleton/ui/components/ui/alert';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Field,
@@ -317,331 +318,333 @@ export function EventPanel({
           {!isNew && <TabsTrigger value="activity">{t('form.tabActivity')}</TabsTrigger>}
         </TabsList>
 
-        {/* `overflow-x-hidden` — політика панелі, а не косметика: у 288px колонці
-            горизонтальний скрол ніколи не є правильною відповіддю, тому
-            переповнення лікується ВМІСТОМ (перенос, `truncate`, стовпчик), а не
-            смугою прокрутки. Без цього класу `overflow-y-auto` вмикає
-            `overflow-x: auto` САМ — за правилом CSS «один із overflow не visible
-            → другий стає auto» */}
-        <TabsContent value="details" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-          {/* `p-2` — поля ПАНЕЛІ, а не сторінки: 8px замість 16px. У 288px
+        {/* `ScrollArea`, а не нативний `overflow-y-auto`: смуга лежить ПОВЕРХ
+            форми і зникає, коли нею не користуються — у 288px колонці постійна
+            смуга відбирала б у полів ще 8px (з 272 доступних). Осі `vertical`
+            досить: горизонтального скролу в панелі не буває за політикою, і
+            примітив глушить його сам — раніше тут стояв ручний
+            `overflow-x-hidden` проти фантомних пікселів `Switch`
+            (`docs/frontend/ui-known-issues.md` UI-2) */}
+        <TabsContent value="details" className="flex min-h-0 flex-1 flex-col">
+          <ScrollArea className="min-h-0 flex-1">
+            {/* `p-2` — поля ПАНЕЛІ, а не сторінки: 8px замість 16px. У 288px
               колонці кожні 8px по краях це 6% ширини поля вводу, і повні поля
               сторінки з'їдали більше, ніж давали (докладніше — §5.6
               `docs/frontend/app-shell.md`) */}
-          <form className="flex flex-col gap-4 p-2" onSubmit={(e) => void onSubmit(e)} noValidate>
-            {/* RSVP — перше, що бачить запрошений: рішення в два кліки */}
-            {!isNew && event.myResponse !== null && !event.isOrganizer && (
-              <Field>
-                <FieldLabel htmlFor="calendar-rsvp-comment">{t('rsvp.question')}</FieldLabel>
-                <div className="flex items-center gap-2">
-                  {(['ACCEPTED', 'TENTATIVE', 'DECLINED'] as const).map((response) => (
-                    <Button
-                      key={response}
-                      type="button"
-                      size="sm"
-                      variant={event.myResponse === response ? 'default' : 'outline'}
-                      disabled={setRsvp.isPending}
-                      onClick={() => {
-                        void (async () => {
-                          // Примітка їде РАЗОМ із відповіддю: окремої кнопки
-                          // «зберегти нотатку» немає свідомо — сервер порівнює
-                          // обидва поля і no-op-ить, лише якщо не змінилось
-                          // жодне, тож повторний клік по вже вибраній відповіді
-                          // оновлює саму примітку
-                          await setRsvp.mutateAsync({
-                            id: event.id,
-                            data: { response, comment: rsvpComment },
-                          });
-                          await invalidate();
-                        })();
-                      }}
-                    >
-                      {t(`rsvp.${response}`)}
-                    </Button>
-                  ))}
-                </div>
-                <Input
-                  id="calendar-rsvp-comment"
-                  value={rsvpComment}
-                  maxLength={500}
-                  placeholder={t('rsvp.commentPlaceholder')}
-                  onChange={(e) => {
-                    setRsvpComment(e.target.value);
-                  }}
-                />
-                <FieldDescription>{t('rsvp.commentHint')}</FieldDescription>
-              </Field>
-            )}
+            <form className="flex flex-col gap-4 p-2" onSubmit={(e) => void onSubmit(e)} noValidate>
+              {/* RSVP — перше, що бачить запрошений: рішення в два кліки */}
+              {!isNew && event.myResponse !== null && !event.isOrganizer && (
+                <Field>
+                  <FieldLabel htmlFor="calendar-rsvp-comment">{t('rsvp.question')}</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    {(['ACCEPTED', 'TENTATIVE', 'DECLINED'] as const).map((response) => (
+                      <Button
+                        key={response}
+                        type="button"
+                        size="sm"
+                        variant={event.myResponse === response ? 'default' : 'outline'}
+                        disabled={setRsvp.isPending}
+                        onClick={() => {
+                          void (async () => {
+                            // Примітка їде РАЗОМ із відповіддю: окремої кнопки
+                            // «зберегти нотатку» немає свідомо — сервер порівнює
+                            // обидва поля і no-op-ить, лише якщо не змінилось
+                            // жодне, тож повторний клік по вже вибраній відповіді
+                            // оновлює саму примітку
+                            await setRsvp.mutateAsync({
+                              id: event.id,
+                              data: { response, comment: rsvpComment },
+                            });
+                            await invalidate();
+                          })();
+                        }}
+                      >
+                        {t(`rsvp.${response}`)}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    id="calendar-rsvp-comment"
+                    value={rsvpComment}
+                    maxLength={500}
+                    placeholder={t('rsvp.commentPlaceholder')}
+                    onChange={(e) => {
+                      setRsvpComment(e.target.value);
+                    }}
+                  />
+                  <FieldDescription>{t('rsvp.commentHint')}</FieldDescription>
+                </Field>
+              )}
 
-            <FieldGroup>
-              <FormTextField
-                control={control}
-                name="title"
-                label={t('form.title')}
-                placeholder={t('form.titlePlaceholder')}
-                disabled={!canEdit}
-              />
-
-              <Field orientation="horizontal">
-                <FieldLabel htmlFor="calendar-all-day">{t('form.allDay')}</FieldLabel>
-                <Switch
-                  id="calendar-all-day"
-                  checked={allDay}
+              <FieldGroup>
+                <FormTextField
+                  control={control}
+                  name="title"
+                  label={t('form.title')}
+                  placeholder={t('form.titlePlaceholder')}
                   disabled={!canEdit}
-                  onCheckedChange={(checked: boolean) => {
-                    setValue('allDay', checked, { shouldDirty: true });
-                  }}
                 />
-              </Field>
 
-              {/* Дата окремим рядком, час — двома половинами під нею.
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="calendar-all-day">{t('form.allDay')}</FieldLabel>
+                  <Switch
+                    id="calendar-all-day"
+                    checked={allDay}
+                    disabled={!canEdit}
+                    onCheckedChange={(checked: boolean) => {
+                      setValue('allDay', checked, { shouldDirty: true });
+                    }}
+                  />
+                </Field>
+
+                {/* Дата окремим рядком, час — двома половинами під нею.
                     Спіймано в браузері: у трьохколонковій розкладці нативні
                     `type="time"` отримували 77px і показували «14:» замість
                     «14:00» (значення було правильне, обрізався рендер) */}
-              {allDay ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field>
-                    <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
-                    <Input
-                      id="calendar-date"
-                      type="date"
-                      disabled={!canEdit}
-                      {...form.register('date')}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="calendar-end-date">{t('form.endDate')}</FieldLabel>
-                    <Input
-                      id="calendar-end-date"
-                      type="date"
-                      disabled={!canEdit}
-                      {...form.register('endDate')}
-                    />
-                  </Field>
-                </div>
-              ) : (
-                <>
-                  <Field>
-                    <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
-                    <Input
-                      id="calendar-date"
-                      type="date"
-                      disabled={!canEdit}
-                      {...form.register('date')}
-                    />
-                  </Field>
+                {allDay ? (
                   <div className="grid grid-cols-2 gap-3">
                     <Field>
-                      <FieldLabel htmlFor="calendar-start-time">{t('form.from')}</FieldLabel>
-                      {/* Нативний `type="time"`, а не власний слот-комбобокс:
-                            браузер сам дає локальний 12/24-годинний формат,
-                            клавіатурний ввід і мобільний пікер. Комбобокс зі
-                            слотами по 15 хв — полірувка CAL-2 */}
+                      <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
                       <Input
-                        id="calendar-start-time"
-                        type="time"
-                        step={900}
+                        id="calendar-date"
+                        type="date"
                         disabled={!canEdit}
-                        {...form.register('startTime')}
+                        {...form.register('date')}
                       />
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="calendar-end-time">{t('form.to')}</FieldLabel>
+                      <FieldLabel htmlFor="calendar-end-date">{t('form.endDate')}</FieldLabel>
                       <Input
-                        id="calendar-end-time"
-                        type="time"
-                        step={900}
+                        id="calendar-end-date"
+                        type="date"
                         disabled={!canEdit}
-                        {...form.register('endTime')}
+                        {...form.register('endDate')}
                       />
                     </Field>
                   </div>
-                  {conflicts.length > 0 && (
-                    // ПОПЕРЕДЖЕННЯ, а не помилка: збереження не блокується, тому
-                    // це `Alert` під полями часу, а не `FieldError` і не
-                    // `errors.root` — форма лишається валідною. Варіант
-                    // `warning` зі смужкою — та сама форма, що банер зони на
-                    // сторінці календаря: мова попереджень у модулі одна
-                    <Alert variant="warning" accent="left">
-                      <TriangleAlertIcon />
-                      <AlertTitle>{t('conflicts.title', { count: conflicts.length })}</AlertTitle>
-                      <AlertDescription>
-                        <ul className="list-none">
-                          {conflicts.slice(0, CONFLICTS_SHOWN).map((conflict) => (
-                            <li key={conflict.id} className="truncate">
-                              {formatTime(conflict.startsAt, timeZone)}
-                              {' – '}
-                              {formatTime(conflict.endsAt, timeZone)} · {conflict.title}
-                            </li>
-                          ))}
-                          {conflicts.length > CONFLICTS_SHOWN && (
-                            <li>
-                              {t('conflicts.more', {
-                                count: conflicts.length - CONFLICTS_SHOWN,
-                              })}
-                            </li>
-                          )}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </>
+                ) : (
+                  <>
+                    <Field>
+                      <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
+                      <Input
+                        id="calendar-date"
+                        type="date"
+                        disabled={!canEdit}
+                        {...form.register('date')}
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field>
+                        <FieldLabel htmlFor="calendar-start-time">{t('form.from')}</FieldLabel>
+                        {/* Нативний `type="time"`, а не власний слот-комбобокс:
+                            браузер сам дає локальний 12/24-годинний формат,
+                            клавіатурний ввід і мобільний пікер. Комбобокс зі
+                            слотами по 15 хв — полірувка CAL-2 */}
+                        <Input
+                          id="calendar-start-time"
+                          type="time"
+                          step={900}
+                          disabled={!canEdit}
+                          {...form.register('startTime')}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="calendar-end-time">{t('form.to')}</FieldLabel>
+                        <Input
+                          id="calendar-end-time"
+                          type="time"
+                          step={900}
+                          disabled={!canEdit}
+                          {...form.register('endTime')}
+                        />
+                      </Field>
+                    </div>
+                    {conflicts.length > 0 && (
+                      // ПОПЕРЕДЖЕННЯ, а не помилка: збереження не блокується, тому
+                      // це `Alert` під полями часу, а не `FieldError` і не
+                      // `errors.root` — форма лишається валідною. Варіант
+                      // `warning` зі смужкою — та сама форма, що банер зони на
+                      // сторінці календаря: мова попереджень у модулі одна
+                      <Alert variant="warning" accent="left">
+                        <TriangleAlertIcon />
+                        <AlertTitle>{t('conflicts.title', { count: conflicts.length })}</AlertTitle>
+                        <AlertDescription>
+                          <ul className="list-none">
+                            {conflicts.slice(0, CONFLICTS_SHOWN).map((conflict) => (
+                              <li key={conflict.id} className="truncate">
+                                {formatTime(conflict.startsAt, timeZone)}
+                                {' – '}
+                                {formatTime(conflict.endsAt, timeZone)} · {conflict.title}
+                              </li>
+                            ))}
+                            {conflicts.length > CONFLICTS_SHOWN && (
+                              <li>
+                                {t('conflicts.more', {
+                                  count: conflicts.length - CONFLICTS_SHOWN,
+                                })}
+                              </li>
+                            )}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                )}
+
+                <FormSelect
+                  control={control}
+                  name="kind"
+                  label={t('form.kind')}
+                  options={kindOptions}
+                />
+
+                <Field>
+                  <FieldLabel htmlFor="calendar-customer">{t('form.customer')}</FieldLabel>
+                  <CustomerSelect
+                    id="calendar-customer"
+                    value={watch('customerId')}
+                    disabled={!canEdit}
+                    onChange={(customerId) => {
+                      setValue('customerId', customerId, { shouldDirty: true });
+                    }}
+                  />
+                </Field>
+
+                <AttendeePicker
+                  value={watch('attendeeIds')}
+                  known={event?.attendees ?? []}
+                  ownerId={event?.ownerId ?? null}
+                  disabled={!canEdit}
+                  onChange={(next) => {
+                    setValue('attendeeIds', next, { shouldDirty: true });
+                  }}
+                />
+
+                <ReminderRows
+                  value={watch('reminders')}
+                  onChange={(next) => {
+                    setValue('reminders', next, { shouldDirty: true });
+                  }}
+                />
+
+                <FormTextField
+                  control={control}
+                  name="location"
+                  label={t('form.location')}
+                  disabled={!canEdit}
+                />
+                <FormTextareaField
+                  control={control}
+                  name="description"
+                  label={t('form.description')}
+                  disabled={!canEdit}
+                />
+
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="calendar-private">{t('form.private')}</FieldLabel>
+                  <Switch
+                    id="calendar-private"
+                    checked={watch('isPrivate')}
+                    disabled={!canEdit}
+                    onCheckedChange={(checked: boolean) => {
+                      setValue('isPrivate', checked, { shouldDirty: true });
+                    }}
+                  />
+                </Field>
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="calendar-busy">{t('form.busy')}</FieldLabel>
+                  <Switch
+                    id="calendar-busy"
+                    checked={watch('busy')}
+                    disabled={!canEdit}
+                    onCheckedChange={(checked: boolean) => {
+                      setValue('busy', checked, { shouldDirty: true });
+                    }}
+                  />
+                </Field>
+              </FieldGroup>
+
+              {errors.root?.server && (
+                <p className="text-sm text-destructive">{errors.root.server.message}</p>
               )}
 
-              <FormSelect
-                control={control}
-                name="kind"
-                label={t('form.kind')}
-                options={kindOptions}
-              />
-
-              <Field>
-                <FieldLabel htmlFor="calendar-customer">{t('form.customer')}</FieldLabel>
-                <CustomerSelect
-                  id="calendar-customer"
-                  value={watch('customerId')}
-                  disabled={!canEdit}
-                  onChange={(customerId) => {
-                    setValue('customerId', customerId, { shouldDirty: true });
-                  }}
-                />
-              </Field>
-
-              <AttendeePicker
-                value={watch('attendeeIds')}
-                known={event?.attendees ?? []}
-                ownerId={event?.ownerId ?? null}
-                disabled={!canEdit}
-                onChange={(next) => {
-                  setValue('attendeeIds', next, { shouldDirty: true });
-                }}
-              />
-
-              <ReminderRows
-                value={watch('reminders')}
-                onChange={(next) => {
-                  setValue('reminders', next, { shouldDirty: true });
-                }}
-              />
-
-              <FormTextField
-                control={control}
-                name="location"
-                label={t('form.location')}
-                disabled={!canEdit}
-              />
-              <FormTextareaField
-                control={control}
-                name="description"
-                label={t('form.description')}
-                disabled={!canEdit}
-              />
-
-              <Field orientation="horizontal">
-                <FieldLabel htmlFor="calendar-private">{t('form.private')}</FieldLabel>
-                <Switch
-                  id="calendar-private"
-                  checked={watch('isPrivate')}
-                  disabled={!canEdit}
-                  onCheckedChange={(checked: boolean) => {
-                    setValue('isPrivate', checked, { shouldDirty: true });
-                  }}
-                />
-              </Field>
-              <Field orientation="horizontal">
-                <FieldLabel htmlFor="calendar-busy">{t('form.busy')}</FieldLabel>
-                <Switch
-                  id="calendar-busy"
-                  checked={watch('busy')}
-                  disabled={!canEdit}
-                  onCheckedChange={(checked: boolean) => {
-                    setValue('busy', checked, { shouldDirty: true });
-                  }}
-                />
-              </Field>
-            </FieldGroup>
-
-            {errors.root?.server && (
-              <p className="text-sm text-destructive">{errors.root.server.message}</p>
-            )}
-
-            {/* Учасники бачать склад і свій RSVP, але не форму: редагує
+              {/* Учасники бачать склад і свій RSVP, але не форму: редагує
                   організатор (сервер відповідає 403, і кнопки тут просто немає) */}
-            {canEdit && (
-              // Стовпчик, а не рядок із `justify-between`: три кнопки
-              // (Cancel event + Delete + Save) у 288px колонці не вміщались і
-              // ВИШТОВХУВАЛИ панель — саме вони давали горизонтальний скрол
-              // (спіймано в браузері 2026-09-08). У вузькій панелі головна дія
-              // йде на всю ширину зверху, вторинні — рядком під нею з переносом
-              <div className="flex flex-col gap-2 border-t pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isNew ? t('form.create') : t('form.save')}
-                </Button>
-                <div className="flex flex-wrap items-center gap-2">
-                  {!isNew && event.status !== 'CANCELLED' && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={setStatus.isPending}
-                      onClick={() => {
-                        void (async () => {
-                          await setStatus.mutateAsync({
-                            id: event.id,
-                            data: { status: 'CANCELLED' },
-                          });
+              {canEdit && (
+                // Стовпчик, а не рядок із `justify-between`: три кнопки
+                // (Cancel event + Delete + Save) у 288px колонці не вміщались і
+                // ВИШТОВХУВАЛИ панель — саме вони давали горизонтальний скрол
+                // (спіймано в браузері 2026-09-08). У вузькій панелі головна дія
+                // йде на всю ширину зверху, вторинні — рядком під нею з переносом
+                <div className="flex flex-col gap-2 border-t pt-4">
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isNew ? t('form.create') : t('form.save')}
+                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!isNew && event.status !== 'CANCELLED' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={setStatus.isPending}
+                        onClick={() => {
+                          void (async () => {
+                            await setStatus.mutateAsync({
+                              id: event.id,
+                              data: { status: 'CANCELLED' },
+                            });
+                            await invalidate();
+                            onClose();
+                          })();
+                        }}
+                      >
+                        <CalendarOffIcon />
+                        {t('form.cancelEvent')}
+                      </Button>
+                    )}
+                    {!isNew && event.status === 'CANCELLED' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          void (async () => {
+                            await setStatus.mutateAsync({
+                              id: event.id,
+                              data: { status: 'CONFIRMED' },
+                            });
+                            await invalidate();
+                          })();
+                        }}
+                      >
+                        {t('form.restoreEvent')}
+                      </Button>
+                    )}
+                    {!isNew && (
+                      <DeleteEventButton
+                        onConfirm={async () => {
+                          await removeEvent.mutateAsync({ id: event.id });
                           await invalidate();
                           onClose();
-                        })();
-                      }}
-                    >
-                      <CalendarOffIcon />
-                      {t('form.cancelEvent')}
-                    </Button>
-                  )}
-                  {!isNew && event.status === 'CANCELLED' && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        void (async () => {
-                          await setStatus.mutateAsync({
-                            id: event.id,
-                            data: { status: 'CONFIRMED' },
-                          });
-                          await invalidate();
-                        })();
-                      }}
-                    >
-                      {t('form.restoreEvent')}
-                    </Button>
-                  )}
-                  {!isNew && (
-                    <DeleteEventButton
-                      onConfirm={async () => {
-                        await removeEvent.mutateAsync({ id: event.id });
-                        await invalidate();
-                        onClose();
-                      }}
-                    />
-                  )}
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </form>
+              )}
+            </form>
+          </ScrollArea>
         </TabsContent>
 
         {!isNew && (
-          <TabsContent
-            value="activity"
-            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
-          >
-            <div className="p-2">
-              {/* Стрічка події — той самий спільний ActivityFeed, що на картках
+          <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-2">
+                {/* Стрічка події — той самий спільний ActivityFeed, що на картках
                     юзера й кастомера. Нового ендпоінта не потрібно взагалі */}
-              <ActivityFeed entityType="calendar_event" entityId={event.id} />
-            </div>
+                <ActivityFeed entityType="calendar_event" entityId={event.id} />
+              </div>
+            </ScrollArea>
           </TabsContent>
         )}
       </Tabs>

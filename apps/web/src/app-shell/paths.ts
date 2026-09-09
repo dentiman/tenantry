@@ -32,6 +32,7 @@ export type NavPath =
   | '/settings/activity'
   | '/playground'
   | '/playground/multi-user-select'
+  | '/playground/dialog'
   | '/user-settings'
   | '/user-settings/account'
   | '/user-settings/security'

@@ -1,6 +1,6 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { cn } from '@saas-skeleton/ui/lib/utils';
-import { Outlet, useMatches } from '@tanstack/react-router';
+import { Outlet, useMatches, useRouterState } from '@tanstack/react-router';
 import {
   Sidebar,
   SidebarInset,
@@ -16,6 +16,7 @@ import {
   ContextPanelSlot,
   ContextPanelTrigger,
 } from '@saas-skeleton/ui/components/context-panel-slot';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../components/notifications/notification-bell';
 import { AppRail } from './app-rail';
@@ -57,6 +58,29 @@ export function AppShell() {
   const matches = useMatches();
   const isBleed = matches.at(-1)?.staticData.layout === 'bleed';
 
+  /**
+   * Прокрутка скидається на початок при переході на іншу сторінку.
+   *
+   * Доки скролило ВІКНО, це робив браузер. Тепер скролить `ScrollArea`, і без
+   * цього ефекту нова сторінка відкривалась там, де людина покинула попередню, —
+   * тобто десь посередині.
+   *
+   * Другим ділом ефект страхує саму смугу. Base UI перераховує переповнення на
+   * `scroll` і на resize; зміну ВИСОТИ ВМІСТУ ловить `ScrollAreaContent` своїм
+   * `ResizeObserver` (він у примітиві є), але RO — єдиний канал, і в замороженому
+   * стані (фонова вкладка) він мовчить. `scrollTo` дає другий, незалежний:
+   * перехід з довгої сторінки на коротку завжди має ненульовий `scrollTop`, тож
+   * подія `scroll` гарантовано доїжджає і змушує перерахунок.
+   *
+   * Ключ — `pathname`, а не вся локація: зміна `?page=2` у гріді це та сама
+   * сторінка, і скидати прокрутку там не треба.
+   */
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const viewportRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    viewportRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
   return (
     // Хедер тримає слот, який наповнюють сторінки (крихти) — див. page-header-slot.tsx,
     // а права колонка — той самий портальний слот для контекстної панелі
@@ -88,9 +112,15 @@ export function AppShell() {
           </Sidebar>
 
           {/* `min-w-0`: без нього широка таблиця гріда не дає стиснути себе, і
-              відкрита контекстна панель виштовхнула б розкладку за край вікна */}
-          <SidebarInset className="min-w-0">
-            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-6 supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:backdrop-blur-xl">
+              відкрита контекстна панель виштовхнула б розкладку за край вікна.
+
+              `h-svh overflow-hidden`: вікно більше НЕ скролиться — скролить
+              `ScrollArea` під хедером. Це прибирає нативну смугу вікна, яка
+              єдина в застосунку лишалась постійною і забирала 15px у КОЖНОЇ
+              сторінки. Побічний виграш: хедер тепер поза скролером, а не
+              `sticky` над ним */}
+          <SidebarInset className="h-svh min-w-0 overflow-hidden">
+            <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
               <SidebarTrigger className="-ml-2" />
               <PageHeaderSlot className="min-w-0 flex-1" />
               <div className="ml-auto flex items-center gap-1">
@@ -101,15 +131,21 @@ export function AppShell() {
               </div>
             </header>
 
-            {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
-              і вкладений <main> був би невалідним */}
-            {/* На всю ширину: у списках таблиці широкі, і центрована колонка
-              max-w-5xl зʼїдала б половину екрана. Відступи — від роуту:
-              сторінка-полотно (грід, календар) бере `bleed` і впирається в краї,
-              решта лишається з полями шела (див. StaticDataRouteOption) */}
-            <div className={cn('flex-1', isBleed ? 'p-0' : 'px-6 pt-4 pb-6')}>
-              <Outlet />
-            </div>
+            {/* Головний скрол застосунку. `size="lg"` — 12px проти 8px у панелей
+                і сіток: ця смуга одна на екран, нею користуються найчастіше, і в
+                неї немає сусіда, з яким треба збігтися (та сама логіка, чому в
+                будь-якій ОС смуга вікна товща за смугу випадайки) */}
+            <ScrollArea className="min-h-0 flex-1" size="lg" viewportRef={viewportRef}>
+              {/* div, а не main: SidebarInset реєстру САМ рендериться як <main>,
+                і вкладений <main> був би невалідним */}
+              {/* На всю ширину: у списках таблиці широкі, і центрована колонка
+                max-w-5xl зʼїдала б половину екрана. Відступи — від роуту:
+                сторінка-полотно (грід, календар) бере `bleed` і впирається в краї,
+                решта лишається з полями шела (див. StaticDataRouteOption) */}
+              <div className={cn('min-h-full', isBleed ? 'p-0' : 'px-6 pt-4 pb-6')}>
+                <Outlet />
+              </div>
+            </ScrollArea>
           </SidebarInset>
 
           {/* Контекстна панель — СУСІД `SidebarInset`, а не його дитина: вона

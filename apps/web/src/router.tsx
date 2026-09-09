@@ -22,6 +22,7 @@ import { UserDetailPage } from './pages/user-detail';
 import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
+import { PlaygroundDialogPage } from './pages/playground-dialog';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
@@ -385,6 +386,12 @@ const playgroundUserSelectRoute = createRoute({
   component: PlaygroundUserSelectPage,
 });
 
+const playgroundDialogRoute = createRoute({
+  getParentRoute: () => playgroundRoute,
+  path: 'dialog',
+  component: PlaygroundDialogPage,
+});
+
 /**
  * Неіснуючий роут ПОЗА будь-якою area (`/nonsense`). Свідомо splat-роут ПІД
  * `appRoute`, а не `notFoundComponent` кореня: так 404 проходить той самий гейт
@@ -425,7 +432,11 @@ const routeTree = rootRoute.addChildren([
       userSettingsNotificationsRoute,
       userSettingsAppearanceRoute,
     ]),
-    playgroundRoute.addChildren([playgroundButtonsRoute, playgroundUserSelectRoute]),
+    playgroundRoute.addChildren([
+      playgroundButtonsRoute,
+      playgroundUserSelectRoute,
+      playgroundDialogRoute,
+    ]),
     notFoundRoute,
   ]),
 ]);

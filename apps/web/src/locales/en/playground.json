@@ -2,7 +2,8 @@
   "title": "Component playground",
   "nav": {
     "buttons": "Buttons",
-    "userSelect": "User select"
+    "userSelect": "User select",
+    "dialog": "Dialog scroll"
   },
   "eyebrow": "Design system",
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
@@ -136,5 +137,28 @@
     },
     "comment": "Comment",
     "commentSample": "Joining from the road — I might be ten minutes late to the call."
+  },
+  "dialog": {
+    "title": "Dialog scroll",
+    "description": "A modal is the only place where a scroller is born from a compromise — a height ceiling, a pinned header and footer, and content of unknown length all at once. These stands show the shape that survives both extremes.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "long": {
+      "title": "Tall dialog",
+      "description": "Content taller than the ceiling: the body scrolls, the header and footer stay put, and the overlay scrollbar takes no width from the fields.",
+      "trigger": "Open tall dialog",
+      "heading": "Edit preferences",
+      "notify": "Email me about changes",
+      "field": "Field {{number}}",
+      "placeholder": "Type something…"
+    },
+    "short": {
+      "title": "Short dialog, same markup",
+      "description": "Identical markup and the same max-height: the dialog must stay as tall as its content. If the scroller stretched itself, the ceiling would become a fixed height.",
+      "trigger": "Open short dialog",
+      "heading": "Rename",
+      "name": "Name",
+      "hint": "Shown to everyone in your organization."
+    }
   }
 }

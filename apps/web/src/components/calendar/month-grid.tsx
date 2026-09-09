@@ -2,6 +2,7 @@ import { TZDate } from '@date-fns/tz';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { dayKey, formatWeekday, isWeekend, todayKey } from '../../lib/calendar-date';
 import { EventChip } from './event-chip';
@@ -151,7 +152,15 @@ export function MonthGrid({
           </div>
         ))}
       </div>
-      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto select-none">
+      {/* Оверлейна смуга прокрутки — та сама, що в сітці дня/тижня: невидима,
+          доки нею не користуються, і ширини в тижневих рядків не забирає */}
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportRef={scrollRef}
+        // `min-h-full`: тижневі рядки ділять висоту через `flex-1`, тож обгортка
+        // вмісту мусить бути не нижчою за viewport
+        contentClassName="flex min-h-full flex-col select-none"
+      >
         {weeks.map((week, weekIndex) => (
           <MonthWeekRow
             key={dayKey(week.days[0] ?? days[0] ?? new TZDate(), timeZone)}
@@ -171,7 +180,7 @@ export function MonthGrid({
             onIntent={onIntent}
           />
         ))}
-      </div>
+      </ScrollArea>
     </div>
   );
 }
@@ -338,7 +347,9 @@ function MonthWeekRow({
               type="button"
               aria-label={createLabel(key)}
               onClick={() => {
-                onCreate(new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0, timeZone));
+                onCreate(
+                  new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0, timeZone),
+                );
               }}
               className="rounded px-1 text-xs text-muted-foreground opacity-0 transition-opacity hover:bg-accent focus-visible:opacity-100 group-hover/cell:opacity-100 hover:opacity-100"
             >
@@ -375,8 +386,7 @@ function MonthWeekRow({
                   ? (pointer, mode) => {
                       // Тягнуть край — рахуємо від того краю, який тягнуть:
                       // інакше «кінець» зсувався б на різницю з ПОЧАТКОМ смуги
-                      const anchorIndex =
-                        mode === 'resize-end' ? slot.endIndex : slot.startIndex;
+                      const anchorIndex = mode === 'resize-end' ? slot.endIndex : slot.startIndex;
                       onDragStart(pointer, event, weekIndex * 7 + anchorIndex, mode);
                     }
                   : undefined

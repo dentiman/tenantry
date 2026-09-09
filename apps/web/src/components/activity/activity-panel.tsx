@@ -23,7 +23,9 @@ interface ActivityPanelProps {
  *   під контент), на широких — рахується від вьюпорта.
  * - **`sticky` тільки з `lg`**: коли колонки стають одна під одною, липкість
  *   зробила б панель, що переслідує контент, — на мобільному це шкода, а не поміч.
- *   Зсув `top` = висота липкого хедера (3.5rem) + відступ контенту (1rem).
+ *   Зсув `top` = відступ контенту (1rem), а не «хедер + відступ»: з 2026-09-09
+ *   скролить `ScrollArea` ПІД хедером, тож його висота в координати скролера вже
+ *   не входить.
  * - Всередині — той самий `ActivityFeed`, що в драйвері й у журналі налаштувань:
  *   ліниве довантаження працює у вкладеному скролі без окремого налаштування.
  */
@@ -33,7 +35,8 @@ export function ActivityPanel({ entityType, entityId, className }: ActivityPanel
   return (
     <Card
       className={cn(
-        'max-h-[32rem] lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-7rem)]',
+        // 6rem = хедер 3.5rem + pt-4 (1rem) + pb-6 (1.5rem)
+        'max-h-[32rem] lg:sticky lg:top-4 lg:max-h-[calc(100svh-6rem)]',
         className,
       )}
     >
