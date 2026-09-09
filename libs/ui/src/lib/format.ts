@@ -1,21 +1,62 @@
 // Обидва застосунки конфігурують САМ синглтон i18next (не createInstance), тож
 // пакет бере той самий інстанс без прокидання через пропи чи контекст
 import i18n from 'i18next';
+import { toDateValue } from '@saas-skeleton/ui/lib/date-value';
 
+/**
+ * **Дата в інтерфейсі — `yyyy-MM-dd`, і це стандарт скелетона** (рішення
+ * користувача 2026-09-09), спільний для гріда, картки, мета-рядка і поля вводу
+ * (`DatePicker`, дефолт `format="iso"`).
+ *
+ * Чому не локальний формат `Intl`, який тут стояв раніше. Три причини, і жодна
+ * з них не про красу:
+ *   1. `03-04-2026` не має однієї відповіді — берлінський бухгалтер і
+ *      нью-йоркський менеджер прочитають різні місяці. Для системи, де дані
+ *      переїжджають між людьми, це не дрібниця;
+ *   2. ширина стала: колонка гріда не перемальовується під мову, а `Sep`/
+ *      `вересня` вже дають різні метрики;
+ *   3. те, що людина бачить на екрані, збігається з тим, що вона знайде в
+ *      експорті, логах і URL — і зможе просто скопіювати.
+ *
+ * Перевизначає це **код** конкретного екрана (`DatePicker format="long"`,
+ * власний `Intl` у місці, де дата — головний зміст), а НЕ юзер у налаштуваннях:
+ * формат дати не стає ще одним перемикачем в адмінці.
+ *
+ * Межа: календар лишається на СВОЇХ форматах (`apps/web/src/lib/calendar-date.ts`
+ * — «Wednesday, September 9», «5 minutes ago»). Там дата не дані, а зміст
+ * екрана, і ISO читався б як лог.
+ */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) {
     return '—';
   }
-  return new Intl.DateTimeFormat(i18n.language).format(new Date(iso));
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return toDateValue(date);
 }
 
+/**
+ * Той самий стандарт із часом: `2026-09-09 14:30`. Година 24-годинна навіть в
+ * `en` — інакше половина рядка була б ISO, а половина локальною (`2:30 PM`).
+ * Секунд немає: у мета-рядку вони шум, а кому вони потрібні (черги, DLQ) —
+ * форматує сам.
+ */
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) {
     return '—';
   }
-  return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(iso),
-  );
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+  return `${toDateValue(date)} ${time}`;
 }
 
 /** Пороги «людського» відліку: до 45 с — «щойно», далі одиниця за величиною різниці */

@@ -45,12 +45,24 @@ import {
 } from '../../api/generated/api';
 import { ActivityFeed } from '../activity/activity-feed';
 import { useAuthStore } from '../../stores/auth.store';
-import { applyServerError, FormSelect, FormTextField, FormTextareaField } from '../form';
+import {
+  applyServerError,
+  FormDateField,
+  FormSelect,
+  FormTextField,
+  FormTextareaField,
+} from '../form';
 import { AttendeePicker } from './attendee-picker';
 import { CustomerSelect } from './customer-select';
 import { ReminderRows } from './reminder-rows';
 import { findConflicts } from './find-conflicts';
-import { dayKey, formatTime, formatDateTime, toInstantIso } from '../../lib/calendar-date';
+import {
+  asWeekStart,
+  dayKey,
+  formatTime,
+  formatDateTime,
+  toInstantIso,
+} from '../../lib/calendar-date';
 
 /**
  * Форма події. Схема ЛОКАЛЬНА, а не з `contracts`, свідомо: у формі час живе
@@ -61,6 +73,11 @@ import { dayKey, formatTime, formatDateTime, toInstantIso } from '../../lib/cale
 const FormSchema = z.object({
   title: z.string().trim().min(1),
   allDay: z.boolean(),
+  /*
+   * Рядок, а не `string | null`: очищене поле дає тут `''` (див. `emptyValue`
+   * на `FormDateField` нижче). Так `.min(1)` лишається робочим повідомленням
+   * «дата обов'язкова», а `toIso` ніколи не бачить `null`.
+   */
   date: z.string().min(1),
   /** Для all-day — останній день (включно, як бачить людина) */
   endDate: z.string(),
@@ -132,6 +149,8 @@ export interface EventPanelTarget {
 interface EventPanelProps {
   target: EventPanelTarget | null;
   timeZone: string;
+  /** Перший день тижня для міні-календаря в полях дати — той самий, що в сітці */
+  weekStartsOn: number;
   defaultDurationMinutes: number;
   defaultReminderMinutes: number | null;
   onClose: () => void;
@@ -140,6 +159,7 @@ interface EventPanelProps {
 export function EventPanel({
   target,
   timeZone,
+  weekStartsOn,
   defaultDurationMinutes,
   defaultReminderMinutes,
   onClose,
@@ -178,10 +198,11 @@ export function EventPanel({
     formState: { isSubmitting, errors },
   } = form;
   const allDay = watch('allDay');
+  const startDate = watch('date');
   const conflicts = useConflicts({
     isOpen: target !== null,
     allDay,
-    date: watch('date'),
+    date: startDate,
     startTime: watch('startTime'),
     endTime: watch('endTime'),
     timeZone,
@@ -402,37 +423,41 @@ export function EventPanel({
                     `type="time"` отримували 77px і показували «14:» замість
                     «14:00» (значення було правильне, обрізався рендер) */}
                 {allDay ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field>
-                      <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
-                      <Input
-                        id="calendar-date"
-                        type="date"
-                        disabled={!canEdit}
-                        {...form.register('date')}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="calendar-end-date">{t('form.endDate')}</FieldLabel>
-                      <Input
-                        id="calendar-end-date"
-                        type="date"
-                        disabled={!canEdit}
-                        {...form.register('endDate')}
-                      />
-                    </Field>
-                  </div>
+                  /* Дві дати ОДНА ПІД ОДНОЮ, а не в два стовпці: у панелі 288px
+                     колонка виходить ~130px, а `2026-09-09` разом зі знаком
+                     календаря в неї не влазить — рівно та сама історія, що з
+                     нативним `type="time"` вище, тільки спіймана до релізу */
+                  <>
+                    <FormDateField
+                      control={control}
+                      name="date"
+                      label={t('form.date')}
+                      disabled={!canEdit}
+                      emptyValue=""
+                      weekStartsOn={asWeekStart(weekStartsOn)}
+                    />
+                    {/* Останній день не може передувати першому — межу тримає
+                        сам календар, а не перевірка після submit */}
+                    <FormDateField
+                      control={control}
+                      name="endDate"
+                      label={t('form.endDate')}
+                      disabled={!canEdit}
+                      emptyValue=""
+                      min={startDate || undefined}
+                      weekStartsOn={asWeekStart(weekStartsOn)}
+                    />
+                  </>
                 ) : (
                   <>
-                    <Field>
-                      <FieldLabel htmlFor="calendar-date">{t('form.date')}</FieldLabel>
-                      <Input
-                        id="calendar-date"
-                        type="date"
-                        disabled={!canEdit}
-                        {...form.register('date')}
-                      />
-                    </Field>
+                    <FormDateField
+                      control={control}
+                      name="date"
+                      label={t('form.date')}
+                      disabled={!canEdit}
+                      emptyValue=""
+                      weekStartsOn={asWeekStart(weekStartsOn)}
+                    />
                     <div className="grid grid-cols-2 gap-3">
                       <Field>
                         <FieldLabel htmlFor="calendar-start-time">{t('form.from')}</FieldLabel>

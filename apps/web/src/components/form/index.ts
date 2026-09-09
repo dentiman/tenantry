@@ -12,6 +12,7 @@ export {
   FormTextField,
   FormPasswordField,
   FormSelect,
+  FormDateField,
   FormTextareaField,
   applyServerError,
 } from '@saas-skeleton/ui/components/form';

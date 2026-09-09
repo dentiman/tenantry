@@ -1,4 +1,10 @@
-import { MousePointerClick, PanelTopIcon, UsersRound } from 'lucide-react';
+import {
+  AlignLeftIcon,
+  MousePointerClick,
+  PanelTopIcon,
+  RectangleHorizontalIcon,
+  UsersRound,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AreaNav } from '../area-nav';
 
@@ -18,6 +24,18 @@ export function PlaygroundSidebar() {
           to: '/playground',
           label: t('nav.buttons'),
           icon: <MousePointerClick />,
+          match: 'exact',
+        },
+        {
+          to: '/playground/vertical-form',
+          label: t('nav.verticalForm'),
+          icon: <AlignLeftIcon />,
+          match: 'exact',
+        },
+        {
+          to: '/playground/inline-form',
+          label: t('nav.inlineForm'),
+          icon: <RectangleHorizontalIcon />,
           match: 'exact',
         },
         {

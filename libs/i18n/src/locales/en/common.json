@@ -27,6 +27,14 @@
     "show": "Show password",
     "hide": "Hide password"
   },
+  "datePicker": {
+    "open": "Open calendar",
+    "mask": {
+      "day": "d",
+      "month": "m",
+      "year": "y"
+    }
+  },
   "phone": {
     "countryLabel": "Country calling code",
     "searchCountry": "Search country or code…",

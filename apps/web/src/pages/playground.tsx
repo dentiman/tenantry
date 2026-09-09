@@ -1,18 +1,9 @@
-import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Mail, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button, buttonVariants } from '@saas-skeleton/ui/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@saas-skeleton/ui/components/ui/card';
-import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import {
   Table,
@@ -22,48 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@saas-skeleton/ui/components/ui/table';
-
-interface ShowcaseCardProps {
-  children: ReactNode;
-  description: string;
-  id: string;
-  title: string;
-}
-
-function ShowcaseCard({ children, description, id, title }: ShowcaseCardProps) {
-  return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6">
-      <Card>
-        <CardHeader className="border-b border-border/70">
-          <CardTitle>
-            <h2 id={`${id}-title`}>{title}</h2>
-          </CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent>{children}</CardContent>
-      </Card>
-    </section>
-  );
-}
-
-interface ExampleTileProps {
-  children: ReactNode;
-  code: string;
-  description?: string;
-}
-
-function ExampleTile({ children, code, description }: ExampleTileProps) {
-  return (
-    <div className="flex min-h-40 flex-col rounded-xl bg-muted/50 p-4">
-      <div className="flex min-h-16 flex-1 items-center justify-center">{children}</div>
-      <Separator className="my-4 bg-border/70" />
-      <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
-        {code}
-      </code>
-      {description ? <p className="mt-2 text-xs text-muted-foreground">{description}</p> : null}
-    </div>
-  );
-}
+import { ExampleTile, ShowcaseCard } from '../components/playground/showcase';
 
 export function PlaygroundPage() {
   const { t } = useTranslation('playground');

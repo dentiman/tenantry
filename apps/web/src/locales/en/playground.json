@@ -3,7 +3,9 @@
   "nav": {
     "buttons": "Buttons",
     "userSelect": "User select",
-    "dialog": "Dialog scroll"
+    "dialog": "Dialog scroll",
+    "verticalForm": "Vertical form",
+    "inlineForm": "Inline form"
   },
   "eyebrow": "Design system",
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
@@ -159,6 +161,91 @@
       "heading": "Rename",
       "name": "Name",
       "hint": "Shown to everyone in your organization."
+    }
+  },
+  "forms": {
+    "submitted": "Submitted values",
+    "applied": "Applied filters",
+    "fields": {
+      "title": "Task title",
+      "owner": "Owner",
+      "startDate": "Start date",
+      "dueDate": "Due date",
+      "notes": "Notes",
+      "date": "Date",
+      "query": "Search"
+    },
+    "placeholders": {
+      "query": "Name or number…"
+    },
+    "owners": {
+      "me": "Me",
+      "team": "My team",
+      "unassigned": "Unassigned",
+      "any": "Anyone"
+    },
+    "actions": {
+      "submit": "Submit",
+      "reset": "Reset",
+      "apply": "Apply"
+    }
+  },
+  "verticalForm": {
+    "title": "Vertical form",
+    "description": "The product default: one column, the label above its control, and a width set by how far the eye can track a line — not by the width of the screen. New form components land here first, because this is where they will spend most of their life.",
+    "startHint": "Type it or pick it: the field shows {{mask}} and accepts several looser shapes.",
+    "sections": {
+      "live": {
+        "title": "A live form",
+        "description": "Wired to react-hook-form and a Zod schema, not drawn. Due date is bounded by start date, so the pair shows both the calendar limit and the schema message. Submit prints what the form actually holds."
+      }
+    }
+  },
+  "inlineForm": {
+    "title": "Inline form",
+    "description": "Several fields on one row plus an action: the filter bar above a list, a report parameter strip, a quick-create row. A row is stricter than a column in two ways, and both are on trial here — a field needs a sensible width of its own, and it has to survive wrapping without scattering its labels.",
+    "sections": {
+      "labelled": {
+        "title": "Labelled row",
+        "description": "Labels stay above their controls, the row wraps as a whole. Fields grow from a basis rather than a fixed width, so extra space goes to whoever needs it."
+      },
+      "toolbar": {
+        "title": "Toolbar without labels",
+        "description": "Denser, and the whole burden of explaining a field falls on its placeholder. This is where the date mask earns its keep: mm/dd/yyyy reads as an instruction, an example date would read as a value already entered."
+      },
+      "narrow": {
+        "title": "Wrapping",
+        "description": "The same row inside a narrow container. Nothing here should clip, overflow, or drop its label — the popup calendar still opens against the field, not the container."
+      },
+      "beside": {
+        "title": "Label beside the control",
+        "description": "Field orientation=\"horizontal\" — the settings-row shape. Not a form-per-row layout, but the closest relative of one, so it belongs on this stand."
+      }
+    }
+  },
+  "datePicker": {
+    "title": "Date picker",
+    "description": "A typeable field with a calendar in a popover. Typing is the primary path — someone who knows the date enters it faster than they can scroll a grid to it, and a plain input is easier on a screen reader than forty-two buttons. The calendar is the second path, for dates you do not know yet.",
+    "tiles": {
+      "iso": "The skeleton default: the field shows exactly what the value holds. Unambiguous, same width in every language, and identical to what ships on the wire.",
+      "long": "A longer label where the date is the point of the screen. Set in code, per screen — never a user setting.",
+      "label": "A plain month caption instead of dropdowns — for dates that live near today.",
+      "past": "max stops the calendar at today. Useful for a birthday or a past-only date.",
+      "disabled": "Read-only: the same form, without the right to change it.",
+      "invalid": "The error state comes from aria-invalid, exactly like every other control."
+    },
+    "accepts": {
+      "title": "What the field accepts from the keyboard",
+      "description": "The field reads far more than it writes. Order and separators for the locale-specific shapes come from Intl, so nothing here is a hardcoded English format. Type into any field above and leave it to see the result.",
+      "input": "Typed",
+      "result": "Result",
+      "iso": "Always accepted — and, being the default display format, what the field gives back.",
+      "localeOrder": "Numbers in the order of the current locale (month first in en-US, day first almost everywhere else).",
+      "noYear": "No year: the current one is used.",
+      "dayOnly": "A day in the current month.",
+      "compact": "Eight digits in a row, yyyymmdd.",
+      "namedMonth": "Month by name, full or short, in any position.",
+      "invalid": "Not a date: the field silently returns to its last valid value."
     }
   }
 }

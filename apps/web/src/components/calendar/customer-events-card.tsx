@@ -109,6 +109,7 @@ export function CustomerEventsCard({
           <EventPanel
             target={target}
             timeZone={preferences.viewerTimeZone}
+            weekStartsOn={preferences.weekStartsOn}
             defaultDurationMinutes={preferences.defaultEventDurationMinutes}
             defaultReminderMinutes={preferences.defaultReminderMinutes}
             onClose={() => {

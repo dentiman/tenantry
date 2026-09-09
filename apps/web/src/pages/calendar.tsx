@@ -558,6 +558,7 @@ export function CalendarPage() {
           <EventPanel
             target={target}
             timeZone={timeZone}
+            weekStartsOn={preferences.weekStartsOn}
             defaultDurationMinutes={preferences.defaultEventDurationMinutes}
             defaultReminderMinutes={preferences.defaultReminderMinutes}
             onClose={() => {

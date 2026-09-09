@@ -23,6 +23,8 @@ import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
 import { PlaygroundDialogPage } from './pages/playground-dialog';
+import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
+import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
@@ -365,8 +367,8 @@ const userSettingsAppearanceRoute = createRoute({
 });
 
 /**
- * Area «Playground» — візуальні стенди примітивів UI. Layout + index: пункт поки
- * один (кнопки), наступний стенд додається роутом і рядком у
+ * Area «Playground» — візуальні стенди примітивів UI. Layout + index: стенд
+ * додається роутом і рядком у
  * `app-shell/areas/playground-sidebar.tsx`.
  */
 const playgroundRoute = createRoute({
@@ -378,6 +380,18 @@ const playgroundButtonsRoute = createRoute({
   getParentRoute: () => playgroundRoute,
   path: '/',
   component: PlaygroundPage,
+});
+
+const playgroundVerticalFormRoute = createRoute({
+  getParentRoute: () => playgroundRoute,
+  path: 'vertical-form',
+  component: PlaygroundVerticalFormPage,
+});
+
+const playgroundInlineFormRoute = createRoute({
+  getParentRoute: () => playgroundRoute,
+  path: 'inline-form',
+  component: PlaygroundInlineFormPage,
 });
 
 const playgroundUserSelectRoute = createRoute({
@@ -434,6 +448,8 @@ const routeTree = rootRoute.addChildren([
     ]),
     playgroundRoute.addChildren([
       playgroundButtonsRoute,
+      playgroundVerticalFormRoute,
+      playgroundInlineFormRoute,
       playgroundUserSelectRoute,
       playgroundDialogRoute,
     ]),
