@@ -174,6 +174,13 @@ live-транспортом). Сповіщення, народжені у вор
 ([ui-registry.md](docs/frontend/ui-registry.md)), історія переходу на shadcn
 ([ui-migration-history.md](docs/frontend/ui-migration-history.md)) і відкриті питання.
 
+## Скіли Claude Code
+
+У `.claude/skills/` (реєстр — `skills-lock.json`) лежить [archify](https://github.com/tt-a1i/archify) —
+скіл, який з текстового опису або з Mermaid генерує самодостатні інтерактивні HTML-діаграми
+(architecture / workflow / sequence / dataflow / lifecycle) з експортом у PNG/SVG/WebM;
+оновлення — `npx skills update archify`.
+
 ## Далі за roadmap
 
 Мультитенантність, realtime і in-app сповіщення вже реалізовані й перевірені — див.

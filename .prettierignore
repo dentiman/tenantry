@@ -1,0 +1,4 @@
+# Вендорені скіли Claude Code — чужий код, який оновлюється через `npx skills update`.
+# `pnpm format` переписав би їхні JSON/MD і розсинхронізував з апстрімом.
+.claude/skills/
+.agents/skills/

@@ -612,6 +612,15 @@ regexp_replace(...)`; разом із колонкою переживає й у�
   **відкритих записів немає**, лишається формат і правило, коли запис заводити),
   `README.md` (quickstart).
 
+**Скіли Claude Code** (`.claude/skills/`, у `skills-lock.json`): `shadcn` — робота з реєстром
+компонентів; **`archify`** (встановлено 2026-09-09, `npx skills add tt-a1i/archify`) — генерує
+з опису або з Mermaid самодостатні інтерактивні HTML-діаграми пʼяти типів (architecture /
+workflow / sequence / dataflow / lifecycle) з експортом у PNG/SVG/WebM; корисний, коли
+підсистему з `docs/` треба показати картинкою, а не прозою. У репо він лежить БЕЗ демо-баласту
+(вирізані `test/` і 5 готових демо-HTML — 5.5 МБ з 8 МБ; рантайму не потрібні, `archify doctor`
+без них зелений, а `archify demo` генерує демо на вимогу), і `.gitignore` тримає їх вирізаними
+після `npx skills update archify`.
+
 ## Команди
 
 ```bash

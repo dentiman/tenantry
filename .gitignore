@@ -31,3 +31,10 @@ apps/worker/logs/
 # Misc
 coverage/
 .DS_Store
+
+# Скіл archify (.claude/skills/archify) комітиться без демо-баласту: 102 тести і 5 готових
+# демо-HTML — 5.5 МБ з 8 МБ, і жоден із них не потрібен рантайму (`archify doctor` зелений
+# без них, `archify demo` генерує демо на вимогу). Ігнор, щоб `npx skills update archify`
+# не повернув їх у коміт мовчки.
+.claude/skills/archify/test/
+.claude/skills/archify/examples/*.html
