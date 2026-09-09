@@ -1,7 +1,16 @@
 {
   "title": "Dashboard",
-  "loadingLabel": "Loading",
   "signedInAs": "Signed in as",
   "role": "Role",
-  "memberSince": "Member since"
+  "memberSince": "Member since",
+  "widgets": {
+    "agenda": {
+      "title": "Upcoming",
+      "openCalendar": "Open calendar"
+    }
+  },
+  "placeholder": {
+    "title": "Coming soon",
+    "hint": "Another widget will take this spot."
+  }
 }

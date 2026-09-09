@@ -62,6 +62,10 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  * viewport, і жодному споживачеві не треба памʼятати про `overflow-x-hidden`.
  * `axis="both"` вмикає горизонталь і другу смугу — для справді широкого вмісту.
  *
+ * Разом із віссю глушиться і `min-width: fit-content`, який Base UI ставить
+ * вмісту: без цього заборона горизонтального скролу не прибирає переповнення, а
+ * лише ХОВАЄ його — вміст лишається завширшки по max-content і обрізається.
+ *
  * ── `Content` обовʼязковий ────────────────────────────────────────────────────
  * Вміст обгорнутий у `ScrollAreaPrimitive.Content` — частину, якої немає в
  * реєстровому shadcn-варіанті, і саме через це там живе тихий баг. Base UI
@@ -157,7 +161,18 @@ function ScrollArea({
         // і клас його не перебʼє
         style={axis === 'vertical' ? { overflowX: 'hidden', overflowY: 'scroll' } : undefined}
       >
-        <ScrollAreaPrimitive.Content data-slot="scroll-area-content" className={contentClassName}>
+        {/* ЛОКАЛЬНА ПРАВКА реєстру: при `axis="vertical"` вміст не має права
+            бути ШИРШИМ за viewport. Base UI ставить йому інлайновий
+            `min-width: fit-content` — правильний дефолт, поки горизонтальна
+            вісь скролиться, і тихий баг, коли вона заглушена: замість
+            прокрутки вбік вміст просто ОБРІЗАЄТЬСЯ. Спіймано у віджиті агенди
+            на дашборді (колонка 288px): рядки набрали 498px по max-content,
+            `truncate` не спрацював жодного разу, і метадані різались посеред
+            слова. `!` обовʼязковий — інлайновий стиль інакше не перебити */}
+        <ScrollAreaPrimitive.Content
+          data-slot="scroll-area-content"
+          className={cn(axis === 'vertical' && 'min-w-0!', contentClassName)}
+        >
           {children}
         </ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>

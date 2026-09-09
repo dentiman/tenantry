@@ -26,6 +26,7 @@ import {
   ItemTitle,
 } from '@saas-skeleton/ui/components/ui/item';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { useCalendarAgenda } from '../../api/generated/api';
@@ -185,11 +186,19 @@ export function AgendaList({
   return (
     /* Ні рамки, ні заливки, ні розділювачів: агенда — СПИСОК КАРТОК на полотні
        сторінки, як центр сповіщень (`notification-panel`), а не таблиця в
-       рамці. Прокрутка лишається на цьому ж вузлі, тому падінги з боків: без
-       них скруглення й тінь карток впирались би в край смуги скролу з одного
-       боку і в межу контенту з іншого (спіймано в браузері — ліва смужка
-       виглядала зрізаною) */
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0.5 pr-1.5">
+       рамці.
+
+       Прокрутка — ОВЕРЛЕЙНИЙ `ScrollArea`, той самий, що в панелі сповіщень і
+       в сітках календаря: нативна смуга тут не просто виглядала інакше за
+       рештою застосунку, а забирала ширину — і у ВІДЖИТІ дашборда, де списку
+       дістається 288px замість сторінки, до неї додавалась ще й горизонтальна
+       (viewport Base UI глушить її сам, `axis="vertical"` — дефолт).
+
+       `px-0.5` лишається: без нього скруглення й тінь карток впирались би в
+       межі скролера (спіймано в браузері — ліва смужка виглядала зрізаною).
+       Класи вмісту йдуть у `contentClassName`, бо flex-контейнером для груп
+       мусить бути їхній ПРЯМИЙ предок, а це тепер `ScrollAreaContent` */
+    <ScrollArea className="min-h-0 flex-1" contentClassName="flex flex-col gap-4 px-0.5">
       {days.map((day) => (
         <AgendaDayGroup
           key={day.key}
@@ -204,7 +213,7 @@ export function AgendaList({
           <Spinner aria-label={t('loadMore')} />
         </div>
       )}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -399,7 +408,7 @@ function AgendaSkeleton({ label }: { label: string }) {
     <div
       aria-busy="true"
       aria-label={label}
-      className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-0.5 pr-1.5"
+      className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-0.5"
     >
       {[0, 1].map((group) => (
         <div key={group} className="flex flex-col gap-1.5">
