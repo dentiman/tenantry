@@ -1227,7 +1227,11 @@ notifications — юзера могли видалити, а актором бу
   ротованого токена дає 401, але НЕ відкликає інші сесії (рядок видалено; треба `revokedAt`
   замість delete) — той самий рефакторинг дає «рівень 1» налаштувань (список пристроїв,
   вибірковий revoke), див. `docs/account-settings.md` §2; (б) refresh у httpOnly cookie
-  замість localStorage. ✅ logout на бекенді і «вийти звідусіль» — зроблено 2026-08-29.
+  замість localStorage; (в) миттєвий revoke живої WS-сесії через `RealtimeEmitter` +
+  room-scoped `disconnectSockets` (не чіпає REST до природного спливання access-токена,
+  доповнює «рівень 2» з denylist, а не замінює його) — план, `docs/account-settings.md` §6;
+  (г) двофакторна автентифікація (TOTP через застосунок-автентифікатор) — зафіксовано як
+  напрямок, без деталей. ✅ logout на бекенді і «вийти звідусіль» — зроблено 2026-08-29.
 - **Мультитенантність (фази MT-0…MT-4)**: деталі — `docs/multi-tenancy-architecture.md`.
   ✅ MT-0 (ролі БД), ✅ MT-1 (фундамент без RLS),
   ✅ MT-2 (RLS увімкнено), ✅ MT-3 (`apps/platform-api` + `apps/platform-web`) — зроблені
