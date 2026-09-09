@@ -186,12 +186,30 @@ export function toE164(raw: string, country: CountryCode): string | null {
 }
 
 /**
- * Читабельний вигляд збереженого номера («+380 67 123 4567»). У БД і в API номер
+ * Читабельний вигляд збереженого номера («380 67 123 4567»). У БД і в API номер
  * завжди E.164 — розставляння пробілів belongs до UI, а не до контракту.
+ *
+ * Плюс у показі знято свідомо (рішення користувача): він нічого не додає до
+ * читання — код країни й так стоїть першим, — але створює шум у колонці, де
+ * номери йдуть один під одним. У контракті і в буфері обміну він теж відсутній
+ * (див. `toDialableDigits`), тож видиме і скопійоване збігаються за складом цифр.
  */
 export function formatForDisplay(value: string | null | undefined): string | null {
   if (!value) return null;
-  return parsePhoneNumberFromString(value)?.formatInternational() ?? value;
+  const formatted = parsePhoneNumberFromString(value)?.formatInternational() ?? value;
+  return formatted.replace(/^\+/, '');
+}
+
+/**
+ * Те, що потрапляє в буфер обміну: суцільні цифри без плюса і пробілів
+ * («380671234567»). Пробіли з показу не переносяться навмисно — номер із них
+ * доводилось би чистити руками в кожному полі, куди його вставляють (дзвонилка,
+ * пошук, чужа CRM), а самі цифри однозначні й приймаються скрізь.
+ */
+export function toDialableDigits(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, '');
+  return digits || null;
 }
 
 /**

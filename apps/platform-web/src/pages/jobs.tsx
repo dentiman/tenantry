@@ -4,7 +4,7 @@ import type { JobState } from '@saas-skeleton/contracts';
 import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
 import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
-import { formatDateTime } from '@saas-skeleton/ui/lib/format';
+import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import type { JobsSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type { DataGridColumn, DataGridFilterDef } from '@saas-skeleton/ui/components/data-grid';
@@ -102,19 +102,19 @@ export function JobsPage() {
       id: 'createdAt',
       header: t('table.created'),
       sortable: true,
-      cell: (job) => formatDateTime(job.createdAt),
+      cell: (job) => <DateTimeCell value={job.createdAt} />,
     },
     {
       id: 'startedAt',
       header: t('table.started'),
       sortable: true,
-      cell: (job) => formatDateTime(job.startedAt),
+      cell: (job) => <DateTimeCell value={job.startedAt} />,
     },
     {
       id: 'completedAt',
       header: t('table.completed'),
       sortable: true,
-      cell: (job) => formatDateTime(job.completedAt),
+      cell: (job) => <DateTimeCell value={job.completedAt} />,
     },
     {
       id: 'output',

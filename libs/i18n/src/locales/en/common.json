@@ -6,6 +6,11 @@
     "menu": "Row actions",
     "close": "Close"
   },
+  "copy": {
+    "action": "Copy",
+    "copied": "Copied",
+    "label": "Copy {{value}}"
+  },
   "contextPanel": {
     "show": "Show context panel",
     "hide": "Hide context panel"

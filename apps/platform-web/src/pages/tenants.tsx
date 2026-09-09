@@ -11,7 +11,7 @@ import {
 } from '../api/generated/api';
 import type { TenantResponseDtoOutput } from '../api/generated/model/tenantResponseDtoOutput';
 import { CreateTenantModal } from '../components/create-tenant-modal';
-import { formatDate } from '@saas-skeleton/ui/lib/format';
+import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,7 +124,9 @@ export function TenantsPage() {
                             {tenant.isActive ? t('status.active') : t('status.suspended')}
                           </Badge>
                         </TableCell>
-                        <TableCell>{formatDate(tenant.createdAt)}</TableCell>
+                        <TableCell>
+                          <DateTimeCell value={tenant.createdAt} />
+                        </TableCell>
                         <TableCell className="text-end">
                           <Button
                             size="sm"

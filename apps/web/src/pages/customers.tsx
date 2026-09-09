@@ -13,8 +13,9 @@ import {
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import type { CustomerListResponseDtoOutputItemsItem } from '../api/generated/model/customerListResponseDtoOutputItemsItem';
 import { CreateCustomerModal } from '../components/create-customer-modal';
+import { PhoneNumber } from '../components/phone-number';
 import { CustomerIdentity } from '../components/customer-identity';
-import { formatDate } from '@saas-skeleton/ui/lib/format';
+import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import type { CustomersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
@@ -124,6 +125,13 @@ export function CustomersPage() {
       ),
     },
     {
+      // Той самий блок, що в /users: телефон — довідкове поле, яке частіше
+      // копіюють, ніж читають
+      id: 'phone',
+      header: t('table.phone'),
+      cell: (c) => <PhoneNumber value={c.phone} />,
+    },
+    {
       id: 'status',
       header: t('table.status'),
       sortable: true,
@@ -159,7 +167,7 @@ export function CustomersPage() {
       id: 'createdAt',
       header: t('table.created'),
       sortable: true,
-      cell: (c) => formatDate(c.createdAt),
+      cell: (c) => <DateTimeCell value={c.createdAt} />,
     },
   ];
 
@@ -268,6 +276,9 @@ export function CustomersPage() {
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
+        // Усе, що не ACTIVE: і призупинений, і архівований (останній у дефолтний
+        // список не потрапляє, але фільтр статусу його показує)
+        isRowMuted={(c) => c.status !== 'ACTIVE'}
         surface="flush"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />

@@ -51,12 +51,32 @@ export function formatDateTime(iso: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
-  const time = new Intl.DateTimeFormat('en-GB', {
+  return `${toDateValue(date)} ${formatClock(date)}`;
+}
+
+/**
+ * Тільки час, `14:30` — друга половина того самого стандарту. Потрібна там, де
+ * дата й час стоять окремо (`DateTimeCell` розкладає їх у два рядки), тому
+ * форматер винесений із `formatDateTime`, а не продубльований: 24-годинність і
+ * відсутність секунд мусять лишитись одним рішенням, а не двома однаковими.
+ */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) {
+    return '—';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return formatClock(date);
+}
+
+function formatClock(date: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   }).format(date);
-  return `${toDateValue(date)} ${time}`;
 }
 
 /** Пороги «людського» відліку: до 45 с — «щойно», далі одиниця за величиною різниці */

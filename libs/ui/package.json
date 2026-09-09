@@ -6,8 +6,10 @@
   "exports": {
     "./api/*": "./src/api/*.ts",
     "./components/context-panel-slot": "./src/components/context-panel-slot.tsx",
+    "./components/copy-to-clipboard": "./src/components/copy-to-clipboard.tsx",
     "./components/data-grid": "./src/components/data-grid/index.ts",
     "./components/date-picker": "./src/components/date-picker.tsx",
+    "./components/date-time-cell": "./src/components/date-time-cell.tsx",
     "./components/form": "./src/components/form/index.ts",
     "./components/not-found-page": "./src/components/not-found-page.tsx",
     "./components/page-breadcrumbs": "./src/components/page-breadcrumbs.tsx",

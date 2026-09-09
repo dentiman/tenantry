@@ -24,11 +24,9 @@ import { PresenceDot } from '../components/presence-dot';
 import { LastSeen } from '../components/last-seen';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { usePresence } from '../realtime/use-presence';
-import { formatDate } from '@saas-skeleton/ui/lib/format';
+import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
-import { CountryFlag } from '../components/form/phone/country-flag';
-import { isSupportedCountry } from '../components/form/phone/countries';
-import { formatForDisplay } from '../components/form/phone/phone-format';
+import { PhoneNumber } from '../components/phone-number';
 import type { UsersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
@@ -138,16 +136,7 @@ export function UsersPage() {
     {
       id: 'phone',
       header: t('table.phone'),
-      cell: (u) => {
-        const formatted = formatForDisplay(u.phone);
-        if (!formatted) return '—';
-        return (
-          <span className="flex items-center gap-2 tabular-nums">
-            {isSupportedCountry(u.phoneCountry) && <CountryFlag country={u.phoneCountry} />}
-            {formatted}
-          </span>
-        );
-      },
+      cell: (u) => <PhoneNumber value={u.phone} />,
     },
     {
       id: 'role',
@@ -194,7 +183,7 @@ export function UsersPage() {
       id: 'createdAt',
       header: t('table.created'),
       sortable: true,
-      cell: (u) => formatDate(u.createdAt),
+      cell: (u) => <DateTimeCell value={u.createdAt} />,
     },
   ];
 
@@ -328,6 +317,9 @@ export function UsersPage() {
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
         rowActions={rowActions}
+        // Юзер без доступу лишається в списку (його треба бачити й повертати),
+        // але не конкурує увагою з тими, хто працює
+        isRowMuted={(u) => !u.isActive}
         surface="flush"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
       />

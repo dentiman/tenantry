@@ -62,6 +62,8 @@ interface DataGridTableProps<TItem> {
   columns: DataGridColumn<TItem>[];
   rowActions?: DataGridRowAction<TItem>[];
   getRowId?: (item: TItem) => string;
+  /** Приглушити рядок «вимкненої» сутності — див. `DataGridProps.isRowMuted` */
+  isRowMuted?: (item: TItem) => boolean;
   /** Варіанти «Items per page» у футері; false — прибрати селект зовсім */
   pageSizeOptions?: number[] | false;
   messages?: DataGridMessages;

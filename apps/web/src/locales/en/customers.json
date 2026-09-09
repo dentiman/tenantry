@@ -17,6 +17,7 @@
     "ariaLabel": "Customers",
     "number": "No.",
     "name": "Customer",
+    "phone": "Phone",
     "status": "Status",
     "owner": "Owner",
     "tags": "Tags",

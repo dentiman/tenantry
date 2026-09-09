@@ -73,6 +73,21 @@ interface DataGridProps<T extends { id: string }> {
   rowActions?: DataGridRowAction<T>[];
   /** За замовчуванням — item.id (усі сутності мають uuid id); переозначити для інших ключів */
   getRowId?: (item: T) => string;
+  /**
+   * Рядок «вимкненої» сутності (неактивний юзер, архівований кастомер) — приглушується
+   * ЦІЛКОМ, а не окремою колонкою статусу: стан належить запису, і око має ловити його
+   * розгорткою всього списку, не читаючи бейдж у кожному рядку.
+   *
+   * Приглушення — прозорість, а не колір: у рядку є і текст, і бейджі, і перемикач, і в
+   * кожного власна палітра; `text-muted-foreground` подіяв би тільки на текст, а
+   * `opacity` однаково відводить назад усе, що в комірці намальовано.
+   *
+   * Службові колонки (чекбокс вибору і меню дій) лишаються при повній непрозорості:
+   * приглушується ЗМІСТ запису, а керування ним — ні, інакше «повернути в роботу»
+   * доводилось би шукати оком серед блідого. Технічно це й неможливо інакше: `opacity`
+   * на `<tr>` перемножується на дітей, і повернути окремій комірці повний тон не вийде.
+   */
+  isRowMuted?: (item: T) => boolean;
 
   /** Сортування й пагінація — з useDataGridFilters(); URL-синхронізація опціональна там */
   grid: DataGridNavigation;
@@ -176,6 +191,7 @@ export function DataGrid<T extends { id: string }>({
   columns,
   rowActions,
   getRowId = (item) => item.id,
+  isRowMuted,
   grid,
   list,
   selection,
@@ -313,8 +329,13 @@ export function DataGrid<T extends { id: string }>({
                     (action) => action.isVisible?.(item) ?? true,
                   );
                   const isRowSelected = selection?.selectedIds.has(rowId) ?? false;
+                  const isMuted = isRowMuted?.(item) ?? false;
                   return (
-                    <TableRow key={rowId} data-state={isRowSelected ? 'selected' : undefined}>
+                    <TableRow
+                      key={rowId}
+                      data-state={isRowSelected ? 'selected' : undefined}
+                      data-muted={isMuted ? '' : undefined}
+                    >
                       {selection && (
                         <TableCell>
                           <Checkbox
@@ -329,9 +350,15 @@ export function DataGrid<T extends { id: string }>({
                       {columns.map((column) => (
                         <TableCell
                           key={column.id}
-                          className={
-                            column.className ?? (column.align === 'end' ? 'text-end' : undefined)
-                          }
+                          className={cn(
+                            column.className ?? (column.align === 'end' ? 'text-end' : undefined),
+                            // 65%: перше значення (75%) на темному полотні майже не
+                            // читалось — muted-текст і так світліший за foreground, і
+                            // чверть прозорості на ньому губиться. Рядок лишається
+                            // розбірливим (це не disabled-контрол, дані в ньому справжні),
+                            // але в розгортці списку явно відходить на другий план
+                            isMuted && 'opacity-65',
+                          )}
                         >
                           {column.cell(item)}
                         </TableCell>

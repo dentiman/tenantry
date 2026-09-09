@@ -38,9 +38,7 @@ import { ChangeAvatarModal } from '../components/change-avatar-modal';
 import { ChangePasswordModal } from '../components/change-password-modal';
 import { PresenceDot } from '../components/presence-dot';
 import { LastSeen } from '../components/last-seen';
-import { CountryFlag } from '../components/form/phone/country-flag';
-import { isSupportedCountry } from '../components/form/phone/countries';
-import { formatForDisplay } from '../components/form/phone/phone-format';
+import { PhoneNumber } from '../components/phone-number';
 import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { usePresence } from '../realtime/use-presence';
 import { useAuthStore } from '../stores/auth.store';
@@ -113,7 +111,6 @@ export function UserDetailPage() {
   }
 
   const isSelf = user.id === currentUser?.id;
-  const phone = formatForDisplay(user.phone);
 
   return (
     <div className="flex flex-col gap-6">
@@ -229,16 +226,7 @@ export function UserDetailPage() {
               <Fact label={t('detail.contact.email')}>{user.email}</Fact>
               <Separator />
               <Fact label={t('detail.contact.phone')}>
-                {phone ? (
-                  <span className="flex items-center justify-end gap-2 tabular-nums">
-                    {isSupportedCountry(user.phoneCountry) && (
-                      <CountryFlag country={user.phoneCountry} />
-                    )}
-                    {phone}
-                  </span>
-                ) : (
-                  t('detail.contact.empty')
-                )}
+                <PhoneNumber value={user.phone} />
               </Fact>
             </CardContent>
           </Card>

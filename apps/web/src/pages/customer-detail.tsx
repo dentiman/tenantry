@@ -53,9 +53,8 @@ import { CustomerContactModal } from '../components/customer-contact-modal';
 import { CustomerIdentity } from '../components/customer-identity';
 import { EditCustomerModal } from '../components/edit-customer-modal';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
-import { CountryFlag } from '../components/form/phone/country-flag';
-import { isSupportedCountry } from '../components/form/phone/countries';
 import { formatForDisplay } from '../components/form/phone/phone-format';
+import { PhoneNumber } from '../components/phone-number';
 import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 
 type Contact = CustomerDetailResponseDtoOutputContactsItem;
@@ -125,7 +124,6 @@ export function CustomerDetailPage() {
     );
   }
 
-  const phone = formatForDisplay(customer.phone);
   const address = [
     customer.addressLine1,
     customer.addressLine2,
@@ -260,16 +258,7 @@ export function CustomerDetailPage() {
                 </Fact>
                 <Separator />
                 <Fact label={t('detail.contact.phone')}>
-                  {phone ? (
-                    <span className="flex items-center justify-end gap-2 tabular-nums">
-                      {isSupportedCountry(customer.phoneCountry) && (
-                        <CountryFlag country={customer.phoneCountry} />
-                      )}
-                      {phone}
-                    </span>
-                  ) : (
-                    t('detail.contact.empty')
-                  )}
+                  <PhoneNumber value={customer.phone} />
                 </Fact>
                 <Separator />
                 <Fact label={t('detail.contact.website')}>

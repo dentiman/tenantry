@@ -66,7 +66,7 @@ export function DashboardPage() {
         {/* Широке місце окремим рядком: майбутні віджити не всі однакові за
             формою (графік, стрічка подій), і доска мусить це показувати вже
             зараз — інакше перший же широкий віджит виглядатиме як виняток */}
-        <DashboardWidgetPlaceholder className="min-h-32 lg:col-span-3" />
+        <DashboardWidgetPlaceholder className="min-h-48 lg:col-span-3" />
       </div>
     </div>
   );
