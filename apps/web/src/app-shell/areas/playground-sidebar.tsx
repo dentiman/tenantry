@@ -1,6 +1,7 @@
 import {
   AlignLeftIcon,
   MousePointerClick,
+  NetworkIcon,
   PanelTopIcon,
   RectangleHorizontalIcon,
   UsersRound,
@@ -48,6 +49,12 @@ export function PlaygroundSidebar() {
           to: '/playground/dialog',
           label: t('nav.dialog'),
           icon: <PanelTopIcon />,
+          match: 'exact',
+        },
+        {
+          to: '/playground/architecture',
+          label: t('nav.architecture'),
+          icon: <NetworkIcon />,
           match: 'exact',
         },
       ]}

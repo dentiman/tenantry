@@ -26,6 +26,7 @@ import { PlaygroundDialogPage } from './pages/playground-dialog';
 import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
+import { PlaygroundArchitecturePage } from './pages/playground-architecture';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
 import { UserSettingsSecurityPage } from './pages/user-settings/security';
@@ -407,6 +408,18 @@ const playgroundDialogRoute = createRoute({
 });
 
 /**
+ * Стенд «Architecture diagram» — Archify-згенерований HTML в `<iframe>`
+ * (`public/diagrams/architecture.html`). `bleed`: діаграма сама керує своєю
+ * вертикаллю на всю висоту вікна, полям шела тут не місце.
+ */
+const playgroundArchitectureRoute = createRoute({
+  getParentRoute: () => playgroundRoute,
+  path: 'architecture',
+  component: PlaygroundArchitecturePage,
+  staticData: { layout: 'bleed' },
+});
+
+/**
  * Неіснуючий роут ПОЗА будь-якою area (`/nonsense`). Свідомо splat-роут ПІД
  * `appRoute`, а не `notFoundComponent` кореня: так 404 проходить той самий гейт
  * `beforeLoad: requireAuth`, що й решта застосунку — залогінений бачить сторінку
@@ -452,6 +465,7 @@ const routeTree = rootRoute.addChildren([
       playgroundInlineFormRoute,
       playgroundUserSelectRoute,
       playgroundDialogRoute,
+      playgroundArchitectureRoute,
     ]),
     notFoundRoute,
   ]),

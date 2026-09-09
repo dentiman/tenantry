@@ -5,7 +5,8 @@
     "userSelect": "User select",
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
-    "inlineForm": "Inline form"
+    "inlineForm": "Inline form",
+    "architecture": "Architecture"
   },
   "eyebrow": "Design system",
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
@@ -222,6 +223,10 @@
         "description": "Field orientation=\"horizontal\" — the settings-row shape. Not a form-per-row layout, but the closest relative of one, so it belongs on this stand."
       }
     }
+  },
+  "architecture": {
+    "title": "Architecture diagram",
+    "frameTitle": "SaaS Skeleton architecture diagram"
   },
   "datePicker": {
     "title": "Date picker",

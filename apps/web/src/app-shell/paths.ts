@@ -35,6 +35,7 @@ export type NavPath =
   | '/playground/inline-form'
   | '/playground/multi-user-select'
   | '/playground/dialog'
+  | '/playground/architecture'
   | '/user-settings'
   | '/user-settings/account'
   | '/user-settings/security'
