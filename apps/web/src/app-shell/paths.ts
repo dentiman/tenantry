@@ -12,12 +12,7 @@
  * а індексний роут area вирішує, що там показати.
  */
 export type AreaPrefix =
-  | '/workspace'
-  | '/calendar'
-  | '/chat'
-  | '/settings'
-  | '/playground'
-  | '/user-settings';
+  '/workspace' | '/calendar' | '/chat' | '/settings' | '/playground' | '/user-settings';
 
 /** Усі адресовані пункти другої колонки (включно з префіксами area — це індексні пункти). */
 export type NavPath =
@@ -33,7 +28,9 @@ export type NavPath =
   | '/playground'
   | '/playground/vertical-form'
   | '/playground/inline-form'
-  | '/playground/multi-user-select'
+  | '/playground/components/buttons'
+  | '/playground/components/tabs'
+  | '/playground/components/user-select'
   | '/playground/dialog'
   | '/playground/architecture'
   | '/user-settings'

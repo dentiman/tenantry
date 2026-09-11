@@ -38,7 +38,7 @@ import {
   formatWeekdayLong,
 } from '../../lib/calendar-date';
 import { EventContextMenu, type EventIntent } from './event-context-menu';
-import { KIND_STYLES } from './event-kind';
+import { KIND_LINE_WIDTH, KIND_STYLES } from './event-kind';
 
 /**
  * Agenda — «що далі». Єдиний перегляд календаря, який ходить КУРСОРНИМ
@@ -322,33 +322,47 @@ function AgendaRow({
       variant="outline"
       className={cn(
         // Картка, а не рядок таблиці: тінь поверхні + скруглення (та сама
-        // форма, що в центрі сповіщень). Скруглення робить і саму смужку
-        // заокругленою — `border-radius` застосовується до межі, тому
-        // окремого елемента під неї не потрібно.
+        // форма, що в центрі сповіщень).
         // Заливка — `bgSoft` (мінімальна прозорість кольору типу), а НЕ
         // `bg-card`: картка тут лежить і на полотні сторінки, і на
         // `bg-card`-картці кастомера — той самий колір зливав би її з
         // поверхнею, лишаючи межу єдиним розрізненням.
-        // Смужка типу — ЛІВА МЕЖА: так роблять Outlook/Teams, Notion Calendar,
-        // Fantastical. Крапка (шлях Google Calendar, FullCalendar list і ReUI)
-        // вимагає власної колонки, а нам потрібна одна
         // Наведення НЕ міняє фон: накладка `hover:bg-accent` перебивала б
         // власний колір типу (`bgSoft`) нейтральним сірим — картка й так
         // клікабельна кнопка з фокус-кільцем, додаткового hover-стану колір
         // не потребує
-        'w-full items-center gap-2 border-l-[3px] py-1.5 pr-3 pl-2.5 shadow-sm',
+        'relative w-full items-center gap-2 overflow-hidden py-1.5 pr-3 pl-[13px] shadow-sm',
         'text-left transition-colors focus-visible:ring-inset',
         KIND_STYLES[event.kind].bgSoft,
-        KIND_STYLES[event.kind].borderLine,
         (isCancelled || isDeclined) && 'opacity-60',
       )}
     >
-      <ItemContent className="gap-0">
-        <ItemTitle className={cn('text-[13px]', isCancelled && 'line-through')}>
+      {/* Смужка типу — не `border-left`: у `border` заокруглення ліпиться
+          з кута НАПІВ (border-radius ділить дугу top-left порівну між
+          верхньою і лівою межею, а верхньої тут немає — виходить криво
+          зрізана чверть дуги, а не ціла).
+          Тут навпаки — ПРЯМОКУТНИК на всю висоту (`inset-y-0`, без
+          власного `rounded-*`), а заокруглення бере САМА картка:
+          `overflow-hidden` + `rounded-lg` на `Item` ріжуть прямокутник
+          по контуру картки, тож дуга смужки — це буквально та сама дуга,
+          що в зовнішньої обводки, ціла, а не половинна */}
+      <span
+        aria-hidden="true"
+        className={cn('absolute inset-y-0 left-0', KIND_LINE_WIDTH, KIND_STYLES[event.kind].line)}
+      />
+      <ItemContent className="min-w-0 gap-0">
+        {/* `ItemTitle` реєстру — `w-fit`: рядок тягнеться під довжину тексту,
+            а не колонки, і `Item` (`flex-wrap`) переносить аватари на другий
+            рядок замість обрізання. Той самий патерн, що в `ContextPanelHeader`
+            (`libs/ui/.../context-panel-slot.tsx`): `min-w-0` на весь шлях до
+            `truncate`-елемента, `w-full` замість `w-fit` */}
+        <ItemTitle
+          className={cn('w-full min-w-0', 'text-[13px]', isCancelled && 'line-through')}
+        >
           {event.visibility === 'PRIVATE' && (
             <LockIcon className="size-3 shrink-0 text-muted-foreground" />
           )}
-          <span className="truncate">{event.title}</span>
+          <span className="min-w-0 flex-1 truncate">{event.title}</span>
         </ItemTitle>
         {/* Час — у ТІЙ САМІЙ колонці, першим у рядку метаданих: окрема колонка
             фіксованої ширини (шлях ReUI, `w-40`) з'їдала третину рядка на

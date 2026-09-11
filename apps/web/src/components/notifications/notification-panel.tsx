@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, XIcon } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Empty,
@@ -10,13 +10,14 @@ import {
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
 } from '@saas-skeleton/ui/components/ui/sheet';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
-import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -138,32 +139,58 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
         }
       }}
     >
-      <SheetContent side="right" className="sm:max-w-[440px]">
+      {/* bg-sidebar замість дефолтного bg-popover: центр сповіщень — те саме
+          "шасі", що бічні колонки шела, а не полотно/картка (див. правило
+          --sidebar для бічних поверхонь, docs/frontend). У світлій темі
+          --popover чисто білий, а --sidebar — той самий теплий сірий, що й
+          сайдбар зліва; у темній вони й так близькі, різниця непомітна.
+          Лівий бордер (`data-[side=right]:border-l` реєстру) розрахований на
+          повнокольоровий `--border` поверх білого `--popover` — на новому
+          `--sidebar`-фоні дві близькі за тоном сірі лінії поруч читались як
+          задвоєна межа. Приглушуємо колір самого бордера (opacity, а не
+          прибираємо зовсім — межа з полотном шела лишається потрібною), і
+          ще тьмяніше в темній темі, де яскрава лінія на й так темному тлі
+          різала око сильніше, ніж у світлій. */}
+      <SheetContent
+        side="right"
+        // Вбудований close вимкнено: він абсолютний (`top-3 right-3`) і центрується
+        // відносно кута попапа, а не відносно рядка заголовка — поруч із табами й
+        // шестернею (32px, у потоці) це давало видиму розбіжність по вертикалі.
+        // Свій close нижче — той самий елемент, просто рядковий сусід інших кнопок
+        showCloseButton={false}
+        className="bg-sidebar data-[side=right]:border-l-border/30 sm:max-w-[440px] dark:data-[side=right]:border-l-border/10"
+      >
         <SheetHeader>
-          <SheetTitle>{showSettings ? t('settings.title') : t('title')}</SheetTitle>
-          {!showSettings && (
-            <div className="mt-3 flex items-center gap-1">
-              {/* ToggleGroup замість трьох кнопок із ручним variant: вибраний стан
-                  тримає сам компонент і віддає його в aria-pressed */}
-              <ToggleGroup
-                value={[filter]}
+          {showSettings ? (
+            <div className="flex items-center gap-2">
+              <SheetTitle className="flex-1">{t('settings.title')}</SheetTitle>
+              <SheetClose render={<Button variant="ghost" size="icon-sm" radius="full" />}>
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </SheetClose>
+            </div>
+          ) : (
+            // Один рядок: title → таби → шестерня → close — усі центровані
+            // спільним `items-center`, а не окремо позиціонований близнюк
+            <div className="flex items-center gap-2">
+              <SheetTitle className="shrink-0">{t('title')}</SheetTitle>
+              {/* Таби — ті самі, що перемикач виглядів у календарі (мінімізовані,
+                  з жолобом-накладкою і активним сегментом): перемикач фільтра
+                  інбокса — той самий патерн «розділи одного екрана» */}
+              <Tabs
+                value={filter}
                 onValueChange={(next) => {
-                  // multiple=false (дефолт) — у масиві максимум один елемент; порожній
-                  // означає повторний клік по активному фільтру: лишаємо як є.
-                  // Каст — бо обгортка реєстру не generic (звужує Value до string),
-                  // а значення сюди приходять рівно з FILTERS
-                  const [value] = next as NotificationsFindAllFilter[];
-                  if (value) {
-                    setFilter(value);
-                  }
+                  setFilter(next as NotificationsFindAllFilter);
                 }}
               >
-                {FILTERS.map((value) => (
-                  <ToggleGroupItem key={value} value={value} size="sm">
-                    {t(`filter.${value}`)}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                <TabsList size="sm">
+                  {FILTERS.map((value) => (
+                    <TabsTrigger key={value} value={value}>
+                      {t(`filter.${value}`)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
               <Button
                 size="icon-sm"
                 variant="ghost"
@@ -175,6 +202,10 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
               >
                 <Settings />
               </Button>
+              <SheetClose render={<Button variant="ghost" size="icon-sm" radius="full" />}>
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </SheetClose>
             </div>
           )}
         </SheetHeader>

@@ -44,12 +44,19 @@ export function DashboardWidget({
 }) {
   return (
     <Card className={cn('flex h-full flex-col', className)}>
-      <CardHeader>
+      {/* `items-center` перебиває стоковий `items-start` реєстру: той
+          розрахований на шапку з `CardDescription` під заголовком (тоді верх
+          вирівнює перший рядок тексту з кнопкою). Тут другого рядка немає —
+          лишається одна лінія тексту проти кнопки заввишки з `size="sm"`
+          (32px). Самого `items-center` на `CardHeader` замало: `CardAction`
+          сам несе `self-start` (щоб не залежати від сусідів, коли рядків
+          два), тому його треба перебити тут-таки `self-center` */}
+      <CardHeader className="items-center">
         <CardTitle>{title}</CardTitle>
         {/* `CardAction` — стокова частина картки: саме вона перемикає шапку в
             дві колонки (`has-data-[slot=card-action]`), тому дія не вимагає
             власного flex-рядка */}
-        {action ? <CardAction>{action}</CardAction> : null}
+        {action ? <CardAction className="self-center">{action}</CardAction> : null}
       </CardHeader>
       {/* `min-h-0` обовʼязковий: без нього вміст зі власним скролом (агенда)
           розпирав би картку на всю свою висоту замість того, щоб скролитись */}

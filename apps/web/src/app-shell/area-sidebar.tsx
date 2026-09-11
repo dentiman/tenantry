@@ -1,6 +1,7 @@
 import { useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
+import { useSettingsBootstrap } from '../api/generated/api';
 import { DEFAULT_AREA, resolveArea } from './areas';
 
 /**
@@ -26,9 +27,17 @@ import { DEFAULT_AREA, resolveArea } from './areas';
  *
  * Шапка колонки — `h-14` з нижньою межею, тобто та сама висота, що в шапці рейлу
  * і в хедері контенту: три межі складаються в одну неперервну лінію через усе
- * вікно. Усередині — назва інсталяції великим і активна area сірим під нею: та
+ * вікно. Усередині — назва тенанта великим і активна area сірим під нею: та
  * сама двоярусна форма, що була у брендовому блоці до появи рейлу, тільки знак
  * тепер живе у смузі, а другий рядок став динамічним.
+ *
+ * Назва тенанта — `settings.general.name` із `GET /settings/bootstrap`
+ * (`useSettingsBootstrap`, `staleTime: Infinity`, той самий кеш, що й
+ * `useCalendarPreferences`): бекенд-дефолт `"Default Tenant"` рідко відповідає
+ * реальній назві компанії, тож продукт-бренд тут показувати не можна. До першої
+ * відповіді — фолбек на `t('brand')`, щоб шапка не була порожньою на
+ * холодному старті. Оновлюється сама: сторінка `/settings` інвалідує
+ * `getSettingsBootstrapQueryKey()` одразу після збереження General.
  */
 export function AreaSidebar() {
   const { t } = useTranslation('layout');
@@ -36,15 +45,19 @@ export function AreaSidebar() {
   // Шлях поза всіма area (404) — навігацію все одно показуємо, щоб був вихід
   const area = resolveArea(pathname) ?? DEFAULT_AREA;
   const AreaContent = area.Sidebar;
+  const { data: bootstrap } = useSettingsBootstrap({
+    query: { staleTime: Number.POSITIVE_INFINITY },
+  });
+  const tenantName = bootstrap?.general.name ?? t('brand');
 
   return (
     <Sidebar collapsible="none" className="w-auto min-w-0 flex-1">
       <SidebarHeader className="h-14 shrink-0 justify-center border-b border-sidebar-border px-4">
         {/* Два рядки тієї самої форми, що мав бренд у сайдбарі до появи рейлу:
-            назва інсталяції зверху, під нею сірим — активний розділ. Знак
+            назва тенанта зверху, під нею сірим — активний розділ. Знак
             переїхав у смугу, тому тут лишився самий текст */}
         <div className="grid leading-tight">
-          <span className="truncate font-semibold">{t('brand')}</span>
+          <span className="truncate font-semibold">{tenantName}</span>
           <span className="truncate text-xs text-muted-foreground">{t(area.labelKey)}</span>
         </div>
       </SidebarHeader>

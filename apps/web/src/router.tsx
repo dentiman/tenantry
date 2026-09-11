@@ -22,6 +22,7 @@ import { UserDetailPage } from './pages/user-detail';
 import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
+import { PlaygroundTabsPage } from './pages/playground-tabs';
 import { PlaygroundDialogPage } from './pages/playground-dialog';
 import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
@@ -377,10 +378,14 @@ const playgroundRoute = createRoute({
   path: '/playground',
 });
 
-const playgroundButtonsRoute = createRoute({
+/** `/playground` → перший стенд каталогу: «домівка» area мусить щось показувати */
+const playgroundIndexRoute = createRoute({
   getParentRoute: () => playgroundRoute,
   path: '/',
-  component: PlaygroundPage,
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/playground/components/buttons', replace: true });
+  },
 });
 
 const playgroundVerticalFormRoute = createRoute({
@@ -395,9 +400,35 @@ const playgroundInlineFormRoute = createRoute({
   component: PlaygroundInlineFormPage,
 });
 
-const playgroundUserSelectRoute = createRoute({
+/**
+ * Підменю «Components» (collapse у сайдбарі) — каталог примітивів окремими
+ * сторінками, розділений на дві НЕ-колапсовні підгрупи (General/Platform,
+ * `app-shell/areas/playground-sidebar.tsx`). Сам `components` — лише
+ * контейнер шляху, власної сторінки не має.
+ */
+const playgroundComponentsRoute = createRoute({
   getParentRoute: () => playgroundRoute,
-  path: 'multi-user-select',
+  path: 'components',
+});
+
+/** General Components: спільна libs/ui, придатна для обох фронтів (web і platform-web) */
+const playgroundComponentsButtonsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'buttons',
+  component: PlaygroundPage,
+});
+
+/** General Components: другий приклад — задає шаблон для решти каталогу */
+const playgroundComponentsTabsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'tabs',
+  component: PlaygroundTabsPage,
+});
+
+/** Platform Components: бізнес-орієнтовані, з бекендом, лише в tenant-порталі */
+const playgroundComponentsUserSelectRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'user-select',
   component: PlaygroundUserSelectPage,
 });
 
@@ -460,10 +491,14 @@ const routeTree = rootRoute.addChildren([
       userSettingsAppearanceRoute,
     ]),
     playgroundRoute.addChildren([
-      playgroundButtonsRoute,
+      playgroundIndexRoute,
       playgroundVerticalFormRoute,
       playgroundInlineFormRoute,
-      playgroundUserSelectRoute,
+      playgroundComponentsRoute.addChildren([
+        playgroundComponentsButtonsRoute,
+        playgroundComponentsTabsRoute,
+        playgroundComponentsUserSelectRoute,
+      ]),
       playgroundDialogRoute,
       playgroundArchitectureRoute,
     ]),

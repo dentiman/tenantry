@@ -5,7 +5,7 @@
   "memberSince": "Member since",
   "widgets": {
     "agenda": {
-      "title": "Upcoming",
+      "title": "Upcoming Events",
       "openCalendar": "Open calendar"
     }
   },

@@ -19,6 +19,7 @@ import {
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../components/notifications/notification-bell';
+import { AppFooterBar } from './account-footer';
 import { AppRail } from './app-rail';
 import { AreaSidebar } from './area-sidebar';
 
@@ -109,6 +110,10 @@ export function AppShell() {
               <AppRail />
               <AreaSidebar />
             </div>
+            {/* Нижня смуга — СИБЛІНГ рядка колонок, тому займає всю ширину
+                ОБОХ (рейл + панель), а не одну з них; border-t відділяє її
+                від навігації над нею. Деталі — account-footer.tsx */}
+            <AppFooterBar />
           </Sidebar>
 
           {/* `min-w-0`: без нього широка таблиця гріда не дає стиснути себе, і

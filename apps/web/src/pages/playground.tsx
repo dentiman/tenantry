@@ -82,10 +82,24 @@ export function PlaygroundPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <PageBreadcrumbs items={[{ label: t('title') }]} />
+      <PageBreadcrumbs
+        items={[
+          { label: t('title'), to: '/playground' },
+          { label: t('nav.components') },
+          { label: t('nav.buttons') },
+        ]}
+      />
 
       <header className="mb-10 max-w-3xl">
-        <Badge variant="secondary">{t('eyebrow')}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{t('eyebrow')}</Badge>
+          {/* Джерело походження — General Components живуть у libs/ui, тому
+              завжди зі своєю позначкою: native (стоковий) чи changed (зі
+              своєю локальною правкою реєстру, docs/frontend/ui-stack.md) */}
+          <Badge variant="outline" title={t('origin.changed.hint')}>
+            {t('origin.changed.label')}
+          </Badge>
+        </div>
         <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-foreground">
           {t('title')}
         </h1>

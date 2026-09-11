@@ -1,7 +1,11 @@
 {
   "title": "Component playground",
   "nav": {
+    "components": "Components",
+    "generalComponents": "General components",
+    "platformComponents": "Platform components",
     "buttons": "Buttons",
+    "tabs": "Tabs",
     "userSelect": "User select",
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
@@ -9,6 +13,20 @@
     "architecture": "Architecture"
   },
   "eyebrow": "Design system",
+  "origin": {
+    "native": {
+      "label": "Shadcn native",
+      "hint": "Vendored from the registry and unedited."
+    },
+    "changed": {
+      "label": "Locally changed",
+      "hint": "Vendored, then edited locally — see the local-edit comment in the component source."
+    },
+    "custom": {
+      "label": "Custom",
+      "hint": "Built in this app on top of shared shadcn primitives; not itself a registry component."
+    }
+  },
   "description": "A visual reference for the shared UI library. Use this page to review components in light and dark themes before shipping them in product flows.",
   "onThisPage": "On this page",
   "navigation": {
@@ -118,6 +136,67 @@
         "disabled": "Prevents interaction and applies the disabled state.",
         "className": "Adds layout utilities such as w-full without changing the recipe.",
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
+      }
+    }
+  },
+  "tabs": {
+    "title": "Tabs",
+    "description": "Tabs switch between sibling views of the same screen. Their visual weight should match how much room they share with the controls around them.",
+    "importLabel": "Shared import",
+    "sections": {
+      "variants": {
+        "title": "Variants",
+        "description": "The default segment surface suits a standalone control block. The line variant reads as a lighter, text-first switch and needs no trough of its own."
+      },
+      "sizes": {
+        "title": "Sizes",
+        "description": "The default 36 px trough is the product baseline. The compact 32 px trough is for a control that has to sit level with other 32 px controls, such as a toolbar."
+      },
+      "usage": {
+        "title": "Real usage",
+        "description": "Two shapes already live in the product: a default-size control that owns a content panel per tab, and a compact controlled switch with no content of its own."
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Project-facing styling props on TabsList. Root, Tab, and Panel forward Base UI's Tabs props unchanged."
+      }
+    },
+    "variants": {
+      "default": {
+        "label": "Default",
+        "description": "A segment surface: the active tab sits on a raised tile (inverted to near-white in dark mode)."
+      },
+      "line": {
+        "label": "Line",
+        "description": "An underline indicator on transparent ground — no trough."
+      }
+    },
+    "sizes": {
+      "default": "Default · 36 px trough",
+      "sm": "Compact · 32 px trough"
+    },
+    "usage": {
+      "content": {
+        "title": "Content tabs — as on the customer card",
+        "description": "defaultValue plus TabsContent: each tab owns a panel, and the trough is the default 36 px size."
+      },
+      "switcher": {
+        "title": "View switcher — as in the calendar header",
+        "description": "A controlled value/onValueChange pair with no TabsContent at all: the page below renders the view itself, and the compact size keeps the control level with its neighbours in the header row."
+      }
+    },
+    "labels": {
+      "overview": "Overview",
+      "contacts": "Contacts",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "api": {
+      "rows": {
+        "variant": "Selects the trough style: default (segment) or line (underline).",
+        "size": "Sets the trough height and typography: default or sm.",
+        "orientation": "Root prop, forwarded from Base UI unchanged — horizontal (default) or vertical."
       }
     }
   },

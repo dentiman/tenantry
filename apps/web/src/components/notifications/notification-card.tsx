@@ -92,19 +92,19 @@ export function NotificationCard({
     // закриття і меню мусять лишитись ЗОВНІ неї — кнопка в кнопці невалідна
     <div className={`group relative ${className}`}>
       <Item
-        variant="outline"
+        variant="default"
         size="sm"
         render={asButton ? <button type="button" /> : undefined}
         className={cn(
           'w-full items-start text-left transition-colors',
-          // Тост — спливна поверхня: власний фон і тінь оверлея. Рядок центру
-          // лежить на фоні панелі й не має ні того, ні того
-          floating && 'bg-popover shadow-lg',
-          // Непрочитане показуємо накладкою — тією самою, що виділяє пункт меню
-          // чи рядок таблиці (docs/frontend/theming.md §1.3.3). У тості її
-          // немає навмисно: щойно спливле й так непрочитане, а `bg-accent`
-          // поверх `bg-popover` просто замінив би фон, а не ліг на нього
-          !floating && isUnread && 'bg-accent',
+          // Той самий матеріал, що картки дашборда (`Card`): без обводки
+          // (variant="default" — border-transparent), світла тінь замість
+          // межі. У світлій темі тінь читається (bg-card біліший за
+          // bg-sidebar панелі); у темній тіні не працюють — підняття дає
+          // світліший колір (bg-popover світліший за bg-sidebar/card у
+          // темній темі), а не shadow. Однаково незалежно від read/unread —
+          // стан непрочитаного показує крапка + жирність тексту нижче
+          floating ? 'bg-popover shadow-lg' : 'bg-card shadow-sm dark:bg-popover dark:shadow-none',
           menu && 'pr-10',
           // Наведення НЕ міняє колір: блакитна обводка `hover:border-primary/50`
           // тут читалась як стан «вибрано» — брендовий колір у списку означає

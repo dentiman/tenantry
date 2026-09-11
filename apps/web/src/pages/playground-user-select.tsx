@@ -71,13 +71,24 @@ export function PlaygroundUserSelectPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageBreadcrumbs
-        items={[{ label: t('title'), to: '/playground' }, { label: t('nav.userSelect') }]}
+        items={[
+          { label: t('title'), to: '/playground' },
+          { label: t('nav.components') },
+          { label: t('nav.userSelect') },
+        ]}
       />
 
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {t('eyebrow')}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {t('eyebrow')}
+          </p>
+          {/* Platform Components — бізнес-компонент цього застосунку, а не
+              вендорений реєстром: своя позначка походження */}
+          <Badge variant="outline" title={t('origin.custom.hint')}>
+            {t('origin.custom.label')}
+          </Badge>
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight">{t('userSelect.title')}</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">{t('userSelect.description')}</p>
       </div>
@@ -116,10 +127,7 @@ export function PlaygroundUserSelectPage() {
                   {/* Слот приймає що завгодно — тут показані дві речі поспіль:
                       примітка і статус. Реальний споживач рендерить крапку лише
                       тоді, коли текст справді є */}
-                  <UserRowNote
-                    label={t('userSelect.comment')}
-                    icon={<MessageSquareTextIcon />}
-                  >
+                  <UserRowNote label={t('userSelect.comment')} icon={<MessageSquareTextIcon />}>
                     {t('userSelect.commentSample')}
                   </UserRowNote>
                   <Badge variant="warning">{t('userSelect.pending')}</Badge>

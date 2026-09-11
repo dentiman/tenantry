@@ -1,19 +1,9 @@
-import { Layers, UserCog } from 'lucide-react';
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Layers } from 'lucide-react';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@saas-skeleton/ui/components/ui/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -22,9 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@saas-skeleton/ui/components/ui/sidebar';
-import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
-import { authLogout } from '../api/generated/api';
-import { getStoredRefreshToken, useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../stores/auth.store';
 import { APP_AREAS, type AppArea, resolveArea } from './areas';
 
 /**
@@ -48,37 +36,37 @@ import { APP_AREAS, type AppArea, resolveArea } from './areas';
 const RAIL_NAV_BUTTON = 'size-8! justify-center group-data-[collapsible=icon]:size-8!';
 
 /**
- * Кнопка-ЯКІР рейлу — бренд угорі й аватар унизу: 40px без падінгу, вміст на всі
- * 32px, знак 20px. Вони не пункти меню, а межі смуги: пункти можна перелічувати,
- * а цих завжди рівно два, і саме вони тримають смугу від верху до низу. Тому
- * метрика тут своя, більша за пункти, і зменшення пунктів її не торкається.
+ * Кнопка-ЯКІР рейлу — зараз лише бренд угорі (аватар унизу переїхав у спільну
+ * `AppFooterBar` — 2026-09-10): 40px без падінгу, вміст на всі 32px, знак 20px.
+ * Це не пункт меню, а межа смуги — тому метрика своя, більша за пункти рейлу.
  *
  * `p-0!` + дубль під `group-data-[collapsible=icon]:` ОБОВʼЯЗКОВІ: варіант має
  * `group-data-[collapsible=icon]:p-2!`, і без дубля згорнутий стан давав 8px
  * падінгу на 40px коробку — 32px вміст стискався і з'їжджав вправо, обрізаючись
- * `overflow-hidden` самої кнопки. Іконки цього не показували (вони у звужений
- * бокс якраз влазять), тому симптом було видно лише на плитці й аватарі.
+ * `overflow-hidden` самої кнопки. Іконка цього не показувала (вона у звужений
+ * бокс якраз влазить), тому симптом було видно лише на плитці.
  *
  * `[&_svg]` — ЄДИНЕ джерело розміру знака: селектор нащадка специфічніший за клас
  * на елементі, тож «на місці» його не перебити без `!`.
  */
 const RAIL_ANCHOR_BUTTON =
   'size-10! justify-center p-0! [&_svg]:size-5 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! ' +
-  // Обидва якорі смуги — БЕЗ підкладки на наведенні. Вони не пункти меню, а
-  // вміст у них має власну форму: бренд — кольорова плитка `rounded-lg`,
-  // аватар — коло; прямокутна сіра підкладка `rounded-md` під ними світилась би
-  // кутиками навколо. Гасимо рівно ті стани, які дає `sidebarMenuButtonVariants`
-  // (`hover`, `active` і `data-open:hover` — останній тримає фон, поки дропдаун
-  // відкритий); focus-ring лишається — він потрібен клавіатурі.
+  // Якір смуги — БЕЗ підкладки на наведенні. Це не пункт меню, а кольорова
+  // плитка `rounded-lg`; прямокутна сіра підкладка `rounded-md` під нею
+  // світилась би кутиками навколо. Гасимо рівно ті стани, які дає
+  // `sidebarMenuButtonVariants` (`hover`, `active` і `data-open:hover` —
+  // останній тримає фон, поки дропдаун відкритий); focus-ring лишається — він
+  // потрібен клавіатурі.
   'hover:bg-transparent active:bg-transparent data-open:hover:bg-transparent';
 
 /**
  * Перший рівень навігації — вузька смуга іконок area (Activity Bar у VS Code,
  * navigation rail у Material/Slack, Tool Window Stripe у JetBrains).
  *
- * Склад — той самий, що в реєстровому блоці `sidebar-09`: бренд угорі, пункти
- * посередині, профіль у футері. Бренд і профіль належать СЕСІЇ, а не area, тому
- * стоять у смузі, яка від area не залежить.
+ * Склад — бренд угорі й пункти посередині (профіль переїхав у спільну нижню
+ * смугу шела `AppFooterBar` — 2026-09-10: там для нього є місце на всю ширину
+ * ОБОХ колонок, а не тільки 48px рейлу, як у реєстровому `sidebar-09`). Бренд
+ * належить СЕСІЇ, а не area, тому стоїть у смузі, яка від area не залежить.
  *
  * Рейл НЕ згортається: він і є згорнутий стан. Кнопка в хедері (і Cmd+B) ховає
  * ДРУГУ колонку — рівно як у VS Code, і рівно тим самим механізмом, що раніше
@@ -125,14 +113,6 @@ export function AppRail() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-1">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <AccountMenu />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
@@ -143,8 +123,8 @@ export function AppRail() {
  * самий знак. Коли назва тенанта доїде на фронт (MT-4), плитка стане тригером
  * дропдауна-перемикача.
  *
- * Плитка — 32px, той самий розмір, що аватар у футері: верх і низ смуги читаються
- * як одна система. Знак у ній 20px від правила `[&_svg]` кнопки — свого класу
+ * Плитка — 32px, той самий розмір, що аватар у нижній смузі шела: верх і низ
+ * читаються як одна система. Знак у ній 20px від правила `[&_svg]` кнопки — свого класу
  * розміру він не має свідомо (див. `RAIL_ANCHOR_BUTTON`). `h-14` шапки дорівнює
  * висоті хедера контенту і шапки другої колонки — три нижні межі складаються в
  * одну неперервну лінію через усе вікно.
@@ -230,88 +210,5 @@ function AppRailItem({ area, isActive }: { area: AppArea; isActive: boolean }) {
     >
       <Icon />
     </SidebarMenuButton>
-  );
-}
-
-/**
- * Профіль у футері рейлу — там, де він і має бути після переїзду бренду нагору
- * (той самий патерн, що в Slack і VS Code). У смузі 48px влазить лише аватар,
- * тому повна ідентичність переїхала в шапку дропдауна: інформації стало більше,
- * ніж було в колонці.
- */
-function AccountMenu() {
-  const { t } = useTranslation('layout');
-  const user = useAuthStore((s) => s.user);
-  const clearSession = useAuthStore((s) => s.clearSession);
-  const navigate = useNavigate();
-  const { isMobile, setOpenMobile } = useSidebar();
-
-  const logout = () => {
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      // Здаємо токен серверу, але НЕ чекаємо на відповідь: вихід не має залежати
-      // від мережі. Викликаємо згенеровану функцію напряму, а не через хук —
-      // помилка тут не подія для юзера, а глобальний MutationCache показав би тост
-      void authLogout({ refreshToken }).catch(() => undefined);
-    }
-    clearSession();
-    void navigate({ to: '/login' });
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<SidebarMenuButton className={RAIL_ANCHOR_BUTTON} aria-label={t('accountMenu')} />}
-      >
-        <UserIdentity
-          id={user?.id ?? ''}
-          email={user?.email ?? ''}
-          name={user?.name}
-          avatarUrl={user?.avatarUrl}
-          textClassName="hidden"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" sideOffset={8} className="min-w-56">
-        {/* Ідентичність — ЛЕЙБЛ групи особистих дій, а не окремий блок над меню.
-            `DropdownMenuLabel` у нас = `MenuPrimitive.GroupLabel`, і Base UI
-            вимагає для нього батьківський `Group` (інакше — рантайм-помилка
-            «MenuGroupContext is missing»). У блоці `nav-user` реєстру він лежить
-            прямо в `DropdownMenuContent` — так можна в Radix, не в Base UI */}
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="p-0 font-normal">
-            <div className="px-2 py-1.5">
-              <UserIdentity
-                id={user?.id ?? ''}
-                email={user?.email ?? ''}
-                name={user?.name}
-                avatarUrl={user?.avatarUrl}
-                className="w-full"
-              />
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {/* Під аватаром — ТІЛЬКИ особисте. Налаштування організації живуть
-              окремою area в рейлі: так два «Settings» ніде не стикаються
-              (патерн GitLab/Notion, docs/settings.md) */}
-          <DropdownMenuItem
-            render={<Link to="/user-settings" />}
-            onClick={() => {
-              if (isMobile) {
-                setOpenMobile(false);
-              }
-            }}
-          >
-            <UserCog />
-            {t('nav.userSettings')}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem variant="destructive" onClick={logout}>
-            {t('logout')}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
