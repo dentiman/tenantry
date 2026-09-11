@@ -22,7 +22,10 @@ import { UserDetailPage } from './pages/user-detail';
 import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
+import { PlaygroundInputPage } from './pages/playground-input';
+import { PlaygroundSelectPage } from './pages/playground-select';
 import { PlaygroundTabsPage } from './pages/playground-tabs';
+import { PlaygroundTextareaPage } from './pages/playground-textarea';
 import { PlaygroundDialogPage } from './pages/playground-dialog';
 import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
@@ -418,6 +421,27 @@ const playgroundComponentsButtonsRoute = createRoute({
   component: PlaygroundPage,
 });
 
+/** General Components: Input + адорнований InputGroup — бандл на одній сторінці */
+const playgroundComponentsInputRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'input',
+  component: PlaygroundInputPage,
+});
+
+/** General Components: Select — базовий випадаючий список */
+const playgroundComponentsSelectRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'select',
+  component: PlaygroundSelectPage,
+});
+
+/** General Components: Textarea — багаторядкове текстове поле */
+const playgroundComponentsTextareaRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'textarea',
+  component: PlaygroundTextareaPage,
+});
+
 /** General Components: другий приклад — задає шаблон для решти каталогу */
 const playgroundComponentsTabsRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
@@ -496,7 +520,10 @@ const routeTree = rootRoute.addChildren([
       playgroundInlineFormRoute,
       playgroundComponentsRoute.addChildren([
         playgroundComponentsButtonsRoute,
+        playgroundComponentsInputRoute,
+        playgroundComponentsSelectRoute,
         playgroundComponentsTabsRoute,
+        playgroundComponentsTextareaRoute,
         playgroundComponentsUserSelectRoute,
       ]),
       playgroundDialogRoute,

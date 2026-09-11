@@ -5,7 +5,10 @@
     "generalComponents": "General components",
     "platformComponents": "Platform components",
     "buttons": "Buttons",
+    "input": "Input",
+    "select": "Select",
     "tabs": "Tabs",
+    "textarea": "Textarea",
     "userSelect": "User select",
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
@@ -136,6 +139,294 @@
         "disabled": "Prevents interaction and applies the disabled state.",
         "className": "Adds layout utilities such as w-full without changing the recipe.",
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
+      }
+    }
+  },
+  "input": {
+    "title": "Input",
+    "description": "A text field that accepts free-form input. Use the bare Input for simple values and wrap it in InputGroup when the field has an adornment — a leading icon, a trailing action button, or a label that clarifies the format.",
+    "importLabel": "Shared import",
+    "navigation": {
+      "overview": "Input overview",
+      "variants": "Sizes",
+      "states": "States",
+      "inputGroup": "InputGroup (adorned)",
+      "usage": "Real usage",
+      "api": "API reference"
+    },
+    "sections": {
+      "variants": {
+        "title": "Sizes",
+        "description": "The default 36 px height is the product baseline for every control. The compact 32 px variant is for dense interfaces such as the calendar header toolbar."
+      },
+      "states": {
+        "title": "States",
+        "description": "Disabled, active with a value, and invalid (aria-invalid) — the three states a field can be in without being focused."
+      },
+      "inputGroup": {
+        "title": "InputGroup — adorned input",
+        "description": "An Input wrapped in InputGroup gains adornments without breaking the field rhythm. The leading adornment clarifies what to type; the trailing one carries an action or a unit."
+      },
+      "usage": {
+        "title": "Real usage",
+        "description": "Input and InputGroup together cover the password field, the date picker popover, the combobox search, and every other text field in the product — linked through FormTextField, never written by hand."
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Project-facing props on Input. Native input props and Base UI interaction props are forwarded unchanged. InputGroup has no styling props of its own."
+      }
+    },
+    "variants": {
+      "default": {
+        "label": "Default · 36 px",
+        "description": "The standard 36 px control for forms and settings screens."
+      },
+      "sm": {
+        "label": "Compact · 32 px",
+        "description": "A 32 px field for toolbar inline inputs and dense table-row filters."
+      }
+    },
+    "states": {
+      "disabled": {
+        "code": "disabled"
+      },
+      "withValue": {
+        "code": "defaultValue",
+        "sample": "A field with content"
+      },
+      "invalid": {
+        "code": "aria-invalid",
+        "description": "Invalid fields render the destructive ring and show validation feedback through FieldError — aria-invalid alone only paints the border.",
+        "sample": "Wrong value"
+      }
+    },
+    "inputGroup": {
+      "icon": {
+        "code": "leading icon adornment",
+        "description": "A leading icon clarifies the expected input. A clear button on the trailing edge keeps the layout stable.",
+        "clear": "Clear"
+      },
+      "email": {
+        "code": "trailing icon adornment",
+        "description": "A trailing icon hints at the format without getting in the way of typing."
+      },
+      "button": {
+        "code": "trailing action button",
+        "description": "A ghost button in the addon carries a discrete action next to the field. The small icon size keeps it level with the 36 px container.",
+        "placeholder": "Add invitee",
+        "addLabel": "Add"
+      },
+      "text": {
+        "code": "text label adornment",
+        "description": "A text label clarifies a fixed suffix like a domain or a unit.",
+        "domain": ".example.com",
+        "sample": "my-account"
+      }
+    },
+    "placeholders": {
+      "defaultSize": "Full name",
+      "smSize": "Search…",
+      "disabled": "Disabled field",
+      "search": "Search customers…",
+      "email": "you@example.com"
+    },
+    "usage": {
+      "password": {
+        "title": "Password toggle — as in FormPasswordField",
+        "description": "An InputGroup with a trailing icon button that swaps between type=\"password\" and type=\"text\". The button uses size=\"icon-xs\" to stay level with the 36 px container.",
+        "sample": "s3cur3-p@ss",
+        "toggle": "Toggle visibility",
+        "path": "libs/ui/src/components/form/form-password-field.tsx"
+      },
+      "datePicker": {
+        "title": "Date picker — as in DatePicker",
+        "description": "An InputGroup with a calendar icon button that opens a popover calendar. The input accepts typed dates and the icon button opens the visual picker.",
+        "placeholder": "mm/dd/yyyy",
+        "sample": "2026-09-11",
+        "path": "libs/ui/src/components/date-picker.tsx"
+      },
+      "combobox": {
+        "title": "Search combobox — as in Combobox",
+        "description": "An InputGroup with a leading search icon and a trailing badge. The same InputGroup shell holds the typed query and the popover toggle.",
+        "placeholder": "Type to search…",
+        "badge": "⌘K",
+        "path": "libs/ui/src/components/ui/combobox.tsx"
+      }
+    },
+    "api": {
+      "rows": {
+        "size": "Sets the control height: default (36 px) or sm (32 px).",
+        "type": "Passthrough to the native input type attribute (text, email, password, search, etc.).",
+        "placeholder": "Hint text shown in the field when empty.",
+        "disabled": "Prevents interaction and applies the disabled state with reduced opacity.",
+        "invalid": "Use aria-invalid to mark the field as having a validation error."
+      }
+    }
+  },
+  "textarea": {
+    "title": "Textarea",
+    "description": "A multi-line text field for notes and free-form content. It shares the control surface and focus style of Input, but grows vertically instead of horizontally. In the product it is used almost exclusively through FormTextareaField — a form wrapper that wires it to react-hook-form.",
+    "importLabel": "Shared import",
+    "sections": {
+      "states": {
+        "title": "States",
+        "description": "Disabled and invalid (aria-invalid) — the two states a textarea can be in without being focused."
+      },
+      "rows": {
+        "title": "Rows and growing",
+        "description": "The textarea is sized by rows; field-sizing-content lets it grow with its content up to whatever ceiling the layout sets."
+      },
+      "live": {
+        "title": "Live value",
+        "description": "A controlled textarea shows the raw string it holds. auto-grow is opt-in via CSS (field-sizing-content) and needs no prop.",
+        "placeholder": "Write notes…",
+        "autoGrow": {
+          "placeholder": "Type to grow…",
+          "description": "field-sizing-content makes the control grow with its content. No prop — it is the default class on the component.",
+          "sample": "First line of notes that keeps growing as you type more content…"
+        }
+      },
+      "usage": {
+        "title": "Real usage",
+        "description": "Textarea lives in the product behind FormTextareaField (notes on entities) and inside InputGroupTextarea. It is never written by hand mark-up in business code.",
+        "wrapper": {
+          "title": "FormTextareaField — notes on entities",
+          "description": "The form wrapper wires the textarea to react-hook-form: value, onChange, onBlur and ref come from useController, and the error state flows through Field with aria-invalid on the control.",
+          "label": "Notes",
+          "sample": "Shared notes that everyone in the org can see…"
+        },
+        "group": {
+          "title": "InputGroupTextarea — a textarea with an adornment",
+          "description": "InputGroup wraps a textarea with the same adornment slots as Input — for multi-line fields that carry a unit or an action.",
+          "sample": "A multi-line field inside an InputGroup…"
+        }
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Project-facing props on the native textarea. rows and className are passthrough; the rest are native textarea attributes. field-sizing-content is a CSS behavior, not a prop."
+      }
+    },
+    "states": {
+      "disabled": {
+        "code": "disabled"
+      },
+      "invalid": {
+        "code": "aria-invalid",
+        "description": "Invalid textareas render the destructive ring; validation feedback flows through FieldError, not aria-invalid alone."
+      }
+    },
+    "placeholders": {
+      "disabled": "Read-only notes…",
+      "invalid": "This field has an error"
+    },
+    "rows": {
+      "small": {
+        "description": "rows={2} with field-sizing-content — a short two-line field that can still grow."
+      },
+      "default": {
+        "description": "rows={6} is the roomy default for a notes block.",
+        "sample": "Meeting notes from the design review.\n\nPin the follow-ups before the week is over."
+      }
+    },
+    "live": {
+      "placeholder": "Type something…"
+    },
+    "usage": {
+      "wrapper": {
+        "label": "Notes"
+      }
+    },
+    "api": {
+      "rows": {
+        "rows": "Starting number of visible rows. The control grows when field-sizing-content applies.",
+        "className": "Adds layout and sizing utilities.",
+        "disabled": "Prevents interaction and applies the disabled state.",
+        "invalid": "Use aria-invalid to mark the field as having a validation error."
+      }
+    }
+  },
+  "select": {
+    "title": "Select",
+    "description": "A dropdown list of mutually exclusive options. Values are always strings on the wire — numeric or enum fields convert at the call site. The popup opens below the trigger (alignItemWithTrigger is off by default, a local change).",
+    "importLabel": "Shared import",
+    "navigation": {
+      "overview": "Select overview",
+      "variants": "Sizes",
+      "groups": "Groups, labels, separators",
+      "usage": "Real usage",
+      "interactivity": "Interactivity",
+      "api": "API reference"
+    },
+    "sections": {
+      "variants": {
+        "title": "Sizes",
+        "description": "The default 36 px control is the product baseline. The compact 32 px variant is for dense toolbars and compact rows."
+      },
+      "groups": {
+        "title": "Groups, labels, separators",
+        "description": "SelectGroup + SelectLabel + SelectSeparator build a sectioned popup — for option lists that benefit from a heading or a divider."
+      },
+      "usage": {
+        "title": "Real usage",
+        "description": "Select appears in the calendar reminders row (numeric presets as strings), the week-start picker in calendar settings, and the owner filter in the inline-form stand. All three convert between the string wire format and their domain type on the spot.",
+        "calendarReminders": {
+          "title": "Reminder presets — as in ReminderRows",
+          "description": "A numeric select that maps minute values to human labels (\"At start\", \"15 min\"). The value stays a string; the number conversion happens in onValueChange.",
+          "atStart": "At start"
+        },
+        "weekStarts": {
+          "title": "First day of week — as in Settings → Calendar",
+          "description": "A numeric select fed by the Date.getDay() format. Not FormSelect (which expects a string key) — the numeric conversion is done at the call site.",
+          "monday": "Monday",
+          "sunday": "Sunday",
+          "saturday": "Saturday"
+        },
+        "filterBar": {
+          "title": "Owner filter — as in the inline form",
+          "description": "A filter-bar select inside an InputGroup-free row; the trigger stretches with w-full and the popup matches its width."
+        }
+      },
+      "interactivity": {
+        "title": "Interactivity",
+        "description": "Base UI keyboard navigation: Arrow keys move between items, Enter and Escape work as expected. The popup stays below the trigger (alignItemWithTrigger: false) so the chosen item never hides the field.",
+        "hint": "Click and use Arrow keys, Enter to select, Escape to close."
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Project-facing styling props on SelectTrigger. Root, Value, Item and the popup forward Base UI's props unchanged."
+      }
+    },
+    "variants": {
+      "default": {
+        "description": "The default 36 px trigger — for forms and settings."
+      },
+      "sm": {
+        "description": "The compact 32 px trigger — for toolbars and dense rows."
+      }
+    },
+    "sizes": {
+      "default": "Default · 36 px",
+      "sm": "Compact · 32 px"
+    },
+    "groups": {
+      "labelAddress": "Address",
+      "billing": "Billing address",
+      "shipping": "Shipping address",
+      "general": "A general option"
+    },
+    "usage": {},
+    "interactivity": {
+      "one": "One",
+      "two": "Two",
+      "three": "Three"
+    },
+    "api": {
+      "rows": {
+        "size": "Sets the control height: default (36 px) or sm (32 px).",
+        "value": "The currently selected value, a string. Pass null for an empty selection.",
+        "onValueChange": "Called with the new value (string) or null when the selection clears.",
+        "items": "Shortcut for a plain list of { value, label } items values.",
+        "disabled": "Prevents interaction and applies the disabled state."
       }
     }
   },

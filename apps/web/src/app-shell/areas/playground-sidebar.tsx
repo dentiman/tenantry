@@ -88,10 +88,34 @@ export function PlaygroundSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/input'}
+                      render={<Link to="/playground/components/input" />}
+                    >
+                      {t('nav.input')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/select'}
+                      render={<Link to="/playground/components/select" />}
+                    >
+                      {t('nav.select')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
                       isActive={pathname === '/playground/components/tabs'}
                       render={<Link to="/playground/components/tabs" />}
                     >
                       {t('nav.tabs')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/textarea'}
+                      render={<Link to="/playground/components/textarea" />}
+                    >
+                      {t('nav.textarea')}
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </SidebarMenuSub>
