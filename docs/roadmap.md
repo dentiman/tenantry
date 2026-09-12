@@ -104,6 +104,11 @@ permissions **замінює** його, а не додається поруч.
 - звузити `app.enableCors()` до allowlist (зараз широкий; той самий allowlist піде в
   `REALTIME_ALLOWED_ORIGINS`).
 
+**План імплементації — [auth-hardening-plan.md](auth-hardening-plan.md)**: п'ять заходів
+(AUTH-0 hardening без міграцій → AUTH-1 сесія як сутність → AUTH-2 httpOnly cookie →
+AUTH-3 відновлення доступу → AUTH-4 2FA) з чекбоксами, зафіксованими рішеннями і
+критеріями приймання.
+
 ### 2.6. Operational maturity
 
 - **EDA-2 — спостережуваність асинхронного шару** ([event-driven-architecture.md](event-driven-architecture.md) §6).
