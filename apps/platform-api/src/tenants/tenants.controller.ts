@@ -1,14 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { TenantListResponse, TenantResponse } from '@saas-skeleton/contracts/platform';
 import { TenantsService } from './tenants.service';
 import {
   CreateTenantDto,
   TenantListResponseDto,
+  TenantQueryDto,
   TenantResponseDto,
   UpdateTenantDto,
 } from './dto/tenant.dto';
-import { toTenantResponse } from './tenants.mapper';
+import { toTenantListResponse, toTenantResponse } from './tenants.mapper';
 
 @ApiTags('tenants')
 @ApiBearerAuth()
@@ -18,9 +19,9 @@ export class TenantsController {
 
   @Get()
   @ApiOkResponse({ type: TenantListResponseDto.Output })
-  async findAll(): Promise<TenantListResponse> {
-    const { items, total } = await this.tenantsService.findAll();
-    return { items: items.map(toTenantResponse), total };
+  async findAll(@Query() query: TenantQueryDto): Promise<TenantListResponse> {
+    const { items, total, page, limit } = await this.tenantsService.findAll(query);
+    return toTenantListResponse(items, total, page, limit);
   }
 
   @Get(':id')

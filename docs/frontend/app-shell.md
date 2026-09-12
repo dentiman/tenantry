@@ -495,11 +495,12 @@ viewport. Ручний `overflow-x-hidden`, який стояв тут до 2026
 ```
 apps/web/src/app-shell/
   app-shell.tsx                  провайдери, дві колонки, SidebarInset
-  app-rail.tsx                   перший рівень: бренд, пункти area, дропдаун профілю
+  app-rail.tsx                   перший рівень: бренд, пункти area
   area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст
   area-nav.tsx                   список пунктів (для тих area, що є меню)
   areas.tsx                      реєстр area, resolveArea, DEFAULT_AREA
   paths.ts                       NavPath / AreaPrefix (літерали) + isUnder
+  account-footer.tsx             нижня смуга шела: AppFooterBar + дропдаун профілю
   areas/
     workspace-sidebar.tsx  chat-sidebar.tsx  settings-sidebar.tsx
     playground-sidebar.tsx  user-settings-sidebar.tsx
@@ -520,11 +521,12 @@ apps/web/src/app-shell/
 `pages/user-settings/layout.tsx`.
 
 У `libs/ui` не переїхало нічого: `app-layout` там свідомо ніколи не жив (бренд і
-навігація в двох фронтах різні), і двоколонковість лишається локальною, поки
-platform-web має одну area. Єдина правка пакета — `NotFoundPage` дістав проп
-`homeTo`: «головна» у tenant-web тепер `/workspace`, у platform-web `/`, і спільний
-компонент не має знати шляхів конкретного плану (хардкод `to="/"` там після
-міграції просто не збереться).
+навігація в двох фронтах різні). **`apps/platform-web` отримав ту саму структуру
+шела** (§9) — файли `src/app-shell/` там СКОПІЙОВАНІ, а не витягнуті в пакет
+(докладніше й обґрунтування — §9.3). Єдина правка пакета — `NotFoundPage` дістав
+проп `homeTo`: «головна» у tenant-web тепер `/workspace`, у platform-web
+`/tenants`, і спільний компонент не має знати шляхів конкретного плану (хардкод
+`to="/"` там після міграції просто не збереться).
 
 ## 7. Граблі
 
@@ -614,3 +616,68 @@ platform-web має одну area. Єдина правка пакета — `Not
   VS Code) і «повертати в останній роут area» (динамічний `to` вбиває типізацію
   `Link` і prefetch; якщо знадобиться — `lastPathByArea` у sessionStorage і
   імперативний `navigate`).
+
+## 9. Шел `apps/platform-web`
+
+Реалізовано 2026-09-12: control plane отримав ту саму МОДЕЛЬ шела, що tenant-web
+(§0 плану `docs/frontend/platform-web-shell-plan.md`) — рейл + колонка area,
+нижня смуга акаунта, контекстна панель, `ScrollArea`-скрол сторінки, друга вісь
+теми, `padded`/`bleed`. Раніше тут був один сайдбар (патерн `sidebar-07`), тепер
+— два рівні навігації, як у tenant-web (`sidebar-09`).
+
+### 9.1 Склад area
+
+| Area              | Префікс          | У рейлі                      | Друга колонка             | Іконка      |
+| ----------------- | ---------------- | ----------------------------- | -------------------------- | ----------- |
+| **Tenants**       | `/tenants`       | так                            | `All tenants`               | `Building2` |
+| **Operations**    | `/operations`    | так                            | `Jobs` · `Queues`            | `Activity`  |
+| **User settings** | `/user-settings` | ні — з дропдауна аватара       | `Profile` · `Appearance`     | `UserCog`   |
+
+Рейл вимагає ≥2 area, інакше він декорація (саме тому в platform-web його довго
+не було) — Tenants (клієнти платформи) і Operations (машинерія системи) дають
+природну межу. Колонка Tenants має рівно один пункт — легально: контракт
+`AppArea.Sidebar` — компонент-контейнер area, а не підменю (те саме
+підтверджував порожній `ChatSidebar` у web); тут вона наповнюється на MT-4
+(оператори, сегменти тенантів). «Черги» переїхали з карток над таблицею джоб на
+власну сторінку `/operations/queues` — інакше `/operations/jobs` не могла стати
+`bleed`-полотном, як `/users` у web. Розділу «Settings» (організаційного) в
+platform-web НЕМАЄ: суб'єкт контрол-плейну — сама платформа, і в `platform-api`
+немає жодного ендпоінта її налаштувань.
+
+### 9.2 Контекстна панель
+
+Один реальний споживач — `JobDetailsPanel` на `/operations/jobs`: повний
+`data`/`output` (у гріді вони обрізані `max-w-56`), таймінги, спроби. Відкриття
+— row action «View details» (той самий патерн, що «View activity» на `/users`).
+
+### 9.3 Копіюємо, а не витягуємо в `libs/ui`
+
+Файли шела platform-web (`src/app-shell/…`) — СКОПІЙОВАНІ з `apps/web`, не
+екстраговані в пакет: реєстр area, бренд (`ShieldCheck` замість `Layers`),
+футер (свій `useAuthStore` з `operator` замість `user`, logout без виклику API —
+`POST /auth/logout` у platform-api не існує), шапка колонки (тут немає
+`GET /settings/bootstrap`, тож бренд статичний, без фолбека на назву тенанта).
+Так само народжувався сам `libs/ui` (UI-0): спершу два побайтово однакові
+набори, потім екстракція. Кандидати на екстракцію після цієї ітерації —
+`area-nav.tsx` (generic по `NavPath`), `RAIL_*`-константи, композиція
+`app-shell.tsx` з інжекцією «рейл/колонка/футер/хедерні кнопки» — робити третім
+ходом, коли зʼявиться третій споживач або коли файли справді зійдуться
+побайтово (сценарій UI-0).
+
+### 9.4 Що лишилось різним (і має лишитись)
+
+Дзвінок сповіщень, presence/last-seen і стрічка активностей — tenant-фічі:
+`activities` живуть під RLS у tenant-плані, платформа їх не читає.
+Refresh-токен: у платформи access-токен (60m) напряму в localStorage без
+refresh-механіки (MT-3, свідомий trade-off). `/user-settings/profile` у
+platform-web — READ-ONLY (нема `PATCH` для `platform_users`), на відміну від
+форми в tenant-web.
+
+### 9.5 Пагінований `GET /tenants`
+
+Передумова для `DataGrid` на `/tenants`: контракт отримав
+`TenantQuerySchema` (`page`/`limit`/`search`/`isActive`/`sortBy`/`sortOrder`,
+той самий whitelist-патерн, що `UserQuerySchema`) і `TenantListResponseSchema`
+через спільний `paginatedResponseSchema` — раніше ендпоінт віддавав
+`{ items, total }` без пагінації, і сторінка була плоскою таблицею без
+`DataGrid`-фреймворку (задокументований виняток, знятий цією ітерацією).

@@ -7,16 +7,41 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { JobQuerySchema } from '@saas-skeleton/contracts';
+import { TenantQuerySchema } from '@saas-skeleton/contracts/platform';
 import { useAuthStore } from './stores/auth.store';
 import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
-import { AppLayout } from './components/app-layout';
+import { AppShell } from './app-shell/app-shell';
+import { isUnder } from './app-shell/paths';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
 import { TenantsPage } from './pages/tenants';
 import { TenantDetailPage } from './pages/tenant-detail';
 import { JobsPage } from './pages/jobs';
+import { QueuesPage } from './pages/queues';
+import { UserSettingsProfilePage } from './pages/user-settings/profile';
+import { UserSettingsAppearancePage } from './pages/user-settings/appearance';
+
+/**
+ * `/jobs` жив у корені до появи area-навігації, тепер живе під `/operations`.
+ * Дзеркало `LEGACY_WORKSPACE_PREFIXES` у web: тимчасова сумісність, не частина
+ * архітектури (орієнтир зняття — кінець 2026).
+ *
+ * `searchStr` обов'язковий — стан гріда (фільтри, сторінка, сортування) живе в
+ * URL, і редірект без нього викидав би оператора на порожній список.
+ */
+const LEGACY_JOBS_PREFIX = '/jobs';
 
 const rootRoute = createRootRoute({
+  beforeLoad: ({ location }) => {
+    if (isUnder(location.pathname, LEGACY_JOBS_PREFIX)) {
+      // TanStack Router: redirect() кидається як управляючий об'єкт, не помилка
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({
+        href: `/operations${location.pathname}${location.searchStr}`,
+        replace: true,
+      });
+    }
+  },
   // ToastHost тут, а не в main.tsx: placement залежить від роуту (адмінка/гостьові)
   component: () => (
     <>
@@ -30,7 +55,7 @@ function requireGuest(): void {
   if (useAuthStore.getState().operator) {
     // TanStack Router: redirect() кидається як управляючий об'єкт, не помилка
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw redirect({ to: '/' });
+    throw redirect({ to: '/tenants' });
   }
 }
 
@@ -48,21 +73,92 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
+/**
+ * Гейт сесії і каркас консолі. Pathless (`id`, а не `path`), бо префікс задає
+ * вже area — дзеркало `apps/web`.
+ *
+ * `notFoundComponent` тут, а не в корені: 404 усередині area малюється
+ * ВСЕРЕДИНІ шела (рейл і панель area лишаються на місці).
+ */
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
   beforeLoad: requireAuth,
-  component: AppLayout,
+  component: AppShell,
+  notFoundComponent: () => <NotFoundPage homeTo="/tenants" />,
 });
 
-const tenantsRoute = createRoute({
+/** Корінь консолі — це area Tenants, окремої сторінки на `/` немає */
+const appIndexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/',
-  component: TenantsPage,
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/tenants', replace: true });
+  },
 });
 
-// Стан списку живе в URL — той самий патерн, що був у tenant-web до MT-3
+/**
+ * Area «Tenants» — клієнти платформи. Layout-роут без компонента: навігація
+ * area живе в шелі (`app-shell/areas/tenants-sidebar.tsx`).
+ */
+const tenantsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/tenants',
+});
+
+// Стан списку живе в URL — той самий контракт, що в /users у tenant-web
 // (.catch() — невалідні значення з URL тихо падають у дефолт, не в помилку роута)
+const TenantsSearchSchema = z.object({
+  search: z.string().trim().optional().catch(undefined),
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
+  // Той самий whitelist полів сортування, що на бекенді (не дублюємо enum)
+  sortBy: TenantQuerySchema.shape.sortBy.catch(undefined),
+  sortOrder: TenantQuerySchema.shape.sortOrder.catch(undefined),
+  // В URL і в query-параметрах API фільтр їде РЯДКОМ 'true'/'false' (не reuse
+  // TenantQuerySchema.shape.isActive — його transform дає boolean, а це wire-формат)
+  isActive: z.enum(['true', 'false']).optional().catch(undefined),
+});
+
+/** TFilters для useDataGridFilters на сторінці tenants — runtime-форму гарантує validateSearch */
+export type TenantsSearch = z.infer<typeof TenantsSearchSchema>;
+
+const tenantsIndexRoute = createRoute({
+  getParentRoute: () => tenantsRoute,
+  path: '/',
+  validateSearch: (search) => TenantsSearchSchema.parse(search),
+  component: TenantsPage,
+  staticData: { layout: 'bleed' },
+});
+
+/** Картка тенанта: окремий роут — на неї дають посилання (route-id не змінився) */
+const tenantDetailRoute = createRoute({
+  getParentRoute: () => tenantsRoute,
+  path: '$tenantId',
+  component: TenantDetailPage,
+});
+
+/**
+ * Area «Operations» — машинерія системи (моніторинг черг). Layout-роут без
+ * компонента; навігація area — `app-shell/areas/operations-sidebar.tsx`.
+ */
+const operationsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/operations',
+});
+
+/** `/operations` → Jobs: «домівка» area мусить щось показувати */
+const operationsIndexRoute = createRoute({
+  getParentRoute: () => operationsRoute,
+  path: '/',
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/operations/jobs', replace: true });
+  },
+});
+
+// Той самий патерн, що був у tenant-web до MT-3: стан списку живе в URL
 const JobsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
   limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
@@ -75,36 +171,72 @@ const JobsSearchSchema = z.object({
 /** TFilters для useDataGridFilters на сторінці jobs — runtime-форму гарантує validateSearch */
 export type JobsSearch = z.infer<typeof JobsSearchSchema>;
 
-const jobsRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/jobs',
+const operationsJobsRoute = createRoute({
+  getParentRoute: () => operationsRoute,
+  path: 'jobs',
   validateSearch: (search) => JobsSearchSchema.parse(search),
   component: JobsPage,
-});
-
-/** Картка тенанта: окремий роут, як `/users/$userId` у tenant-адмінці */
-const tenantDetailRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/tenants/$tenantId',
-  component: TenantDetailPage,
+  staticData: { layout: 'bleed' },
 });
 
 /**
- * Неіснуючий роут. Свідомо НЕ `notFoundComponent` кореня, а splat-роут ПІД `appRoute`:
- * так 404 проходить той самий гейт `beforeLoad: requireAuth`, що й решта застосунку —
- * залогінений бачить сторінку всередині layout-а (сайдбар/хедер на місці), гість
- * летить на /login замість того, щоб дивитись на 404 у порожньому вікні.
- * Статичні й динамічні роути ранжуються вище за splat, тож нічого не перехоплює.
+ * Черги — окрема сторінка (сітка карток), а не блок над таблицею джоб: тепер
+ * `/operations/jobs` — чисте `bleed`-полотно таблиці, як `/users` у tenant-web.
+ */
+const operationsQueuesRoute = createRoute({
+  getParentRoute: () => operationsRoute,
+  path: 'queues',
+  component: QueuesPage,
+});
+
+/**
+ * ОСОБИСТІ налаштування — area без пункту в рейлі: вхід із дропдауна аватара.
+ * Той самий URL-префікс, що в tenant-web — однакова ментальна модель для
+ * людини, що ходить між двома консолями.
+ */
+const userSettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/user-settings',
+});
+
+const userSettingsProfileRoute = createRoute({
+  getParentRoute: () => userSettingsRoute,
+  path: '/',
+  component: UserSettingsProfilePage,
+});
+
+const userSettingsAppearanceRoute = createRoute({
+  getParentRoute: () => userSettingsRoute,
+  path: 'appearance',
+  component: UserSettingsAppearancePage,
+});
+
+/**
+ * Неіснуючий роут ПОЗА будь-якою area (`/nonsense`). Свідомо splat-роут ПІД
+ * `appRoute`, а не `notFoundComponent` кореня: так 404 проходить той самий
+ * гейт `beforeLoad: requireAuth` — оператор бачить сторінку всередині шела,
+ * гість летить на /login. Промахи ВСЕРЕДИНІ area ловить `notFoundComponent`
+ * на `appRoute`.
  */
 const notFoundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '$',
-  component: () => <NotFoundPage homeTo="/" />,
+  component: () => <NotFoundPage homeTo="/tenants" />,
 });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([tenantsRoute, tenantDetailRoute, jobsRoute, notFoundRoute]),
+  appRoute.addChildren([
+    appIndexRoute,
+    tenantsRoute.addChildren([tenantsIndexRoute, tenantDetailRoute]),
+    operationsRoute.addChildren([
+      operationsIndexRoute,
+      operationsJobsRoute,
+      operationsQueuesRoute,
+    ]),
+    userSettingsRoute.addChildren([userSettingsProfileRoute, userSettingsAppearanceRoute]),
+    notFoundRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });
@@ -112,5 +244,13 @@ export const router = createRouter({ routeTree });
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
+  }
+
+  /**
+   * Розкладка контенту — властивість РОУТУ, а не сторінки. Дзеркало
+   * `apps/web/src/router.tsx` (там повне обґрунтування).
+   */
+  interface StaticDataRouteOption {
+    layout?: 'padded' | 'bleed';
   }
 }

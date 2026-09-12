@@ -106,7 +106,7 @@ export function TenantDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Крихти віддаються в хедер layout-а порталом (page-header-slot.tsx) */}
-      <PageBreadcrumbs items={[{ label: t('title'), to: '/' }, { label: tenant.name }]} />
+      <PageBreadcrumbs items={[{ label: t('title'), to: '/tenants' }, { label: tenant.name }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">

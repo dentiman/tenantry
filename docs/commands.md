@@ -214,8 +214,9 @@ pnpm platform:web:dev
 # → pnpm --filter @saas-skeleton/platform-web dev  (Vite, :5174, проксі /api → :3002)
 ```
 
-Control plane SPA: Tenants (плоска таблиця + CreateTenantModal + suspend/resume),
-`/jobs` (перенесено з tenant-web 1:1 після MT-3).
+Control plane SPA: два рівні навігації (`docs/frontend/app-shell.md` §9) — Tenants
+(`DataGrid` + `CreateTenantModal` + suspend/resume), Operations (`/operations/jobs` +
+`/operations/queues`, перенесено з tenant-web після MT-3), User settings.
 
 ---
 

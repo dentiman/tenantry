@@ -31,6 +31,7 @@ import type {
   QueueStatsResponseDtoOutput,
   TenantListResponseDtoOutput,
   TenantResponseDtoOutput,
+  TenantsFindAllParams,
   UpdateTenantDto,
 } from './model';
 
@@ -317,32 +318,36 @@ export function usePlatformAuthMe<
 }
 
 export const tenantsFindAll = (
+  params?: TenantsFindAllParams,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
   return customInstance<TenantListResponseDtoOutput>(
-    { url: `/api/tenants`, method: 'GET', signal },
+    { url: `/api/tenants`, method: 'GET', params, signal },
     options,
   );
 };
 
-export const getTenantsFindAllQueryKey = () => {
-  return [`/api/tenants`] as const;
+export const getTenantsFindAllQueryKey = (params?: TenantsFindAllParams) => {
+  return [`/api/tenants`, ...(params ? [params] : [])] as const;
 };
 
 export const getTenantsFindAllQueryOptions = <
   TData = Awaited<ReturnType<typeof tenantsFindAll>>,
   TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>>;
-  request?: SecondParameter<typeof customInstance>;
-}) => {
+>(
+  params?: TenantsFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getTenantsFindAllQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getTenantsFindAllQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof tenantsFindAll>>> = ({ signal }) =>
-    tenantsFindAll(requestOptions, signal);
+    tenantsFindAll(params, requestOptions, signal);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof tenantsFindAll>>,
@@ -358,6 +363,7 @@ export function useTenantsFindAll<
   TData = Awaited<ReturnType<typeof tenantsFindAll>>,
   TError = unknown,
 >(
+  params: undefined | TenantsFindAllParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>> &
       Pick<
@@ -376,6 +382,7 @@ export function useTenantsFindAll<
   TData = Awaited<ReturnType<typeof tenantsFindAll>>,
   TError = unknown,
 >(
+  params?: TenantsFindAllParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>> &
       Pick<
@@ -394,6 +401,7 @@ export function useTenantsFindAll<
   TData = Awaited<ReturnType<typeof tenantsFindAll>>,
   TError = unknown,
 >(
+  params?: TenantsFindAllParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>>;
     request?: SecondParameter<typeof customInstance>;
@@ -405,13 +413,14 @@ export function useTenantsFindAll<
   TData = Awaited<ReturnType<typeof tenantsFindAll>>,
   TError = unknown,
 >(
+  params?: TenantsFindAllParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantsFindAll>>, TError, TData>>;
     request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getTenantsFindAllQueryOptions(options);
+  const queryOptions = getTenantsFindAllQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

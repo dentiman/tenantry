@@ -7,9 +7,14 @@ import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import type { JobsSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
-import type { DataGridColumn, DataGridFilterDef } from '@saas-skeleton/ui/components/data-grid';
+import type {
+  DataGridColumn,
+  DataGridFilterDef,
+  DataGridRowAction,
+} from '@saas-skeleton/ui/components/data-grid';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
-import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
+import { JobDetailsPanel } from '../components/job-details-panel';
+import { useState } from 'react';
 
 // Моніторинг: дані оновлюються самі, без ручного рефрешу
 const REFETCH_INTERVAL_MS = 5000;
@@ -30,7 +35,7 @@ const stateVariant: Record<
 };
 
 // Типізований компаунд-набір гріда цієї сторінки; Grid.filter — фабрики фільтрів,
-// привʼязані до search-схеми роуту /jobs
+// привʼязані до search-схеми роуту /operations/jobs
 const Grid = createDataGrid<JobsSearch, JobListResponseDtoOutputItemsItem>();
 
 function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): string {
@@ -40,14 +45,15 @@ function jobStateLabel(t: TFunction<['jobs', 'common']>, state: JobState): strin
 /**
  * MT-3: переїхало сюди з tenant-web разом із самим модулем моніторингу —
  * pgboss.job поза RLS, тож повний (крос-tenant) список легальний тільки
- * в control plane (docs/multi-tenancy-migration.md, «Поломка 2»).
+ * в control plane. Сітка карток черг переїхала на окрему `/operations/queues`
+ * (крок 6 плану шела) — тепер таблиця сама впирається в краї, як `/users`.
  */
 export function JobsPage() {
   const { t } = useTranslation(['jobs', 'common']);
+  const [selectedJob, setSelectedJob] = useState<JobListResponseDtoOutputItemsItem | null>(null);
 
-  const { data: stats } = useJobsQueues({
-    query: { refetchInterval: REFETCH_INTERVAL_MS },
-  });
+  // Лише список назв черг для фільтра — картки статистики переїхали на /operations/queues
+  const { data: stats } = useJobsQueues();
   const queues = stats?.queues ?? [];
 
   const filters: DataGridFilterDef<JobsSearch>[] = [
@@ -130,6 +136,16 @@ export function JobsPage() {
     },
   ];
 
+  const rowActions: DataGridRowAction<JobListResponseDtoOutputItemsItem>[] = [
+    {
+      id: 'details',
+      label: t('table.viewDetails'),
+      onAction: (job) => {
+        setSelectedJob(job);
+      },
+    },
+  ];
+
   return (
     // limit не шлемо — дефолт задає бекенд (PaginationQuerySchema, 20)
     <Grid.Root
@@ -145,39 +161,29 @@ export function JobsPage() {
         subtitle={t('subtitle')}
       />
 
-      <div className="mb-4">
-        <Grid.Filters filters={filters} />
+      <div className="border-b border-border">
+        <Grid.Toolbar
+          surface="band"
+          filters={filters}
+          totalLabel={t('toolbar.total')}
+          selectedLabel={t('toolbar.selected')}
+          size="sm"
+        />
       </div>
-      {queues.length > 0 && (
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {queues.map((q) => (
-            <Card key={q.name} size="sm">
-              <CardContent className="flex flex-col gap-2">
-                <p className="truncate text-sm font-medium text-foreground">{q.name}</p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>{t('queueCard.total', { count: q.total })}</span>
-                  <span>{t('queueCard.active', { count: q.active })}</span>
-                  <span>{t('queueCard.completed', { count: q.completed })}</span>
-                  {q.failed > 0 && (
-                    <span className="text-destructive">
-                      {t('queueCard.failed', { count: q.failed })}
-                    </span>
-                  )}
-                  {q.retry > 0 && (
-                    <span className="text-warning">{t('queueCard.retry', { count: q.retry })}</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}
         columns={columns}
-        surface="card"
+        rowActions={rowActions}
+        surface="flush"
         messages={{ loading: t('loadingLabel'), empty: t('empty') }}
+      />
+
+      <JobDetailsPanel
+        job={selectedJob}
+        onClose={() => {
+          setSelectedJob(null);
+        }}
       />
     </Grid.Root>
   );

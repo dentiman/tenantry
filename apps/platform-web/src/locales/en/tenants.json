@@ -1,11 +1,21 @@
 {
   "title": "Tenants",
   "subtitle": "Create workspaces and control their access.",
+  "searchLabel": "Search tenants",
+  "searchPlaceholder": "Search by slug or name…",
+  "filters": {
+    "statusLabel": "Status",
+    "statusAll": "All statuses"
+  },
+  "toolbar": {
+    "total": "Total",
+    "selected": "Selected"
+  },
   "table": {
     "ariaLabel": "Tenants",
-    "slug": "Slug",
-    "name": "Name",
+    "name": "Tenant",
     "status": "Status",
+    "locale": "Language",
     "created": "Created"
   },
   "status": {

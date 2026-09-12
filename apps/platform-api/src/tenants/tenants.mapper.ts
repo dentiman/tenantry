@@ -1,5 +1,5 @@
 import type { Tenant } from '@saas-skeleton/database';
-import type { TenantResponse } from '@saas-skeleton/contracts/platform';
+import type { TenantListResponse, TenantResponse } from '@saas-skeleton/contracts/platform';
 
 // settings (Json) свідомо НЕ віддається списком — внутрішня кухня tenant-а
 export function toTenantResponse(tenant: Tenant): TenantResponse {
@@ -11,5 +11,20 @@ export function toTenantResponse(tenant: Tenant): TenantResponse {
     locale: tenant.locale,
     createdAt: tenant.createdAt.toISOString(),
     updatedAt: tenant.updatedAt.toISOString(),
+  };
+}
+
+export function toTenantListResponse(
+  items: Tenant[],
+  total: number,
+  page: number,
+  limit: number,
+): TenantListResponse {
+  return {
+    items: items.map(toTenantResponse),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
   };
 }

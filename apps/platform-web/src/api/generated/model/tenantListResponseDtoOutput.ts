@@ -9,9 +9,8 @@ import type { TenantListResponseDtoOutputItemsItem } from './tenantListResponseD
 
 export interface TenantListResponseDtoOutput {
   items: TenantListResponseDtoOutputItemsItem[];
-  /**
-   * @minimum -9007199254740991
-   * @maximum 9007199254740991
-   */
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

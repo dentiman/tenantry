@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemPrismaService } from '@saas-skeleton/database';
 import type { Tenant } from '@saas-skeleton/database';
-import type { CreateTenant, UpdateTenant } from '@saas-skeleton/contracts/platform';
+import type { CreateTenant, TenantQuery, UpdateTenant } from '@saas-skeleton/contracts/platform';
 import { fieldConflictException } from '@saas-skeleton/shared/errors';
 import * as argon2 from 'argon2';
 
@@ -17,12 +17,40 @@ export class TenantsService {
 
   constructor(private readonly prisma: SystemPrismaService) {}
 
-  async findAll(): Promise<{ items: Tenant[]; total: number }> {
+  async findAll(query: TenantQuery): Promise<{
+    items: Tenant[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { page, limit, isActive, search, sortBy, sortOrder } = query;
+
+    const where = {
+      ...(isActive !== undefined && { isActive }),
+      ...(search && {
+        OR: [
+          { slug: { contains: search, mode: 'insensitive' as const } },
+          { name: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
+
+    // tie-breaker по id обов'язковий — інакше пагінація "пливе" при рівних значеннях sortBy
+    const orderBy = sortBy
+      ? [{ [sortBy]: sortOrder ?? 'asc' }, { id: 'desc' as const }]
+      : [{ createdAt: 'asc' as const }, { id: 'desc' as const }];
+
     const [items, total] = await Promise.all([
-      this.prisma.tenant.findMany({ orderBy: { createdAt: 'asc' } }),
-      this.prisma.tenant.count(),
+      this.prisma.tenant.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy,
+      }),
+      this.prisma.tenant.count({ where }),
     ]);
-    return { items, total };
+
+    return { items, total, page, limit };
   }
 
   async findOne(id: string): Promise<Tenant> {

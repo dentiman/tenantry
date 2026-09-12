@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
 
 // MT-3: контракти CONTROL PLANE (apps/platform-api). Свідомо ОКРЕМИЙ підпростір:
 // імпортуються як '@saas-skeleton/contracts/platform' і НЕ реекспортуються з головного
@@ -68,7 +69,19 @@ export const UpdateTenantSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const TenantListResponseSchema = z.object({
-  items: z.array(TenantResponseSchema),
-  total: z.number().int(),
+/** Той самий whitelist-патерн, що UserQuerySchema: sortBy — закритий enum у Swagger */
+export const TenantQuerySchema = listQuerySchema([
+  'slug',
+  'name',
+  'isActive',
+  'createdAt',
+]).extend({
+  // Рядок 'true'/'false' на дроті + transform у boolean — дзеркало UserQuerySchema.isActive
+  isActive: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  search: z.string().optional(),
 });
+
+export const TenantListResponseSchema = paginatedResponseSchema(TenantResponseSchema);

@@ -1,9 +1,15 @@
 {
   "brand": "Platform Console",
-  "brandSubtitle": "Control plane",
-  "nav": {
+  "areas": {
     "tenants": "Tenants",
-    "jobs": "Jobs"
+    "operations": "Operations",
+    "userSettings": "User settings"
+  },
+  "nav": {
+    "allTenants": "All tenants",
+    "jobs": "Jobs",
+    "queues": "Queues",
+    "userSettings": "User settings"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",
@@ -11,6 +17,11 @@
     "switchLabel": "Switch theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "paletteLabel": "Switch color theme",
+    "palettes": {
+      "gray": "Dark grey",
+      "slate": "Slate"
+    }
   }
 }

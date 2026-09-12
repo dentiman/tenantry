@@ -24,4 +24,8 @@ export * from './queueStatsResponseDtoOutputQueuesItem';
 export * from './tenantListResponseDtoOutput';
 export * from './tenantListResponseDtoOutputItemsItem';
 export * from './tenantResponseDtoOutput';
+export * from './tenantsFindAllIsActive';
+export * from './tenantsFindAllParams';
+export * from './tenantsFindAllSortBy';
+export * from './tenantsFindAllSortOrder';
 export * from './updateTenantDto';

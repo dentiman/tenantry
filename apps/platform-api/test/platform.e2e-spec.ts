@@ -194,6 +194,61 @@ describe('Platform API (e2e)', () => {
       const slugs = (response.body.items as { slug: string }[]).map((t) => t.slug);
       expect(slugs).toContain('default');
     });
+
+    it('finds tenants by search on slug and name', async () => {
+      const token = await loginOperator();
+      await request(app.getHttpServer())
+        .post('/api/tenants')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          slug: 'searchable-slug',
+          name: 'Findable Name Inc',
+          admin: { email: 'search@example.test', password: 'SearchAdmin123' },
+        })
+        .expect(201);
+
+      const bySlug = await request(app.getHttpServer())
+        .get('/api/tenants?search=searchable')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect((bySlug.body.items as { slug: string }[]).map((t) => t.slug)).toContain(
+        'searchable-slug',
+      );
+
+      const byName = await request(app.getHttpServer())
+        .get('/api/tenants?search=Findable')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect((byName.body.items as { slug: string }[]).map((t) => t.slug)).toContain(
+        'searchable-slug',
+      );
+    });
+
+    it('filters tenants by isActive=false to only suspended ones', async () => {
+      const token = await loginOperator();
+      const created = await request(app.getHttpServer())
+        .post('/api/tenants')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          slug: 'to-suspend',
+          name: 'To Suspend',
+          admin: { email: 'suspend@example.test', password: 'SuspendAdmin123' },
+        })
+        .expect(201);
+      await request(app.getHttpServer())
+        .patch(`/api/tenants/${String(created.body.id)}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ isActive: false })
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .get('/api/tenants?isActive=false')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      const items = response.body.items as { slug: string; isActive: boolean }[];
+      expect(items.every((t) => !t.isActive)).toBe(true);
+      expect(items.map((t) => t.slug)).toContain('to-suspend');
+    });
   });
 
   describe('jobs monitoring (переїхало з tenant-api — гейт MT-3)', () => {

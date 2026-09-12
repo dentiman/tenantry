@@ -1,0 +1,24 @@
+{
+  "title": "User settings",
+  "nav": {
+    "profile": "Profile",
+    "appearance": "Appearance"
+  },
+  "loadingLabel": "Loading profile",
+  "profile": {
+    "title": "Profile",
+    "description": "Facts about your operator account. Changed by a platform administrator.",
+    "email": "Email",
+    "name": "Name",
+    "createdAt": "Member since",
+    "readOnlyHint": "This account is managed by the platform — there is no self-service edit yet.",
+    "loadFailed": "Could not load your profile"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "How this console looks on this device. The choice is stored in this browser only.",
+    "theme": "Theme",
+    "palette": "Color theme",
+    "paletteDescription": "Applies to both light and dark mode."
+  }
+}

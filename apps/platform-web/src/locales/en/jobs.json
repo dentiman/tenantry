@@ -1,17 +1,25 @@
 {
   "title": "Jobs",
-  "subtitle": "Monitor background queues across all tenants.",
+  "subtitle": "Monitor background jobs across all tenants.",
+  "queuesTitle": "Queues",
+  "queuesSubtitle": "Queue-level stats across all tenants.",
   "filters": {
     "queueLabel": "queue",
     "stateLabel": "state",
     "all": "All ({{label}})"
+  },
+  "toolbar": {
+    "total": "Total",
+    "selected": "Selected"
   },
   "queueCard": {
     "total": "total: {{count}}",
     "active": "active: {{count}}",
     "completed": "completed: {{count}}",
     "failed": "failed: {{count}}",
-    "retry": "retry: {{count}}"
+    "retry": "retry: {{count}}",
+    "empty": "No queues yet",
+    "emptyHint": "Queue-level stats will appear here once a job has been enqueued."
   },
   "states": {
     "created": "Created",
@@ -30,7 +38,8 @@
     "created": "Created",
     "started": "Started",
     "completed": "Completed",
-    "output": "Output"
+    "output": "Output",
+    "viewDetails": "View details"
   },
   "loadingLabel": "Loading jobs",
   "empty": "No jobs found"
