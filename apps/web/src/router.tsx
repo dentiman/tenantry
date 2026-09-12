@@ -22,6 +22,7 @@ import { UserDetailPage } from './pages/user-detail';
 import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
 import { PlaygroundPage } from './pages/playground';
+import { PlaygroundComboboxPage } from './pages/playground-combobox';
 import { PlaygroundInputPage } from './pages/playground-input';
 import { PlaygroundSelectPage } from './pages/playground-select';
 import { PlaygroundTabsPage } from './pages/playground-tabs';
@@ -421,6 +422,13 @@ const playgroundComponentsButtonsRoute = createRoute({
   component: PlaygroundPage,
 });
 
+/** General Components: Combobox — пошук-з-попапом, фундамент усіх бізнес-селектів */
+const playgroundComponentsComboboxRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'combobox',
+  component: PlaygroundComboboxPage,
+});
+
 /** General Components: Input + адорнований InputGroup — бандл на одній сторінці */
 const playgroundComponentsInputRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
@@ -520,6 +528,7 @@ const routeTree = rootRoute.addChildren([
       playgroundInlineFormRoute,
       playgroundComponentsRoute.addChildren([
         playgroundComponentsButtonsRoute,
+        playgroundComponentsComboboxRoute,
         playgroundComponentsInputRoute,
         playgroundComponentsSelectRoute,
         playgroundComponentsTabsRoute,

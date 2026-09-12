@@ -5,6 +5,7 @@
     "generalComponents": "General components",
     "platformComponents": "Platform components",
     "buttons": "Buttons",
+    "combobox": "Combobox",
     "input": "Input",
     "select": "Select",
     "tabs": "Tabs",
@@ -139,6 +140,94 @@
         "disabled": "Prevents interaction and applies the disabled state.",
         "className": "Adds layout utilities such as w-full without changing the recipe.",
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
+      }
+    }
+  },
+  "combobox": {
+    "title": "Combobox",
+    "description": "The base search-with-popup primitive beneath every business picker in the product — user select, customer select, country select. Shown here bare, with local data only: the business wrappers live on the Platform pages.",
+    "importLabel": "Shared import",
+    "navigation": {
+      "overview": "Combobox overview",
+      "single": "Single value",
+      "chips": "Multiple (chips)",
+      "states": "States",
+      "usage": "Real usage",
+      "api": "API reference"
+    },
+    "placeholders": {
+      "search": "Search…",
+      "pickOne": "Pick one…"
+    },
+    "empty": "Nothing found",
+    "sections": {
+      "single": {
+        "title": "Single value",
+        "description": "Two trigger shapes: an input that shows the chosen value as its text, and a button-style trigger with the search field moved inside the popup — for pickers whose trigger renders identity markup, not text.",
+        "inputTrigger": "The input itself is the trigger: typing filters, choosing fills the field.",
+        "buttonTrigger": "A button trigger with no chevron (showChevron={false}) plus a search field inside the popup. The popup anchors to the field, not the button."
+      },
+      "chips": {
+        "title": "Multiple — chips in the field",
+        "description": "ComboboxChips renders the selected values as removable chips with an inline search caret. Backspace on an empty field drops the last chip.",
+        "placeholder": "Add…",
+        "remove": "Remove",
+        "hint": "Selection is a T[]; each chip renders through the render slot and removes via its own aria-label."
+      },
+      "states": {
+        "title": "States",
+        "description": "Disabled passes through to the field and its clear affordances; an empty result set is where ComboboxEmpty shows its message."
+      },
+      "usage": {
+        "title": "Real usage",
+        "description": "Four patterns already live in the product. They share the primitive but differ in trigger shape, data source, and where the search field lives — the four shapes a new picker starts from.",
+        "serverSearch": {
+          "title": "Server-side search — UserSelect",
+          "description": "The input lives inside the popup, items come from GET /users with debounce, and picking a row never fills the search box. This is the shape the playground trigger-with-popup stand mirrors."
+        },
+        "countrySelect": {
+          "title": "Flag trigger — CountrySelect",
+          "description": "The trigger is a button rendering a flag and dial code; search sits in the popup and matches a stitched search string (name, ISO code, dial code) via itemToStringLabel."
+        },
+        "chipsMulti": {
+          "title": "Chips multi-select — UserMultiSelect",
+          "description": "ComboboxChips with multiple; filtering is delegated to the server (filter={null}), so the built-in contains never lies about an unloaded page."
+        },
+        "customerSelect": {
+          "title": "Domain rows — CustomerSelect",
+          "description": "Same recipe as UserSelect but rendering CustomerIdentity rows; shows the primitive composing with domain markup inside the list."
+        }
+      },
+      "api": {
+        "title": "API reference",
+        "description": "Root props that shape the product's usage. The parts (Input, Trigger, Content, List, Item) forward Base UI's props unchanged; local edits add showChevron, showClear, removeLabel and the exported ComboboxClear."
+      }
+    },
+    "single": {
+      "inputTrigger": "Type to filter a local list; choosing fills the field. The chevron button opens the same popup.",
+      "buttonTrigger": "The trigger can be any markup — here a plain button with an icon. Search lives in the popup."
+    },
+    "chips": {
+      "placeholder": "Add…",
+      "remove": "Remove",
+      "hint": "Chips render from the value array; the caret stays at the end. Backspace on an empty field removes the last chip."
+    },
+    "states": {
+      "disabled": "Disabled",
+      "emptyHint": "Open the popup to see the empty state — no items, one message."
+    },
+    "placeholders": {
+      "search": "Search…"
+    },
+    "usage": {},
+    "api": {
+      "rows": {
+        "multiple": "Turns the root into a multi-select and makes value an array.",
+        "items": "The option list. Objects, not bare strings — the item renderer receives them whole.",
+        "value": "The controlled selection: one option object, or an array when multiple.",
+        "filter": "The built-in string filter. Pass null when filtering happens server-side.",
+        "itemToStringLabel": "Extracts the searchable string from an option — typeahead reads it.",
+        "anchor": "Anchors the popup to a wrapper element instead of the trigger, so its width follows the field."
       }
     }
   },

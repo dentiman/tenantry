@@ -29,6 +29,7 @@ export type NavPath =
   | '/playground/vertical-form'
   | '/playground/inline-form'
   | '/playground/components/buttons'
+  | '/playground/components/combobox'
   | '/playground/components/input'
   | '/playground/components/select'
   | '/playground/components/tabs'
