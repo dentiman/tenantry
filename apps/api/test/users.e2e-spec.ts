@@ -176,6 +176,26 @@ describe('Users API (e2e)', () => {
       .expect(400);
   });
 
+  // AUTH-0 (FR-011): довжина — єдина вимога до пароля; композиційних правил немає
+  it('rejects an initial password shorter than 12 characters', async () => {
+    const headers = await createAuthHeaders(`${Date.now()}-short-password-admin`);
+    const tooShort = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({ ...createUserPayload(`${Date.now()}-short`), password: 'Elevenchars' })
+      .expect(400);
+
+    expect(tooShort.body.fieldErrors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: 'password' })]),
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({ ...createUserPayload(`${Date.now()}-twelve`), password: 'twelve-chars' })
+      .expect(201);
+  });
+
   it('created user can login with the initial password', async () => {
     const payload = createUserPayload(`${Date.now()}-login`);
     const headers = await createAuthHeaders(`${Date.now()}-login-admin`);

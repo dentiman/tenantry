@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
+import { PasswordSchema } from '../user/user.schema';
 
 // MT-3: контракти CONTROL PLANE (apps/platform-api). Свідомо ОКРЕМИЙ підпростір:
 // імпортуються як '@saas-skeleton/contracts/platform' і НЕ реекспортуються з головного
@@ -57,7 +58,8 @@ export const CreateTenantSchema = z.object({
   // invite-флоу відкладено на MT-4) — уніфіковано з tenant-рівневим create user
   admin: z.object({
     email: normalizedEmail,
-    password: z.string().min(8).max(128),
+    // AUTH-0: та сама політика, що в tenant-плані — це пароль tenant-користувача
+    password: PasswordSchema,
     name: z.string().nullable().optional(),
   }),
 });
@@ -70,12 +72,7 @@ export const UpdateTenantSchema = z.object({
 });
 
 /** Той самий whitelist-патерн, що UserQuerySchema: sortBy — закритий enum у Swagger */
-export const TenantQuerySchema = listQuerySchema([
-  'slug',
-  'name',
-  'isActive',
-  'createdAt',
-]).extend({
+export const TenantQuerySchema = listQuerySchema(['slug', 'name', 'isActive', 'createdAt']).extend({
   // Рядок 'true'/'false' на дроті + transform у boolean — дзеркало UserQuerySchema.isActive
   isActive: z
     .enum(['true', 'false'])

@@ -24,7 +24,8 @@ import { SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import type { Redis } from 'ioredis';
-import { REALTIME_CONFIG, REALTIME_REDIS } from '../src/realtime/realtime.constants';
+import { REALTIME_CONFIG } from '../src/realtime/realtime.constants';
+import { REDIS_CLIENT } from '../src/redis/redis.constants';
 import type { RealtimeConfig } from '../src/realtime/realtime.config';
 import { PresenceStore } from '../src/realtime/presence/presence.store';
 import { LastSeenWriter } from '../src/realtime/presence/last-seen.writer';
@@ -434,7 +435,7 @@ describe('Realtime gateway + presence (e2e)', () => {
         .set('Authorization', `Bearer ${author.tokens.accessToken}`)
         .send({
           email: uniqueEmail('rt-notify-member'),
-          password: 'Password123',
+          password: 'Password1234',
           name: 'RT Member',
         })
         .expect(201);
@@ -511,7 +512,7 @@ describe('Realtime gateway + presence (e2e)', () => {
      */
     it('sweeper знімає юзера, чия lease протермінувалась', async () => {
       const config = app.get<RealtimeConfig>(REALTIME_CONFIG);
-      const store = new PresenceStore(app.get<Redis>(REALTIME_REDIS), {
+      const store = new PresenceStore(app.get<Redis>(REDIS_CLIENT), {
         ...config,
         // Власний префікс — щоб «мертві» ключі цього тесту не бачив живий sweeper застосунку
         keyPrefix: `${config.keyPrefix}:expiry`,

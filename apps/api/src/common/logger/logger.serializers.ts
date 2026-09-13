@@ -1,5 +1,15 @@
 import { SENSITIVE_HEADERS } from './logger.constants';
 
+/**
+ * AUTH-0: адреса клієнта — `req.ip` Express-а, який після `trust proxy` бере її з
+ * X-Forwarded-For. Стандартний `remoteAddress` pino — це сокет, тобто за nginx/swarm
+ * адреса балансувальника. Сирий запит pino-http кладе в неперелічуване `raw`.
+ */
+function clientIp(req: Record<string, unknown>): unknown {
+  const raw = (req as { raw?: { ip?: unknown } }).raw;
+  return raw?.ip ?? req.remoteAddress;
+}
+
 // Custom serializers for redacting sensitive data
 export const customSerializers = {
   req(req: Record<string, unknown>): Record<string, unknown> {
@@ -16,10 +26,11 @@ export const customSerializers = {
       }
       return {
         ...req,
+        ip: clientIp(req),
         headers: sanitizedHeaders,
       };
     }
-    return req;
+    return { ...req, ip: clientIp(req) };
   },
   res(res: Record<string, unknown>): Record<string, unknown> {
     const headers = res.headers as Record<string, unknown> | undefined;

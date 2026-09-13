@@ -1,9 +1,7 @@
-import { Inject, Module, type OnApplicationShutdown } from '@nestjs/common';
-import type { Redis } from 'ioredis';
+import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { loadRealtimeConfig, type RealtimeConfig } from './realtime.config';
-import { REALTIME_CONFIG, REALTIME_REDIS } from './realtime.constants';
-import { realtimeRedisProvider } from './realtime-redis.provider';
+import { REALTIME_CONFIG } from './realtime.constants';
 import { RealtimeEmitter } from './realtime.emitter';
 import { RealtimeGateway } from './realtime.gateway';
 import { SocketAuthService } from './socket-auth.service';
@@ -24,7 +22,7 @@ import { PresenceStore } from './presence/presence.store';
     // Конфіг валідується тут, на старті процесу: помилка в REALTIME_* має
     // впасти одразу, а не проявитись розʼїханою presence за пів години
     { provide: REALTIME_CONFIG, useFactory: (): RealtimeConfig => loadRealtimeConfig() },
-    realtimeRedisProvider,
+    // Клієнт Valkey — з глобального RedisModule (AUTH-0: спільний і з throttler-ом)
     PresenceStore,
     LastSeenWriter,
     PresenceService,
@@ -32,21 +30,6 @@ import { PresenceStore } from './presence/presence.store';
     SocketAuthService,
     RealtimeGateway,
   ],
-  exports: [REALTIME_CONFIG, REALTIME_REDIS, RealtimeEmitter],
+  exports: [REALTIME_CONFIG, RealtimeEmitter],
 })
-export class RealtimeModule implements OnApplicationShutdown {
-  constructor(@Inject(REALTIME_REDIS) private readonly redis: Redis) {}
-
-  /**
-   * Хуки провайдерів Nest виконує перед хуком самого модуля, тому drain leases
-   * у PresenceService встигає відпрацювати до закриття конекшена. `quit` дочекається
-   * уже відправлених команд; помилку ковтаємо — процес усе одно зупиняється.
-   */
-  async onApplicationShutdown(): Promise<void> {
-    try {
-      await this.redis.quit();
-    } catch {
-      this.redis.disconnect();
-    }
-  }
-}
+export class RealtimeModule {}

@@ -19,7 +19,7 @@
 
 | Захід | Фаза                                                     | Обсяг | Міграції | Ламає контракти                               | Статус       |
 | ----- | -------------------------------------------------------- | ----- | -------- | --------------------------------------------- | ------------ |
-| 1     | **AUTH-0** — hardening без міграцій                      | S     | 0        | ні                                            | ⬜ не почато |
+| 1     | **AUTH-0** — hardening без міграцій                      | S     | 0        | ні                                            | ✅ завершено |
 | 2     | **AUTH-1** — сесія як сутність                           | L     | 1        | так (`/account/sessions`)                     | ⬜ не почато |
 | 3     | **AUTH-2** — httpOnly cookie + дзеркало в platform       | M     | 0        | так (`AuthTokens.refreshToken` стає опційним) | ⬜ не почато |
 | 4     | **AUTH-3** — відновлення доступу (`verification_tokens`) | M     | 1        | ні (тільки нові роути)                        | ⬜ не почато |
@@ -203,100 +203,101 @@ brute force, відкритий CORS, підміна IP за проксі, де�
 Зараз `REALTIME_REDIS` створюється в `RealtimeModule`, а `RealtimeModule` імпортує
 `AuthModule`. Якщо throttler у auth-шарі попросить цей токен — вийде цикл модулів.
 
-- [ ] Створити `apps/api/src/redis/redis.module.ts` (`@Global()`) з провайдером
+- [x] Створити `apps/api/src/redis/redis.module.ts` (`@Global()`) з провайдером
       `REDIS_CLIENT` (переїзд `realtime-redis.provider.ts`); `redisUrl` і `keyPrefix`
       читати з того самого env (`REDIS_URL`, `REALTIME_KEY_PREFIX`), дефолти не міняти.
-- [ ] `RealtimeModule` і `app.setup.ts` переводяться на `REDIS_CLIENT`; `REALTIME_REDIS`
+- [x] `RealtimeModule` і `app.setup.ts` переводяться на `REDIS_CLIENT`; `REALTIME_REDIS`
       лишити реекспортом-алиасом **або** видалити разом з усіма вживаннями (обрати одне,
       напівстану не лишати).
-- [ ] `onApplicationShutdown` із `quit()` переїжджає в `RedisModule` (зараз він у
+- [x] `onApplicationShutdown` із `quit()` переїжджає в `RedisModule` (зараз він у
       `RealtimeModule` — після переїзду провайдера він закривав би чужий клієнт).
-- [ ] Перевірити `apps/api/test/setup-env.ts`: e2e ізолюються окремим
+- [x] Перевірити `apps/api/test/setup-env.ts`: e2e ізолюються окремим
       `REALTIME_KEY_PREFIX` на jest-worker — ключі throttler-а мусять потрапити під той
       самий префікс, інакше сьюти битимуть лічильники один одного.
 
 ### Throttler
 
-- [ ] `pnpm --filter @saas-skeleton/api add @nestjs/throttler`
-- [ ] `apps/api/src/common/throttler/redis-throttler.storage.ts` — реалізація
+- [x] `pnpm --filter @saas-skeleton/api add @nestjs/throttler`
+- [x] `apps/api/src/common/throttler/redis-throttler.storage.ts` — реалізація
       `ThrottlerStorage` на наявному `ioredis` (INCR + EXPIRE в одному `multi`;
       ~50 рядків). **Свідомо без пакета `nestjs-throttler-storage-redis`**: одна
       зовнішня залежність заради 50 рядків, які ми й так мусимо розуміти.
-- [ ] `ThrottlerModule.forRootAsync` в `app.module.ts`: дефолт помірний
-      (напр. 120 запитів/хв на IP) — це стеля від абузу, а не бізнес-обмеження.
-- [ ] `@Throttle` на чутливих роутах: - `POST /auth/login` — 5/хв на `(email, ip)` + 20/хв на `ip`; - `POST /auth/refresh` — 30/хв на `ip` (ротація легальна, але не сотнями); - `POST /account/password`, `POST /account/sessions/revoke-all` — 10/год на юзера.
-- [ ] Кастомний `ThrottlerGuard` з `getTracker()`, який для логіну бере email із тіла
+- [x] `ThrottlerModule.forRootAsync` в `app.module.ts`: дефолт помірний
+      (120 запитів/хв на користувача; для анонімних — на IP) — це стеля від абузу, а не
+      бізнес-обмеження. На IP для всіх вона віддавала б 429 цілому офісу за NAT (§8).
+- [x] `@Throttle` на чутливих роутах: - `POST /auth/login` — 5/хв на `(email, ip)` + 20/хв на `ip`; - `POST /auth/refresh` — 30/хв на `ip` (ротація легальна, але не сотнями); - `POST /account/password`, `POST /account/sessions/revoke-all` — 10/год на юзера.
+- [x] Кастомний `ThrottlerGuard` з `getTracker()`, який для логіну бере email із тіла
       запиту. **Грабля:** тіло на момент guard-а вже розпарсене body-parser-ом, але
       Zod-пайп ще не відпрацював — email може бути будь-чим; нормалізувати
       (`trim().toLowerCase()`) і обрізати довжину перед тим, як класти в ключ Redis.
-- [ ] Відповідь 429 мусить пройти через `AllExceptionsFilter` і отримати код
+- [x] Відповідь 429 мусить пройти через `AllExceptionsFilter` і отримати код
       `ApiError` (додати `TOO_MANY_REQUESTS` у закритий enum `libs/contracts/src/error/`).
-- [ ] Фронт: `libs/ui/src/api/api-error.ts` — 429 показується тостом із людським
+- [x] Фронт: `libs/ui/src/api/api-error.ts` — 429 показується тостом із людським
       текстом (`errors.tooManyRequests` у `libs/i18n`), а не «щось пішло не так».
 
 ### Мережеві дрібниці, без яких ліміт декоративний
 
-- [ ] `NestFactory.create<NestExpressApplication>(...)` + `app.set('trust proxy', 1)`
+- [x] `NestFactory.create<NestExpressApplication>(...)` + `app.set('trust proxy', 1)`
       у `apps/api/src/main.ts` і `apps/platform-api/src/main.ts`.
       **Без цього кроку весь пункт «throttler» не працює**: за nginx/swarm `req.ip`
       дорівнює адресі балансувальника, і ліміт по IP банить увесь тенант одразу.
-- [ ] Звірити з логером: `apps/api/src/common/logger/` має писати справжній
+- [x] Звірити з логером: `apps/api/src/common/logger/` має писати справжній
       `req.ip` (після `trust proxy` він з'явиться сам).
 
 ### CORS і заголовки
 
-- [ ] `CORS_ALLOWED_ORIGINS` (comma-separated) — **той самий список**, що вже живе в
+- [x] `CORS_ALLOWED_ORIGINS` (comma-separated) — **той самий список**, що вже живе в
       `REALTIME_ALLOWED_ORIGINS` (`apps/api/src/realtime/realtime.config.ts`,
       дефолт `http://localhost:5173`). Прочитати обидва з одного місця, щоб вони не
       розійшлися: HTTP-CORS і Socket.IO `allowRequest` мусять мати однакову думку.
-- [ ] `app.enableCors({ origin: <allowlist>, credentials: true })` — `credentials`
+- [x] `app.enableCors({ origin: <allowlist>, credentials: true })` — `credentials`
       знадобиться в заході 3 (cookie), ставимо одразу.
-- [ ] `pnpm --filter @saas-skeleton/api add helmet` + `app.use(helmet())`.
+- [x] `pnpm --filter @saas-skeleton/api add helmet` + `app.use(helmet())`.
       Для JSON-API користь помірна (`X-Content-Type-Options`, `X-Frame-Options`,
       вимкнений `X-Powered-By`), але ціна нульова. CSP для API не налаштовуємо —
       сторінок він не віддає (крім Swagger; перевірити, що `/api/docs` не зламався).
 
 ### Env fail-fast
 
-- [ ] `apps/api/src/config/env.schema.ts` — Zod-схема обов'язкових змінних:
+- [x] `apps/api/src/config/env.schema.ts` — Zod-схема обов'язкових змінних:
       `DATABASE_URL`, `JWT_SECRET` (min 32 символи **і** заборона літерального значення
       з `.env.example`), `JWT_ACCESS_EXPIRES_IN`, `REDIS_URL`, S3-блок.
-- [ ] Підключити через `ConfigModule.forRoot({ validate })` — процес падає на старті,
+- [x] Підключити через `ConfigModule.forRoot({ validate })` — процес падає на старті,
       а не через тиждень «чомусь токени чужого середовища валідні».
-- [ ] Те саме для `apps/platform-api` (`PLATFORM_JWT_SECRET`), і **перевірити, що він
+- [x] Те саме для `apps/platform-api` (`PLATFORM_JWT_SECRET`), і **перевірити, що він
       не фолбечиться на `JWT_SECRET`** — це вже так, тест має це зафіксувати.
-- [ ] `.env.example` оновити коментарями до нових змінних.
+- [x] `.env.example` оновити коментарями до нових змінних.
 
 ### Password policy
 
-- [ ] `PasswordSchema` (`libs/contracts/src/user/user.schema.ts`) — підняти нижню межу
+- [x] `PasswordSchema` (`libs/contracts/src/user/user.schema.ts`) — підняти нижню межу
       з 8 до **12** символів і додати перевірку на топ-список зіпсованих паролів?
       **Рішення: ні до списку, так до 12.** Композиційні правила («цифра + спецсимвол»)
       NIST 800-63B прямо не радить; довжина — єдина метрика, що працює.
       Breach-словник — це або 100 МБ у репо, або зовнішній HIBP API (мережевий виклик
       у критичному шляху логіну) → поза скоупом, записати в §7.
-- [ ] Міграція наявних паролів не потрібна: перевірка діє на запис, старі хеші живі.
+- [x] Міграція наявних паролів не потрібна: перевірка діє на запис, старі хеші живі.
       Сід (`libs/database/prisma/seed.ts`) використовує `Admin12345` (10 символів) —
       **оновити сід і `docs/database-seed.md`**, інакше `pnpm db:reset` зламається.
 
 ## 1.3. Тести (додати в `apps/api/test/auth.e2e-spec.ts`)
 
-- [ ] 6-й підряд невдалий логін на ту саму пошту → 429 (і 6-й правильний логін теж 429 —
+- [x] 6-й підряд невдалий логін на ту саму пошту → 429 (і 6-й правильний логін теж 429 —
       ліміт не розрізняє успіх, це навмисно).
-- [ ] Ліміт по `(email, ip)` не заважає іншому email з того ж IP (у межах IP-стелі).
-- [ ] Лічильник скидається після вікна (фейковий таймер або окремий префікс ключа).
-- [ ] 429 має форму `ApiError` з `code: 'TOO_MANY_REQUESTS'` і `requestId`.
-- [ ] Старт із `JWT_SECRET` коротшим за 32 символи валить bootstrap.
-- [ ] **Ізоляція:** сьют чистить свої throttler-ключі у `afterEach`, інакше сусідній
+- [x] Ліміт по `(email, ip)` не заважає іншому email з того ж IP (у межах IP-стелі).
+- [x] Лічильник скидається після вікна (фейковий таймер або окремий префікс ключа).
+- [x] 429 має форму `ApiError` з `code: 'TOO_MANY_REQUESTS'` і `requestId`.
+- [x] Старт із `JWT_SECRET` коротшим за 32 символи валить bootstrap.
+- [x] **Ізоляція:** сьют чистить свої throttler-ключі у `afterEach`, інакше сусідній
       сьют почне з вичерпаним лімітом (класичне «падає випадковий тест»).
 
 ## 1.4. DoD заходу 1
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm build` чисті
-- [ ] `pnpm api:test:e2e` і `pnpm platform:test:e2e` зелені
-- [ ] Живий прогін: `pnpm api:dev` + `pnpm web:dev`, 6 невдалих логінів у формі → тост
+- [x] `pnpm lint && pnpm typecheck && pnpm build` чисті
+- [x] `pnpm api:test:e2e` і `pnpm platform:test:e2e` зелені
+- [x] Живий прогін: `pnpm api:dev` + `pnpm web:dev`, 6 невдалих логінів у формі → тост
       про «забагато спроб» замість «невірний пароль»
-- [ ] Оновити «Табло» і §8
+- [x] Оновити «Табло» і §8
 
 ---
 
@@ -463,11 +464,11 @@ model AuthSession {
 
 - [ ] `libs/contracts/src/account/account.schema.ts`:
       `ts
-    AuthSessionResponseSchema = {
-      id, deviceLabel, userAgent, ip, isCurrent,
-      createdAt, lastUsedAt, idleExpiresAt, absoluteExpiresAt
-    }
-    `
+  AuthSessionResponseSchema = {
+    id, deviceLabel, userAgent, ip, isCurrent,
+    createdAt, lastUsedAt, idleExpiresAt, absoluteExpiresAt
+  }
+  `
       `revokedAt`/`revokedReason` у відповідь **не** віддаємо: список показує активні
       сесії, мертві — це forensics в БД, не UI.
 - [ ] `GET /account/sessions` → `AuthSessionResponse[]` (тільки живі, найсвіжіші зверху,
@@ -515,7 +516,7 @@ model AuthSession {
 - [ ] Сесія з `absolute_expires_at` у минулому → 401, навіть якщо секрет вірний.
 - [ ] **Reuse у вікні:** старий токен одразу після ротації → 200 (гонка).
 - [ ] **Reuse поза вікном:** `prev_rotated_at` зсунуто в минуле → 401 + `revoked_reason
-    = 'rotation_reuse'` + сповіщення в інбоксі юзера.
+  = 'rotation_reuse'` + сповіщення в інбоксі юзера.
 - [ ] Reuse вбиває ТІЛЬКИ свою сесію — друга сесія того ж юзера жива.
 - [ ] Чужий секрет при живому `sid` → 401 + `revoked_reason = 'secret_mismatch'`.
 - [ ] `GET /account/sessions` показує обидві сесії; `isCurrent` — рівно в тієї, чий
@@ -899,9 +900,22 @@ union нормально; якщо ні — розділити на два respo
 Записувати сюди все, що пішло не за планом: пропущені кроки (`[~]`), знайдені
 граблі, змінені рішення. Формат — дата, захід, що і чому.
 
-| Дата       | Захід | Що сталося                                                                                                            |
-| ---------- | ----- | --------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-12 | —     | План складено (аудит `apps/api/src/auth`, `apps/api/src/account`, `docs/account-settings.md`, `docs/roadmap.md` §2.5) |
+| Дата       | Захід | Що сталося                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12 | —     | План складено (аудит `apps/api/src/auth`, `apps/api/src/account`, `docs/account-settings.md`, `docs/roadmap.md` §2.5)                                                                                                                                                                                                                                           |
+| 2026-09-13 | —     | Скоуп закріплено SpecKit-артефактами `specs/001-auth-hardening/` (spec + clarify + plan + tasks). Рішення clarify, що змінюють цей план: лічильник спроб 2FA — у БД, а не Valkey; throttler — fail-open; обов'язкова 2FA блокується на сервері; скидання 2FA адміном (див. `specs/001-auth-hardening/plan.md` D-1…D-9)                                          |
+| 2026-09-13 | 1     | **Throttler у platform-api не зроблено** (D-1): у стеку platform-api не має Valkey; ліміт логіну оператора переїхав у захід 3 разом із дзеркалом сесій                                                                                                                                                                                                          |
+| 2026-09-13 | 1     | `REALTIME_REDIS` **видалено**, аліасу немає (D-2); третій споживач — `presence.store.ts`. Для throttler-а — ОКРЕМИЙ клієнт `REDIS_THROTTLER_CLIENT` без offline-черги: fail-open потребує швидкої помилки, а спільний клієнт тримає чергу для presence                                                                                                          |
+| 2026-09-13 | 1     | Замість `@Throttle` на роутах — іменовані throttler-и в `ThrottlerModule` + opt-in `@RateLimit(...)` через `skipIf`: @nestjs/throttler v6 застосовує кожен оголошений throttler до КОЖНОГО роуту. Guard — `AppThrottlerGuard` (підклас) лише заради стандартного `Retry-After`: для іменованого ліміту пакет пише `Retry-After-login` і світить `X-RateLimit-*` |
+| 2026-09-13 | 1     | Усі пороги — env з бойовими дефолтами, а не константи в декораторах: e2e ідуть `--runInBand` з одного IP, лічильники спільні між сьютами. `setup-env.ts` піднімає пороги, бойові значення задає лише `rate-limit.e2e-spec.ts` (окремий файл, а не `auth.e2e-spec.ts` — свій застосунок з іншим env)                                                             |
+| 2026-09-13 | 1     | Env-схема робить обов'язковим лише `JWT_SECRET`/`PLATFORM_JWT_SECRET`: у БД/S3/Valkey є робочі дефолти, і обов'язковість зламала б `pnpm api:dev` без `.env`. Плейсхолдери з `.env.example` відхиляються явним списком — **локальні `.env`, скопійовані з прикладу, треба оновити** (`openssl rand -hex 32`)                                                    |
+| 2026-09-13 | 1     | CORS control plane — `PLATFORM_CORS_ALLOWED_ORIGINS`, а не спільне `CORS_ALLOWED_ORIGINS`: у dev обидва API читають один кореневий `.env`                                                                                                                                                                                                                       |
+| 2026-09-13 | 1     | Знайдено поза планом: пароль першого адміна тенанта (`CreateTenantSchema`) мав `min(8)` — переведено на `PasswordSchema`. Пароль сіду `Admin12345` → `Admin1234567`; на наявній dev-БД сід його не переписує (`update: {}`)                                                                                                                                     |
+| 2026-09-13 | 1     | helmet: CSP лишено, але БЕЗ `upgrade-insecure-requests` — тестовий прод по http, Swagger через nginx тягнув би ресурси по https. Перевірено: `/api/docs` рендериться                                                                                                                                                                                            |
+| 2026-09-13 | 1     | Невдалий логін: `event=auth_login_failed` + reason/email/tenant; `requestId` і ip дає контекстний логер pino-http (`req.id`, `req.ip`), серіалізатор `req` тепер пише `ip` з Express, а не адресу сокета                                                                                                                                                        |
+| 2026-09-13 | 1     | Нестабільність e2e, НЕ пов'язана із заходом: до змін повний прогін дав 205/206 (`numbering`), після — поодиноке падіння випадкового сьюту (`numbering`/`notifications`), кожен окремо зелений; три повні прогони поспіль — 221/221. Фронт: 429 — глобальний тост, форма його не показує під полями                                                              |
+| 2026-09-13 | 1     | **Виправлено після `/speckit-analyze`** (plan D-10): загальна стеля `default` рахувалась на IP для ВСІХ роутів — офіс за одним NAT ділив би 120/хв на всіх, SPA кожного впирався б у 429. Тепер трекер — `user:<sub>` (throttler стоїть після `JwtAuthGuard`), на IP — лише анонімні запити; e2e «general ceiling». `THROTTLER_STORAGE_TIMEOUT_MS` прибрано з env — константа 200 мс (D-15) |
+| 2026-09-13 | —     | `/speckit-analyze` змінив дизайн наступних заходів (plan D-11…D-15): токен одноразового посилання в payload події — лише зашифрований (`CryptoService` переїжджає з заходу 5 у захід 4, `ENCRYPTION_KEY` потрібен api і worker); realtime рветься на рівні сесії (`sessionRoom`), тенант емітер бере з CLS; сторінка підтвердження email — публічна `/confirm-email`; `sessions_revoked` лише для самостійних завершень; TTL-и і стеля спроб — константи |
 
 ---
 

@@ -1,6 +1,5 @@
 /** DI-токени realtime-шару (значення, не класи — тому рядкові символи) */
 export const REALTIME_CONFIG = Symbol('REALTIME_CONFIG');
-export const REALTIME_REDIS = Symbol('REALTIME_REDIS');
 
 /**
  * `tenantRoom`/`userRoom` переїхали в `@saas-skeleton/contracts` (realtime.schema):

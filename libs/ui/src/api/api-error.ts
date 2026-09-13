@@ -47,7 +47,7 @@ export function parseApiError(error: unknown): ParsedApiError {
 
 /**
  * Помилки «не про конкретну дію користувача» — їх показує глобальний toast,
- * а не форма: network, 5xx (включно з 503 від недоступної БД) та 403.
+ * а не форма: network, 5xx (включно з 503 від недоступної БД), 403 і 429.
  * 401 сюди не входить — ним займається refresh-інтерсептор.
  */
 export function isGlobalApiError(parsed: ParsedApiError): boolean {
@@ -55,6 +55,11 @@ export function isGlobalApiError(parsed: ParsedApiError): boolean {
     return true;
   }
   if (parsed.status === 403) {
+    return true;
+  }
+  // AUTH-0: «забагато спроб» — не помилка поля і не «невірний пароль»: форма не може
+  // її виправити, людина має зачекати, тож показуємо тостом, а не під полями
+  if (parsed.status === 429) {
     return true;
   }
   return parsed.status >= 500;

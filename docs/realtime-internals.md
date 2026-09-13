@@ -14,7 +14,7 @@
 | WebSocket-адаптер Nest            | `apps/api/src/realtime/realtime-io.adapter.ts` — транспорт, CORS/`allowRequest`, Redis Streams                  |
 | Емісія в room-и                   | `apps/api/src/realtime/realtime.emitter.ts`                                                                     |
 | Конфіг + валідація env            | `apps/api/src/realtime/realtime.config.ts`                                                                      |
-| Клієнт Valkey                     | `apps/api/src/realtime/realtime-redis.provider.ts`                                                              |
+| Клієнт Valkey                     | `apps/api/src/redis/redis.module.ts` (`REDIS_CLIENT`; спільний із throttler-ом з AUTH-0)                         |
 | Presence: Lua                     | `apps/api/src/realtime/presence/presence.lua.ts`                                                                |
 | Presence: сховище                 | `apps/api/src/realtime/presence/presence.store.ts`                                                              |
 | Presence: логіка ноди             | `apps/api/src/realtime/presence/presence.service.ts`                                                            |

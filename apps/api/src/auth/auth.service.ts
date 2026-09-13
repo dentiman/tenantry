@@ -34,24 +34,24 @@ export class AuthService {
     });
 
     if (!user?.passwordHash) {
-      this.logger.warn(`Login failed - user not found: ${data.email}`);
+      this.logLoginFailure(data, 'user_not_found');
       throw new UnauthorizedException('Invalid email or password');
     }
 
     const isPasswordValid = await argon2.verify(user.passwordHash, data.password);
     if (!isPasswordValid) {
-      this.logger.warn(`Login failed - invalid password for: ${data.email}`);
+      this.logLoginFailure(data, 'invalid_password');
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (!user.isActive) {
-      this.logger.warn(`Login failed - account deactivated: ${data.email}`);
+      this.logLoginFailure(data, 'user_inactive');
       throw new UnauthorizedException('Account is deactivated');
     }
 
     // MT-1: suspend тенанта відмовляє вхід усім його юзерам; той самий 401 без деталізації
     if (!user.tenant.isActive) {
-      this.logger.warn(`Login failed - tenant suspended: ${user.tenant.slug} (${data.email})`);
+      this.logLoginFailure(data, 'tenant_suspended');
       throw new UnauthorizedException('Account is deactivated');
     }
 
@@ -59,6 +59,18 @@ export class AuthService {
 
     const tokens = await this.issueTokens(user);
     return { user, tokens };
+  }
+
+  /**
+   * AUTH-0 (FR-006): невдалий вхід — ТІЛЬКИ технічний лог зі стабільним тегом під алерт,
+   * у журнал бізнес-подій не пишеться (перебір засмітив би фід). `requestId` і ip
+   * додає контекстний логер pino-http (прив'язка запиту), тут їх дублювати не треба.
+   */
+  private logLoginFailure(data: Login, reason: string): void {
+    this.logger.warn(
+      { event: 'auth_login_failed', reason, email: data.email, tenant: data.tenant ?? null },
+      `Login failed (${reason}) for ${data.email}`,
+    );
   }
 
   async refresh(refreshToken: string): Promise<AuthTokens> {

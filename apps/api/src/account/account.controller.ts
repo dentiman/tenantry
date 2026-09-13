@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { StorageService } from '@saas-skeleton/shared';
 import type { AuthTokens, UserResponse } from '@saas-skeleton/contracts';
 import { AuthTokensDto } from '../auth/dto/auth-response.dto';
+import { RATE_LIMITS, RateLimit } from '../common/throttler/rate-limit.decorator';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { toUserResponseWithAvatar } from '../users/users.mapper';
@@ -47,6 +48,7 @@ export class AccountController {
    * 200, а не дефолтний 201: ресурс не створюється — як і на /auth/login
    */
   @Post('password')
+  @RateLimit(RATE_LIMITS.accountSensitive)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
   changePassword(
@@ -58,6 +60,7 @@ export class AccountController {
 
   /** «Вийти на всіх пристроях»; тіла запиту немає — суб'єкт і так із токена */
   @Post('sessions/revoke-all')
+  @RateLimit(RATE_LIMITS.accountSensitive)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
   revokeAllSessions(@CurrentUser() actor: JwtPayload): Promise<AuthTokens> {

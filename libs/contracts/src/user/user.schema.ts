@@ -48,7 +48,7 @@ export const UserSchema = z.object({
 });
 
 /** Межі пароля — одне місце на всі флоу (create, зміна пароля адміном) */
-export const PasswordSchema = z.string().min(8).max(128);
+export const PasswordSchema = z.string().min(12).max(128);
 
 export const CreateUserSchema = z.object({
   // Нормалізація перед валідацією: у Zod 4 перевірка формату йде до transform-ів

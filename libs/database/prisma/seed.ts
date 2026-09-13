@@ -12,7 +12,9 @@ const DEFAULT_PLATFORM_DATABASE_URL =
 const DEFAULT_TENANT_ID = '00000000-0000-4000-8000-000000000001';
 
 const ADMIN_EMAIL = 'admin@example.com';
-const ADMIN_PASSWORD = 'Admin12345';
+// AUTH-0: мінімум 12 символів (PasswordSchema). Upsert із `update: {}` пароль наявного
+// адміна НЕ переписує — на старій dev-БД лишається попередній до `pnpm db:reset`
+const ADMIN_PASSWORD = 'Admin1234567';
 const PLATFORM_ADMIN_EMAIL = 'platform@example.com';
 const PLATFORM_ADMIN_PASSWORD = 'Platform12345';
 

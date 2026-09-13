@@ -251,7 +251,7 @@ Local services and seeded identities:
 - Mailpit UI: `http://localhost:8025`
 - SeaweedFS S3: `http://localhost:8333`
 - Default tenant: `default`
-- Tenant administrator: `admin@example.com` / `Admin12345`
+- Tenant administrator: `admin@example.com` / `Admin1234567`
 - Platform operator: `platform@example.com` / `Platform12345`
 
 ## Validation expectations

@@ -1,5 +1,9 @@
 import http from 'node:http';
+import { loadRepoEnv } from './load-env';
 import { buildTestDatabaseUrl, buildTestPlatformUrl } from './test-database';
+
+// Першим рядком: усе нижче (тестові URL, дефолти) має бачити адреси з кореневого .env
+loadRepoEnv();
 
 // Node ≥19 тримає keep-alive у globalAgent увімкненим. У e2e це шкодить: кожен
 // сьют піднімає СВІЙ Nest-застосунок і закриває його в afterAll, а supertest
@@ -25,5 +29,16 @@ process.env.DATABASE_POOL_MAX ??= '3';
 // ізоляцію дає префікс ключів. Свій префікс на КОЖЕН jest-worker: інакше паралельні
 // сьюти (і запущений поруч dev-api) ділили б один tenant-індекс і мели чужі leases.
 process.env.REALTIME_KEY_PREFIX = `saas:rt:test:${String(process.pid)}`;
-// Локально можна не задавати: дефолт збігається з docker-compose (див. .env.example)
-process.env.REDIS_URL ??= 'redis://:saas-realtime@localhost:6379';
+// REDIS_URL тут НЕ задаємо: адреса — з .env (loadRepoEnv), інакше дефолт застосунку
+// (`redis.config.ts`, = docker-compose). Власний дефолт у тестах уже раз перебив .env
+
+// AUTH-0: e2e ходять з ОДНОГО IP і в одному процесі (--runInBand) — лічильники
+// throttler-а спільні для всіх сьютів у межах вікна. З бойовими порогами (5 логінів
+// на хвилину) сотні тестів ловили б 429 у випадковому місці. Бойові значення явно
+// задає лише rate-limit.e2e-spec.ts.
+const RELAXED_LIMIT = '100000';
+process.env.THROTTLE_DEFAULT_LIMIT_PER_MINUTE = RELAXED_LIMIT;
+process.env.AUTH_LOGIN_LIMIT_PER_MINUTE = RELAXED_LIMIT;
+process.env.AUTH_LOGIN_IP_LIMIT_PER_MINUTE = RELAXED_LIMIT;
+process.env.AUTH_REFRESH_LIMIT_PER_MINUTE = RELAXED_LIMIT;
+process.env.ACCOUNT_SENSITIVE_LIMIT_PER_HOUR = RELAXED_LIMIT;

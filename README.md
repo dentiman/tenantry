@@ -29,7 +29,7 @@ pnpm db:roles             # ТІЛЬКИ якщо Postgres-volume існував
                           # ролі saas_migrator/saas_app/saas_platform і гранти (інакше пропустити)
 pnpm db:generate          # Prisma client
 pnpm db:migrate:dev       # міграції (йдуть під saas_migrator — MIGRATE_DATABASE_URL з .env)
-pnpm db:seed              # дефолтні дані: tenant "default" + admin@example.com/Admin12345
+pnpm db:seed              # дефолтні дані: tenant "default" + admin@example.com/Admin1234567
                           # (tenant-адмін) + platform@example.com/Platform12345 (platform-оператор)
 pnpm api:dev              # Tenant API на http://localhost:3001 (Swagger: /api/docs)
 pnpm platform:dev         # Control plane API на http://localhost:3002 (Swagger: /api/docs;

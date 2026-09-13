@@ -13,7 +13,6 @@ async function bootstrap(): Promise<void> {
 
   app.useLogger(app.get(Logger));
 
-  app.enableCors();
   configureApp(app);
 
   const openApiDoc = SwaggerModule.createDocument(

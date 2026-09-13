@@ -10,6 +10,7 @@ import request from 'supertest';
 import * as argon2 from 'argon2';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { validatePlatformEnv } from '../src/config/env.schema';
 import { SystemPrismaService } from '@saas-skeleton/database';
 
 const OPERATOR_EMAIL = 'operator@example.com';
@@ -56,6 +57,32 @@ describe('Platform API (e2e)', () => {
       .expect(200);
     return String(response.body.accessToken);
   };
+
+  // AUTH-0 (FR-010): небезпечний секрет валить старт control plane
+  describe('env validation', () => {
+    const strongSecret = 'p'.repeat(20) + 'Q'.repeat(20);
+
+    it('accepts a strong PLATFORM_JWT_SECRET', () => {
+      expect(() => validatePlatformEnv({ PLATFORM_JWT_SECRET: strongSecret })).not.toThrow();
+    });
+
+    it('does NOT fall back to JWT_SECRET (окремий секрет — security boundary)', () => {
+      expect(() => validatePlatformEnv({ JWT_SECRET: strongSecret })).toThrow(
+        /PLATFORM_JWT_SECRET/,
+      );
+    });
+
+    it('rejects a short secret and the literal value from .env.example', () => {
+      expect(() => validatePlatformEnv({ PLATFORM_JWT_SECRET: 'x'.repeat(31) })).toThrow(
+        /PLATFORM_JWT_SECRET/,
+      );
+      expect(() =>
+        validatePlatformEnv({
+          PLATFORM_JWT_SECRET: 'change-me-platform-secret-min-32-chars-key-here',
+        }),
+      ).toThrow(/PLATFORM_JWT_SECRET/);
+    });
+  });
 
   describe('platform auth', () => {
     it('logs an operator in and serves /auth/me', async () => {
@@ -126,7 +153,7 @@ describe('Platform API (e2e)', () => {
       const payload = {
         slug: 'dup-tenant',
         name: 'Dup',
-        admin: { email: 'dup@dup.test', password: 'DupAdmin123' },
+        admin: { email: 'dup@dup.test', password: 'DupAdmin1234' },
       };
       await request(app.getHttpServer())
         .post('/api/tenants')
@@ -137,7 +164,7 @@ describe('Platform API (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/tenants')
         .set('Authorization', `Bearer ${token}`)
-        .send({ ...payload, admin: { email: 'other@dup.test', password: 'DupAdmin123' } })
+        .send({ ...payload, admin: { email: 'other@dup.test', password: 'DupAdmin1234' } })
         .expect(409);
       expect(response.body.fieldErrors).toEqual(
         expect.arrayContaining([expect.objectContaining({ field: 'slug' })]),
@@ -152,7 +179,7 @@ describe('Platform API (e2e)', () => {
         .send({
           slug: 'Not A Slug!',
           name: 'Bad',
-          admin: { email: 'bad@bad.test', password: 'BadAdmin123' },
+          admin: { email: 'bad@bad.test', password: 'BadAdmin1234' },
         })
         .expect(400);
     });

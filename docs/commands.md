@@ -124,7 +124,7 @@ pnpm db:seed
 ```
 
 Ідемпотентний upsert дефолтних даних: tenant `slug=default` + tenant-адмін
-`admin@example.com`/`Admin12345` + platform-оператор
+`admin@example.com`/`Admin1234567` + platform-оператор
 `platform@example.com`/`Platform12345`. Можна ганяти повторно на живій БД без ризику
 дублів. Деталі — [docs/database-seed.md](database-seed.md).
 
@@ -315,6 +315,14 @@ notifications, account, customers, numbering, settings) —
 `globalSetup` сам створює окрему БД `saas_skeleton_test`, ставить ролі (`db:roles`) і
 міграції — dev-дані не чіпає. Presence живе не в БД, тому ізоляцію їй дає окремий
 префікс ключів на кожен jest-worker (`setup-env.ts`), а не окреме сховище.
+
+**Звідки тести беруть адреси.** Той самий кореневий `.env` (і `.env.local`), що й
+`pnpm api:dev`: `test/load-env.ts` вантажить їх першим рядком `setup-env.ts` і
+`global-setup.ts`, пріоритет — як у `ConfigModule` (явне оточення → `.env.local` → `.env`),
+тож CI зі своїми змінними файлів не потребує. Якщо Valkey на машині висить не на 6379
+(`REDIS_PORT` у `.env`), правити треба лише `.env` — `REDIS_PORT` і `REDIS_URL` разом.
+`globalSetup` перед міграціями пінгує Valkey і за хибної адреси зупиняє прогін одним
+повідомленням з адресою. Та сама схема для `pnpm platform:test:e2e` (ділить ці файли).
 
 ### `pnpm platform:test:e2e`
 
