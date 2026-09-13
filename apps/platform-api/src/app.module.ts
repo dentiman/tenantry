@@ -7,6 +7,7 @@ import { PlatformAuthModule } from './auth/platform-auth.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { JobsMonitorModule } from './jobs/jobs.module';
 import { loggerConfig } from './logger.config';
+import { validatePlatformEnv } from './config/env.schema';
 
 /**
  * CONTROL PLANE (MT-3). Принципово ВІДСУТНІ в графі залежностей:
@@ -19,6 +20,8 @@ import { loggerConfig } from './logger.config';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'],
+      // AUTH-0: невалідний env валить старт, а не проявляється через тиждень
+      validate: validatePlatformEnv,
     }),
     LoggerModule.forRootAsync(loggerConfig),
     SystemPrismaModule,

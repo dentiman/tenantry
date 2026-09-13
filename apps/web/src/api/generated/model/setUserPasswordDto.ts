@@ -8,7 +8,7 @@
 
 export interface SetUserPasswordDto {
   /**
-   * @minLength 8
+   * @minLength 12
    * @maxLength 128
    */
   password: string;

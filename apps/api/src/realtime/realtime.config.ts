@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { REALTIME_DEFAULT_KEY_PREFIX } from '@saas-skeleton/contracts';
+import { resolveAllowedOrigins } from '../config/cors.config';
+import { resolveRedisKeyPrefix, resolveRedisUrl } from '../redis/redis.config';
 
 /**
  * Конфіг realtime-шару. Дефолти = docker-compose dev (той самий підхід, що в
@@ -10,10 +11,6 @@ import { REALTIME_DEFAULT_KEY_PREFIX } from '@saas-skeleton/contracts';
  * а не проявлятись за пів години розʼїханою presence.
  */
 
-const DEFAULT_REDIS_URL = 'redis://:saas-realtime@localhost:6379';
-// Спільна з воркером константа: розійшовшись, процеси писали б у різні стріми
-const DEFAULT_KEY_PREFIX = REALTIME_DEFAULT_KEY_PREFIX;
-const DEFAULT_ALLOWED_ORIGINS = 'http://localhost:5173';
 const DEFAULT_LEASE_TTL_MS = 60_000;
 const DEFAULT_HEARTBEAT_MS = 20_000;
 const DEFAULT_RECOVERY_MS = 120_000;
@@ -66,18 +63,13 @@ function toInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function toOrigins(value: string | undefined): string[] {
-  return (value ?? DEFAULT_ALLOWED_ORIGINS)
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter((origin) => origin !== '');
-}
-
 export function loadRealtimeConfig(env: NodeJS.ProcessEnv = process.env): RealtimeConfig {
   const parsed = RealtimeConfigSchema.safeParse({
-    redisUrl: env.REDIS_URL ?? DEFAULT_REDIS_URL,
-    keyPrefix: env.REALTIME_KEY_PREFIX ?? DEFAULT_KEY_PREFIX,
-    allowedOrigins: toOrigins(env.REALTIME_ALLOWED_ORIGINS),
+    // Адреса і префікс — спільні для всіх споживачів Valkey (redis.config.ts)
+    redisUrl: resolveRedisUrl(env),
+    keyPrefix: resolveRedisKeyPrefix(env),
+    // AUTH-0: той самий список, що HTTP-CORS (config/cors.config.ts)
+    allowedOrigins: resolveAllowedOrigins(env),
     leaseTtlMs: toInt(env.REALTIME_LEASE_TTL_MS, DEFAULT_LEASE_TTL_MS),
     heartbeatMs: toInt(env.REALTIME_HEARTBEAT_MS, DEFAULT_HEARTBEAT_MS),
     recoveryMs: toInt(env.REALTIME_RECOVERY_MS, DEFAULT_RECOVERY_MS),

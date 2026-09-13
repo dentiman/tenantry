@@ -9,7 +9,7 @@
 export type CreateTenantDtoAdmin = {
   email: string;
   /**
-   * @minLength 8
+   * @minLength 12
    * @maxLength 128
    */
   password: string;

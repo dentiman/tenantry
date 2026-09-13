@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { resolveAllowedOrigins } from '../src/config/cors.config';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
 import { SystemPrismaService } from '@saas-skeleton/database';
 import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
@@ -396,6 +397,32 @@ describe('Auth (e2e)', () => {
           password: 'GuardPass123',
         })
         .expect(200);
+    });
+  });
+
+  // AUTH-0 (FR-008, FR-009): CORS-allowlist і захисні заголовки
+  describe('HTTP hardening', () => {
+    it('answers CORS only for an allowed origin', async () => {
+      const [allowedOrigin] = resolveAllowedOrigins();
+
+      const allowed = await request(app.getHttpServer())
+        .get('/api/health')
+        .set('Origin', allowedOrigin ?? '')
+        .expect(200);
+      expect(allowed.headers['access-control-allow-origin']).toBe(allowedOrigin);
+      expect(allowed.headers['access-control-allow-credentials']).toBe('true');
+
+      const foreign = await request(app.getHttpServer())
+        .get('/api/health')
+        .set('Origin', 'https://evil.example')
+        .expect(200);
+      expect(foreign.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
+    it('sets security headers and hides the framework', async () => {
+      const response = await request(app.getHttpServer()).get('/api/health').expect(200);
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['x-powered-by']).toBeUndefined();
     });
   });
 

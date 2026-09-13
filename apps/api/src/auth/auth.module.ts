@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { AccessTokenService } from './access-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { AppThrottlerGuard } from '../common/throttler/app-throttler.guard';
 
 @Module({
   imports: [
@@ -33,6 +34,12 @@ import { RolesGuard } from './guards/roles.guard';
       // і RolesGuard читає request.user, який кладе перший
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      // AUTH-0: ПІСЛЯ JwtAuthGuard — ліміт «на користувача» бере req.user.sub.
+      // Публічні роути (логін, refresh) Jwt пропускає, тож їх ліміт спрацьовує до хендлера
+      provide: APP_GUARD,
+      useClass: AppThrottlerGuard,
     },
   ],
   // AccessTokenService експортується для RealtimeModule: socket-middleware перевіряє

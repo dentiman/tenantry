@@ -19,7 +19,7 @@
 лишається без прав на щойно замігровані таблиці; DROP/CREATE усієї БД цього уникає, а ролі й
 default-privileges `ensure-roles.ts` перевстановлює явно й ідемпотентно. Дефолтні сід-дані
 (`libs/database/prisma/seed.ts`, вже існували з MT-1/MT-3, тепер задокументовані явно):
-tenant `slug=default` + tenant-адмін `admin@example.com`/`Admin12345` + platform-оператор
+tenant `slug=default` + tenant-адмін `admin@example.com`/`Admin1234567` + platform-оператор
 `platform@example.com`/`Platform12345` — обидва upsert, ідемпотентні. Перевірено живим
 прогоном: `pnpm db:reset` на dev-БД → усі 7 міграцій застосувались чисто → `saas_app` бачить
 свій tenant тільки з контекстом (fail-closed без) і НЕ має прав на `platform_users`
@@ -634,7 +634,7 @@ pnpm db:generate          # Prisma client → libs/database/src/generated (gitig
 pnpm db:migrate:dev       # міграції (dev; НЕ передавати ім'я через `pnpm ... -- --name X` —
                           # pnpm дублює `--`, prisma йде в інтерактивний prompt і висить;
                           # `cd libs/database && pnpm exec prisma migrate dev --name X`)
-pnpm db:seed              # дефолтні сід-дані: tenant "default" + admin@example.com/Admin12345
+pnpm db:seed              # дефолтні сід-дані: tenant "default" + admin@example.com/Admin1234567
                           # (tenant-адмін) + platform@example.com/Platform12345 (platform-оператор);
                           # ідемпотентний upsert — можна ганяти повторно на живій БД
 pnpm api:dev              # API: http://localhost:3001, Swagger: /api/docs
@@ -652,6 +652,11 @@ pnpm api:test:e2e         # 199 тестів tenant-api (rls, tenant-isolation, 
                           # settings, calendar + scheduled-нагадування);
                           # ВИМАГАЄ Postgres І Valkey (presence-тести ходять до живих Lua-скриптів;
                           # ізоляція — окремий REALTIME_KEY_PREFIX на jest-worker, не окреме сховище).
+                          # Адреси інфри тести беруть із ТОГО САМОГО кореневого .env/.env.local, що й
+                          # api:dev (test/load-env.ts; явне оточення CI має пріоритет); globalSetup
+                          # пінгує Valkey і падає ОДНІЄЮ помилкою з адресою. Власних дефолтів портів
+                          # у тестах НЕ заводити: `REDIS_URL ??= …:6379` у setup-env перебивав .env
+                          # (Valkey на :6380) і давав `Stream isn't writeable` у десятках тестів.
                           # В ОКРЕМІЙ БД saas_skeleton_test (globalSetup сам створює її, гарантує ролі
                           # і мігрує під saas_migrator; тести ходять під saas_app) — dev-дані не чіпає.
                           # НЕ ганяти з піднятим dev-стеком: 14 сьютів × 2 клієнти впираються в

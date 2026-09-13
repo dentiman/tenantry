@@ -13,6 +13,14 @@ export const loggerConfig: LoggerModuleAsyncParams = {
   useFactory: () => ({
     pinoHttp: {
       level: logLevel,
+      // AUTH-0: `req.ip` Express-а (після trust proxy — з X-Forwarded-For) замість
+      // адреси сокета, яка за nginx/swarm дорівнює балансувальнику
+      serializers: {
+        req: (req: Record<string, unknown>): Record<string, unknown> => ({
+          ...req,
+          ip: (req as { raw?: { ip?: unknown } }).raw?.ip ?? req.remoteAddress,
+        }),
+      },
       autoLogging: {
         ignore: (req): boolean => req.url === '/health' || req.url === '/api/health',
       },

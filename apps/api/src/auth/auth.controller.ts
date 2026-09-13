@@ -6,6 +6,7 @@ import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { AuthResponseDto, AuthTokensDto, MeResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
+import { RATE_LIMITS, RateLimit } from '../common/throttler/rate-limit.decorator';
 import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
 import { toAuthResponse, toMeResponse } from './auth.mapper';
 import type { AuthResponse, AuthTokens, MeResponse } from '@saas-skeleton/contracts';
@@ -20,6 +21,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  // AUTH-0: ліміт спрацьовує в guard-і, тобто ДО argon2 — перебір не палить CPU
+  @RateLimit(RATE_LIMITS.login, RATE_LIMITS.loginIp)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto.Output })
   async login(@Body() dto: LoginDto): Promise<AuthResponse> {
@@ -29,6 +32,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @RateLimit(RATE_LIMITS.refresh)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
   async refresh(@Body() dto: RefreshDto): Promise<AuthTokens> {

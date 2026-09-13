@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { Redis } from 'ioredis';
-import { REALTIME_CONFIG, REALTIME_REDIS } from '../realtime.constants';
+import { REDIS_CLIENT } from '../../redis/redis.constants';
+import { REALTIME_CONFIG } from '../realtime.constants';
 import type { RealtimeConfig } from '../realtime.config';
 import {
   ACQUIRE_LEASE,
@@ -86,7 +87,7 @@ export class PresenceStore implements OnModuleInit {
   private readonly redis: PresenceRedis;
 
   constructor(
-    @Inject(REALTIME_REDIS) redis: Redis,
+    @Inject(REDIS_CLIENT) redis: Redis,
     @Inject(REALTIME_CONFIG) private readonly config: RealtimeConfig,
   ) {
     this.redis = redis as PresenceRedis;

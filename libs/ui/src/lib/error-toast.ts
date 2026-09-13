@@ -13,6 +13,9 @@ function toastTitle(parsed: ParsedApiError): string {
   if (parsed.status === 403) {
     return i18n.t('errors:toast.accessDeniedTitle');
   }
+  if (parsed.code === 'TOO_MANY_REQUESTS') {
+    return i18n.t('errors:toast.tooManyRequestsTitle');
+  }
   if (parsed.code === 'SERVICE_UNAVAILABLE') {
     return i18n.t('errors:toast.serviceUnavailableTitle');
   }
