@@ -7,7 +7,7 @@ export const REALTIME_CONFIG = Symbol('REALTIME_CONFIG');
  * тихо розійшлися б і перестали доставляти. Реекспорт залишений, щоб решта
  * realtime-теки імпортувала їх звідси, як і раніше.
  */
-export { tenantRoom, userRoom } from '@saas-skeleton/contracts';
+export { tenantRoom, userRoom, sessionRoom } from '@saas-skeleton/contracts';
 
 /** За скільки до `exp` сервер просить клієнта оновити access-токен */
 export const AUTH_EXPIRY_WARNING_MS = 60_000;

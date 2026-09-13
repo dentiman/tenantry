@@ -48,6 +48,10 @@
         "cancelled": "Event cancellations",
         "rsvp_changed": "Replies to my events",
         "reminder": "Event reminders"
+      },
+      "auth": {
+        "new_device": "Sign-ins from new devices",
+        "session_reuse_detected": "Suspicious session activity"
       }
     }
   },
@@ -71,7 +75,15 @@
       "rsvp_changed_one": "<b>{{actor}}</b> replied to <a>{{event}}</a>",
       "rsvp_changed_other": "{{count}} replies to <a>{{event}}</a>, latest from <b>{{actor}}</b>",
       "reminder": "<a>{{event}}</a> starts soon"
+    },
+    "auth": {
+      "new_device": "New sign-in from <b>{{deviceLabel}}</b> ({{ip}})",
+      "session_reuse_detected": "We ended the session on <b>{{deviceLabel}}</b> after suspicious activity"
     }
+  },
+  "auth": {
+    "unknownDevice": "an unknown device",
+    "unknownIp": "unknown IP"
   },
   "unknown": "You have a new notification",
   "system": "System"

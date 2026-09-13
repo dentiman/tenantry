@@ -51,7 +51,7 @@ describe('Users API (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
   });
 
@@ -563,7 +563,7 @@ describe('Users API (e2e)', () => {
       });
 
       // Логін вище видав рефреш — саме його зміна пароля мусить відкликати
-      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(1);
+      expect(await prisma.authSession.count({ where: { userId: target.user.id, revokedAt: null } })).toBe(1);
 
       await request(app.getHttpServer())
         .post(`/api/users/${target.user.id}/password`)
@@ -571,7 +571,7 @@ describe('Users API (e2e)', () => {
         .send({ password: 'BrandNewPass123' })
         .expect(204);
 
-      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(0);
+      expect(await prisma.authSession.count({ where: { userId: target.user.id, revokedAt: null } })).toBe(0);
 
       await request(app.getHttpServer())
         .post('/api/auth/login')
@@ -638,7 +638,7 @@ describe('Users API (e2e)', () => {
         .expect(200);
 
       expect(response.body).toEqual(expect.objectContaining({ id: target.user.id, isActive: false }));
-      expect(await prisma.refreshToken.count({ where: { userId: target.user.id } })).toBe(0);
+      expect(await prisma.authSession.count({ where: { userId: target.user.id, revokedAt: null } })).toBe(0);
 
       await request(app.getHttpServer())
         .post('/api/auth/login')

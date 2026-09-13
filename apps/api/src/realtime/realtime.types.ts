@@ -12,6 +12,12 @@ export interface RealtimeSocketData {
   userId: string;
   tenantId: string;
   role: string;
+  /**
+   * AUTH-1: сесія-пристрій, чиїм токеном відкрито зʼєднання. Сокет сидить у room-і
+   * цього `sid`, тому «завершити сесію» рве саме його, не чіпаючи інші пристрої.
+   * Змінюється на `auth.update.v1`, якщо клієнт приніс токен іншої сесії.
+   */
+  sid: string;
   /** exp токена в мс — на ньому стоять таймери auth.expiring.v1 і примусового закриття */
   expiresAtMs: number;
 }

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { TenantContextService } from '@saas-skeleton/database';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type {
   CalendarEventChanged,
@@ -12,7 +13,7 @@ import {
   NotificationDispatcherRegistry,
   type NotificationDispatcher,
 } from '@saas-skeleton/shared';
-import { tenantRoom, userRoom } from './realtime.constants';
+import { sessionRoom, tenantRoom, userRoom } from './realtime.constants';
 import type { TenantNamespace } from './realtime.types';
 
 /**
@@ -29,7 +30,10 @@ export class RealtimeEmitter implements NotificationDispatcher {
   private readonly logger = new Logger(RealtimeEmitter.name);
   private namespace: TenantNamespace | null = null;
 
-  constructor(dispatcherRegistry: NotificationDispatcherRegistry) {
+  constructor(
+    dispatcherRegistry: NotificationDispatcherRegistry,
+    private readonly tenantContext: TenantContextService,
+  ) {
     // Інбокс живе в libs/shared і про socket.io не знає — транспорт віддається
     // йому тут (той самий прийом пізньої реєстрації, що з namespace нижче)
     dispatcherRegistry.register(this);
@@ -88,5 +92,37 @@ export class RealtimeEmitter implements NotificationDispatcher {
     for (const recipientId of recipientIds) {
       this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.calendarEventChanged, payload);
     }
+  }
+
+  // ---- AUTH-1: примусовий розрив зʼєднань відкликаної сесії ----
+
+  /**
+   * Tenant беремо з CLS, а НЕ аргументом. Ці два методи кличе доменний код
+   * (account, users), а йому tenantId не належить за конституцією §I — там його
+   * взагалі не видно. Інфраструктурний сервіс має право дістати його сам.
+   */
+  disconnectSession(sid: string): void {
+    this.disconnectRoom(sessionRoom(this.tenantContext.requireTenantId(), sid), `session ${sid}`);
+  }
+
+  disconnectUser(userId: string): void {
+    this.disconnectRoom(userRoom(this.tenantContext.requireTenantId(), userId), `user ${userId}`);
+  }
+
+  /**
+   * `disconnectSockets(true)` через adapter — тобто рве і зʼєднання, підключені до
+   * ІНШИХ реплік api: без цього «завершити сесію» працювало б лише тоді, коли
+   * пристрій випадково тримає socket на тій самій ноді, що обробила HTTP-запит.
+   *
+   * Межа чесна і записана в UI: миттєво рветься realtime, а вже виданий
+   * access-токен stateless і догорає до 15 хвилин (denylist — окреме рішення).
+   */
+  private disconnectRoom(room: string, subject: string): void {
+    if (!this.namespace) {
+      this.logger.warn(`Realtime namespace is not ready yet, cannot disconnect ${subject}`);
+      return;
+    }
+    this.namespace.in(room).disconnectSockets(true);
+    this.logger.log(`Disconnected realtime sockets of ${subject}`);
   }
 }

@@ -25,6 +25,7 @@ import type {
   ActivitiesFindAllParams,
   ActivityListResponseDtoOutput,
   AuthResponseDtoOutput,
+  AuthSessionResponseDtoOutput,
   AuthTokensDtoOutput,
   CalendarAgendaParams,
   CalendarAgendaResponseDtoOutput,
@@ -1063,6 +1064,100 @@ export const useUsersSetStatus = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const presenceGet = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PresenceSnapshotDtoOutput>(
+    { url: `/api/presence`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getPresenceGetQueryKey = () => {
+  return [`/api/presence`] as const;
+};
+
+export const getPresenceGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof presenceGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getPresenceGetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof presenceGet>>> = ({ signal }) =>
+    presenceGet(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof presenceGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type PresenceGetQueryResult = NonNullable<Awaited<ReturnType<typeof presenceGet>>>;
+export type PresenceGetQueryError = unknown;
+
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof presenceGet>>,
+          TError,
+          Awaited<ReturnType<typeof presenceGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof presenceGet>>,
+          TError,
+          Awaited<ReturnType<typeof presenceGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getPresenceGetQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 export const customersFindAll = (
   params?: CustomersFindAllParams,
@@ -3681,100 +3776,6 @@ export const useCalendarSetReminders = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
-export const presenceGet = (
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<PresenceSnapshotDtoOutput>(
-    { url: `/api/presence`, method: 'GET', signal },
-    options,
-  );
-};
-
-export const getPresenceGetQueryKey = () => {
-  return [`/api/presence`] as const;
-};
-
-export const getPresenceGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof presenceGet>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-  request?: SecondParameter<typeof customInstance>;
-}) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getPresenceGetQueryKey();
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof presenceGet>>> = ({ signal }) =>
-    presenceGet(requestOptions, signal);
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof presenceGet>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type PresenceGetQueryResult = NonNullable<Awaited<ReturnType<typeof presenceGet>>>;
-export type PresenceGetQueryError = unknown;
-
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof presenceGet>>,
-          TError,
-          Awaited<ReturnType<typeof presenceGet>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof presenceGet>>,
-          TError,
-          Awaited<ReturnType<typeof presenceGet>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getPresenceGetQueryOptions(options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
 export const accountGetProfile = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
@@ -4039,6 +4040,193 @@ export const useAccountChangePassword = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getAccountChangePasswordMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountListSessions = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AuthSessionResponseDtoOutput[]>(
+    { url: `/api/account/sessions`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAccountListSessionsQueryKey = () => {
+  return [`/api/account/sessions`] as const;
+};
+
+export const getAccountListSessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof accountListSessions>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof accountListSessions>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAccountListSessionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof accountListSessions>>> = ({ signal }) =>
+    accountListSessions(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof accountListSessions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AccountListSessionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof accountListSessions>>
+>;
+export type AccountListSessionsQueryError = unknown;
+
+export function useAccountListSessions<
+  TData = Awaited<ReturnType<typeof accountListSessions>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof accountListSessions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountListSessions>>,
+          TError,
+          Awaited<ReturnType<typeof accountListSessions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAccountListSessions<
+  TData = Awaited<ReturnType<typeof accountListSessions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof accountListSessions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountListSessions>>,
+          TError,
+          Awaited<ReturnType<typeof accountListSessions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAccountListSessions<
+  TData = Awaited<ReturnType<typeof accountListSessions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof accountListSessions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAccountListSessions<
+  TData = Awaited<ReturnType<typeof accountListSessions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof accountListSessions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAccountListSessionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const accountRevokeSession = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<void>({ url: `/api/account/sessions/${id}`, method: 'DELETE' }, options);
+};
+
+export const getAccountRevokeSessionMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountRevokeSession>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountRevokeSession>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['accountRevokeSession'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountRevokeSession>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return accountRevokeSession(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountRevokeSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountRevokeSession>>
+>;
+
+export type AccountRevokeSessionMutationError = unknown;
+
+export const useAccountRevokeSession = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountRevokeSession>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountRevokeSession>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getAccountRevokeSessionMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

@@ -90,7 +90,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
 
     afterEach(async () => {
       await deleteKeys(redis, keyPattern);
-      await prisma.refreshToken.deleteMany();
+      await prisma.authSession.deleteMany();
       await prisma.user.deleteMany();
     });
 
@@ -194,7 +194,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
 
     afterEach(async () => {
       await deleteKeys(redis, keyPattern);
-      await prisma.refreshToken.deleteMany();
+      await prisma.authSession.deleteMany();
       await prisma.user.deleteMany();
     });
 
@@ -273,7 +273,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
 
     afterEach(async () => {
       warnSpy.mockRestore();
-      await prisma.refreshToken.deleteMany();
+      await prisma.authSession.deleteMany();
       await prisma.user.deleteMany();
     });
 

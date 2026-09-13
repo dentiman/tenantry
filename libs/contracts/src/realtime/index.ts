@@ -4,6 +4,7 @@ export {
   REALTIME_EVENTS,
   tenantRoom,
   userRoom,
+  sessionRoom,
   REALTIME_DEFAULT_KEY_PREFIX,
   realtimeStreamName,
   realtimeSessionKeyPrefix,

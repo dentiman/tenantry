@@ -28,10 +28,22 @@ export class AccessTokenService {
   constructor(private readonly jwtService: JwtService) {}
 
   async verify(token: string): Promise<VerifiedAccessToken> {
+    let payload: VerifiedAccessToken;
     try {
-      return await this.jwtService.verifyAsync<VerifiedAccessToken>(token);
+      payload = await this.jwtService.verifyAsync<VerifiedAccessToken>(token);
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
+
+    // AUTH-1: токен без `sid` — це токен, виданий ДО переходу на сесії-пристрої.
+    // Приймати його не можна: без sid неможливо ні визначити «поточну сесію» в
+    // списку пристроїв, ні порвати socket саме тієї сесії, яку відкликали.
+    // Розлогінення це не спричиняє — refresh-токен лишився валідним (міграція
+    // перенесла рядки), і перший же 401 клієнт закриває мовчазним refresh-ом.
+    if (typeof payload.sid !== 'string' || payload.sid === '') {
+      throw new UnauthorizedException('Invalid or expired access token');
+    }
+
+    return payload;
   }
 }

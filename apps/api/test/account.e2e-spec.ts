@@ -42,7 +42,7 @@ describe('Account (e2e)', () => {
     await prisma.activityLink.deleteMany({});
     await prisma.activity.deleteMany({});
     await prisma.notification.deleteMany({});
-    await prisma.refreshToken.deleteMany({});
+    await prisma.authSession.deleteMany({});
     await prisma.user.deleteMany({});
 
     const created = await createAndLoginTestUser(app, prisma, {

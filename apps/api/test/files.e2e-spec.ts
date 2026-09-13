@@ -90,7 +90,7 @@ describe('Files API (e2e)', () => {
   beforeEach(async () => {
     storage.clear();
     await prisma.attachment.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
     await prisma.file.deleteMany();
   });

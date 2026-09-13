@@ -42,3 +42,27 @@ export const ChangeOwnPasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: PasswordSchema,
 });
+
+/**
+ * Рядок списку «мої пристрої» (AUTH-1). З появою `auth_sessions` сесія нарешті стала
+ * сутністю з тривалою ідентичністю (`id` переживає ротацію), тож її можна показати
+ * і вибірково завершити — до цього існувало тільки «все або нічого».
+ *
+ * Чого тут НЕМАЄ і не буде: `tokenHash`/`prevTokenHash` (секрет), `revokedAt` і
+ * `revokedReason` (список показує лише живі — мертва сесія це не рядок зі статусом,
+ * а відсутність рядка). Мапер явний, тому додати їх спреду неможливо.
+ */
+export const AuthSessionResponseSchema = z.object({
+  id: z.uuid(),
+  /** «Chrome on macOS» — щоб людина впізнала свій ноутбук; null, якщо UA не було */
+  deviceLabel: z.string().nullable(),
+  /** Сирий UA поруч із міткою: коли двох «Chrome on macOS» треба якось розрізнити */
+  userAgent: z.string().nullable(),
+  ip: z.string().nullable(),
+  /** Та сама сесія, з якої прийшов запит (`id === JWT.sid`) — її не можна сплутати */
+  isCurrent: z.boolean(),
+  createdAt: z.iso.datetime(),
+  lastUsedAt: z.iso.datetime(),
+  idleExpiresAt: z.iso.datetime(),
+  absoluteExpiresAt: z.iso.datetime(),
+});

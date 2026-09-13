@@ -20,4 +20,6 @@ export const NotificationPreferenceListDtoOutputItemsItemType = {
   calendar_eventcancelled: 'calendar_event.cancelled',
   calendar_eventrsvp_changed: 'calendar_event.rsvp_changed',
   calendar_eventreminder: 'calendar_event.reminder',
+  authnew_device: 'auth.new_device',
+  authsession_reuse_detected: 'auth.session_reuse_detected',
 } as const;

@@ -33,7 +33,7 @@ describe('Organization settings API (e2e)', () => {
     await prisma.numberSeries.deleteMany();
     await prisma.activityLink.deleteMany();
     await prisma.activity.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
     // Дефолтний стан воркспейсу між тестами. `settings` теж: секції в JSON
     // (calendar) пише сусідній сьют, а `--runInBand` виконує їх послідовно —

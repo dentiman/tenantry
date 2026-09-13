@@ -69,10 +69,18 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
   // Зняття відповідального — не «призначення на null»: у людини це окрема фраза,
   // тому окремий ключ. Тип події при цьому один — журнал фільтрується по ньому
   const owner = payload.owner;
-  const i18nKey =
+  let i18nKey: string =
     activity.type === 'customer.owner_changed' && owner === null
       ? 'customer.owner_cleared'
       : activity.type;
+
+  // AUTH-1: «відкликано сесії» читається по-різному залежно від того, ЧОМУ це сталося:
+  // один пристрій, усі пристрої чи система сама вбила підозрілу сесію. Тип події при
+  // цьому один — журнал фільтрується по ньому, а розгалужується лише текст
+  const reason = strField(payload, 'reason');
+  if (activity.type === 'user.sessions_revoked' && reason !== '') {
+    i18nKey = `user.sessions_revoked_${reason}`;
+  }
 
   // Усі user.*-події мають однакову форму «хто зробив + над ким»: actorLabel —
   // снапшот того, хто натиснув (реальна людина доїжджає навіть у подіях, які

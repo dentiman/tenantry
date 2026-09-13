@@ -7,6 +7,14 @@ export interface JwtPayload {
   role: string;
   /** MT-1: tenant юзера; кладеться при видачі З РЯДКА БД, звіряється guard-ом */
   tenantId: string;
+  /**
+   * AUTH-1: сесія-пристрій, що видала цей токен. Саме завдяки йому «завершити
+   * сесію» вміє порвати socket рівно того пристрою, а список пристроїв — показати
+   * «це поточний». Стабільний: ротація refresh-токена його не міняє.
+   */
+  sid: string;
+  /** Id самого токена — під майбутній denylist відкликаних access-токенів */
+  jti: string;
 }
 
 export const CurrentUser = createParamDecorator(

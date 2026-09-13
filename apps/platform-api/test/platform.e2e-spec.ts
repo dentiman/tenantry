@@ -34,7 +34,7 @@ describe('Platform API (e2e)', () => {
   beforeEach(async () => {
     await prisma.platformUser.deleteMany();
     // tenants створюються тестами — чистимо все, крім дефолтного (він із міграції)
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
     await prisma.tenant.deleteMany({ where: { slug: { not: 'default' } } });
     await prisma.platformUser.create({

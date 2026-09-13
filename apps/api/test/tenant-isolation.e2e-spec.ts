@@ -42,7 +42,7 @@ describe('Tenant isolation (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await sysPrisma.refreshToken.deleteMany();
+    await sysPrisma.authSession.deleteMany();
     await sysPrisma.user.deleteMany();
   });
 
@@ -120,6 +120,10 @@ describe('Tenant isolation (e2e)', () => {
       email: userB.email,
       role: userB.role,
       tenantId: TENANT_B_ID,
+      // AUTH-1: токен без sid відхиляється як «виданий до переходу на сесії»,
+      // і тест перевіряв би не ту межу — тут предмет саме звірка тенантів
+      sid: '33333333-3333-4333-8333-333333333333',
+      jti: '44444444-4444-4444-8444-444444444444',
     });
 
     await request(app.getHttpServer())
@@ -231,5 +235,54 @@ describe('Tenant isolation (e2e)', () => {
       .send({ email: `b-login-${suffix}@example.com`, password: 'whatever123' })
       .expect(401);
     expect(response.body.message).toBe('Invalid email or password');
+  });
+
+  // ---- AUTH-1: сесії-пристрої під тією самою ізоляцією, що решта tenant-таблиць ----
+
+  it('сесія юзера tenant-а B не видима під контекстом A', async () => {
+    const suffix = String(Date.now());
+    const userB = await createUserInTenantB(`sess-${suffix}`);
+    await sysPrisma.authSession.create({
+      data: {
+        tenantId: TENANT_B_ID,
+        userId: userB.id,
+        tokenHash: 'sha256:deadbeef',
+        idleExpiresAt: new Date(Date.now() + 3600_000),
+        absoluteExpiresAt: new Date(Date.now() + 3600_000),
+      },
+    });
+
+    // Той самий прийом, що для решти таблиць: читаємо tenant-клієнтом у контексті A
+    const visible = await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
+      tenantPrisma.authSession.findMany({ where: { userId: userB.id } }),
+    );
+    expect(visible).toEqual([]);
+  });
+
+  it('DELETE чужої сесії з tenant-а B у контексті A → 404, рядок живий', async () => {
+    const suffix = String(Date.now());
+    const userB = await createUserInTenantB(`del-${suffix}`);
+    const sessionB = await sysPrisma.authSession.create({
+      data: {
+        tenantId: TENANT_B_ID,
+        userId: userB.id,
+        tokenHash: 'sha256:deadbeef',
+        idleExpiresAt: new Date(Date.now() + 3600_000),
+        absoluteExpiresAt: new Date(Date.now() + 3600_000),
+      },
+    });
+
+    const { tokens } = await createAndLoginTestUser(app, sysPrisma, {
+      email: `a-owner-${suffix}@example.com`,
+      password: 'AdminPass12345',
+    });
+
+    await request(app.getHttpServer())
+      .delete(`/api/account/sessions/${sessionB.id}`)
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .expect(404);
+
+    const stillThere = await sysPrisma.authSession.findUnique({ where: { id: sessionB.id } });
+    expect(stillThere?.revokedAt).toBeNull();
   });
 });

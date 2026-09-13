@@ -50,7 +50,7 @@ describe('Customers API (e2e)', () => {
     await prisma.activity.deleteMany();
     await prisma.notification.deleteMany();
     await prisma.notificationState.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
   });
 
