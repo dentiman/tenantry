@@ -17,6 +17,8 @@ const KNOWN_TYPES = [
   'calendar_event.cancelled',
   'calendar_event.rsvp_changed',
   'calendar_event.reminder',
+  'auth.new_device',
+  'auth.session_reuse_detected',
 ] as const;
 type KnownType = (typeof KNOWN_TYPES)[number];
 
@@ -89,6 +91,10 @@ export function NotificationMessage({
         customer: subject?.label ?? '',
         event: subject?.label ?? '',
         tenant: strField(payload, 'tenant'),
+        // AUTH-1: обидва поля бувають null (агент без User-Agent, невідомий ip) —
+        // підставляємо чесне «unknown», а не порожнечу посеред речення
+        deviceLabel: strField(payload, 'deviceLabel') || t('auth.unknownDevice'),
+        ip: strField(payload, 'ip') || t('auth.unknownIp'),
       }}
       components={{
         // <b> — просто акцент (актор, назва воркспейсу); <a> — сутність, на яку

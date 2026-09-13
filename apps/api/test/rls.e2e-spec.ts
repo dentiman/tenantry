@@ -7,7 +7,7 @@ import { Client } from 'pg';
 import { buildTestDatabaseUrl } from './test-database';
 
 /** Таблиці рівня 1 (tenant-scoped) + tenants; інфра (processed_jobs, pgboss.*) — поза RLS */
-const TENANT_TABLES = ['users', 'refresh_tokens', 'files', 'attachments'];
+const TENANT_TABLES = ['users', 'auth_sessions', 'files', 'attachments'];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
   // Голий pg-клієнт під saas_app — БЕЗ Nest, БЕЗ extension, БЕЗ set_config:

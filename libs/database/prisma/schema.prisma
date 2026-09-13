@@ -30,7 +30,7 @@ model Tenant {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   users                   User[]
-  refreshTokens           RefreshToken[]
+  authSessions            AuthSession[]
   files                   File[]
   attachments             Attachment[]
   activities              Activity[]
@@ -83,7 +83,7 @@ model User {
   lastSeenAt   DateTime? @map("last_seen_at")
 
   tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  refreshTokens           RefreshToken[]
+  authSessions            AuthSession[]
   // Персональний інбокс (docs/notifications.md): іде разом із юзером — це його
   // особисті дані, а не журнал (журнал — activities, він переживає видалення)
   notifications           Notification[]           @relation("NotificationRecipient")
@@ -112,20 +112,54 @@ enum Role {
   USER
 }
 
-model RefreshToken {
-  id        String   @id @default(uuid())
-  tenantId  String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
-  userId    String   @map("user_id")
-  tokenHash String   @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+/// AUTH-1: сесія = ПРИСТРІЙ, а не рядок refresh-токена. Раніше ротація робила
+/// delete+create з новим id, тож «сесія» як сутність, яку можна показати в списку
+/// і вибірково вбити, у моделі просто не існувала. Тепер id стабільний (він же
+/// `sid` у access-токені й середній сегмент refresh-токена), а ротація міняє лише
+/// секрет — список пристроїв і точковий revoke стають можливими.
+model AuthSession {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+
+  /// `sha256:<hex>` — секрет має 256 біт ентропії, розтягувати його argon2 нічого не
+  /// дає (перебір неможливий за побудовою), а ротація на кожен refresh робила б
+  /// ~100 мс CPU на запит. `argon2:<phc>` — рядки, перенесені міграцією зі старої
+  /// таблиці; перша ж успішна ротація переписує їх на `sha256:`.
+  tokenHash String @map("token_hash")
+
+  /// Попереднє покоління секрету. Живе вікном (константа в AuthSessionService) від
+  /// `prevRotatedAt`: два паралельні запити з однієї вкладки (або обірваний на
+  /// пів-дорозі refresh) не мусять виглядати як крадіжка токена.
+  prevTokenHash String?   @map("prev_token_hash")
+  prevRotatedAt DateTime? @map("prev_rotated_at")
+  generation    Int       @default(0)
+
+  issuedAt   DateTime @default(now()) @map("issued_at")
+  lastUsedAt DateTime @default(now()) @map("last_used_at")
+  /// Посувається кожною ротацією — «сесія жива, поки нею користуються»
+  idleExpiresAt     DateTime @map("idle_expires_at")
+  /// Рахується від `issuedAt` і НЕ посувається: стеля життя пристрою
+  absoluteExpiresAt DateTime @map("absolute_expires_at")
+
+  /// Рядок лишається після відкликання (на відміну від старого `delete`): без нього
+  /// неможливо відрізнити «сесії ніколи не було» від «її щойно вбили» — а саме на
+  /// цій різниці стоїть reuse-detection
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason")
+
+  userAgent   String? @map("user_agent")
+  ip          String?
+  /// parseUserAgent(userAgent) — ключ, за яким вхід визначається як «новий пристрій»
+  deviceLabel String? @map("device_label")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  // Композитний FK: токен не може вказати на юзера чужого tenant-а (FK-перевірки обходять RLS)
+  // Композитний FK: сесія не може вказати на юзера чужого tenant-а (FK-перевірки обходять RLS)
   user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
 
   @@index([tenantId, userId])
-  @@map("refresh_tokens")
+  @@index([tenantId, idleExpiresAt])
+  @@map("auth_sessions")
 }
 
 // Файлова підсистема (Files v1): метадані об'єктів S3-сховища.

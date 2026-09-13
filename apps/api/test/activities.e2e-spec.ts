@@ -26,7 +26,7 @@ describe('Activities API (e2e)', () => {
   beforeEach(async () => {
     await prisma.activityLink.deleteMany();
     await prisma.activity.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
   });
 

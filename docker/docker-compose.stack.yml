@@ -169,7 +169,10 @@ services:
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
-      JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
+      # AUTH-1: сесія-пристрій замість рядка refresh-токена
+      AUTH_SESSION_IDLE_DAYS: ${AUTH_SESSION_IDLE_DAYS:-7}
+      AUTH_SESSION_ABSOLUTE_DAYS: ${AUTH_SESSION_ABSOLUTE_DAYS:-30}
+      AUTH_REUSE_REVOKES_ALL_SESSIONS: ${AUTH_REUSE_REVOKES_ALL_SESSIONS:-false}
     networks: [saas_net]
     logging: *logging
     # RT-1: на SIGTERM api звільняє presence-leases і закриває sockets. Дефолтних 10 с

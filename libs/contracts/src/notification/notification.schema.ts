@@ -32,6 +32,11 @@ export const NOTIFICATION_TYPES = [
   // нагадування — єдиний тип, який народжується не з дії людини, а з розкладу
   // (scheduled_notifications + cron-сканер, §8 доку)
   'calendar_event.reminder',
+  // --- Безпека акаунта (AUTH-1). Адресат завжди ОДИН — власник акаунта:
+  // це єдиний клас сповіщень, де отримувач не обчислюється, а відомий за
+  // побудовою, і де «дізнатись пізно» дорівнює «не дізнатись».
+  'auth.new_device',
+  'auth.session_reuse_detected',
 ] as const;
 export const NotificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
@@ -75,6 +80,16 @@ export const NOTIFICATION_PAYLOAD_SCHEMAS = {
     allDay: z.boolean(),
     /** «за 30 хв» — рядок інбокса підписує, ЧОМУ він прийшов саме зараз */
     minutesBefore: z.number().int().nonnegative(),
+  }),
+  // Обидва поля nullable: заголовка User-Agent може не бути взагалі (curl, старий
+  // клієнт), а ip — за проксі, якому ми не довіряємо. Рядок інбокса мусить
+  // рендеритись і без них: «новий вхід» сам по собі вже сигнал
+  'auth.new_device': z.object({
+    deviceLabel: z.string().nullable(),
+    ip: z.string().nullable(),
+  }),
+  'auth.session_reuse_detected': z.object({
+    deviceLabel: z.string().nullable(),
   }),
 } as const satisfies Record<NotificationType, z.ZodType>;
 
@@ -126,6 +141,11 @@ export const NOTIFICATION_TYPE_META = {
   'calendar_event.cancelled': { category: 'calendar', defaultEnabled: true, muteable: false },
   'calendar_event.rsvp_changed': { category: 'calendar', defaultEnabled: true, muteable: true },
   'calendar_event.reminder': { category: 'calendar', defaultEnabled: true, muteable: true },
+  // Немутабельні за тим самим правилом, що 'user.password_changed': сповіщення про
+  // безпеку — це не інформування, а єдиний канал, яким людина може дізнатися про
+  // чужий вхід у свій акаунт. Перемикача тут не буде
+  'auth.new_device': { category: 'security', defaultEnabled: true, muteable: false },
+  'auth.session_reuse_detected': { category: 'security', defaultEnabled: true, muteable: false },
 } as const satisfies Record<NotificationType, NotificationTypeMeta>;
 
 // ---------------------------------------------------------------- читання

@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
+import type { AuthSessionResponse } from '@saas-skeleton/contracts';
 import { ChangeOwnPasswordSchema } from '@saas-skeleton/contracts';
 import {
   AlertDialog,
@@ -13,12 +16,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from '@saas-skeleton/ui/components/ui/item';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
-import { useAccountChangePassword, useAccountRevokeAllSessions } from '../../api/generated/api';
+import { formatRelativeTime } from '@saas-skeleton/ui/lib/format';
+import {
+  getAccountListSessionsQueryKey,
+  useAccountChangePassword,
+  useAccountListSessions,
+  useAccountRevokeAllSessions,
+  useAccountRevokeSession,
+} from '../../api/generated/api';
 import { ContentSection } from '../../components/section/content-section';
 import { applyServerError, FormPasswordField } from '../../components/form';
 import { useAuthStore } from '../../stores/auth.store';
@@ -138,21 +157,59 @@ function PasswordForm() {
 }
 
 /**
- * Списку пристроїв тут немає — і це не спрощення UI, а чесне відображення моделі:
- * рядок refresh-токена живе до найближчої ротації і щоразу отримує новий id, тож
- * «сесії» як сутності, яку можна показати і вибірково вбити, не існує.
+ * «Мої пристрої» (AUTH-1). До появи `auth_sessions` цієї секції не існувало як
+ * списку — і не тому, що бракувало UI: рядок refresh-токена жив до найближчої
+ * ротації і щоразу отримував новий id, тож показувати й вибірково вбивати не було
+ * чого. Тепер `id` сесії стабільний, і список — прямий наслідок моделі.
+ *
+ * Порожнього стану немає навмисно: щоб відкрити цю сторінку, треба мати сесію,
+ * тож щонайменше один рядок у списку є завжди.
  */
 function SessionsSection() {
   const { t } = useTranslation('user-settings');
+  const queryClient = useQueryClient();
   const setTokens = useAuthStore((s) => s.setTokens);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const revokeAll = useAccountRevokeAllSessions();
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const navigate = useNavigate();
 
-  const revoke = async (): Promise<void> => {
+  const [isRevokeAllOpen, setIsRevokeAllOpen] = useState(false);
+  const [pendingSession, setPendingSession] = useState<AuthSessionResponse | null>(null);
+
+  const sessions = useAccountListSessions();
+  const revokeAll = useAccountRevokeAllSessions();
+  const revokeOne = useAccountRevokeSession();
+
+  const invalidate = (): Promise<void> =>
+    queryClient.invalidateQueries({ queryKey: getAccountListSessionsQueryKey() });
+
+  const onRevokeAll = async (): Promise<void> => {
     const tokens = await revokeAll.mutateAsync();
+    // Стара пара щойно померла разом з усіма іншими сесіями
     setTokens(tokens);
-    setIsConfirmOpen(false);
+    setIsRevokeAllOpen(false);
+    await invalidate();
     toast.add({ type: 'success', title: t('security.sessions.done') });
+  };
+
+  const onRevokeOne = async (session: AuthSessionResponse): Promise<void> => {
+    try {
+      await revokeOne.mutateAsync({ id: session.id });
+      setPendingSession(null);
+
+      // Завершили СВІЙ же пристрій: сесії, з якої зроблено запит, більше немає,
+      // і лишатись на сторінці з мертвим токеном немає сенсу
+      if (session.isCurrent) {
+        clearSession();
+        void navigate({ to: '/login' });
+        return;
+      }
+
+      await invalidate();
+      toast.add({ type: 'success', title: t('security.sessions.revoked') });
+    } catch {
+      setPendingSession(null);
+      toast.add({ type: 'error', title: t('security.sessions.revokeFailed') });
+    }
   };
 
   return (
@@ -162,6 +219,42 @@ function SessionsSection() {
         <p className="text-sm text-muted-foreground">{t('security.sessions.description')}</p>
       </div>
 
+      {sessions.isPending ? (
+        <p className="text-sm text-muted-foreground">{t('security.sessions.loading')}</p>
+      ) : (
+        <ItemGroup className="gap-2">
+          {(sessions.data ?? []).map((session) => (
+            <Item key={session.id} variant="outline">
+              <ItemContent>
+                <ItemTitle className="flex items-center gap-2">
+                  {session.deviceLabel ?? t('security.sessions.unknownDevice')}
+                  {session.isCurrent && (
+                    <Badge variant="secondary">{t('security.sessions.thisDevice')}</Badge>
+                  )}
+                </ItemTitle>
+                <ItemDescription>
+                  {[session.ip, formatRelativeTime(session.lastUsedAt)]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={revokeOne.isPending}
+                  onClick={() => {
+                    setPendingSession(session);
+                  }}
+                >
+                  {t('security.sessions.revoke')}
+                </Button>
+              </ItemActions>
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
+
       <p className="text-sm text-muted-foreground">{t('security.sessions.note')}</p>
 
       <div>
@@ -169,14 +262,14 @@ function SessionsSection() {
           variant="secondary"
           disabled={revokeAll.isPending}
           onClick={() => {
-            setIsConfirmOpen(true);
+            setIsRevokeAllOpen(true);
           }}
         >
           {t('security.sessions.signOutAll')}
         </Button>
       </div>
 
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <AlertDialog open={isRevokeAllOpen} onOpenChange={setIsRevokeAllOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('security.sessions.confirmTitle')}</AlertDialogTitle>
@@ -186,10 +279,42 @@ function SessionsSection() {
             <AlertDialogCancel>{t('security.sessions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                void revoke();
+                void onRevokeAll();
               }}
             >
               {t('security.sessions.confirm')}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingSession !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingSession(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('security.sessions.revokeTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSession?.isCurrent
+                ? t('security.sessions.revokeCurrentBody')
+                : t('security.sessions.revokeBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <AlertDialogCancel>{t('security.sessions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingSession) {
+                  void onRevokeOne(pendingSession);
+                }
+              }}
+            >
+              {t('security.sessions.revoke')}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

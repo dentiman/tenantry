@@ -34,6 +34,9 @@ const positiveIntString = z
   .regex(/^\d+$/, 'must be a positive integer')
   .refine((value) => Number(value) > 0, 'must be a positive integer');
 
+/** env завжди рядок: приймаємо лише однозначні `true`/`false`, без «1»/«yes»/«on» */
+const booleanString = z.enum(['true', 'false']);
+
 const originList = z.string().refine(
   (value) => {
     const origins = parseOrigins(value);
@@ -55,6 +58,17 @@ export const ApiEnvSchema = z.looseObject({
   CORS_ALLOWED_ORIGINS: originList.optional(),
   REALTIME_ALLOWED_ORIGINS: originList.optional(),
   TRUST_PROXY_HOPS: z.string().trim().regex(/^\d+$/, 'must be a non-negative integer').optional(),
+
+  // AUTH-1: життя сесії-пристрою. Конфігуровані свідомо (spec FR-014): 7/30 —
+  // компроміс скелетона, а форк із іншим профілем ризику міняє їх без правки коду.
+  // Вікно повторного використання токена (60 с) — НЕ env: це властивість протоколу
+  // ротації, а не політики (константа в AuthSessionService)
+  AUTH_SESSION_IDLE_DAYS: positiveIntString.optional(),
+  AUTH_SESSION_ABSOLUTE_DAYS: positiveIntString.optional(),
+  // Чи вважати reuse поза вікном компрометацією ВСІХ пристроїв юзера, а не лише
+  // тієї сесії. За замовчуванням ні: один викрадений токен не мусить вибивати
+  // людину з робочого ноутбука й телефона одночасно
+  AUTH_REUSE_REVOKES_ALL_SESSIONS: booleanString.optional(),
 
   // AUTH-0: пороги обмеження частоти (дефолти — у throttle.config.ts)
   THROTTLE_DEFAULT_LIMIT_PER_MINUTE: positiveIntString.optional(),

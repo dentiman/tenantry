@@ -1,12 +1,14 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService, TenantContextService } from '@saas-skeleton/database';
-import type { User as PrismaUser } from '@saas-skeleton/database';
+import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
+import type { Prisma, User as PrismaUser } from '@saas-skeleton/database';
+import { NotificationRecorder, parseUserAgent } from '@saas-skeleton/shared';
 import type { Login, AuthTokens } from '@saas-skeleton/contracts';
 
 import * as argon2 from 'argon2';
-import { randomBytes } from 'crypto';
+import { randomUUID } from 'crypto';
+import type { ClientContextData } from '../common/client-context.decorator';
+import { AuthSessionService } from './auth-session.service';
 
 // MT-1: self-serve реєстрації немає (рішення 2026-07-16) — юзерів створює tenant-адмін
 // (users-модуль), тенантів — platform-api (MT-3). Тому auth = тільки login/refresh/me.
@@ -18,12 +20,15 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    // Auth — легальне місце для tenantId (§0 плану): видача JWT і refresh-резолюція
-    private readonly tenantContext: TenantContextService,
+    private readonly tenantTx: TenantTransactions,
+    private readonly sessions: AuthSessionService,
+    private readonly notifications: NotificationRecorder,
   ) {}
 
-  async login(data: Login): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
+  async login(
+    data: Login,
+    client: ClientContextData,
+  ): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
     this.logger.log(`Login attempt for email: ${data.email}`);
 
     // Пошук у ВЖЕ резолвленому tenant-і (TenantResolutionMiddleware → CLS → RLS з MT-2);
@@ -57,7 +62,7 @@ export class AuthService {
 
     this.logger.log(`User logged in successfully: ${user.email} (ID: ${user.id})`);
 
-    const tokens = await this.issueTokens(user);
+    const tokens = await this.issueTokens(user, client, { notifyNewDevice: true });
     return { user, tokens };
   }
 
@@ -73,112 +78,49 @@ export class AuthService {
     );
   }
 
-  async refresh(refreshToken: string): Promise<AuthTokens> {
-    // MT-1: формат tenantId:tokenId:secret — тенант резолвиться із самого токена
-    // (на /auth/refresh немає ні JWT, ні slug-а; для фронта рядок opaque)
-    const [tenantId, tokenId, secret] = refreshToken.split(':');
-    if (!tenantId || !tokenId || !secret) {
-      this.logger.warn('Token refresh failed - invalid token format');
-      throw new UnauthorizedException('Invalid refresh token format');
-    }
-
-    // Перезаписуємо контекст middleware-а значенням із токена: далі всі запити
-    // (пошук токена, ротація, видача) йдуть у tenant-і токена, і RLS (MT-2) це звірить
-    this.tenantContext.set(tenantId);
-
-    this.logger.debug(`Token refresh attempt for tokenId: ${tokenId}`);
-
-    const storedToken = await this.prisma.refreshToken.findUnique({
-      where: { id: tokenId },
-      include: { user: { include: { tenant: true } } },
-    });
-
-    if (!storedToken || storedToken.expiresAt < new Date()) {
-      if (storedToken) {
-        await this.prisma.refreshToken.delete({ where: { id: tokenId } });
-        this.logger.warn(`Token refresh failed - expired token deleted: ${tokenId}`);
-      } else {
-        this.logger.warn(`Token refresh failed - token not found: ${tokenId}`);
-      }
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
-
-    // Префікс мусить збігатися з tenant-ом рядка (захист від зшитого токена)
-    if (storedToken.tenantId !== tenantId) {
-      this.logger.warn(`Token refresh failed - tenant mismatch for token: ${tokenId}`);
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const isValid = await argon2.verify(storedToken.tokenHash, secret);
-    if (!isValid) {
-      // Possible token theft — delete all tokens for this user
-      await this.prisma.refreshToken.deleteMany({
-        where: { userId: storedToken.userId },
-      });
-      this.logger.error(
-        `⚠️ SECURITY: Possible token theft detected! All tokens revoked for user: ${storedToken.user.email} (ID: ${storedToken.userId})`,
-      );
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    // Rotate: delete old token, issue new pair
-    await this.prisma.refreshToken.delete({ where: { id: tokenId } });
-
-    if (!storedToken.user.isActive) {
-      this.logger.warn(`Token refresh failed - account deactivated: ${storedToken.user.email}`);
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    if (!storedToken.user.tenant.isActive) {
-      this.logger.warn(
-        `Token refresh failed - tenant suspended: ${storedToken.user.tenant.slug} (${storedToken.user.email})`,
-      );
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    this.logger.log(
-      `Token refreshed successfully for user: ${storedToken.user.email} (ID: ${storedToken.userId})`,
+  /**
+   * Ротація сесії. Механіка — в `AuthSessionService`; тут лишається питання
+   * identity: чи взагалі має право заходити той, чия сесія ще жива.
+   *
+   * Порядок саме такий (contracts/http-api.md §«POST /auth/refresh»): спершу
+   * сесія, потім акаунт. Деактивованому юзеру однаково прилетить 401, але його
+   * токен при цьому вже ротований — тобто вкрадена копія теж стала недійсною.
+   */
+  async refresh(refreshToken: string, client: ClientContextData): Promise<AuthTokens> {
+    const { user, session, refreshToken: rotated } = await this.sessions.verifyAndConsume(
+      refreshToken,
+      client,
     );
 
-    return this.issueTokens(storedToken.user);
+    if (!user.isActive) {
+      this.logger.warn(`Token refresh failed - account deactivated: ${user.email}`);
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    if (!user.tenant.isActive) {
+      this.logger.warn(
+        `Token refresh failed - tenant suspended: ${user.tenant.slug} (${user.email})`,
+      );
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    this.logger.log(`Token refreshed successfully for user: ${user.email} (ID: ${user.id})`);
+
+    return {
+      accessToken: await this.signAccessToken(user, session.id),
+      refreshToken: rotated,
+    };
   }
 
   /**
-   * Здача власного refresh-токена на виході (V1 «рівень 0»). До цього logout був
-   * суто клієнтським (`clearSession()` у сторі), і рядок токена лишався живим у БД
-   * до `expiresAt` — вийшовши на чужому комп'ютері, юзер лишав там робочу сесію.
+   * Вихід: клієнт здає свій refresh-токен, сесія отримує `revoked_reason = 'logout'`.
    *
-   * Мовчазно ідемпотентний: невірний формат, чужий tenant, неіснуючий чи вже
-   * зданий токен — усе це 204, а не 4xx. Роут публічний, і будь-яка деталізація
-   * зробила б із нього оракул «чи існує такий tokenId».
-   *
-   * Невірний секрет НЕ вмикає theft-detection (на відміну від /refresh): там
-   * пред'явлення чужого токена — спроба ним скористатись, тут — щонайбільше спосіб
-   * вибити чужі сесії анонімним запитом.
+   * Мовчазно ідемпотентний: невірний формат, чужий tenant, неіснуюча чи вже здана
+   * сесія — усе це 204, а не 4xx. Роут публічний, і будь-яка деталізація зробила б
+   * із нього оракул «чи існує така сесія».
    */
-  async logout(refreshToken: string): Promise<void> {
-    const [tenantId, tokenId, secret] = refreshToken.split(':');
-    if (!tenantId || !tokenId || !secret) {
-      this.logger.debug('Logout ignored - invalid token format');
-      return;
-    }
-
-    // Як у refresh: контекст беремо з самого токена (JWT на цьому роуті немає)
-    this.tenantContext.set(tenantId);
-
-    const storedToken = await this.prisma.refreshToken.findUnique({ where: { id: tokenId } });
-    if (storedToken?.tenantId !== tenantId) {
-      this.logger.debug(`Logout ignored - token not found: ${tokenId}`);
-      return;
-    }
-
-    if (!(await argon2.verify(storedToken.tokenHash, secret))) {
-      this.logger.warn(`Logout ignored - secret mismatch for token: ${tokenId}`);
-      return;
-    }
-
-    await this.prisma.refreshToken.delete({ where: { id: tokenId } });
-    this.logger.log(`Refresh session revoked on logout (user: ${storedToken.userId})`);
+  logout(refreshToken: string): Promise<void> {
+    return this.sessions.revokeByToken(refreshToken);
   }
 
   async getMe(userId: string): Promise<PrismaUser> {
@@ -192,42 +134,78 @@ export class AuthService {
   }
 
   /**
-   * Видача пари токенів. Публічний, бо потрібен не тільки login/refresh: після
-   * зміни власного пароля і після «вийти звідусіль» усі refresh-рядки юзера
-   * видаляються, і поточному пристрою треба одразу повернути свіжу пару — інакше
-   * дія, яку людина зробила свідомо, викидала б її саму на /login.
+   * Нова сесія + пара токенів. Потрібна не тільки логіну: після зміни власного
+   * пароля і після «вийти звідусіль» усі сесії юзера відкликаються (включно з тією,
+   * з якої прийшов запит) — без свіжої пари дія, зроблена свідомо, викидала б
+   * людину на /login.
    */
-  async issueTokens(user: PrismaUser): Promise<AuthTokens> {
+  async issueTokens(
+    user: PrismaUser,
+    client: ClientContextData,
+    options: { notifyNewDevice?: boolean } = {},
+  ): Promise<AuthTokens> {
+    const issued = await this.tenantTx.withTenantTx(async (tx) => {
+      // Перевіряємо ДО створення сесії: інакше щойно створений рядок і був би
+      // тією «наявною сесією з тим самим пристроєм», і сповіщення не прийшло б ніколи
+      const isNewDevice =
+        options.notifyNewDevice === true && (await this.isNewDevice(user.id, client));
+
+      const created = await this.sessions.create(tx, { userId: user.id, client });
+
+      if (isNewDevice) {
+        await this.notifyNewDevice(tx, user.id, client);
+      }
+      return created;
+    });
+
+    return {
+      accessToken: await this.signAccessToken(user, issued.session.id),
+      refreshToken: issued.refreshToken,
+    };
+  }
+
+  private isNewDevice(userId: string, client: ClientContextData): Promise<boolean> {
+    return this.sessions
+      .hasLiveSessionWithDevice(userId, parseUserAgent(client.userAgent))
+      .then((exists) => !exists);
+  }
+
+  /**
+   * «Вхід із нового пристрою» — сповіщення, а не блокування: система не знає, чи це
+   * зловмисник, чи власник купив ноутбук. Знає це тільки людина, тому їй і кажемо.
+   *
+   * Ключ — `deviceLabel`, тобто груба мітка «Chrome on macOS», а не точний
+   * User-Agent: мінорна версія браузера оновлюється сама і не мусить виглядати
+   * як новий пристрій — інакше сповіщення знецінилося б за тиждень.
+   */
+  private notifyNewDevice(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    client: ClientContextData,
+  ): Promise<void> {
+    return this.notifications.notify(tx, {
+      type: 'auth.new_device',
+      recipientIds: [userId],
+      // Актор — система: людина не «робила» цього сповіщення, вона його отримувач
+      actor: { type: 'system' },
+      payload: { deviceLabel: parseUserAgent(client.userAgent), ip: client.ip },
+    });
+  }
+
+  /**
+   * `sid` — сесія, з якої виданий токен: саме він дозволяє порвати socket рівно
+   * того пристрою, який відкликали, не зачепивши решту вкладок юзера.
+   * `jti` — id самого токена, під майбутній denylist (AUTH-4 і далі).
+   */
+  private signAccessToken(user: PrismaUser, sid: string): Promise<string> {
     // tenantId — З РЯДКА ЮЗЕРА в БД, ніколи з запиту (§ «Джерело tenantId» плану)
-    const payload = { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId };
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    // Generate refresh token as tenantId:tokenId:secret
-    const tokenRecord = await this.prisma.refreshToken.create({
-      data: {
-        tenantId: user.tenantId,
-        userId: user.id,
-        tokenHash: '', // placeholder, updated below
-        expiresAt: new Date(
-          Date.now() +
-            this.configService.get<number>('JWT_REFRESH_EXPIRES_DAYS', 7) * 24 * 60 * 60 * 1000,
-        ),
-      },
+    return this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      sid,
+      jti: randomUUID(),
     });
-
-    const secret = randomBytes(32).toString('hex');
-    const secretHash = await argon2.hash(secret);
-
-    await this.prisma.refreshToken.update({
-      where: { id: tokenRecord.id },
-      data: { tokenHash: secretHash },
-    });
-
-    this.logger.debug(
-      `Generated new token pair for user: ${user.email} (tokenId: ${tokenRecord.id})`,
-    );
-
-    const refreshToken = `${user.tenantId}:${tokenRecord.id}:${secret}`;
-    return { accessToken, refreshToken };
   }
 }

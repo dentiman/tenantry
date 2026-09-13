@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthSessionService } from './auth-session.service';
 import { AccessTokenService } from './access-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -24,6 +25,7 @@ import { AppThrottlerGuard } from '../common/throttler/app-throttler.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthSessionService,
     AccessTokenService,
     {
       provide: APP_GUARD,
@@ -44,6 +46,8 @@ import { AppThrottlerGuard } from '../common/throttler/app-throttler.guard';
   ],
   // AccessTokenService експортується для RealtimeModule: socket-middleware перевіряє
   // токен ТИМ САМИМ кодом, що HTTP-guard
-  exports: [AuthService, AccessTokenService],
+  // AuthSessionService експортується для account/users: відкликання сесій —
+  // частина їхніх доменних транзакцій (зміна пароля, деактивація, revoke-all)
+  exports: [AuthService, AuthSessionService, AccessTokenService],
 })
 export class AuthModule {}

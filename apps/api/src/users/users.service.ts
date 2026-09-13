@@ -14,6 +14,8 @@ import { Role } from '@saas-skeleton/database';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+import { AuthSessionService } from '../auth/auth-session.service';
+import { RealtimeEmitter } from '../realtime/realtime.emitter';
 // Пара phone/phoneCountry узгоджується одним правилом на застосунок (common/phone.ts):
 // те саме поле є в кастомерів і їхніх контактів
 import { normalizePhonePair } from '../common/phone';
@@ -31,6 +33,8 @@ export class UsersService {
     private readonly tenantTx: TenantTransactions,
     private readonly activities: ActivityRecorder,
     private readonly notifications: NotificationRecorder,
+    private readonly sessions: AuthSessionService,
+    private readonly realtime: RealtimeEmitter,
   ) {}
 
   async findAll(query: UserQuery): Promise<{
@@ -189,7 +193,10 @@ export class UsersService {
 
     await this.tenantTx.withTenantTx(async (tx) => {
       await tx.user.update({ where: { id }, data: { passwordHash } });
-      const revoked = await tx.refreshToken.deleteMany({ where: { userId: id } });
+      // AUTH-1: відкликаємо, а не видаляємо — рядок сесії лишається слідом інциденту.
+      // Окремої `user.sessions_revoked` тут НЕ пишемо (spec FR-021): у зміни пароля
+      // є власна активність нижче, а два рядки на одну дію зробили б фід нечитабельним
+      const revokedCount = await this.sessions.revokeAllForUser(tx, id, 'password_change');
 
       await this.activities.record(tx, {
         type: 'user.password_changed',
@@ -210,8 +217,14 @@ export class UsersService {
       });
 
       this.logger.log(
-        `Password changed for ${user.email} (ID: ${id}); revoked ${String(revoked.count)} refresh session(s)`,
+        `Password changed for ${user.email} (ID: ${id}); revoked ${String(revokedCount)} session(s)`,
       );
+
+      // Після коміту, а не всередині: до коміту сесії ще живі, і клієнт, який
+      // перепідключився б у цю мілісекунду, лишився б із робочим socket-ом
+      this.tenantTx.onCommit(tx, () => {
+        this.realtime.disconnectUser(id);
+      });
     });
   }
 
@@ -246,10 +259,13 @@ export class UsersService {
       });
 
       // Вимкнення = kill-switch: сесії йдуть разом із доступом. /auth/refresh і так
-      // перевіряє isActive, але лишати живі рядки токенів після відкликання доступу
+      // перевіряє isActive, але лишати живі сесії після відкликання доступу
       // означало б, що повернення прапорця тихо воскресить старі сесії
       if (!isActive) {
-        await tx.refreshToken.deleteMany({ where: { userId: id } });
+        await this.sessions.revokeAllForUser(tx, id, 'user_disabled');
+        this.tenantTx.onCommit(tx, () => {
+          this.realtime.disconnectUser(id);
+        });
       }
 
       await this.activities.record(tx, {

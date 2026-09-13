@@ -20,7 +20,7 @@
 | Захід | Фаза                                                     | Обсяг | Міграції | Ламає контракти                               | Статус       |
 | ----- | -------------------------------------------------------- | ----- | -------- | --------------------------------------------- | ------------ |
 | 1     | **AUTH-0** — hardening без міграцій                      | S     | 0        | ні                                            | ✅ завершено |
-| 2     | **AUTH-1** — сесія як сутність                           | L     | 1        | так (`/account/sessions`)                     | ⬜ не почато |
+| 2     | **AUTH-1** — сесія як сутність                           | L     | 1        | так (`/account/sessions`)                     | ✅ завершено |
 | 3     | **AUTH-2** — httpOnly cookie + дзеркало в platform       | M     | 0        | так (`AuthTokens.refreshToken` стає опційним) | ⬜ не почато |
 | 4     | **AUTH-3** — відновлення доступу (`verification_tokens`) | M     | 1        | ні (тільки нові роути)                        | ⬜ не почато |
 | 5     | **AUTH-4** — 2FA (TOTP)                                  | L     | 1        | так (`AuthResponse` → union)                  | ⬜ не почато |
@@ -359,7 +359,7 @@ interval». Поза вікном — атака, сесія вмирає.
 
 ## 2.2. Схема даних
 
-- [ ] Модель у `libs/database/prisma/schema.prisma`:
+- [x] Модель у `libs/database/prisma/schema.prisma`:
 
 ```prisma
 /// Сесія = пристрій. Id стабільний і переживає ротацію refresh-токена
@@ -401,10 +401,10 @@ model AuthSession {
 }
 ```
 
-- [ ] Міграція `cd libs/database && pnpm exec prisma migrate dev --name auth_sessions`
-- [ ] У згенерованому SQL **дописати руками**:
-  - [ ] RLS-блок за шаблоном §1.3 (`ENABLE` + `FORCE` + `tenant_isolation`);
-  - [ ] перенесення даних **до** `DROP TABLE "refresh_tokens"`:
+- [x] Міграція `cd libs/database && pnpm exec prisma migrate dev --name auth_sessions`
+- [x] У згенерованому SQL **дописати руками**:
+  - [x] RLS-блок за шаблоном §1.3 (`ENABLE` + `FORCE` + `tenant_isolation`);
+  - [x] перенесення даних **до** `DROP TABLE "refresh_tokens"`:
     ```sql
     INSERT INTO "auth_sessions" (id, tenant_id, user_id, token_hash, generation,
                                  issued_at, last_used_at, idle_expires_at, absolute_expires_at)
@@ -412,47 +412,47 @@ model AuthSession {
            created_at, created_at, expires_at, created_at + INTERVAL '30 days'
     FROM "refresh_tokens";
     ```
-  - [ ] `DROP TABLE "refresh_tokens";` — **тільки після** `INSERT … SELECT`.
-- [ ] Прогнати `pnpm db:reset` і переконатись, що всі міграції лягають на чисту БД.
+  - [x] `DROP TABLE "refresh_tokens";` — **тільки після** `INSERT … SELECT`.
+- [x] Прогнати `pnpm db:reset` і переконатись, що всі міграції лягають на чисту БД.
 
 ## 2.3. Бекенд
 
-- [ ] `apps/api/src/auth/auth-session.service.ts` — уся механіка сесій окремо від
+- [x] `apps/api/src/auth/auth-session.service.ts` — уся механіка сесій окремо від
       `AuthService` (той лишається про логін/токени):
       `create()`, `rotate()`, `verifyAndConsume()`, `revoke(sid, reason)`,
       `revokeAllForUser(userId, reason)`, `listForUser(userId)`.
-- [ ] Алгоритм `verifyAndConsume(refreshToken)` — реалізувати рівно в цьому порядку: 1. `split(':')` → `tenantId`, `sid`, `secret`; невірний формат → 401. 2. `tenantContext.set(tenantId)` (як зараз: на `/auth/refresh` немає ні JWT, ні slug). 3. Знайти сесію по `sid`; немає / `revokedAt != null` /
+- [x] Алгоритм `verifyAndConsume(refreshToken)` — реалізувати рівно в цьому порядку: 1. `split(':')` → `tenantId`, `sid`, `secret`; невірний формат → 401. 2. `tenantContext.set(tenantId)` (як зараз: на `/auth/refresh` немає ні JWT, ні slug). 3. Знайти сесію по `sid`; немає / `revokedAt != null` /
       `idleExpiresAt < now` / `absoluteExpiresAt < now` → 401. 4. `tenantId` префікса ≠ `session.tenantId` → 401 (захист від зшитого токена). 5. secret збігається з `tokenHash` → **ротація**: `generation++`,
       `prevTokenHash ← tokenHash`, `prevRotatedAt ← now`, новий `tokenHash` (sha256),
       `lastUsedAt/ip/userAgent ← поточні`, `idleExpiresAt ← now + idle`,
       `absoluteExpiresAt` **не чіпати**. 6. інакше secret збігається з `prevTokenHash`: - `now - prevRotatedAt <= reuseWindow` → гонка: віддати нову пару як у п.5,
       `generation` не інкрементувати (щоб лічильник не брехав); - інакше → **reuse detected**: `revoke(sid, 'rotation_reuse')`, сповіщення
       юзеру, лог `error`, 401. 7. інакше → `revoke(sid, 'secret_mismatch')`, 401. 8. Після успіху — перевірити `user.isActive` і `tenant.isActive` (як зараз).
-- [ ] `AuthService.issueTokens` → один `INSERT` (хеш рахується ДО запису; порожнього
+- [x] `AuthService.issueTokens` → один `INSERT` (хеш рахується ДО запису; порожнього
       `tokenHash` більше не існує), payload JWT += `sid`, `jti`.
-- [ ] `JwtPayload` (`apps/api/src/auth/decorators/current-user.decorator.ts`) += `sid`.
+- [x] `JwtPayload` (`apps/api/src/auth/decorators/current-user.decorator.ts`) += `sid`.
       **Перевірити socket-шар**: `SocketAuthService` і `handleAuthUpdate` звіряють
       `sub`/`tenantId`/`role` при оновленні токена — вирішити, чи `sid` теж має
       збігатися (рекомендація: **ні** — після revoke-all клієнт легально приносить
       токен нової сесії, і вимога незмінного `sid` розірвала б живий сокет без потреби).
-- [ ] `@ClientContext()` — декоратор у `apps/api/src/common/` → `{ ip, userAgent }`
+- [x] `@ClientContext()` — декоратор у `apps/api/src/common/` → `{ ip, userAgent }`
       з `req.ip` (працює завдяки `trust proxy` із заходу 1) і `req.headers['user-agent']`.
       Передається в `login` і `refresh`.
-- [ ] `libs/shared/src/auth/user-agent.ts` — `parseUserAgent(ua): string | null`
+- [x] `libs/shared/src/auth/user-agent.ts` — `parseUserAgent(ua): string | null`
       («Chrome on macOS», «Safari on iPhone», «Unknown device»).
-- [ ] Конфіг (`AUTH_SESSION_IDLE_DAYS=7`, `AUTH_SESSION_ABSOLUTE_DAYS=30`,
+- [x] Конфіг (`AUTH_SESSION_IDLE_DAYS=7`, `AUTH_SESSION_ABSOLUTE_DAYS=30`,
       `AUTH_REFRESH_REUSE_WINDOW_SECONDS=60`, `AUTH_REUSE_REVOKES_ALL_SESSIONS=false`)
       через Zod-схему env із заходу 1 + `.env.example`.
-- [ ] `UsersService.setPassword` і `AccountService.revokeAllSessions` переводяться на
+- [x] `UsersService.setPassword` і `AccountService.revokeAllSessions` переводяться на
       `revokeAllForUser(..., reason)` — **`update` замість `deleteMany`**: рядок лишається
       з `revoked_at`, інакше зникає і слід, і можливість показати «сесію вбито тоді-то».
-- [ ] `UsersService.setStatus(false)` — так само (зараз теж `deleteMany`).
-- [ ] **Миттєвий розрив WS** при revoke: після коміту транзакції
+- [x] `UsersService.setStatus(false)` — так само (зараз теж `deleteMany`).
+- [x] **Миттєвий розрив WS** при revoke: після коміту транзакції
       `namespace.to(userRoom(tenantId, userId)).disconnectSockets(true)` через
       `RealtimeEmitter` (додати метод `disconnectUser(tenantId, userId)`). Adapter
       (Valkey) сам рознесе це по всіх нодах. Межа чесна: REST через ще живий
       access-токен працює до 15 хв — так і написано в UI.
-- [ ] Cron `apps/worker/src/subscribers/cleanup-expired-tokens.subscriber.ts`:
+- [x] Cron `apps/worker/src/subscribers/cleanup-expired-tokens.subscriber.ts`:
       перевести на `auth_sessions`, видаляти рядки, де
       `revoked_at < now() - 30d` OR `absolute_expires_at < now() - 30d`
       (30 днів «мертвого» зберігання — щоб список пристроїв міг показати історію
@@ -462,7 +462,7 @@ model AuthSession {
 
 ## 2.4. Контракти й ендпоінти
 
-- [ ] `libs/contracts/src/account/account.schema.ts`:
+- [x] `libs/contracts/src/account/account.schema.ts`:
       `ts
   AuthSessionResponseSchema = {
     id, deviceLabel, userAgent, ip, isCurrent,
@@ -471,64 +471,64 @@ model AuthSession {
   `
       `revokedAt`/`revokedReason` у відповідь **не** віддаємо: список показує активні
       сесії, мертві — це forensics в БД, не UI.
-- [ ] `GET /account/sessions` → `AuthSessionResponse[]` (тільки живі, найсвіжіші зверху,
+- [x] `GET /account/sessions` → `AuthSessionResponse[]` (тільки живі, найсвіжіші зверху,
       поточна першою).
-- [ ] `DELETE /account/sessions/:id` → 204. Чужий/неіснуючий `id` → **404**, не 403
+- [x] `DELETE /account/sessions/:id` → 204. Чужий/неіснуючий `id` → **404**, не 403
       (не даємо оракул «чи існує така сесія»). Вбити поточну сесію дозволено — це
       просто logout з іншого боку.
-- [ ] `POST /account/sessions/revoke-all` лишається як є (повертає свіжу пару).
-- [ ] Мапер `apps/api/src/account/account.mapper.ts` — `tokenHash`/`prevTokenHash`
+- [x] `POST /account/sessions/revoke-all` лишається як є (повертає свіжу пару).
+- [x] Мапер `apps/api/src/account/account.mapper.ts` — `tokenHash`/`prevTokenHash`
       не існують у відповіді за побудовою (явний мапінг, не спред).
-- [ ] `pnpm openapi:generate && pnpm web:codegen`
+- [x] `pnpm openapi:generate && pnpm web:codegen`
 
 ## 2.5. Активності й сповіщення
 
-- [ ] `libs/contracts/src/notification/notification.schema.ts`: - `auth.new_device` — «вхід із нового пристрою» (категорія `security`,
+- [x] `libs/contracts/src/notification/notification.schema.ts`: - `auth.new_device` — «вхід із нового пристрою» (категорія `security`,
       `muteable: false`, payload `{ deviceLabel, ip }`); - `auth.session_reuse_detected` — «сесію завершено з міркувань безпеки»
       (категорія `security`, `muteable: false`).
-- [ ] «Новий пристрій» визначаємо як «немає ЖИВОЇ сесії цього юзера з таким
+- [x] «Новий пристрій» визначаємо як «немає ЖИВОЇ сесії цього юзера з таким
       `deviceLabel`». Не fingerprint, не IP-мережа — просто і чесно; хибні
       спрацювання (перевстановив браузер) дешеві, пропуски — дорогі.
-- [ ] `libs/contracts/src/activity/activity.schema.ts`: `user.sessions_revoked` —
+- [x] `libs/contracts/src/activity/activity.schema.ts`: `user.sessions_revoked` —
       payload += опційний `reason`. Нових типів активності **не додаємо** (див. §1.5).
-- [ ] Тексти в `libs/i18n/src/locales/en/notifications.json`.
+- [x] Тексти в `libs/i18n/src/locales/en/notifications.json`.
 
 ## 2.6. Фронт (`apps/web`)
 
-- [ ] `apps/web/src/pages/user-settings/security.tsx` — секція `SessionsSection`
+- [x] `apps/web/src/pages/user-settings/security.tsx` — секція `SessionsSection`
       замість абзацу-пояснення: список пристроїв (`Item*` з `libs/ui`, **не** кустарна
       розмітка), рядок = `deviceLabel` · IP · відносний час `lastUsedAt`, бейдж
       «This device» для `isCurrent`, кнопка revoke на кожному + «Sign out everywhere» знизу.
-- [ ] Видалення поточної сесії → `clearSession()` + редірект на `/login`
+- [x] Видалення поточної сесії → `clearSession()` + редірект на `/login`
       (сервер уже нічого не поверне).
-- [ ] Порожнього стану не буває (сесія, з якої дивишся, завжди є) — не вигадувати `Empty`.
-- [ ] Інвалідація списку після кожної дії; тости успіху/помилки.
-- [ ] Рядки — `apps/web/src/locales/en/user-settings.json`; відносний час — наявний
+- [x] Порожнього стану не буває (сесія, з якої дивишся, завжди є) — не вигадувати `Empty`.
+- [x] Інвалідація списку після кожної дії; тости успіху/помилки.
+- [x] Рядки — `apps/web/src/locales/en/user-settings.json`; відносний час — наявний
       хелпер форматування з `libs/ui/src/lib/format`.
-- [ ] Оновити підпис про «до 15 хвилин»: тепер WS рветься миттєво, REST — до спливання
+- [x] Оновити підпис про «до 15 хвилин»: тепер WS рветься миттєво, REST — до спливання
       access-токена. Текст має описувати рівно це.
 
 ## 2.7. Тести — новий `apps/api/test/auth-sessions.e2e-spec.ts`
 
-- [ ] Логін створює рівно один рядок `auth_sessions` із заповненими UA/IP/deviceLabel.
-- [ ] Ротація зберігає **той самий** `sid` і інкрементує `generation`.
-- [ ] Ротація посуває `idle_expires_at` і **не чіпає** `absolute_expires_at`.
-- [ ] Сесія з `absolute_expires_at` у минулому → 401, навіть якщо секрет вірний.
-- [ ] **Reuse у вікні:** старий токен одразу після ротації → 200 (гонка).
-- [ ] **Reuse поза вікном:** `prev_rotated_at` зсунуто в минуле → 401 + `revoked_reason
+- [x] Логін створює рівно один рядок `auth_sessions` із заповненими UA/IP/deviceLabel.
+- [x] Ротація зберігає **той самий** `sid` і інкрементує `generation`.
+- [x] Ротація посуває `idle_expires_at` і **не чіпає** `absolute_expires_at`.
+- [x] Сесія з `absolute_expires_at` у минулому → 401, навіть якщо секрет вірний.
+- [x] **Reuse у вікні:** старий токен одразу після ротації → 200 (гонка).
+- [x] **Reuse поза вікном:** `prev_rotated_at` зсунуто в минуле → 401 + `revoked_reason
   = 'rotation_reuse'` + сповіщення в інбоксі юзера.
-- [ ] Reuse вбиває ТІЛЬКИ свою сесію — друга сесія того ж юзера жива.
-- [ ] Чужий секрет при живому `sid` → 401 + `revoked_reason = 'secret_mismatch'`.
-- [ ] `GET /account/sessions` показує обидві сесії; `isCurrent` — рівно в тієї, чий
+- [x] Reuse вбиває ТІЛЬКИ свою сесію — друга сесія того ж юзера жива.
+- [x] Чужий секрет при живому `sid` → 401 + `revoked_reason = 'secret_mismatch'`.
+- [x] `GET /account/sessions` показує обидві сесії; `isCurrent` — рівно в тієї, чий
       access-токен пред'явлено.
-- [ ] `DELETE /account/sessions/:id` чужої сесії (інший юзер) → 404, рядок живий.
-- [ ] Зміна пароля / revoke-all ставлять `revoked_at` усім, але поточний пристрій
+- [x] `DELETE /account/sessions/:id` чужої сесії (інший юзер) → 404, рядок живий.
+- [x] Зміна пароля / revoke-all ставлять `revoked_at` усім, але поточний пристрій
       отримує робочу нову пару.
-- [ ] Міграційний шлях: рядок із `argon2:`-префіксом верифікується і після ротації
+- [x] Міграційний шлях: рядок із `argon2:`-префіксом верифікується і після ротації
       стає `sha256:` (зібрати хеш у тесті вручну).
-- [ ] RLS: сесія юзера тенанта B не видима під контекстом A (`rls.e2e-spec` авточек
+- [x] RLS: сесія юзера тенанта B не видима під контекстом A (`rls.e2e-spec` авточек
       `pg_policies` підхопить таблицю сам, але явний тест ізоляції теж потрібен).
-- [ ] Оновити наявні сьюти, що чіпають `refresh_tokens` напряму
+- [x] Оновити наявні сьюти, що чіпають `refresh_tokens` напряму
       (`auth.e2e-spec.ts`, `account.e2e-spec.ts`, `users.e2e-spec.ts`) — прямі
       prisma-доступи тестів ідуть через `SystemPrismaService` (BYPASSRLS).
 
@@ -547,15 +547,19 @@ model AuthSession {
 
 ## 2.9. DoD заходу 2
 
-- [ ] Усі чекбокси §2.2–§2.7
-- [ ] `pnpm lint && pnpm typecheck && pnpm build` чисті; `openapi.json` і orval-артефакти закомічені
-- [ ] `pnpm api:test:e2e` зелений (очікувано ~+14 тестів)
-- [ ] Живий прогін: два браузери (звичайний + інкогніто) → у списку дві сесії →
-      вбити чужу з першого → другий отримує розрив сокета негайно і 401 на
-      наступному refresh → у першого лишилась одна сесія
-- [ ] Живий прогін міграції: `pnpm db:reset` + логін + `pnpm db:migrate:deploy` на БД
-      зі старими рядками (перевірити, що сесія пережила)
-- [ ] Оновити «Табло» і §8
+- [x] Усі чекбокси §2.2–§2.7
+- [x] `pnpm lint && pnpm typecheck && pnpm build` чисті; `openapi.json` і orval-артефакти закомічені
+- [x] `pnpm api:test:e2e` зелений (очікувано ~+14 тестів)
+- [~] Живий прогін: два «браузери» (два різні `User-Agent` через curl) → у списку дві
+      сесії з правильним `isCurrent` → вбити чужу з першого → її refresh 401, сусідня
+      жива, чужий id → 404. Розрив сокета перевірено e2e (`realtime.e2e-spec.ts`,
+      справжній socket.io-клієнт), а НЕ в живому браузері — §8
+- [~] Живий прогін міграції на БД зі СТАРИМИ рядками не робився: dev-БД на момент
+      міграції мала нуль `refresh_tokens`, тож `INSERT … SELECT` перенiс нуль рядків.
+      Перевірено інакше: всі 16 міграцій лягли на ЧИСТУ базу (throwaway `saas_migrcheck`,
+      21 таблиця + політика `tenant_isolation` на `auth_sessions`), а `argon2:`-шлях
+      верифікації і перезапис на `sha256:` покрито e2e — §8
+- [x] Оновити «Табло» і §8
 
 ---
 
@@ -916,6 +920,14 @@ union нормально; якщо ні — розділити на два respo
 | 2026-09-13 | 1     | Нестабільність e2e, НЕ пов'язана із заходом: до змін повний прогін дав 205/206 (`numbering`), після — поодиноке падіння випадкового сьюту (`numbering`/`notifications`), кожен окремо зелений; три повні прогони поспіль — 221/221. Фронт: 429 — глобальний тост, форма його не показує під полями                                                              |
 | 2026-09-13 | 1     | **Виправлено після `/speckit-analyze`** (plan D-10): загальна стеля `default` рахувалась на IP для ВСІХ роутів — офіс за одним NAT ділив би 120/хв на всіх, SPA кожного впирався б у 429. Тепер трекер — `user:<sub>` (throttler стоїть після `JwtAuthGuard`), на IP — лише анонімні запити; e2e «general ceiling». `THROTTLER_STORAGE_TIMEOUT_MS` прибрано з env — константа 200 мс (D-15) |
 | 2026-09-13 | —     | `/speckit-analyze` змінив дизайн наступних заходів (plan D-11…D-15): токен одноразового посилання в payload події — лише зашифрований (`CryptoService` переїжджає з заходу 5 у захід 4, `ENCRYPTION_KEY` потрібен api і worker); realtime рветься на рівні сесії (`sessionRoom`), тенант емітер бере з CLS; сторінка підтвердження email — публічна `/confirm-email`; `sessions_revoked` лише для самостійних завершень; TTL-и і стеля спроб — константи |
+| 2026-09-13 | 2     | **AUTH-1 зроблено.** `refresh_tokens` → `auth_sessions`: `id` стабільний і став `sid` у JWT, ротація — умовний `updateMany` по `tokenHash` (оптимістичне блокування замість `FOR UPDATE`), хеш секрету — `sha256:` (256 біт ентропії не треба розтягувати argon2 на кожному refresh), перенесені рядки живуть під префіксом `argon2:` і переписуються першою ж ротацією |
+| 2026-09-13 | 2     | **Порядок у міграції виправлено руками**: Prisma згенерувала `DROP TABLE refresh_tokens` ПЕРЕД `CREATE TABLE auth_sessions` — тобто мовчазне розлогінення всіх. У файлі порядок CREATE → `INSERT … SELECT` → RLS → DROP |
+| 2026-09-13 | 2     | `AccessTokenService` відхиляє токен БЕЗ `sid` (виданий до переходу). Розлогінення це не спричиняє — refresh-токени пережили міграцію, і перший 401 клієнт закриває мовчазним refresh-ом; без цього не було б ні `isCurrent`, ні точкового розриву сокета |
+| 2026-09-13 | 2     | Реалізовано в парі з планом: `disconnectSession(sid)` рве рівно один пристрій, `disconnectUser` — усі; тенант обидва беруть із CLS (D-12). `auth.update.v1` `sid` НЕ звіряє і ПЕРЕВОДИТЬ сокет у room нової сесії — інакше після зміни пароля вкладка лишалась би в room-і мертвої сесії |
+| 2026-09-13 | 2     | Побічний ефект, спійманий сусідніми сьютами: `auth.new_device` пише рядок в інбокс на КОЖЕН логін, і 15 тестів (`notifications`, `calendar`, `realtime`) рахували «в інбоксі рівно один елемент». Прибирання цього типу додано в login-хелпери тих сьютів — сповіщення правильне, просто не їхній предмет |
+| 2026-09-13 | 2     | Тест «theft detection вбиває ВСІ токени юзера» переписано: тепер невідомий секрет відкликає ТІЛЬКИ свою сесію (`secret_mismatch`), а стару поведінку вмикає `AUTH_REUSE_REVOKES_ALL_SESSIONS=true`. `auth.e2e-spec` «old token after rotation → 401» теж змінився: у 60-секундному вікні старий токен дає 200 (гонка вкладок), 401 — лише після закриття вікна |
+| 2026-09-13 | 2     | `JWT_REFRESH_EXPIRES_DAYS` прибрано звідусіль (env-приклади, `deploy.env`, stack-compose) — його замінили `AUTH_SESSION_IDLE_DAYS`/`AUTH_SESSION_ABSOLUTE_DAYS` |
+| 2026-09-13 | 2     | **Не зроблено (перенесено):** живий прогін у браузері і 1.10 (дві репліки api :3001/:3011 проти однієї Valkey); прогін міграції на БД зі старими рядками — dev-БД мала нуль `refresh_tokens`. Замість них: e2e зі справжнім socket.io-клієнтом, `argon2:`-шлях в e2e і накат усіх міграцій на чисту throwaway-базу. E2E: 203 → **245** tenant + 16 platform |
 
 ---
 

@@ -76,7 +76,7 @@ describe('Calendar API (e2e)', () => {
     await prisma.activity.deleteMany();
     await prisma.notification.deleteMany();
     await prisma.notificationState.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
     // Секція calendar живе в settings JSON — скидаємо, щоб тести не залежали
     // від того, що лишив попередній
@@ -101,6 +101,9 @@ describe('Calendar API (e2e)', () => {
       name: `Cal ${suffix}`,
       role,
     });
+    // AUTH-1: логін кладе в інбокс security-сповіщення `auth.new_device`; сьют
+    // рахує сповіщення ПРО ПОДІЇ, тож чужий рядок тут лише зашумив би лічильник
+    await prisma.notification.deleteMany({ where: { type: 'auth.new_device' } });
     return { headers: { Authorization: `Bearer ${tokens.accessToken}` }, id: user.id, email };
   };
 

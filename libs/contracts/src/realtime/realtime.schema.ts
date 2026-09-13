@@ -29,6 +29,17 @@ export const userRoom = (tenantId: string, userId: string): string =>
   `tenant:${tenantId}:user:${userId}`;
 
 /**
+ * AUTH-1: room однієї СЕСІЇ-пристрою. Потрібен рівно для однієї операції —
+ * «завершити цю сесію» мусить порвати socket саме того пристрою, лишивши живими
+ * інші вкладки того самого юзера. Через `userRoom` це нерозв'язне: він не
+ * розрізняє пристрої за побудовою.
+ *
+ * `sid` — id рядка `auth_sessions`, він же claim у access-токені.
+ */
+export const sessionRoom = (tenantId: string, sid: string): string =>
+  `tenant:${tenantId}:session:${sid}`;
+
+/**
  * Ключі Redis Streams-адаптера. Теж протокол: `apps/api` і `apps/worker` мусять
  * писати В ОДИН стрім, інакше емісія з воркера просто нікуди не доїде — тихо,
  * без жодної помилки. Тому імена рахуються тут, а не складаються рядками на місці.

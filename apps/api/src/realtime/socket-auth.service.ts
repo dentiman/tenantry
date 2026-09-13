@@ -39,6 +39,12 @@ export class SocketAuthService {
    * ту саму сесію. Новий токен з іншим `sub`, `tenantId` або `role` — це вже інша
    * identity: сокет уже сидить у room-ах старої, а права могли змінитись, тому
    * перевипуск робиться через новий handshake, а не підміною на льоту.
+   *
+   * `sid` СВІДОМО не звіряється (research R-11). Вкладка може принести токен іншої
+   * сесії цілком легально — наприклад, після зміни пароля або «вийти звідусіль»,
+   * коли сервер сам видав їй нову пару. Рвати за це зʼєднання означало б карати
+   * юзера за дію, яку він щойно зробив навмисно; замість цього гейтвей просто
+   * переводить сокет у room нової сесії.
    */
   async reauthenticate(socket: TenantSocket, token: string): Promise<RealtimeSocketData> {
     const payload = await this.verify(token);
@@ -98,6 +104,7 @@ export class SocketAuthService {
       userId: payload.sub,
       tenantId: payload.tenantId,
       role: payload.role,
+      sid: payload.sid,
       expiresAtMs: payload.exp * 1000,
     };
   }

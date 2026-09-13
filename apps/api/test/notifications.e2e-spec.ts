@@ -55,7 +55,7 @@ describe('Notifications API (e2e)', () => {
     await prisma.notificationPreference.deleteMany();
     await prisma.activityLink.deleteMany();
     await prisma.activity.deleteMany();
-    await prisma.refreshToken.deleteMany();
+    await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
   });
 
@@ -75,6 +75,10 @@ describe('Notifications API (e2e)', () => {
       name: `Admin ${suffix}`,
       role: 'ADMIN',
     });
+    // AUTH-1: кожен логін кладе в інбокс security-сповіщення `auth.new_device`.
+    // Воно правильне, але предмет цього сьюту — fan-out, колапс і лічильники;
+    // без цього рядка перевірки «в інбоксі рівно один елемент» перевіряли б auth
+    await prisma.notification.deleteMany({ where: { type: 'auth.new_device' } });
     return { user, headers: { Authorization: `Bearer ${tokens.accessToken}` } };
   };
 
@@ -138,6 +142,8 @@ describe('Notifications API (e2e)', () => {
         password: 'SecurePass123',
         role: 'USER',
       });
+      // Той самий прибиральник, що в loginAdmin: логін не є предметом цього сьюту
+      await prisma.notification.deleteMany({ where: { type: 'auth.new_device' } });
 
       await createUserViaApi(author.headers, suffix);
 

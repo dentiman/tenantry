@@ -32,7 +32,7 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await prisma.refreshToken.deleteMany({});
+    await prisma.authSession.deleteMany({});
     await prisma.user.deleteMany({});
   });
 
@@ -200,18 +200,31 @@ describe('Auth (e2e)', () => {
       expect(response.body.refreshToken).not.toBe(refreshToken);
     });
 
-    it('should invalidate old refresh token after rotation', async () => {
+    it('should invalidate the old refresh token once the rotation window closes', async () => {
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken })
         .expect(200);
 
-      const response = await request(app.getHttpServer())
+      // AUTH-1: одразу після ротації старий токен ще приймається — це вікно (60 с)
+      // існує рівно для того, щоб гонка двох вкладок не виглядала як крадіжка.
+      // Деталі поведінки — auth-sessions.e2e-spec.ts
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken })
+        .expect(200);
+
+      // Зсуваємо момент ротації в минуле — вікно зачинене, це вже reuse
+      const sid = refreshToken.split(':')[1] ?? '';
+      await prisma.authSession.update({
+        where: { id: sid },
+        data: { prevRotatedAt: new Date(Date.now() - 2 * 60 * 1000) },
+      });
+
+      await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken })
         .expect(401);
-
-      expect(response.body.message).toBe('Invalid or expired refresh token');
     });
 
     it('should return 401 for invalid refresh token format', async () => {
@@ -252,42 +265,31 @@ describe('Auth (e2e)', () => {
         .expect(401);
     });
 
-    it('should revoke all tokens on theft detection (tampered secret)', async () => {
-      // Інший юзер — щоб у БД було кілька токенів
+    it('should revoke the session (and only it) when the secret does not match', async () => {
+      // Інший юзер — щоб переконатись, що чужі сесії не зачепило
       await createAndLoginTestUser(app, prisma, {
         email: 'otheruser@example.com',
         password: 'OtherPass123',
       });
 
-      const tokensCountBefore = await prisma.refreshToken.count({
-        where: { user: { email: 'refreshuser@example.com' } },
-      });
-
-      expect(tokensCountBefore).toBe(1);
-
-      // Tamper with the secret part of the token (simulate token theft/modification)
-      const [tenantId, tokenId] = refreshToken.split(':');
-      const tamperedToken = `${tenantId}:${tokenId}:${'f'.repeat(64)}`;
-
-      // Attempt to use tampered token - should trigger theft detection
+      // Підмінений секрет при живому sid
+      const [tenantId, sid] = refreshToken.split(':');
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
-        .send({ refreshToken: tamperedToken })
+        .send({ refreshToken: `${tenantId}:${sid}:${'f'.repeat(64)}` })
         .expect(401);
 
-      // All tokens for this user should be revoked due to theft detection
-      const tokensAfterTheft = await prisma.refreshToken.count({
-        where: { user: { email: 'refreshuser@example.com' } },
-      });
+      // AUTH-1: сесія відкликана, а НЕ видалена — рядок лишається слідом інциденту
+      const session = await prisma.authSession.findUnique({ where: { id: sid } });
+      expect(session?.revokedReason).toBe('secret_mismatch');
+      expect(session?.revokedAt).not.toBeNull();
 
-      expect(tokensAfterTheft).toBe(0);
-
-      // Other user's tokens should remain intact
-      const otherUserTokens = await prisma.refreshToken.count({
-        where: { user: { email: 'otheruser@example.com' } },
-      });
-
-      expect(otherUserTokens).toBe(1);
+      // Чужий юзер не постраждав
+      expect(
+        await prisma.authSession.count({
+          where: { user: { email: 'otheruser@example.com' }, revokedAt: null },
+        }),
+      ).toBe(1);
     });
   });
 

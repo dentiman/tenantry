@@ -18,6 +18,7 @@ export * from './authResponseDtoOutputTokens';
 export * from './authResponseDtoOutputUser';
 export * from './authResponseDtoOutputUserLocale';
 export * from './authResponseDtoOutputUserRole';
+export * from './authSessionResponseDtoOutput';
 export * from './authTokensDtoOutput';
 export * from './calendarAgendaKind';
 export * from './calendarAgendaParams';

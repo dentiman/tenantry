@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { AuthUpdateSchema, REALTIME_EVENTS, TENANT_NAMESPACE } from '@saas-skeleton/contracts';
 import type { AuthUpdateResult } from '@saas-skeleton/contracts';
-import { AUTH_EXPIRY_WARNING_MS, tenantRoom, userRoom } from './realtime.constants';
+import { AUTH_EXPIRY_WARNING_MS, sessionRoom, tenantRoom, userRoom } from './realtime.constants';
 import { RealtimeAuthError, toHandshakeError } from './realtime.errors';
 import { RealtimeEmitter } from './realtime.emitter';
 import { SocketAuthService } from './socket-auth.service';
@@ -81,10 +81,10 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
   }
 
   async handleConnection(socket: TenantSocket): Promise<void> {
-    const { tenantId, userId } = socket.data;
+    const { tenantId, userId, sid } = socket.data;
 
     // Клієнт НІКОЛИ не називає room сам — лише сервер із перевіреного payload-у
-    await socket.join([tenantRoom(tenantId), userRoom(tenantId, userId)]);
+    await socket.join([tenantRoom(tenantId), userRoom(tenantId, userId), sessionRoom(tenantId, sid)]);
     this.scheduleAuthTimers(socket);
 
     // disconnect слухаємо самі, а не через OnGatewayDisconnect: Nest-івський хук
@@ -138,7 +138,19 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
     }
 
     try {
+      const previousSid = socket.data.sid;
       socket.data = await this.socketAuth.reauthenticate(socket, parsed.data.accessToken);
+
+      // AUTH-1: токен міг приїхати від ІНШОЇ сесії того ж юзера (зміна пароля,
+      // «вийти звідусіль» — сервер сам віддав вкладці нову пару). Переводимо сокет
+      // у room нової сесії, інакше він лишився б у room-і вже мертвої: наступний
+      // revoke нової сесії його б не порвав, а revoke старої — порвав би дарма
+      if (socket.data.sid !== previousSid) {
+        const { tenantId, sid } = socket.data;
+        await socket.leave(sessionRoom(tenantId, previousSid));
+        await socket.join(sessionRoom(tenantId, sid));
+      }
+
       this.scheduleAuthTimers(socket);
       return { status: 'accepted', expiresAt: new Date(socket.data.expiresAtMs).toISOString() };
     } catch (error) {

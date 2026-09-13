@@ -417,6 +417,9 @@ describe('Realtime gateway + presence (e2e)', () => {
         password: 'Password123',
         role: 'ADMIN',
       });
+      // AUTH-1: логін лишає security-рядок `auth.new_device` — він зсунув би
+      // unreadCount, який тут перевіряється як «рівно одне нове сповіщення»
+      await sysPrisma.notification.deleteMany({ where: { type: 'auth.new_device' } });
 
       // Дві вкладки того самого юзера — обидві мають отримати подію
       const tabA = await connect(observer.tokens.accessToken);
@@ -467,6 +470,7 @@ describe('Realtime gateway + presence (e2e)', () => {
         password: 'Password123',
         role: 'ADMIN',
       });
+      await sysPrisma.notification.deleteMany({ where: { type: 'auth.new_device' } });
       const notification = await sysPrisma.notification.create({
         data: {
           tenantId: DEFAULT_TENANT_ID,
@@ -732,6 +736,116 @@ describe('Realtime gateway + presence (e2e)', () => {
       // Room-и мають tenant-префікс, тому однакові id юзерів у різних тенантах
       // не можуть перетнутись (docs/realtime-internals.md § «Room-и»)
       expect(foreignSeen).toHaveLength(0);
+    });
+  });
+
+  /**
+   * AUTH-1. Головне тут — РІЗНИЦЯ між двома розривами: завершення однієї сесії рве
+   * рівно її сокет, а «вийти звідусіль» — усі. Саме заради цієї різниці сокет і
+   * сидить у room-і свого `sid`, а не тільки в особистому room-і юзера.
+   */
+  describe('розрив зʼєднань відкликаної сесії', () => {
+    /** Резолвиться, щойно сервер закрив зʼєднання */
+    const waitForDisconnect = (socket: ClientSocket, timeoutMs = 3000): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('socket was not disconnected in time'));
+        }, timeoutMs);
+        socket.on('disconnect', (reason: string) => {
+          clearTimeout(timer);
+          resolve(reason);
+        });
+      });
+
+    it('DELETE сесії рве САМЕ її сокет, інші вкладки юзера лишаються', async () => {
+      const email = uniqueEmail('rt-revoke-one');
+      const first = await createAndLoginTestUser(app, sysPrisma, { email, password: 'Password123' });
+      const second = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: 'Password123' })
+        .expect(200);
+      const secondTokens = (second.body as { tokens: { accessToken: string; refreshToken: string } })
+        .tokens;
+
+      const firstSocket = await connect(first.tokens.accessToken);
+      const secondSocket = await connect(secondTokens.accessToken);
+      await sleep(150);
+
+      const secondSid = secondTokens.refreshToken.split(':')[1] ?? '';
+      const closed = waitForDisconnect(secondSocket);
+
+      await request(app.getHttpServer())
+        .delete(`/api/account/sessions/${secondSid}`)
+        .set('Authorization', `Bearer ${first.tokens.accessToken}`)
+        .expect(204);
+
+      await expect(closed).resolves.toEqual(expect.any(String));
+      expect(firstSocket.connected).toBe(true);
+    });
+
+    it('revoke-all рве всі сокети юзера', async () => {
+      const email = uniqueEmail('rt-revoke-all');
+      const owner = await createAndLoginTestUser(app, sysPrisma, { email, password: 'Password123' });
+      const other = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: 'Password123' })
+        .expect(200);
+
+      const socketA = await connect(owner.tokens.accessToken);
+      const socketB = await connect(
+        (other.body as { tokens: { accessToken: string } }).tokens.accessToken,
+      );
+      await sleep(150);
+
+      const closedA = waitForDisconnect(socketA);
+      const closedB = waitForDisconnect(socketB);
+
+      await request(app.getHttpServer())
+        .post('/api/account/sessions/revoke-all')
+        .set('Authorization', `Bearer ${owner.tokens.accessToken}`)
+        .expect(200);
+
+      await expect(Promise.all([closedA, closedB])).resolves.toHaveLength(2);
+    });
+
+    it('auth.update.v1 з токеном ІНШОЇ сесії не рве сокет, а переводить його в новий room', async () => {
+      const email = uniqueEmail('rt-auth-update');
+      const owner = await createAndLoginTestUser(app, sysPrisma, { email, password: 'Password123' });
+
+      const socket = await connect(owner.tokens.accessToken);
+      await sleep(150);
+
+      // Нова сесія того ж юзера — інший sid, та сама identity
+      const second = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: 'Password123' })
+        .expect(200);
+      const secondTokens = (second.body as { tokens: { accessToken: string; refreshToken: string } })
+        .tokens;
+
+      const ack = await socket
+        .timeout(3000)
+        .emitWithAck(REALTIME_EVENTS.authUpdate, { accessToken: secondTokens.accessToken });
+      expect(ack).toMatchObject({ status: 'accepted' });
+      expect(socket.connected).toBe(true);
+
+      // Стара сесія вже не «його»: її відкликання сокет не чіпає
+      const firstSid = owner.tokens.refreshToken.split(':')[1] ?? '';
+      await request(app.getHttpServer())
+        .delete(`/api/account/sessions/${firstSid}`)
+        .set('Authorization', `Bearer ${secondTokens.accessToken}`)
+        .expect(204);
+      await sleep(250);
+      expect(socket.connected).toBe(true);
+
+      // А відкликання НОВОЇ — рве: сокет переїхав саме в її room
+      const closed = waitForDisconnect(socket);
+      const secondSid = secondTokens.refreshToken.split(':')[1] ?? '';
+      await request(app.getHttpServer())
+        .delete(`/api/account/sessions/${secondSid}`)
+        .set('Authorization', `Bearer ${secondTokens.accessToken}`)
+        .expect(204);
+      await expect(closed).resolves.toEqual(expect.any(String));
     });
   });
 });

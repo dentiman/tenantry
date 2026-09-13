@@ -7,6 +7,7 @@ import { LogoutDto } from './dto/logout.dto';
 import { AuthResponseDto, AuthTokensDto, MeResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
 import { RATE_LIMITS, RateLimit } from '../common/throttler/rate-limit.decorator';
+import { ClientContext, type ClientContextData } from '../common/client-context.decorator';
 import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
 import { toAuthResponse, toMeResponse } from './auth.mapper';
 import type { AuthResponse, AuthTokens, MeResponse } from '@saas-skeleton/contracts';
@@ -25,8 +26,11 @@ export class AuthController {
   @RateLimit(RATE_LIMITS.login, RATE_LIMITS.loginIp)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto.Output })
-  async login(@Body() dto: LoginDto): Promise<AuthResponse> {
-    const { user, tokens } = await this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @ClientContext() client: ClientContextData,
+  ): Promise<AuthResponse> {
+    const { user, tokens } = await this.authService.login(dto, client);
     return toAuthResponse(user, tokens);
   }
 
@@ -35,8 +39,11 @@ export class AuthController {
   @RateLimit(RATE_LIMITS.refresh)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
-  async refresh(@Body() dto: RefreshDto): Promise<AuthTokens> {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(
+    @Body() dto: RefreshDto,
+    @ClientContext() client: ClientContextData,
+  ): Promise<AuthTokens> {
+    return this.authService.refresh(dto.refreshToken, client);
   }
 
   /**
