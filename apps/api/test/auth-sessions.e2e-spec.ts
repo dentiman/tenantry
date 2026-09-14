@@ -13,7 +13,12 @@ import * as argon2 from 'argon2';
 import { SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { createAndLoginTestUser, loginTestUser, DEFAULT_TENANT_ID } from './test-users';
+import {
+  createAndLoginTestUser,
+  loginTestUser,
+  refreshTokenFromCookie,
+  DEFAULT_TENANT_ID,
+} from './test-users';
 
 const EMAIL = 'sessions-owner@example.com';
 const PASSWORD = 'SessionsPass12345';
@@ -75,12 +80,12 @@ describe('Auth sessions (e2e)', () => {
     it('логін створює рівно одну сесію з підписом пристрою', async () => {
       await prisma.authSession.deleteMany({});
       const response = await login(CHROME_MAC).expect(200);
-      const issued = (response.body as { tokens: { refreshToken: string } }).tokens;
+      const issuedRefreshToken = refreshTokenFromCookie(response);
 
       const sessions = await prisma.authSession.findMany({ where: { userId } });
       expect(sessions).toHaveLength(1);
       expect(sessions[0]).toMatchObject({
-        id: sid(issued.refreshToken),
+        id: sid(issuedRefreshToken),
         userAgent: CHROME_MAC,
         deviceLabel: 'Chrome on macOS',
         generation: 0,
@@ -96,7 +101,7 @@ describe('Auth sessions (e2e)', () => {
       });
 
       const response = await refresh(tokens.refreshToken).expect(200);
-      const rotated = (response.body as { refreshToken: string }).refreshToken;
+      const rotated = refreshTokenFromCookie(response);
 
       // Той самий пристрій — той самий рядок; це і є вся суть фази
       expect(sid(rotated)).toBe(before.id);
@@ -133,7 +138,7 @@ describe('Auth sessions (e2e)', () => {
   describe('повторне використання токена', () => {
     it('у вікні — це гонка вкладок, а не крадіжка: 200 без стрибка generation', async () => {
       const first = await refresh(tokens.refreshToken).expect(200);
-      expect((first.body as { refreshToken: string }).refreshToken).toBeDefined();
+      expect(refreshTokenFromCookie(first)).toEqual(expect.any(String));
 
       // Той самий (уже ротований) токен одразу після ротації
       await refresh(tokens.refreshToken).expect(200);
@@ -305,7 +310,7 @@ describe('Auth sessions (e2e)', () => {
 
       await refresh(other.refreshToken).expect(401);
       await refresh(tokens.refreshToken).expect(401);
-      await refresh((response.body as { refreshToken: string }).refreshToken).expect(200);
+      await refresh(refreshTokenFromCookie(response)).expect(200);
 
       // Саме відкликані, а не видалені
       const revoked = await prisma.authSession.findMany({

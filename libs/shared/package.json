@@ -9,8 +9,10 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",
     "@aws-sdk/s3-request-presigner": "^3.1086.0",
+    "@nestjs/throttler": "^6.5.0",
     "@saas-skeleton/contracts": "workspace:*",
     "@saas-skeleton/database": "workspace:*",
+    "ioredis": "^5.11.1",
     "nestjs-cls": "^6.2.1",
     "nestjs-zod": "^5.4.0",
     "pg-boss": "^12.26.0",

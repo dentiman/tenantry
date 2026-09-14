@@ -6,7 +6,12 @@ import { configureApp } from '../src/app.setup';
 import { resolveAllowedOrigins } from '../src/config/cors.config';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
 import { SystemPrismaService } from '@saas-skeleton/database';
-import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
+import {
+  createAndLoginTestUser,
+  createTestUser,
+  refreshTokenFromCookie,
+  DEFAULT_TENANT_ID,
+} from './test-users';
 
 // MT-1: POST /auth/register видалено зовсім (рішення 2026-07-16) — юзерів створює
 // tenant-адмін. Setup тестів — прямий create + login (test-users.ts).
@@ -72,16 +77,15 @@ describe('Auth (e2e)', () => {
         },
         tokens: {
           accessToken: expect.any(String),
-          refreshToken: expect.any(String),
         },
       });
 
       expect(response.body.user.id).toBeDefined();
       expect(response.body.tokens.accessToken).toMatch(/^eyJ/);
-      // MT-1: формат refresh-токена — tenantId:tokenId:secret
-      expect(response.body.tokens.refreshToken).toMatch(
-        /^[a-f0-9-]{36}:[a-f0-9-]{36}:[a-f0-9]{64}$/,
-      );
+      // AUTH-2: refresh-токен більше не в тілі — тільки в httpOnly cookie
+      expect(response.body.tokens.refreshToken).toBeUndefined();
+      // MT-1: формат refresh-токена — tenantId:tokenId:secret (перевірено через cookie)
+      expect(refreshTokenFromCookie(response)).toMatch(/^[a-f0-9-]{36}:[a-f0-9-]{36}:[a-f0-9]{64}$/);
     });
 
     it('should login with any email casing (normalized internally)', async () => {
@@ -191,13 +195,12 @@ describe('Auth (e2e)', () => {
         .send({ refreshToken })
         .expect(200);
 
-      expect(response.body).toMatchObject({
-        accessToken: expect.any(String),
-        refreshToken: expect.any(String),
-      });
+      expect(response.body).toMatchObject({ accessToken: expect.any(String) });
+      // AUTH-2: тіло більше не несе refreshToken — нова пара в Set-Cookie
+      expect(response.body.refreshToken).toBeUndefined();
 
       expect(response.body.accessToken).toMatch(/^eyJ/);
-      expect(response.body.refreshToken).not.toBe(refreshToken);
+      expect(refreshTokenFromCookie(response)).not.toBe(refreshToken);
     });
 
     it('should invalidate the old refresh token once the rotation window closes', async () => {
@@ -425,6 +428,121 @@ describe('Auth (e2e)', () => {
       const response = await request(app.getHttpServer()).get('/api/health').expect(200);
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['x-powered-by']).toBeUndefined();
+    });
+  });
+
+  // AUTH-2: refresh у httpOnly cookie (T069-T071, contracts/http-api.md § «Refresh cookie»)
+  describe('AUTH-2: refresh cookie', () => {
+    const findSetCookie = (response: { headers: Record<string, unknown> }): string => {
+      const raw = response.headers['set-cookie'];
+      const cookies = Array.isArray(raw) ? (raw as string[]) : typeof raw === 'string' ? [raw] : [];
+      const cookie = cookies.find((c) => c.startsWith('saas_refresh='));
+      if (!cookie) {
+        throw new Error('saas_refresh cookie not found');
+      }
+      return cookie;
+    };
+
+    beforeEach(async () => {
+      await createTestUser(prisma, {
+        email: 'cookieuser@example.com',
+        password: 'CookiePass123',
+      });
+    });
+
+    it('login sets an HttpOnly, SameSite=Lax cookie scoped to /api/auth; body carries no refreshToken', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'cookieuser@example.com', password: 'CookiePass123' })
+        .expect(200);
+
+      const cookie = findSetCookie(response);
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/SameSite=Lax/i);
+      expect(cookie).toMatch(/Path=\/api\/auth/);
+      // Дефолт COOKIE_SECURE=true (e2e не перевизначає) — Secure у заголовку
+      expect(cookie).toMatch(/Secure/i);
+      expect(response.body.tokens.refreshToken).toBeUndefined();
+    });
+
+    it('refresh without cookie and without body → 401; with cookie → 200 and a new Set-Cookie', async () => {
+      await request(app.getHttpServer()).post('/api/auth/refresh').send({}).expect(401);
+
+      const login = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'cookieuser@example.com', password: 'CookiePass123' })
+        .expect(200);
+      const cookie = findSetCookie(login);
+      const cookieValue = cookie.split(';')[0]!;
+
+      const refreshed = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValue)
+        .send({})
+        .expect(200);
+
+      expect(refreshed.body.accessToken).toMatch(/^eyJ/);
+      const rotatedCookie = findSetCookie(refreshed);
+      expect(rotatedCookie).not.toBe(cookie);
+
+      // Перехідний шлях (§7 плану) — токен у тілі теж досі приймається
+      const rawRefreshToken = refreshTokenFromCookie(login);
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: rawRefreshToken })
+        .expect(200);
+    });
+
+    it('logout clears the cookie (Max-Age=0, same Path) and revokes the session', async () => {
+      const login = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'cookieuser@example.com', password: 'CookiePass123' })
+        .expect(200);
+      const cookieValue = findSetCookie(login).split(';')[0]!;
+      const rawRefreshToken = refreshTokenFromCookie(login);
+
+      const logout = await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', cookieValue)
+        .send({})
+        .expect(204);
+
+      const cleared = findSetCookie(logout);
+      expect(cleared).toMatch(/Max-Age=0/);
+      expect(cleared).toMatch(/Path=\/api\/auth/);
+
+      const sid = rawRefreshToken.split(':')[1] ?? '';
+      const session = await prisma.authSession.findUnique({ where: { id: sid } });
+      expect(session?.revokedReason).toBe('logout');
+    });
+
+    it('rejects a foreign Origin on refresh and logout with 403; a missing Origin passes', async () => {
+      const login = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'cookieuser@example.com', password: 'CookiePass123' })
+        .expect(200);
+      const cookieValue = findSetCookie(login).split(';')[0]!;
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValue)
+        .set('Origin', 'https://evil.example')
+        .send({})
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', cookieValue)
+        .set('Origin', 'https://evil.example')
+        .send({})
+        .expect(403);
+
+      // Без Origin (native-клієнти, curl) — пропуск
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValue)
+        .send({})
+        .expect(200);
     });
   });
 

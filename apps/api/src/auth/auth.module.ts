@@ -8,7 +8,7 @@ import { AuthSessionService } from './auth-session.service';
 import { AccessTokenService } from './access-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { AppThrottlerGuard } from '../common/throttler/app-throttler.guard';
+import { AppThrottlerGuard } from '@saas-skeleton/shared';
 
 @Module({
   imports: [

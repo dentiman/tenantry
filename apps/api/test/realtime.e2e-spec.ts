@@ -29,7 +29,12 @@ import { REDIS_CLIENT } from '../src/redis/redis.constants';
 import type { RealtimeConfig } from '../src/realtime/realtime.config';
 import { PresenceStore } from '../src/realtime/presence/presence.store';
 import { LastSeenWriter } from '../src/realtime/presence/last-seen.writer';
-import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
+import {
+  createAndLoginTestUser,
+  createTestUser,
+  refreshTokenFromCookie,
+  DEFAULT_TENANT_ID,
+} from './test-users';
 
 const TENANT_B_ID = '00000000-0000-4000-8000-000000000042';
 const TENANT_B_SLUG = 'rt-tenant-b';
@@ -764,8 +769,10 @@ describe('Realtime gateway + presence (e2e)', () => {
         .post('/api/auth/login')
         .send({ email, password: 'Password123' })
         .expect(200);
-      const secondTokens = (second.body as { tokens: { accessToken: string; refreshToken: string } })
-        .tokens;
+      const secondTokens = {
+        accessToken: (second.body as { tokens: { accessToken: string } }).tokens.accessToken,
+        refreshToken: refreshTokenFromCookie(second),
+      };
 
       const firstSocket = await connect(first.tokens.accessToken);
       const secondSocket = await connect(secondTokens.accessToken);
@@ -820,8 +827,10 @@ describe('Realtime gateway + presence (e2e)', () => {
         .post('/api/auth/login')
         .send({ email, password: 'Password123' })
         .expect(200);
-      const secondTokens = (second.body as { tokens: { accessToken: string; refreshToken: string } })
-        .tokens;
+      const secondTokens = {
+        accessToken: (second.body as { tokens: { accessToken: string } }).tokens.accessToken,
+        refreshToken: refreshTokenFromCookie(second),
+      };
 
       const ack = await socket
         .timeout(3000)

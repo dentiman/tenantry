@@ -13,7 +13,7 @@ import {
 import { SidebarMenuButton, useSidebar } from '@saas-skeleton/ui/components/ui/sidebar';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { authLogout } from '../api/generated/api';
-import { getStoredRefreshToken, useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../stores/auth.store';
 
 /** Плейсхолдер — версія самого застосунку, `package.json` кореня монорепо */
 const APP_VERSION = '0.0.1';
@@ -67,13 +67,11 @@ function AccountMenu() {
   const { isMobile, setOpenMobile } = useSidebar();
 
   const logout = () => {
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      // Здаємо токен серверу, але НЕ чекаємо на відповідь: вихід не має залежати
-      // від мережі. Викликаємо згенеровану функцію напряму, а не через хук —
-      // помилка тут не подія для юзера, а глобальний MutationCache показав би тост
-      void authLogout({ refreshToken }).catch(() => undefined);
-    }
+    // AUTH-2: токен більше не в localStorage — сервер бере його з httpOnly cookie.
+    // Здаємо його, але НЕ чекаємо на відповідь: вихід не має залежати від мережі.
+    // Викликаємо згенеровану функцію напряму, а не через хук — помилка тут не подія
+    // для юзера, а глобальний MutationCache показав би тост
+    void authLogout({}).catch(() => undefined);
     clearSession();
     void navigate({ to: '/login' });
   };

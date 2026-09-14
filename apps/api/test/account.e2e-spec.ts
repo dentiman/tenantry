@@ -5,7 +5,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
 import { SystemPrismaService } from '@saas-skeleton/database';
-import { createAndLoginTestUser, loginTestUser } from './test-users';
+import { createAndLoginTestUser, loginTestUser, refreshTokenFromCookie } from './test-users';
 
 /**
  * Self-service акаунт (V1 «рівень 0»): профіль, зміна власного пароля, «вийти
@@ -124,7 +124,7 @@ describe('Account (e2e)', () => {
         .send({ currentPassword: PASSWORD, newPassword: 'BrandNewPass123' })
         .expect(200);
 
-      const fresh = response.body as { accessToken: string; refreshToken: string };
+      const fresh = { refreshToken: refreshTokenFromCookie(response) };
       expect(fresh.refreshToken).toEqual(expect.any(String));
 
       // Стара сесія (і та, з якої міняли, і чужа вкладка) більше не оновлюється
@@ -161,7 +161,7 @@ describe('Account (e2e)', () => {
         .set('Authorization', `Bearer ${tokens.accessToken}`)
         .expect(200);
 
-      const fresh = response.body as { refreshToken: string };
+      const fresh = { refreshToken: refreshTokenFromCookie(response) };
 
       await request(app.getHttpServer())
         .post('/api/auth/refresh')

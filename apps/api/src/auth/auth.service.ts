@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Prisma, User as PrismaUser } from '@saas-skeleton/database';
 import { NotificationRecorder, parseUserAgent } from '@saas-skeleton/shared';
-import type { Login, AuthTokens } from '@saas-skeleton/contracts';
+import type { Login } from '@saas-skeleton/contracts';
 
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
@@ -12,6 +12,17 @@ import { AuthSessionService } from './auth-session.service';
 
 // MT-1: self-serve реєстрації немає (рішення 2026-07-16) — юзерів створює tenant-адмін
 // (users-модуль), тенантів — platform-api (MT-3). Тому auth = тільки login/refresh/me.
+
+/**
+ * AUTH-2: суперсет `AuthTokens` — контролер ставить cookie сирим `refreshToken` і
+ * рахує `Max-Age` з `idleExpiresAt`; у тіло відповіді (мапер) з цього йде лише
+ * `accessToken`. `idleExpiresAt` НЕ є частиною wire-контракту.
+ */
+export interface IssuedAuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  idleExpiresAt: Date;
+}
 
 @Injectable()
 export class AuthService {
@@ -28,7 +39,7 @@ export class AuthService {
   async login(
     data: Login,
     client: ClientContextData,
-  ): Promise<{ user: PrismaUser; tokens: AuthTokens }> {
+  ): Promise<{ user: PrismaUser; tokens: IssuedAuthTokens }> {
     this.logger.log(`Login attempt for email: ${data.email}`);
 
     // Пошук у ВЖЕ резолвленому tenant-і (TenantResolutionMiddleware → CLS → RLS з MT-2);
@@ -86,7 +97,7 @@ export class AuthService {
    * сесія, потім акаунт. Деактивованому юзеру однаково прилетить 401, але його
    * токен при цьому вже ротований — тобто вкрадена копія теж стала недійсною.
    */
-  async refresh(refreshToken: string, client: ClientContextData): Promise<AuthTokens> {
+  async refresh(refreshToken: string, client: ClientContextData): Promise<IssuedAuthTokens> {
     const { user, session, refreshToken: rotated } = await this.sessions.verifyAndConsume(
       refreshToken,
       client,
@@ -109,6 +120,7 @@ export class AuthService {
     return {
       accessToken: await this.signAccessToken(user, session.id),
       refreshToken: rotated,
+      idleExpiresAt: session.idleExpiresAt,
     };
   }
 
@@ -143,7 +155,7 @@ export class AuthService {
     user: PrismaUser,
     client: ClientContextData,
     options: { notifyNewDevice?: boolean } = {},
-  ): Promise<AuthTokens> {
+  ): Promise<IssuedAuthTokens> {
     const issued = await this.tenantTx.withTenantTx(async (tx) => {
       // Перевіряємо ДО створення сесії: інакше щойно створений рядок і був би
       // тією «наявною сесією з тим самим пристроєм», і сповіщення не прийшло б ніколи
@@ -161,6 +173,7 @@ export class AuthService {
     return {
       accessToken: await this.signAccessToken(user, issued.session.id),
       refreshToken: issued.refreshToken,
+      idleExpiresAt: issued.session.idleExpiresAt,
     };
   }
 

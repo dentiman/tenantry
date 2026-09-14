@@ -2584,8 +2584,7 @@
               }
             },
             "required": [
-              "accessToken",
-              "refreshToken"
+              "accessToken"
             ],
             "additionalProperties": false
           }
@@ -2603,10 +2602,7 @@
             "type": "string",
             "minLength": 1
           }
-        },
-        "required": [
-          "refreshToken"
-        ]
+        }
       },
       "AuthTokensDto_Output": {
         "type": "object",
@@ -2619,8 +2615,7 @@
           }
         },
         "required": [
-          "accessToken",
-          "refreshToken"
+          "accessToken"
         ],
         "additionalProperties": false
       },
@@ -2631,10 +2626,7 @@
             "type": "string",
             "minLength": 1
           }
-        },
-        "required": [
-          "refreshToken"
-        ]
+        }
       },
       "MeResponseDto_Output": {
         "type": "object",

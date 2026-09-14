@@ -1,15 +1,29 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { AuthResponseDto, AuthTokensDto, MeResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
-import { RATE_LIMITS, RateLimit } from '../common/throttler/rate-limit.decorator';
+import { RATE_LIMITS, RateLimit } from '@saas-skeleton/shared';
 import { ClientContext, type ClientContextData } from '../common/client-context.decorator';
 import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
-import { toAuthResponse, toMeResponse } from './auth.mapper';
+import { toAuthResponse, toAuthTokensResponse, toMeResponse } from './auth.mapper';
+import { OriginGuard } from './guards/origin.guard';
+import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './refresh-cookie';
 import type { AuthResponse, AuthTokens, MeResponse } from '@saas-skeleton/contracts';
 
 @ApiTags('auth')
@@ -29,33 +43,56 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @ClientContext() client: ClientContextData,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
     const { user, tokens } = await this.authService.login(dto, client);
+    setRefreshCookie(res, tokens.refreshToken, tokens.idleExpiresAt);
     return toAuthResponse(user, tokens);
   }
 
   @Public()
+  @UseGuards(OriginGuard)
   @Post('refresh')
   @RateLimit(RATE_LIMITS.refresh)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
   async refresh(
+    @Req() req: Request,
     @Body() dto: RefreshDto,
     @ClientContext() client: ClientContextData,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokens> {
-    return this.authService.refresh(dto.refreshToken, client);
+    // AUTH-2: cookie спочатку, тіло — перехідний шлях (platform-web, старі вкладки),
+    // прибрати після AUTH-4 (§7 плану auth-hardening-plan.md)
+    const token = readRefreshCookie(req) ?? dto.refreshToken;
+    if (!token) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    const tokens = await this.authService.refresh(token, client);
+    setRefreshCookie(res, tokens.refreshToken, tokens.idleExpiresAt);
+    return toAuthTokensResponse(tokens);
   }
 
   /**
    * Вихід: клієнт здає свій refresh-токен, рядок зникає з БД. Публічний і
-   * ідемпотентний (завжди 204) — деталі в AuthService.logout.
+   * ідемпотентний (завжди 204) — деталі в AuthService.logout. AUTH-2: cookie
+   * чиститься ЗАВЖДИ, незалежно від того, чи вдалося розпізнати токен.
    */
   @Public()
+  @UseGuards(OriginGuard)
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  async logout(@Body() dto: LogoutDto): Promise<void> {
-    await this.authService.logout(dto.refreshToken);
+  async logout(
+    @Req() req: Request,
+    @Body() dto: LogoutDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const token = readRefreshCookie(req) ?? dto.refreshToken;
+    if (token) {
+      await this.authService.logout(token);
+    }
+    clearRefreshCookie(res);
   }
 
   @Get('me')

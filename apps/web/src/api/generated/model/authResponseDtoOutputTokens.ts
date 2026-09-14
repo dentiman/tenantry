@@ -8,5 +8,5 @@
 
 export type AuthResponseDtoOutputTokens = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 };
