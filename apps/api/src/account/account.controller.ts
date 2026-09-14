@@ -8,12 +8,15 @@ import {
   Param,
   Patch,
   Post,
+  Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { StorageService } from '@saas-skeleton/shared';
+import type { Response } from 'express';
+import { RATE_LIMITS, RateLimit, StorageService } from '@saas-skeleton/shared';
 import type { AuthSessionResponse, AuthTokens, UserResponse } from '@saas-skeleton/contracts';
 import { AuthTokensDto } from '../auth/dto/auth-response.dto';
-import { RATE_LIMITS, RateLimit } from '../common/throttler/rate-limit.decorator';
+import { toAuthTokensResponse } from '../auth/auth.mapper';
+import { setRefreshCookie } from '../auth/refresh-cookie';
 import { ClientContext, type ClientContextData } from '../common/client-context.decorator';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { UserResponseDto } from '../users/dto/user-response.dto';
@@ -63,12 +66,15 @@ export class AccountController {
   @RateLimit(RATE_LIMITS.accountSensitive)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
-  changePassword(
+  async changePassword(
     @Body() dto: ChangeOwnPasswordDto,
     @CurrentUser() actor: JwtPayload,
     @ClientContext() client: ClientContextData,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokens> {
-    return this.account.changePassword(actor.sub, dto, actor, client);
+    const tokens = await this.account.changePassword(actor.sub, dto, actor, client);
+    setRefreshCookie(res, tokens.refreshToken, tokens.idleExpiresAt);
+    return toAuthTokensResponse(tokens);
   }
 
   /**
@@ -94,10 +100,13 @@ export class AccountController {
   @RateLimit(RATE_LIMITS.accountSensitive)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokensDto.Output })
-  revokeAllSessions(
+  async revokeAllSessions(
     @CurrentUser() actor: JwtPayload,
     @ClientContext() client: ClientContextData,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokens> {
-    return this.account.revokeAllSessions(actor.sub, actor, client);
+    const tokens = await this.account.revokeAllSessions(actor.sub, actor, client);
+    setRefreshCookie(res, tokens.refreshToken, tokens.idleExpiresAt);
+    return toAuthTokensResponse(tokens);
   }
 }

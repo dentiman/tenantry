@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import type { ThrottlerStorage } from '@nestjs/throttler';
 import type { Redis } from 'ioredis';
-import { resolveRedisKeyPrefix } from '../../redis/redis.config';
 
 // Пакет не експортує тип запису з кореня — виводимо з інтерфейсу сховища
 type ThrottlerStorageRecord = Awaited<ReturnType<ThrottlerStorage['increment']>>;
@@ -15,8 +14,9 @@ const PASS_THROUGH: ThrottlerStorageRecord = {
 };
 
 /**
- * Лічильники throttler-а у Valkey (AUTH-0, research R-01). Свідомо без пакета
- * `nestjs-throttler-storage-redis`: ~50 рядків, які ми й так мусимо розуміти.
+ * Лічильники throttler-а у Valkey (AUTH-0, research R-01; переїзд у `libs/shared`
+ * заходом AUTH-2, R-15 — apps/platform-api став другим споживачем). Свідомо без
+ * пакета `nestjs-throttler-storage-redis`: ~50 рядків, які ми й так мусимо розуміти.
  *
  * Fixed window: перший удар створює лічильник із TTL вікна (`SET … PX NX`), решта
  * інкрементують його; блокування триває до кінця того самого вікна. У swarm N реплік
@@ -28,11 +28,13 @@ const PASS_THROUGH: ThrottlerStorageRecord = {
  */
 export class RedisThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger(RedisThrottlerStorage.name);
-  private readonly keyPrefix = `${resolveRedisKeyPrefix()}:throttle`;
 
   constructor(
-    // Клієнт REDIS_THROTTLER_CLIENT — без offline-черги (redis.constants.ts)
+    // Клієнт без offline-черги (кожен процес заводить свій під REDIS_THROTTLER_CLIENT)
     private readonly redis: Redis,
+    // Префікс ключів — свій на процес (`{REALTIME_KEY_PREFIX}:throttle` у api,
+    // те саме в platform-api), щоб два процеси не ділили лічильники випадково
+    private readonly keyPrefix: string,
     private readonly timeoutMs: number,
   ) {}
 

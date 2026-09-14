@@ -21,7 +21,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RedisModule } from './redis/redis.module';
-import { AppThrottlerModule } from './common/throttler/throttler.setup';
+import { AppThrottlerModule } from './common/app-throttler.module';
 import { loggerConfig } from './common/logger';
 import { validateApiEnv } from './config/env.schema';
 

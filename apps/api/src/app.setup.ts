@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { Express } from 'express';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AllExceptionsFilter } from '@saas-skeleton/shared';
@@ -11,7 +12,12 @@ import type { RealtimeConfig } from './realtime/realtime.config';
 import { resolveAllowedOrigins } from './config/cors.config';
 import { resolveTrustProxyHops } from './config/env.schema';
 
-/** Спільний сетап HTTP-шару — використовується в main.ts і e2e-тестах */
+/**
+ * Спільний сетап HTTP-шару — використовується в main.ts і e2e-тестах.
+ * `cookieParser()` живе ТУТ (а не окремо в main.ts) з тієї самої причини, що
+ * helmet/CORS вище: main.ts викликає САМЕ цю функцію, тож e2e (через configureApp
+ * у своєму setup) і бойовий процес завжди бачать один і той самий middleware-стек.
+ */
 export function configureApp(app: INestApplication): void {
   // AUTH-0: мережевий периметр живе ТУТ, а не в main.ts — інакше e2e перевіряли б
   // застосунок без нього (та сама причина, що з WebSocket-адаптером нижче).
@@ -26,6 +32,8 @@ export function configureApp(app: INestApplication): void {
   app.use(helmet({ contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } } }));
   // credentials: true — під refresh-cookie з AUTH-2; allowlist спільний із Socket.IO
   app.enableCors({ origin: resolveAllowedOrigins(), credentials: true });
+  // AUTH-2: refresh-cookie — без цього middleware `req.cookies` не існує
+  app.use(cookieParser());
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());

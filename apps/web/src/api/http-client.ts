@@ -1,8 +1,11 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import type { AuthTokens } from '@saas-skeleton/contracts';
-import { useAuthStore, getStoredRefreshToken } from '../stores/auth.store';
+import { useAuthStore } from '../stores/auth.store';
 
-export const axiosInstance = axios.create({ baseURL: '/' });
+// AUTH-2: withCredentials — без нього браузер не покладе httpOnly refresh-cookie
+// в запит до /api/auth/refresh (same-origin через dev-проксі/nginx, CORS тут не
+// заважає, credentials: true на бекенді покриває нестандартні розгортання)
+export const axiosInstance = axios.create({ baseURL: '/', withCredentials: true });
 
 axiosInstance.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
@@ -14,15 +17,18 @@ axiosInstance.interceptors.request.use((config) => {
 
 let refreshPromise: Promise<AuthTokens> | null = null;
 
-/** Single-flight: паралельні 401 чекають на один спільний refresh */
+/**
+ * Single-flight: паралельні 401 чекають на один спільний refresh. AUTH-2: токен
+ * більше не читається зі сховища — його несе httpOnly cookie, тіло порожнє.
+ */
 export async function refreshTokens(): Promise<AuthTokens> {
   refreshPromise ??= (async () => {
-    const refreshToken = getStoredRefreshToken();
-    if (!refreshToken) {
-      throw new Error('No refresh token');
-    }
     // Сирий axios (без інтерсепторів), щоб 401 від refresh не зациклився
-    const { data } = await axios.post<AuthTokens>('/api/auth/refresh', { refreshToken });
+    const { data } = await axios.post<AuthTokens>(
+      '/api/auth/refresh',
+      {},
+      { withCredentials: true },
+    );
     useAuthStore.getState().setTokens(data);
     return data;
   })().finally(() => {

@@ -76,6 +76,10 @@ export const ApiEnvSchema = z.looseObject({
   AUTH_LOGIN_IP_LIMIT_PER_MINUTE: positiveIntString.optional(),
   AUTH_REFRESH_LIMIT_PER_MINUTE: positiveIntString.optional(),
   ACCOUNT_SENSITIVE_LIMIT_PER_HOUR: positiveIntString.optional(),
+
+  // AUTH-2: refresh у httpOnly cookie. Дефолт true (прод/тестовий https); false —
+  // локалка й тестовий прод по http (.env.example, docker/deploy.env)
+  COOKIE_SECURE: booleanString.optional(),
 });
 
 export type ApiEnv = z.infer<typeof ApiEnvSchema>;
@@ -99,4 +103,12 @@ export function formatIssues(error: z.ZodError): string {
 export function resolveTrustProxyHops(env: NodeJS.ProcessEnv = process.env): number {
   const raw = env.TRUST_PROXY_HOPS;
   return raw === undefined || raw.trim() === '' ? 1 : Number(raw);
+}
+
+/**
+ * AUTH-2: `Secure`-атрибут refresh-cookie. Дефолт `true` (прод/тестовий https);
+ * `.env.example` і `docker/deploy.env` ставлять `false` — тестовий прод живе по http.
+ */
+export function resolveCookieSecure(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.COOKIE_SECURE !== 'false';
 }

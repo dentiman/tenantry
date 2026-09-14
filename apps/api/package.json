@@ -29,6 +29,7 @@
     "@saas-skeleton/shared": "workspace:*",
     "@socket.io/redis-streams-adapter": "^0.3.1",
     "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
     "file-type": "^22.0.1",
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^11.1.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",

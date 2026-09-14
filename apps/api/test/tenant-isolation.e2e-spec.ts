@@ -11,7 +11,12 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { PrismaService, SystemPrismaService, TenantContextService } from '@saas-skeleton/database';
-import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
+import {
+  createAndLoginTestUser,
+  createTestUser,
+  refreshTokenFromCookie,
+  DEFAULT_TENANT_ID,
+} from './test-users';
 
 const TENANT_B_ID = '00000000-0000-4000-8000-000000000002';
 
@@ -196,8 +201,8 @@ describe('Tenant isolation (e2e)', () => {
       Buffer.from(String(login.body.tokens.accessToken).split('.')[1] ?? '', 'base64').toString(),
     ) as { tenantId: string };
     expect(payload.tenantId).toBe(TENANT_B_ID);
-    // refresh-токен несе префікс tenant-а B
-    expect(String(login.body.tokens.refreshToken).startsWith(`${TENANT_B_ID}:`)).toBe(true);
+    // refresh-токен (тепер у cookie, AUTH-2) несе префікс tenant-а B
+    expect(refreshTokenFromCookie(login).startsWith(`${TENANT_B_ID}:`)).toBe(true);
 
     // і бачить ЛИШЕ юзерів свого tenant-а
     const list = await request(app.getHttpServer())

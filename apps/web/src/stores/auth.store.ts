@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 import type { UserResponse, AuthTokens } from '@saas-skeleton/contracts';
 
-const REFRESH_TOKEN_KEY = 'saas_refresh_token';
-
+/**
+ * AUTH-2: refresh-токен більше НІКОЛИ не потрапляє на цей бік — сервер тримає
+ * його в httpOnly cookie (`saas_refresh`, `Path=/api/auth`), недоступній JS.
+ * Стор тримає лише те, що фронту фізично потрібно в пам'яті: юзера і
+ * access-токен (обидва помруть на перезавантаженні — і це навмисно, `initAuth`
+ * відновлює їх через `POST /auth/refresh`, який cookie вже несе сам).
+ */
 interface AuthState {
   user: UserResponse | null;
-  /** Access-токен живе тільки в пам'яті; у localStorage — лише refresh */
   accessToken: string | null;
   setSession: (user: UserResponse, tokens: AuthTokens) => void;
   setTokens: (tokens: AuthTokens) => void;
@@ -17,22 +21,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   accessToken: null,
   setSession: (user, tokens) => {
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
     set({ user, accessToken: tokens.accessToken });
   },
   setTokens: (tokens) => {
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
     set({ accessToken: tokens.accessToken });
   },
   setUser: (user) => {
     set({ user });
   },
   clearSession: () => {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     set({ user: null, accessToken: null });
   },
 }));
-
-export function getStoredRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}

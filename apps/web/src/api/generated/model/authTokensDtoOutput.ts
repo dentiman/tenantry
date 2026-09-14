@@ -8,5 +8,5 @@
 
 export interface AuthTokensDtoOutput {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 }

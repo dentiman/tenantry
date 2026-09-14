@@ -1,5 +1,10 @@
 import type { PlatformUser } from '@saas-skeleton/database';
-import type { PlatformAuthResponse, PlatformUserResponse } from '@saas-skeleton/contracts/platform';
+import type {
+  PlatformAuthResponse,
+  PlatformAuthTokens,
+  PlatformUserResponse,
+} from '@saas-skeleton/contracts/platform';
+import type { IssuedPlatformTokens } from './platform-auth.service';
 
 export function toPlatformUserResponse(user: PlatformUser): PlatformUserResponse {
   return {
@@ -10,9 +15,14 @@ export function toPlatformUserResponse(user: PlatformUser): PlatformUserResponse
   };
 }
 
+// AUTH-2: refresh-токен їде в httpOnly cookie — мапери кладуть лише accessToken
 export function toPlatformAuthResponse(
   user: PlatformUser,
-  accessToken: string,
+  tokens: IssuedPlatformTokens,
 ): PlatformAuthResponse {
-  return { user: toPlatformUserResponse(user), accessToken };
+  return { user: toPlatformUserResponse(user), accessToken: tokens.accessToken };
+}
+
+export function toPlatformAuthTokensResponse(tokens: IssuedPlatformTokens): PlatformAuthTokens {
+  return { accessToken: tokens.accessToken };
 }

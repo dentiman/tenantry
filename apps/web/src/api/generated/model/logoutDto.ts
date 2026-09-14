@@ -8,5 +8,5 @@
 
 export interface LogoutDto {
   /** @minLength 1 */
-  refreshToken: string;
+  refreshToken?: string;
 }

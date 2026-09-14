@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { Express } from 'express';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { ZodValidationPipe } from 'nestjs-zod';
 // Subpath-імпорт свідомо: головний index libs/shared тягне pg-boss/@aws-sdk
@@ -15,6 +16,8 @@ export function configureApp(app: INestApplication): void {
   // upgrade-insecure-requests вимкнено — тестовий прод по http (див. apps/api/src/app.setup.ts)
   app.use(helmet({ contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } } }));
   app.enableCors({ origin: resolvePlatformAllowedOrigins(), credentials: true });
+  // AUTH-2: дзеркало cookie-based refresh — cookie `saas_platform_refresh`
+  app.use(cookieParser());
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());

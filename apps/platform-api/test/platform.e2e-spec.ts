@@ -8,9 +8,11 @@ import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import * as argon2 from 'argon2';
+import { Redis } from 'ioredis';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { validatePlatformEnv } from '../src/config/env.schema';
+import { REDIS_THROTTLER_CLIENT } from '../src/redis/redis.constants';
 import { SystemPrismaService } from '@saas-skeleton/database';
 
 const OPERATOR_EMAIL = 'operator@example.com';
@@ -296,6 +298,234 @@ describe('Platform API (e2e)', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
       expect(Array.isArray(response.body.queues)).toBe(true);
+    });
+  });
+
+  // AUTH-2 (T072): дзеркало tenant-плану — сесія-пристрій, cookie, throttler
+  describe('AUTH-2: refresh cookie', () => {
+    const findSetCookie = (response: { headers: Record<string, unknown> }): string => {
+      const raw = response.headers['set-cookie'];
+      const cookies = Array.isArray(raw) ? (raw as string[]) : typeof raw === 'string' ? [raw] : [];
+      const cookie = cookies.find((c) => c.startsWith('saas_platform_refresh='));
+      if (!cookie) {
+        throw new Error('saas_platform_refresh cookie not found');
+      }
+      return cookie;
+    };
+    const cookieValueOf = (response: { headers: Record<string, unknown> }): string =>
+      findSetCookie(response).split(';')[0]!;
+    const rawTokenOf = (response: { headers: Record<string, unknown> }): string =>
+      // Express URL-кодує значення cookie (':' → '%3A') — розкодовуємо до сирого токена
+      decodeURIComponent(cookieValueOf(response).slice('saas_platform_refresh='.length));
+
+    const login = () =>
+      request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: OPERATOR_EMAIL, password: OPERATOR_PASSWORD });
+
+    it('sets an HttpOnly cookie scoped to /api/auth; body carries no refreshToken; access lives 15m', async () => {
+      const response = await login().expect(200);
+      const cookie = findSetCookie(response);
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/Path=\/api\/auth/);
+      expect((response.body as { refreshToken?: unknown }).refreshToken).toBeUndefined();
+
+      const payloadBase64 = String(response.body.accessToken).split('.')[1] ?? '';
+      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString()) as {
+        iat: number;
+        exp: number;
+      };
+      expect(payload.exp - payload.iat).toBe(15 * 60);
+    });
+
+    it('refresh rotates the token keeping the same sid', async () => {
+      const login1 = await login().expect(200);
+      const sid = rawTokenOf(login1).split(':')[0];
+
+      const refreshed = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValueOf(login1))
+        .expect(200);
+
+      expect(refreshed.body.accessToken).toMatch(/^eyJ/);
+      const rotatedSid = rawTokenOf(refreshed).split(':')[0];
+      expect(rotatedSid).toBe(sid);
+      expect(rawTokenOf(refreshed)).not.toBe(rawTokenOf(login1));
+    });
+
+    it('reuse outside the rotation window → 401', async () => {
+      const login1 = await login().expect(200);
+      const cookie1 = cookieValueOf(login1);
+      const sid = rawTokenOf(login1).split(':')[0]!;
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .expect(200);
+
+      await prisma.platformAuthSession.update({
+        where: { id: sid },
+        data: { prevRotatedAt: new Date(Date.now() - 2 * 60 * 1000) },
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .expect(401);
+    });
+
+    it('logout clears the cookie and revokes the session', async () => {
+      const login1 = await login().expect(200);
+      const cookie1 = cookieValueOf(login1);
+      const sid = rawTokenOf(login1).split(':')[0]!;
+
+      const logout = await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', cookie1)
+        .expect(204);
+
+      const cleared = findSetCookie(logout);
+      expect(cleared).toMatch(/Max-Age=0/);
+      expect(cleared).toMatch(/Path=\/api\/auth/);
+
+      const session = await prisma.platformAuthSession.findUnique({ where: { id: sid } });
+      expect(session?.revokedReason).toBe('logout');
+    });
+
+    it('rejects a foreign Origin on refresh/logout with 403; missing Origin passes', async () => {
+      const login1 = await login().expect(200);
+      const cookie1 = cookieValueOf(login1);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .set('Origin', 'https://evil.example')
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', cookie1)
+        .set('Origin', 'https://evil.example')
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .expect(200);
+    });
+  });
+
+  // Бойові пороги — окремий застосунок зі своїм REALTIME_KEY_PREFIX (setup-env.ts
+  // піднімає їх глобально, щоб сотні інших тестів не ловили 429; той самий патерн,
+  // що apps/api/test/rate-limit.e2e-spec.ts)
+  describe('AUTH-2: throttler (production thresholds)', () => {
+    let throttledApp: INestApplication;
+    let throttledPrisma: SystemPrismaService;
+    let redis: Redis;
+    let restoreEnv: () => void;
+    let keyPattern: string;
+
+    function withEnv(overrides: Record<string, string>): () => void {
+      const previous = Object.fromEntries(Object.keys(overrides).map((k) => [k, process.env[k]]));
+      Object.assign(process.env, overrides);
+      return () => {
+        for (const [key, value] of Object.entries(previous)) {
+          if (value === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = value;
+          }
+        }
+      };
+    }
+
+    async function scanKeys(client: Redis, pattern: string): Promise<string[]> {
+      const found: string[] = [];
+      let cursor = '0';
+      do {
+        const [next, keys] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 500);
+        cursor = next;
+        found.push(...keys);
+      } while (cursor !== '0');
+      return found;
+    }
+
+    beforeAll(async () => {
+      const prefix = `${process.env.REALTIME_KEY_PREFIX ?? 'saas:rt:test'}:platform-ratelimit`;
+      restoreEnv = withEnv({
+        AUTH_LOGIN_LIMIT_PER_MINUTE: '5',
+        AUTH_LOGIN_IP_LIMIT_PER_MINUTE: '20',
+        AUTH_REFRESH_LIMIT_PER_MINUTE: '30',
+        REALTIME_KEY_PREFIX: prefix,
+      });
+      keyPattern = `${prefix}:platform:throttle:*`;
+
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+      throttledApp = moduleRef.createNestApplication();
+      configureApp(throttledApp);
+      await throttledApp.init();
+      throttledPrisma = throttledApp.get(SystemPrismaService);
+      redis = throttledApp.get<Redis>(REDIS_THROTTLER_CLIENT);
+
+      await throttledPrisma.platformUser.deleteMany();
+      await throttledPrisma.platformUser.create({
+        data: {
+          email: OPERATOR_EMAIL,
+          name: 'Operator',
+          passwordHash: await argon2.hash(OPERATOR_PASSWORD),
+        },
+      });
+    });
+
+    afterEach(async () => {
+      // Кожен тест зі свого «чистого» лічильника — інакше 5/хв «login» з першого
+      // тесту з'їдав би спроби другого (та сама причина, що в rate-limit.e2e-spec.ts)
+      const keys = await scanKeys(redis, keyPattern);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+      await throttledPrisma.platformAuthSession.deleteMany();
+    });
+
+    afterAll(async () => {
+      await throttledApp.close();
+      restoreEnv();
+    });
+
+    it('6th login attempt from the same email+ip → 429', async () => {
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        await request(throttledApp.getHttpServer())
+          .post('/api/auth/login')
+          .send({ email: OPERATOR_EMAIL, password: 'WrongPass123' })
+          .expect(401);
+      }
+      await request(throttledApp.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: OPERATOR_EMAIL, password: OPERATOR_PASSWORD })
+        .expect(429);
+    });
+
+    it('31st refresh in a minute from one ip → 429', async () => {
+      const login1 = await request(throttledApp.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: OPERATOR_EMAIL, password: OPERATOR_PASSWORD })
+        .expect(200);
+      const raw = login1.headers['set-cookie'] as string[] | string;
+      const cookies = Array.isArray(raw) ? raw : [raw];
+      const cookie = cookies
+        .find((c) => c.startsWith('saas_platform_refresh='))!
+        .split(';')[0]!;
+
+      for (let attempt = 1; attempt <= 30; attempt++) {
+        await request(throttledApp.getHttpServer())
+          .post('/api/auth/refresh')
+          .set('Cookie', cookie)
+          .expect(200);
+      }
+      await request(throttledApp.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie)
+        .expect(429);
     });
   });
 });

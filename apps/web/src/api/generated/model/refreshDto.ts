@@ -8,5 +8,5 @@
 
 export interface RefreshDto {
   /** @minLength 1 */
-  refreshToken: string;
+  refreshToken?: string;
 }

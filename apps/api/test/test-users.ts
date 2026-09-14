@@ -42,6 +42,25 @@ export interface TestTokens {
   refreshToken: string;
 }
 
+/**
+ * AUTH-2: сервер більше не кладе `refreshToken` у тіло (Set-Cookie `saas_refresh`,
+ * `Path=/api/auth`) — тести, що читали його з `response.body`, читають з cookie.
+ * Формат токена (`tenantId:sid:secret`) не змінився, лише транспорт.
+ */
+export function refreshTokenFromCookie(response: {
+  headers: Record<string, unknown>;
+}): string {
+  const raw = response.headers['set-cookie'];
+  const cookies = Array.isArray(raw) ? (raw as string[]) : typeof raw === 'string' ? [raw] : [];
+  const cookie = cookies.find((c) => c.startsWith('saas_refresh='));
+  if (!cookie) {
+    throw new Error('saas_refresh cookie not found in response');
+  }
+  const pair = cookie.split(';')[0] ?? '';
+  // Express URL-кодує значення cookie (':' → '%3A') — розкодовуємо назад до сирого токена
+  return decodeURIComponent(pair.slice('saas_refresh='.length));
+}
+
 export async function loginTestUser(
   app: INestApplication,
   email: string,
@@ -51,7 +70,8 @@ export async function loginTestUser(
     .post('/api/auth/login')
     .send({ email, password })
     .expect(200);
-  return (response.body as { tokens: TestTokens }).tokens;
+  const accessToken = (response.body as { tokens: { accessToken: string } }).tokens.accessToken;
+  return { accessToken, refreshToken: refreshTokenFromCookie(response) };
 }
 
 /** Створити юзера і одразу залогінити — заміна колишнього register-бутстрапа */

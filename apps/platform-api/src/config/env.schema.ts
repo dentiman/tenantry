@@ -29,6 +29,15 @@ const originList = z.string().refine(
   { message: 'must be a comma-separated list of origins like https://ops.example.com' },
 );
 
+const positiveIntString = z
+  .string()
+  .trim()
+  .regex(/^\d+$/, 'must be a positive integer')
+  .refine((value) => Number(value) > 0, 'must be a positive integer');
+
+/** env завжди рядок: приймаємо лише однозначні `true`/`false`, без «1»/«yes»/«on» */
+const booleanString = z.enum(['true', 'false']);
+
 export const PlatformEnvSchema = z.looseObject({
   // ОКРЕМИЙ від tenant-плану секрет — фолбеку на JWT_SECRET немає і не буде
   PLATFORM_JWT_SECRET: z
@@ -37,6 +46,7 @@ export const PlatformEnvSchema = z.looseObject({
     .refine((value) => !EXAMPLE_PLATFORM_JWT_SECRETS.has(value), {
       message: 'must not be the placeholder from .env.example — generate a real secret',
     }),
+  // AUTH-2: 15m, як tenant-api (було 60m без refresh — MVP MT-3)
   PLATFORM_JWT_ACCESS_EXPIRES_IN: z.string().min(1).optional(),
   PLATFORM_DATABASE_URL: z.string().min(1).optional(),
   // AUTH-0: мережевий периметр. Ім'я з префіксом PLATFORM_, як PLATFORM_JWT_SECRET і
@@ -44,6 +54,19 @@ export const PlatformEnvSchema = z.looseObject({
   // control plane origin tenant-web
   PLATFORM_CORS_ALLOWED_ORIGINS: originList.optional(),
   TRUST_PROXY_HOPS: z.string().trim().regex(/^\d+$/, 'must be a non-negative integer').optional(),
+
+  // AUTH-2: Valkey — другий споживач throttler-а (R-15); ті самі імена й дефолти, що в api
+  REDIS_URL: z.string().min(1).optional(),
+  REALTIME_KEY_PREFIX: z.string().min(1).optional(),
+  THROTTLE_DEFAULT_LIMIT_PER_MINUTE: positiveIntString.optional(),
+  AUTH_LOGIN_LIMIT_PER_MINUTE: positiveIntString.optional(),
+  AUTH_LOGIN_IP_LIMIT_PER_MINUTE: positiveIntString.optional(),
+  AUTH_REFRESH_LIMIT_PER_MINUTE: positiveIntString.optional(),
+
+  // AUTH-2: сесія-пристрій control plane — той самий каркас, що tenant-api (без RLS)
+  AUTH_SESSION_IDLE_DAYS: positiveIntString.optional(),
+  AUTH_SESSION_ABSOLUTE_DAYS: positiveIntString.optional(),
+  COOKIE_SECURE: booleanString.optional(),
 });
 
 export type PlatformEnv = z.infer<typeof PlatformEnvSchema>;
@@ -68,4 +91,9 @@ export function resolvePlatformAllowedOrigins(env: NodeJS.ProcessEnv = process.e
 export function resolveTrustProxyHops(env: NodeJS.ProcessEnv = process.env): number {
   const raw = env.TRUST_PROXY_HOPS;
   return raw === undefined || raw.trim() === '' ? 1 : Number(raw);
+}
+
+/** AUTH-2: `Secure`-атрибут `saas_platform_refresh` — та сама змінна, що в tenant-api */
+export function resolveCookieSecure(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.COOKIE_SECURE !== 'false';
 }

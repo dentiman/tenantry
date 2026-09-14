@@ -9,12 +9,11 @@ import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import { ActivityRecorder } from '@saas-skeleton/shared';
 import type {
   AuthSessionResponse,
-  AuthTokens,
   ChangeOwnPassword,
   UpdateAccountProfile,
 } from '@saas-skeleton/contracts';
 import * as argon2 from 'argon2';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, type IssuedAuthTokens } from '../auth/auth.service';
 import { AuthSessionService } from '../auth/auth-session.service';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import type { ClientContextData } from '../common/client-context.decorator';
@@ -68,7 +67,7 @@ export class AccountService {
     data: ChangeOwnPassword,
     actor: JwtPayload,
     client: ClientContextData,
-  ): Promise<AuthTokens> {
+  ): Promise<IssuedAuthTokens> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user?.passwordHash) {
       // Юзер із JWT, але без хеша — акаунт без пароля (майбутній SSO): міняти нічого
@@ -109,7 +108,7 @@ export class AccountService {
     userId: string,
     actor: JwtPayload,
     client: ClientContextData,
-  ): Promise<AuthTokens> {
+  ): Promise<IssuedAuthTokens> {
     const user = await this.users.findOne(userId);
 
     await this.tenantTx.withTenantTx(async (tx) => {
