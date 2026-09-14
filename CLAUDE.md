@@ -621,6 +621,38 @@ workflow / sequence / dataflow / lifecycle) з експортом у PNG/SVG/Web
 без них зелений, а `archify demo` генерує демо на вимогу), і `.gitignore` тримає їх вирізаними
 після `npx skills update archify`.
 
+**Workspace slots завершені і перевірені** (2026-09-13): ізольований dev-стек на паралельний
+git worktree/agent workspace (`docs/workspace-slots.md`). `pnpm ws:init [N]`
+(`scripts/workspace-init.ts`) — слот N (аргумент, або перший вільний, або вже задекларований
+у `.env.local` цього checkout-у) → зсув портів +100·N, `COMPOSE_PROJECT_NAME=saas-skeleton-N`,
+свіжі `JWT_SECRET`/`PLATFORM_JWT_SECRET` (СВОЇ на слот, не копія базового `.env` — рішення
+користувача), `docker compose --env-file .env.local up -d`, і ЗАВЖДИ `pnpm db:reset` (теж
+рішення користувача: детермінований чистий стан важливіший за швидкість повторного
+`ws:init`). `pnpm ws:down` гасить контейнери й volume-и слота. Виявилось, що `apps/api`,
+`apps/platform-api`, `apps/worker` вже й так каскадують кореневий `.env.local` через
+`ConfigModule.forRoot({ envFilePath: [...] })` — коду там міняти не довелось; єдине реальне
+місце було Vite (`apps/web`, `apps/platform-web`) — `server.port`/`proxy.target` тепер через
+`loadEnv(mode, <корінь репо>, '')`, а не хардкод `localhost:3001`/`5173`. У `docker-compose.yml`
+досить було `name: ${COMPOSE_PROJECT_NAME:-saas-skeleton}` і прибрати 4× `container_name`
+(хостові порти вже були параметризовані `${VAR:-default}`). Грабля, спіймана живим прогоном:
+**Postgres-образ на ПЕРШОМУ старті з `docker-entrypoint-initdb.d` піднімає тимчасовий сервер,
+ганяє init-скрипти й перезапускається фінальним** — у це вікно порт коротко приймає TCP і
+одразу рве з'єднання, тому голий wait-for-port дає хибний «готовий», і перший `db:reset`
+падає на `Connection terminated unexpectedly`; лікування — ретрай самого `db:reset` (до 5
+спроб, ідемпотентний: `DROP IF EXISTS` → `CREATE` → roles → migrate → seed), а не довший
+wait. Живий прогін: слот 1 піднятий поруч зі слотом 0 (обидва одночасно в `docker ps`, різні
+порти, слот 0 незайманий), `pnpm api:dev`/`web:dev` слота 1 підхопили `.env.local` (лог
+`workspace slot: 1`, API на :3101, Vite на :5273), `GET /api/health` через dev-проксі →
+`200` з API саме слота 1, `pnpm ws:down` прибрав лише `saas-skeleton-1_*`.
+Для агентів у хмарних/паралельних workspace (той самий текст додано в `AGENTS.md`) —
+`pnpm ws:init` **не** потрібен для чистої роботи з кодом і файловою системою (читання,
+редагування, `lint`/`typecheck`/`build`); піднімати стек — лише коли задача реально
+торкається БД (міграції, сід, Prisma-запити, RLS/tenant-isolation), e2e-тестів
+(`api:test:e2e`/`platform:test:e2e`), браузерної перевірки живого застосунку
+(`web:dev`/`platform:web:dev`), або чогось на Valkey/Redis (realtime, presence,
+rate-limiting). Піднятий заради задачі слот — гасити `pnpm ws:down` одразу після, щоб
+workspace не лишав контейнери, що течуть.
+
 ## Команди
 
 ```bash
@@ -630,6 +662,11 @@ pnpm docker:up            # PostgreSQL 17 + Mailpit + Valkey + SeaweedFS (OrbSta
                           # Mailpit UI: http://localhost:8025 (SMTP :1025 — дефолти MailerService)
                           # SeaweedFS S3: http://localhost:8333 (креденшели — docker/seaweedfs/s3.json,
                           # дефолти StorageService збігаються; бакет+CORS створює сам API на старті)
+pnpm ws:init [N]          # workspace slots (docs/workspace-slots.md): ізольований стек для
+                          # паралельного worktree — зсув портів +100·N, своя БД, свої секрети,
+                          # ЗАВЖДИ db:reset. Без N — перший вільний слот, або вже задекларований
+                          # у .env.local цього checkout-у
+pnpm ws:down              # гасить контейнери й volume-и слота цього checkout-у
 pnpm db:generate          # Prisma client → libs/database/src/generated (gitignored)
 pnpm db:migrate:dev       # міграції (dev; НЕ передавати ім'я через `pnpm ... -- --name X` —
                           # pnpm дублює `--`, prisma йде в інтерактивний prompt і висить;

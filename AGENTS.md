@@ -221,6 +221,27 @@ pnpm platform:web:codegen
   cd libs/database && pnpm exec prisma migrate dev --name X
   ```
 
+## Workspace infrastructure (cloud/agent workspaces)
+
+This repo supports isolated per-workspace dev stacks ("workspace slots",
+`docs/workspace-slots.md`): `pnpm ws:init [N]` brings up a dedicated Postgres/Valkey/
+SeaweedFS/Mailpit stack on ports shifted by `+100·N` and resets its database; `pnpm ws:down`
+tears it down again. It is safe to call `ws:init` repeatedly — it reuses the same slot for
+this checkout and always leaves the database in a clean, migrated, seeded state.
+
+Only run `pnpm ws:init` when the task actually needs live infrastructure:
+
+- Database work: migrations, seed data, Prisma queries, RLS/tenant-isolation behavior.
+- Running the tenant/platform/e2e test suites (`pnpm api:test:e2e`, `pnpm platform:test:e2e`).
+- Browser verification of a running app (`web:dev`/`platform:web:dev` and manual/automated
+  checks against them).
+- Anything touching Redis/Valkey-backed behavior: realtime gateway, presence, rate limiting.
+
+Do not bring up the stack for pure code/filesystem work — reading, editing, refactoring,
+`pnpm lint`/`pnpm typecheck`/`pnpm build` do not require a running stack. When you did start
+a slot for a task, run `pnpm ws:down` once you are done so the workspace does not leak
+running containers.
+
 ## Common commands
 
 ```bash

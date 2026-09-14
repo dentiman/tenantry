@@ -12,7 +12,10 @@ async function bootstrap(): Promise<void> {
   });
 
   // Use Pino logger from nestjs-pino (multistream: console + file)
-  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+  // Workspace slots (docs/workspace-slots.md): щоб не плутати, який checkout/порт зараз слухає
+  logger.log(`workspace slot: ${process.env.WORKSPACE_SLOT ?? '0 (default)'}`, 'Bootstrap');
 
   // RT-1: без цього SIGTERM від swarm убив би процес до того, як presence встигне
   // віддати свої leases — і кожен rolling deploy лишав би «привидів» online

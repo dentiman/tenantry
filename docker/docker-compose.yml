@@ -1,9 +1,10 @@
-name: saas-skeleton
+# Workspace slots (docs/workspace-slots.md): COMPOSE_PROJECT_NAME намспейсить
+# контейнери/мережу/volume-и на слот; container_name фіксовані імена ламав би.
+name: ${COMPOSE_PROJECT_NAME:-saas-skeleton}
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: saas-skeleton-db
     restart: unless-stopped
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
@@ -19,7 +20,6 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    container_name: saas-skeleton-mailpit
     restart: unless-stopped
     ports:
       - '${MAILPIT_SMTP_PORT:-1025}:1025' # SMTP — сюди шле apps/worker
@@ -32,7 +32,6 @@ services:
   # noeviction — тиха eviction presence-ключів гірша за явну помилку.
   valkey:
     image: valkey/valkey:8-alpine
-    container_name: saas-skeleton-valkey
     restart: unless-stopped
     command:
       - valkey-server
@@ -61,7 +60,6 @@ services:
   # Публікується ТІЛЬКИ S3-порт 8333 — master/volume/filer лишаються всередині контейнера.
   seaweedfs:
     image: chrislusf/seaweedfs:latest # прод: зафіксувати конкретний тег
-    container_name: saas-skeleton-s3
     restart: unless-stopped
     command: 'server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=256'
     ports:

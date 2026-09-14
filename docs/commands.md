@@ -10,6 +10,7 @@
 ## Зміст
 
 - [Docker (інфраструктура)](#docker-інфраструктура)
+- [Workspace slots](#workspace-slots)
 - [База даних (Prisma + ролі)](#база-даних-prisma--ролі)
 - [Застосунки — розробка](#застосунки--розробка)
 - [Кодогенерація контрактів](#кодогенерація-контрактів)
@@ -30,22 +31,26 @@
 
 ```bash
 pnpm docker:up
-# → docker compose -f docker/docker-compose.yml up -d
+# без .env.local → docker compose -f docker/docker-compose.yml up -d
+# з .env.local (workspace slot) → docker compose --env-file .env.local -f docker/docker-compose.yml up -d
 ```
 
-Піднімає всі три контейнери у фоні (`-d`). Свіжий Postgres-volume сам створює ролі БД
+Піднімає всі чотири контейнери у фоні (`-d`). Свіжий Postgres-volume сам створює ролі БД
 через `docker/postgres/init/01-roles.sql` — окремий крок `db:roles` після цього
-**не потрібен** (детальніше — розділ [«pnpm db:roles»](#pnpm-dbroles) нижче).
+**не потрібен** (детальніше — розділ [«pnpm db:roles»](#pnpm-dbroles) нижче). Якщо в
+checkout є `.env.local` (створений `pnpm ws:init`, див. [Workspace slots](#workspace-slots)),
+команда автоматично б'є в потрібний слот, а не в базовий стек.
 
 ### `pnpm docker:down`
 
 ```bash
 pnpm docker:down
-# → docker compose -f docker/docker-compose.yml down
+# без .env.local → docker compose -f docker/docker-compose.yml down
+# з .env.local (workspace slot) → docker compose --env-file .env.local -f docker/docker-compose.yml down
 ```
 
-Зупиняє й видаляє контейнери. Named volume (`saas-skeleton`) не видаляється — дані
-Postgres/SeaweedFS переживають `down`/`up`.
+Зупиняє й видаляє контейнери. Named volume не видаляється — дані Postgres/SeaweedFS
+переживають `down`/`up` (щоб прибрати й дані слота — `pnpm ws:down`, нижче).
 
 ### `pnpm docker:prod:up` / `pnpm docker:prod:down`
 
@@ -59,6 +64,43 @@ pnpm docker:prod:up
 хостових директоріях `${SAAS_DATA_DIR}/{postgres,seaweedfs}`, теги образів запінені,
 порти тільки на `127.0.0.1`, без Mailpit. Потребує `.env.production`
 (приклад — `.env.production.example`).
+
+---
+
+## Workspace slots
+
+Ізольований dev-стек на паралельний git worktree/agent workspace (`docs/workspace-slots.md`):
+окремий docker-compose project, зсув портів +100·N, окрема БД, власні секрети — щоб два
+checkout-и могли одночасно тримати повний стек (Postgres/Valkey/SeaweedFS/Mailpit +
+api/platform-api/worker + web/platform-web), не заважаючи один одному.
+
+### `pnpm ws:init [N]`
+
+```bash
+pnpm ws:init      # перший вільний слот (або той самий, що вже в .env.local цього checkout-у)
+pnpm ws:init 2    # саме слот 2
+```
+
+Генерує `.env.local` (зсув портів, `WORKSPACE_SLOT`, свіжі `JWT_SECRET`/`PLATFORM_JWT_SECRET`),
+піднімає `docker compose --env-file .env.local ... up -d`, чекає, поки Postgres слота стане
+готовим, і ЗАВЖДИ виконує `pnpm db:reset` (чиста БД навіть при повторному виклику на тому
+самому слоті). Друкує адреси (web, platform-web, api/platform Swagger, Mailpit UI). Слот 0 —
+базовий checkout без `.env.local`, ним `ws:init` не керує.
+
+Далі в цьому checkout — звичайні `pnpm api:dev`/`platform:dev`/`worker:dev`/`web:dev`/
+`platform:web:dev`: усі підхоплюють `.env.local` автоматично (`apps/api`, `apps/platform-api`,
+`apps/worker` — через `ConfigModule.forRoot({ envFilePath: [...] })`, `apps/web`/
+`apps/platform-web` — через `loadEnv` у `vite.config.ts`).
+
+### `pnpm ws:down`
+
+```bash
+pnpm ws:down
+# → docker compose --env-file .env.local -f docker/docker-compose.yml down -v
+```
+
+Гасить і прибирає контейнери й volume-и слота цього checkout-у (`.env.local` не
+видаляється — наступний `ws:init` без аргументу повертається на той самий слот).
 
 ---
 

@@ -11,7 +11,10 @@ async function bootstrap(): Promise<void> {
     bufferLogs: true,
   });
 
-  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+  // Workspace slots (docs/workspace-slots.md): щоб не плутати, який checkout/порт зараз слухає
+  logger.log(`workspace slot: ${process.env.WORKSPACE_SLOT ?? '0 (default)'}`, 'Bootstrap');
 
   configureApp(app);
 

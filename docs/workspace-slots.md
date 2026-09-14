@@ -1,6 +1,7 @@
-# Ізольовані робочі простори (слоти) — ІДЕЯ
+# Ізольовані робочі простори (слоти)
 
-**Статус**: ідея, не реалізовано (записано 2026-09-13). Реалізувати окремим workspace.
+**Статус**: реалізовано і перевірено живим прогоном (2026-09-13). `pnpm ws:init [N]`
+(`scripts/workspace-init.ts`) і `pnpm ws:down` — готові команди, не план.
 
 ## Проблема
 
@@ -66,17 +67,22 @@ Custom — лише скрипт ініціалізації (нижче) і па
 
 `scripts/workspace-init.ts` → `pnpm ws:init [N]`:
 
-1. Визначити N: з аргументу або перший вільний (порти `base + 100·N` не зайняті).
-2. Згенерувати `.env.local` (gitignored). Похідні URL будуються з портів, щоб не правити
-   дві змінні руками:
+1. Визначити N: з аргументу; якщо не задано — з `WORKSPACE_SLOT` уже наявного `.env.local`
+   (ідемпотентно, той самий workspace лишається на тому самому слоті); інакше перший
+   `N=1..50`, у якого всі 9 портів слота вільні (перевірка через `net`, спроба
+   `listen`/`EADDRINUSE`). `N=0` — помилка: слот 0 не через цей скрипт.
+2. Згенерувати `.env.local` (gitignored, перезаписується щоразу). Лише ПЕРЕВИЗНАЧЕНІ ключі —
+   решта (`S3_ACCESS_KEY`, `SMTP_*` тощо) і так приходить із базового `.env`, бо
+   `@nestjs/config`/Vite мерджать `.env.local` поверх `.env`, а не замінюють:
 
    ```env
+   WORKSPACE_SLOT=1
    COMPOSE_PROJECT_NAME=saas-skeleton-1
    POSTGRES_PORT=5532
    REDIS_PORT=6479
    S3_PORT=8433
-   MAILPIT_UI_PORT=8125
    MAILPIT_SMTP_PORT=1125
+   MAILPIT_UI_PORT=8125
    PORT=3101
    PLATFORM_PORT=3102
    WEB_PORT=5273
@@ -87,35 +93,69 @@ Custom — лише скрипт ініціалізації (нижче) і па
    POSTGRES_ADMIN_URL=postgresql://saas:saas@localhost:5532/postgres
    REDIS_URL=redis://:saas-realtime@localhost:6479
    S3_ENDPOINT=http://localhost:8433
-   SMTP_PORT=1125
    CORS_ALLOWED_ORIGINS=http://localhost:5273
    PLATFORM_CORS_ALLOWED_ORIGINS=http://localhost:5274
    S3_CORS_ALLOWED_ORIGINS=http://localhost:5273
-   APP_PUBLIC_URL=http://localhost:5273
+   JWT_SECRET=<згенеровано, 64 hex>
+   PLATFORM_JWT_SECRET=<згенеровано, 64 hex>
    ```
 
+   Секрети (`JWT_SECRET`/`PLATFORM_JWT_SECRET`) генеруються СВОЇ на кожен слот
+   (`randomBytes(32).toString('hex')`) — не копіюються з базового `.env`, щоб токени різних
+   слотів ніколи не були крос-валідні.
 3. `docker compose --env-file .env.local -f docker/docker-compose.yml up -d`.
-4. `pnpm db:reset`: чиста БД, ролі, міграції, сід.
-5. Надрукувати адреси: web, platform-web, api Swagger, Mailpit.
+4. Дочекатись, поки Postgres слота почне приймати TCP (ретрай-цикл, до 15с) — і потім
+   `pnpm db:reset` (ЗАВЖДИ, і на новому, і на вже ініціалізованому слоті — рішення
+   користувача: детермінований чистий стан важливіший за швидкість повторного `ws:init`).
+   `db:reset` теж ретраїться (до 5 спроб, 2с) — образ Postgres на ПЕРШОМУ старті з
+   `docker-entrypoint-initdb.d` піднімає тимчасовий сервер, ганяє init-скрипти й
+   перезапускається вже фінальним; у це вікно порт коротко приймає TCP і одразу рве
+   з'єднання, чого голий wait-for-port не бачить. Сама команда ідемпотентна
+   (`DROP IF EXISTS` → `CREATE` → roles → migrate → seed), тому ретрай безпечний.
+5. Надрукувати адреси (web, platform-web, api/platform Swagger, Mailpit UI) і нагадати
+   команди `*:dev` — вони підхоплять `.env.local` автоматично.
 
-`pnpm ws:down` → `docker compose -p saas-skeleton-N down -v` (контейнери і дані слота).
+`pnpm ws:down` → `docker compose --env-file .env.local -f docker/docker-compose.yml down -v`
+(контейнери і volume-и слота; `.env.local` не видаляється — наступний `ws:init` без
+аргументу повертається на той самий слот).
 
-## Що змінити в репо
+## Що змінено в репо
 
-- `docker/docker-compose.yml` — прибрати `name:` і `container_name`, винести всі хостові
-  порти в змінні з дефолтами слота 0.
+- `docker/docker-compose.yml` — `name: saas-skeleton` → `name: ${COMPOSE_PROJECT_NAME:-saas-skeleton}`,
+  прибрано 4× `container_name`. Хостові порти вже й так були параметризовані
+  (`${VAR:-default}`) — окремо чіпати не довелось.
+- `scripts/workspace-init.ts` (новий) + `pnpm ws:init`/`ws:down` у корені `package.json`;
+  `tsx` заведений явною root-залежністю (раніше працював лише через
+  `shamefully-hoist=true`).
+- `docker:up`/`docker:down` — умовно передають `--env-file .env.local`, якщо файл є.
 - `apps/web/vite.config.ts`, `apps/platform-web/vite.config.ts` — `server.port` і
-  `proxy.target` (включно з `ws: true` для `/socket.io`) з env.
-- `package.json` — `docker:up/down` передають `--env-file .env.local`, якщо файл існує
-  (compose сам читає лише `.env`).
-- Перевірити всі дефолти `localhost:<port>` у коді й скриптах (`libs/database/scripts/*`,
-  `apps/api/test/test-database.ts`, `redis.config.ts`, `worker-realtime.emitter.ts`): вони мусять
-  перебиватись env.
-- `docs/commands.md` і `CLAUDE.md` — розділ про слоти.
+  `proxy.target` (включно з `ws: true` для `/socket.io` у web) тепер через
+  `loadEnv(mode, <корінь репо>, '')`, а не хардкод. Це ЄДИНЕ місце, де справді бракувало
+  читання кореневого `.env.local` — `apps/api`, `apps/platform-api`, `apps/worker` вже мали
+  `envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env']` і підхоплюють слот
+  без жодних змін коду.
+- `apps/api/src/main.ts`, `apps/platform-api/src/main.ts`, `apps/worker/src/main.ts` — один
+  рядок логу при старті (`workspace slot: N`), щоб не плутати, який процес який слот
+  обслуговує.
+- Перевірено: дефолти `localhost:<port>` у `libs/database/scripts/*`,
+  `apps/api/test/test-database.ts`, `redis.config.ts`, `worker-realtime.emitter.ts` вже й так
+  повністю перебиваються env (`??`) — коду там міняти не довелось.
+- `.env.example`, `docs/commands.md`, `CLAUDE.md` — коротка документація команд.
 
-## Відкриті питання
+## Живий прогін (2026-09-13)
 
-- Чи потрібен `db:reset` при кожному `ws:init`, чи лише при створенні слота.
-- Чи копіювати секрети (`JWT_SECRET` тощо) з `.env` основного checkout-а, чи генерувати свої.
+`pnpm ws:init` (без аргументу, слот 0 уже піднятий) → знайшов слот 1, підняв
+`saas-skeleton-1-{postgres,valkey,mailpit,seaweedfs}-1` на портах 5532/6479/1125/8125/8433,
+`db:reset` пройшов усі 16 міграцій + сід. Повторний `pnpm ws:init` (без аргументу) на тому
+самому checkout — переюзав слот 1 (`WORKSPACE_SLOT` з `.env.local`), `db:reset` знову
+відпрацював дочиста. `pnpm api:dev` — лог `workspace slot: 1`, слухає :3101, `StorageService`
+підхопив CORS-origin `http://localhost:5273` (порт слота). `pnpm web:dev` — Vite на :5273,
+`GET /api/health` через dev-проксі → `200 {"status":"ok"}` з API слота 1. Слот 0
+(`saas-skeleton-db` тощо, порти 5432/6380/8025/1025/8333) увесь час лишався незайманим.
+`pnpm ws:down` прибрав контейнери й volume-и `saas-skeleton-1_*`, слот 0 не зачепив.
+`pnpm lint`/`pnpm typecheck` — чисті.
+
+## Відкрите питання
+
 - Спільний кеш образів Docker — ок, але Valkey/Postgres на кожен слот — це пам'ять:
-  прикинути ліміт одночасних слотів на машині.
+  прикинути ліміт одночасних слотів на машині (не блокер, просто не виміряно).
