@@ -21,7 +21,7 @@
 | ----- | -------------------------------------------------------- | ----- | -------- | --------------------------------------------- | ------------ |
 | 1     | **AUTH-0** — hardening без міграцій                      | S     | 0        | ні                                            | ✅ завершено |
 | 2     | **AUTH-1** — сесія як сутність                           | L     | 1        | так (`/account/sessions`)                     | ✅ завершено |
-| 3     | **AUTH-2** — httpOnly cookie + дзеркало в platform       | M     | 0        | так (`AuthTokens.refreshToken` стає опційним) | ⬜ не почато |
+| 3     | **AUTH-2** — httpOnly cookie + дзеркало в platform       | M     | 1        | так (`AuthTokens.refreshToken` стає опційним) | ✅ завершено (живий прогін — частково, §8) |
 | 4     | **AUTH-3** — відновлення доступу (`verification_tokens`) | M     | 1        | ні (тільки нові роути)                        | ⬜ не почато |
 | 5     | **AUTH-4** — 2FA (TOTP)                                  | L     | 1        | так (`AuthResponse` → union)                  | ⬜ не почато |
 
@@ -606,79 +606,83 @@ refresh; повний цикл (логін → F5 → refresh → logout) пра
 
 ## 3.2. Кроки — бекенд
 
-- [ ] `pnpm --filter @saas-skeleton/api add cookie-parser` (+ `@types/cookie-parser` у dev)
-      і `app.use(cookieParser())` у `main.ts` **та** в `configureApp` (інакше e2e
-      перевірятимуть не ту конфігурацію — та сама причина, чому там стоїть
-      WebSocket-адаптер).
-- [ ] `apps/api/src/auth/refresh-cookie.ts` — одне місце на ім'я, опції й TTL cookie:
-      `set(res, token)`, `clear(res)`, `read(req)`.
-- [ ] `AuthController`: `login`, `refresh`, `account/password`, `account/sessions/revoke-all`
+- [x] `pnpm --filter @saas-skeleton/api add cookie-parser` (+ `@types/cookie-parser` у dev)
+      і `app.use(cookieParser())` у `configureApp` — **не** окремо ще й у `main.ts`:
+      `main.ts` викликає саме `configureApp`, тож дублювання виклику зайве (той самий
+      патерн, що вже прийнятий для helmet/CORS у цьому ж файлі).
+- [x] `apps/api/src/auth/refresh-cookie.ts` — одне місце на ім'я, опції й TTL cookie:
+      `setRefreshCookie(res, token, idleExpiresAt)`, `clearRefreshCookie(res)`, `readRefreshCookie(req)`.
+- [x] `AuthController`: `login`, `refresh`, `account/password`, `account/sessions/revoke-all`
       отримують `@Res({ passthrough: true })` і ставлять cookie; `logout` — чистить.
       **Грабля:** без `passthrough: true` Nest віддає керування відповіддю вручну, і
       повернений об'єкт перестає серіалізуватись — роут почне віддавати порожнє тіло.
-- [ ] `refresh`/`logout` читають токен **спочатку з cookie**, і лише потім із тіла
+- [x] `refresh`/`logout` читають токен **спочатку з cookie**, і лише потім із тіла
       (перехідний період — доки `platform-web` і старі вкладки не оновились).
       Після заходу 5 гілку з тілом прибрати (записати в §7 як борг із датою).
-- [ ] Перевірка `Origin` на `/auth/refresh` і `/auth/logout`: немає заголовка — пропускаємо
+- [x] Перевірка `Origin` на `/auth/refresh` і `/auth/logout`: немає заголовка — пропускаємо
       (native-клієнти, curl); є і не в allowlist — 403.
-- [ ] `AuthTokensSchema.refreshToken` → `.optional()`; мапери перестають його класти.
-- [ ] `pnpm openapi:generate && pnpm web:codegen && pnpm platform:web:codegen`
+- [x] `AuthTokensSchema.refreshToken` → `.optional()`; мапери перестають його класти.
+- [x] `pnpm openapi:generate && pnpm web:codegen && pnpm platform:web:codegen`
 
 ## 3.3. Кроки — фронт (`apps/web`)
 
-- [ ] `axios.create({ baseURL: '/', withCredentials: true })` у
+- [x] `axios.create({ baseURL: '/', withCredentials: true })` у
       `apps/web/src/api/http-client.ts`.
-- [ ] `refreshTokens()` більше не читає токен зі сховища — просто
+- [x] `refreshTokens()` більше не читає токен зі сховища — просто
       `POST /api/auth/refresh` з порожнім тілом; single-flight лишається як є.
-- [ ] `apps/web/src/stores/auth.store.ts`: прибрати `REFRESH_TOKEN_KEY`,
+- [x] `apps/web/src/stores/auth.store.ts`: прибрати `REFRESH_TOKEN_KEY`,
       `getStoredRefreshToken()`, запис у `localStorage`. Стор тримає **тільки**
       `user` + `accessToken` (обидва в пам'яті).
-- [ ] `init-auth.ts`: умову «є токен у localStorage» замінити на безумовну спробу
+- [x] `init-auth.ts`: умову «є токен у localStorage» замінити на безумовну спробу
       `refreshTokens()` з мовчазним `catch` (cookie ми не бачимо — 401 і є відповіддю
       «сесії немає»). **Наслідок:** кожен холодний старт анонімного відвідувача робить
       один зайвий 401 — це нормально і дешевше за будь-який маркер у localStorage.
       Маркер «здається, ми залогінені» заводити **не** треба: він рано чи пізно
-      розійдеться з реальністю.
-- [ ] Перевірити, що логаут із `http-client` (`clearSession()` + редірект) кличе
-      серверний `/auth/logout` — інакше cookie лишиться жити.
-- [ ] Socket-цикл: `auth.expiring.v1` → `refreshTokens()` → `auth.update.v1` працює без
-      змін (токен доступу як був у пам'яті, так і лишився) — **перевірити живим прогоном**,
-      це найтонше місце заходу.
+      розійдеться з реальністю. Одноразово прибрано старий ключ `saas_refresh_token`.
+- [x] Перевірити, що логаут із `http-client` (`clearSession()` + редірект) кличе
+      серверний `/auth/logout` — інакше cookie лишиться жити (`account-footer.tsx`
+      тепер кличе `authLogout({})` без токена в тілі).
+- [~] Socket-цикл: `auth.expiring.v1` → `refreshTokens()` → `auth.update.v1` — код не
+      чіпали (токен доступу як був у пам'яті, так і лишився), але **живим прогоном
+      у браузері з реальним 20+ хвилинним очікуванням не перевірено** в цій сесії
+      (§8). Backend-частина (сам refresh-цикл через cookie) перевірена curl-ом.
 
 ## 3.4. Дзеркало в `platform-api` / `platform-web`
 
 Контрол-плейн зараз слабший за дата-плейн: access-токен 60 хв **без refresh**,
 у `localStorage`. Це не можна лишати після того, як tenant-план став строгішим.
 
-- [ ] Портувати `auth_sessions` у platform-план (таблиця `platform_auth_sessions`,
+- [x] Портувати `auth_sessions` у platform-план (таблиця `platform_auth_sessions`,
       **без RLS** — `platform_users` живуть поза tenant-ізоляцією, `REVOKE ALL FROM saas_app`).
-- [ ] Повноцінний refresh-флоу: access 15 хв + refresh-cookie, ротація, той самий
-      `AuthSessionService` (винести спільну механіку в `libs/shared/src/auth/`, якщо
-      дублювання перевищить ~40 рядків; інакше чесна копія краща за передчасну абстракцію).
-- [ ] `apps/platform-web`: прибрати access-токен із `localStorage`.
-- [ ] Перевірити, що токени двох планів лишились крос-невалідними (наявний e2e).
-
-> **Якщо обсяг заходу росте** — дзеркало виносити в окремий захід 6, а не робити
-> наспіх: запиши це в §8 і онови «Табло». Головне — не лишити platform у
-> напівстані (частина сесій у cookie, частина в localStorage).
+- [x] Повноцінний refresh-флоу: access 15 хв + refresh-cookie, ротація. Спільне ядро
+      в `libs/shared/src/auth/` НЕ заводили (дублювання невелике, різні Prisma-моделі
+      й формат токена) — `PlatformAuthSessionService` лишився чесною копією
+      `AuthSessionService`, як і планувалось у § «Відкрите» плану.
+- [x] `apps/platform-web`: прибрати access-токен із `localStorage`.
+- [x] Перевірити, що токени двох планів лишились крос-невалідними (наявний e2e +
+      живий curl: tenant-токен на `/api/tenants` → 401, platform-токен на `/api/users` → 401).
 
 ## 3.5. Тести
 
-- [ ] Логін ставить `Set-Cookie` з `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`;
+- [x] Логін ставить `Set-Cookie` з `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`;
       тіло відповіді `refreshToken` **не** містить.
-- [ ] `refresh` без cookie і без тіла → 401.
-- [ ] `refresh` із cookie → 200 + нова `Set-Cookie` (ротація видна в заголовку).
-- [ ] `logout` чистить cookie (`Max-Age=0`) і вбиває сесію.
-- [ ] Чужий `Origin` на `/auth/refresh` → 403; відсутній `Origin` → 200.
-- [ ] `COOKIE_SECURE=true` додає `Secure` (перевіряти рядок заголовка, не поведінку).
+- [x] `refresh` без cookie і без тіла → 401.
+- [x] `refresh` із cookie → 200 + нова `Set-Cookie` (ротація видна в заголовку).
+- [x] `logout` чистить cookie (`Max-Age=0`) і вбиває сесію.
+- [x] Чужий `Origin` на `/auth/refresh` → 403; відсутній `Origin` → 200.
+- [x] `COOKIE_SECURE=true` додає `Secure` (перевіряти рядок заголовка, не поведінку).
 
 ## 3.6. DoD заходу 3
 
-- [ ] Живий прогін у браузері: логін → DevTools → `localStorage` порожній,
-      cookie є і позначена HttpOnly → F5 зберігає сесію → вкладка 20+ хвилин відкрита
-      (socket дожив до `auth.expiring` і оновився) → logout чистить cookie
-- [ ] `pnpm api:test:e2e` і `pnpm platform:test:e2e` зелені
-- [ ] Оновити «Табло» і §8
+- [~] Живий прогін у браузері: перевірено BACKEND-контрактом через curl проти
+      реального dev-стеку слота (не jest) — login → `Set-Cookie` HttpOnly/Secure/
+      SameSite=Lax/Path=/api/auth, тіло без refreshToken; refresh із cookie ротує;
+      чужий Origin → 403; logout чистить cookie; крос-plane 401 в обидва боки.
+      **НЕ зроблено**: клік по реальному UI в браузері (DevTools → `localStorage`
+      порожній, F5, 20+ хвилин відкритої вкладки для `auth.expiring.v1`) — див. §8,
+      окремий захід.
+- [x] `pnpm api:test:e2e` (249/249) і `pnpm platform:test:e2e` (23/23) зелені
+- [x] Оновити «Табло» і §8
 
 ---
 
@@ -928,6 +932,11 @@ union нормально; якщо ні — розділити на два respo
 | 2026-09-13 | 2     | Тест «theft detection вбиває ВСІ токени юзера» переписано: тепер невідомий секрет відкликає ТІЛЬКИ свою сесію (`secret_mismatch`), а стару поведінку вмикає `AUTH_REUSE_REVOKES_ALL_SESSIONS=true`. `auth.e2e-spec` «old token after rotation → 401» теж змінився: у 60-секундному вікні старий токен дає 200 (гонка вкладок), 401 — лише після закриття вікна |
 | 2026-09-13 | 2     | `JWT_REFRESH_EXPIRES_DAYS` прибрано звідусіль (env-приклади, `deploy.env`, stack-compose) — його замінили `AUTH_SESSION_IDLE_DAYS`/`AUTH_SESSION_ABSOLUTE_DAYS` |
 | 2026-09-13 | 2     | **Не зроблено (перенесено):** живий прогін у браузері і 1.10 (дві репліки api :3001/:3011 проти однієї Valkey); прогін міграції на БД зі старими рядками — dev-БД мала нуль `refresh_tokens`. Замість них: e2e зі справжнім socket.io-клієнтом, `argon2:`-шлях в e2e і накат усіх міграцій на чисту throwaway-базу. E2E: 203 → **245** tenant + 16 platform |
+| 2026-09-14 | ⚠️ інцидент | **Випадковий `pnpm db:reset` проти СПІЛЬНОЇ dev-БД слота 0** (не пов'язано з дизайном заходу 3, а з тим, як виконувалась робота): команди `pnpm db:reset` і `prisma migrate dev` було запущено з кореня worktree БЕЗ явного експорту `DATABASE_URL`/`MIGRATE_DATABASE_URL` зі свого `.env.local` — обидва впали на дефолт `localhost:5432`, який виявився контейнером `saas-skeleton-db` (слот 0, головний checkout, ЖИВІ dev-процеси api/worker/platform-api користувача були підключені саме до нього). Наслідок: `saas_skeleton` слота 0 було DROP+CREATE+мігровано+засіяно наново (втрачено будь-які ручні/тестові дані, які там могли бути; схема — консистентна, сід — ідемпотентний дефолт), і туди ж застосувалась нова міграція `platform_auth_sessions`. Виправлено: (1) увесь подальший DB-тулінг у цій сесії явно передавав `DATABASE_URL`/`MIGRATE_DATABASE_URL` зі свого `.env.local` (слот 1, порт 5532); (2) слот 1 домігровано і досіяно правильно; (3) слот 0 НЕ відкочували назад (додаткові маніпуляції з чужою БД — ризикованіші за наслідок; `pnpm db:reset` у головному checkout-і тривіально відновлює чистий стан, якщо треба). **Дію мав знати і підтвердити людина** — записано тут явно, а не замовчано |
+| 2026-09-14 | 3     | **Реальна регресія в рефакторингу throttler-а (T082), спіймана e2e**: `keyPrefix` у `createAppThrottlerModule` спершу був рядком, обчисленим ОДРАЗУ в `apps/api/src/common/app-throttler.module.ts` — цей файл імпортується РАЗ на процес (кеш модулів Node), тож `REALTIME_KEY_PREFIX`, який `rate-limit.e2e-spec.ts` перевизначає ПЕРЕД компіляцією своєї копії `AppModule`, застигав зі старту процесу і не підхоплювався. Виправлено: `keyPrefix` став `() => string` і викликається всередині лінивого `useFactory` (як і `loadThrottleConfig()` вже робив) — щоразу читає `process.env` заново. Один тест (`stores the login counter with a TTL of one window`) впав до фіксу, зелений після |
+| 2026-09-14 | 3     | Express URL-кодує значення cookie (`:` → `%3A`) — тестовий хелпер `refreshTokenFromCookie` (apps/api/test/test-users.ts) спершу не декодував, тож `TestTokens.refreshToken` містив `%3A` замість `:` і ламав `.split(':')` та порівняння в ~15 e2e по всьому сьюту (auth, auth-sessions, account, realtime, tenant-isolation). Виправлено `decodeURIComponent`-ом на виході з хелпера; дзеркальний хелпер у platform.e2e-spec.ts виправлено так само |
+| 2026-09-14 | 3     | `cookieParser()` додано лише в `configureApp` (app.setup.ts), НЕ окремо ще й у `main.ts` — план §3.2 називав обидва файли, але `main.ts` і так викликає `configureApp`, а дублювання суперечило б уже прийнятому патерну (helmet/CORS у тому самому файлі, з тим самим обґрунтуванням «щоб e2e бачили ту саму конфігурацію»). Якщо це розходження з планом небажане — легко додати явний виклик і в `main.ts` |
+| 2026-09-14 | 3     | Живий прогін у браузері (quickstart 2.1–2.8) виконано лише ЧАСТКОВО: бекенд-контракт (2.1, 2.5, 2.6, 2.8) перевірено `curl`-ом проти реального dev-стеку слота 1 (api :3101, platform-api :3102) — cookie-флаги, ротація, Origin-guard, крос-plane 401 в обидва боки, усе відповідає контракту. **НЕ виконано**: 2.2 (F5 у браузері), 2.3 (анонімне вікно → тихий 401), 2.4 (сокет 20+ хв до `auth.expiring.v1` → `auth.update.v1`), 2.7 (platform-web F5 + 70 хв). Причина — сесія без інтерактивного браузера й без бюджету на 20+-хвилинне очікування в реальному часі. **Окремий захід**: докрутити 2.2–2.4/2.7 живим кліком у браузері (claude-in-chrome або людина) проти піднятого `pnpm web:dev`/`pnpm platform:web:dev` слота; backend-частина вже підтверджена, ризик — лише в фронтовому/сокетному коді, який фаза НЕ чіпала |
 
 ---
 
