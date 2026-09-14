@@ -26,6 +26,7 @@ import type {
   JobListResponseDtoOutput,
   JobsFindAllParams,
   PlatformAuthResponseDtoOutput,
+  PlatformAuthTokensDtoOutput,
   PlatformLoginDto,
   PlatformUserResponseDtoOutput,
   QueueStatsResponseDtoOutput,
@@ -207,6 +208,124 @@ export const usePlatformAuthLogin = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getPlatformAuthLoginMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const platformAuthRefresh = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PlatformAuthTokensDtoOutput>(
+    { url: `/api/auth/refresh`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getPlatformAuthRefreshMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof platformAuthRefresh>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<Awaited<ReturnType<typeof platformAuthRefresh>>, TError, void, TContext> => {
+  const mutationKey = ['platformAuthRefresh'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof platformAuthRefresh>>,
+    void
+  > = () => {
+    return platformAuthRefresh(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PlatformAuthRefreshMutationResult = NonNullable<
+  Awaited<ReturnType<typeof platformAuthRefresh>>
+>;
+
+export type PlatformAuthRefreshMutationError = unknown;
+
+export const usePlatformAuthRefresh = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof platformAuthRefresh>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof platformAuthRefresh>>, TError, void, TContext> => {
+  const mutationOptions = getPlatformAuthRefreshMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const platformAuthLogout = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>({ url: `/api/auth/logout`, method: 'POST', signal }, options);
+};
+
+export const getPlatformAuthLogoutMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof platformAuthLogout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<Awaited<ReturnType<typeof platformAuthLogout>>, TError, void, TContext> => {
+  const mutationKey = ['platformAuthLogout'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformAuthLogout>>, void> = () => {
+    return platformAuthLogout(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PlatformAuthLogoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof platformAuthLogout>>
+>;
+
+export type PlatformAuthLogoutMutationError = unknown;
+
+export const usePlatformAuthLogout = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof platformAuthLogout>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof platformAuthLogout>>, TError, void, TContext> => {
+  const mutationOptions = getPlatformAuthLogoutMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

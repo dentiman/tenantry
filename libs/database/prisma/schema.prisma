@@ -232,7 +232,45 @@ model PlatformUser {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  authSessions PlatformAuthSession[]
+
   @@map("platform_users")
+}
+
+/// AUTH-2: дзеркало `AuthSession` у control plane (план §3.4) — «чесна копія», а не
+/// спільне ядро: різні Prisma-моделі й формат токена (без tenant-префікса), третього
+/// споживача механіки немає (конституція VIII). БЕЗ `tenant_id` і БЕЗ RLS —
+/// `platform_users` живуть поза tenant-ізоляцією, як і сама таблиця; міграція робить
+/// `REVOKE ALL … FROM saas_app`, як для `platform_users`.
+model PlatformAuthSession {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// `sha256:<hex>` — той самий протокол ротації, що в tenant-плані; тут перенесення
+  /// зі старих `argon2:`-рядків не потрібне (control plane refresh-механіки не мав)
+  tokenHash String @map("token_hash")
+
+  prevTokenHash String?   @map("prev_token_hash")
+  prevRotatedAt DateTime? @map("prev_rotated_at")
+  generation    Int       @default(0)
+
+  issuedAt          DateTime @default(now()) @map("issued_at")
+  lastUsedAt        DateTime @default(now()) @map("last_used_at")
+  idleExpiresAt     DateTime @map("idle_expires_at")
+  absoluteExpiresAt DateTime @map("absolute_expires_at")
+
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason")
+
+  userAgent   String? @map("user_agent")
+  ip          String?
+  deviceLabel String? @map("device_label")
+
+  user PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([idleExpiresAt])
+  @@map("platform_auth_sessions")
 }
 
 // Журнал бізнес-подій (docs/activity-log.md). Append-only: без updatedAt,

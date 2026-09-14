@@ -46,6 +46,41 @@
         ]
       }
     },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "platformAuthRefresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAuthTokensDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "platform-auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "platformAuthLogout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform-auth"
+        ]
+      }
+    },
     "/api/auth/me": {
       "get": {
         "operationId": "platformAuthMe",
@@ -481,6 +516,18 @@
         },
         "required": [
           "user",
+          "accessToken"
+        ],
+        "additionalProperties": false
+      },
+      "PlatformAuthTokensDto_Output": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": [
           "accessToken"
         ],
         "additionalProperties": false

@@ -17,6 +17,7 @@ export * from './jobsFindAllSortOrder';
 export * from './jobsFindAllState';
 export * from './platformAuthResponseDtoOutput';
 export * from './platformAuthResponseDtoOutputUser';
+export * from './platformAuthTokensDtoOutput';
 export * from './platformLoginDto';
 export * from './platformUserResponseDtoOutput';
 export * from './queueStatsResponseDtoOutput';

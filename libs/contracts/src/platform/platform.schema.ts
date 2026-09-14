@@ -24,8 +24,13 @@ export const PlatformUserResponseSchema = z.object({
 
 export const PlatformAuthResponseSchema = z.object({
   user: PlatformUserResponseSchema,
-  // MVP control plane: тільки access-токен (60m), refresh-механіки поки немає —
-  // операторів мало, перелогін прийнятний; розширення — за потреби
+  // AUTH-2: access 15 хв; refresh їде в httpOnly cookie `saas_platform_refresh`
+  // (Path=/api/auth) — у тілі його більше немає (було: MVP MT-3, 60m без refresh)
+  accessToken: z.string(),
+});
+
+/** Відповідь `POST /auth/refresh` — та сама форма, що accessToken у логіні */
+export const PlatformAuthTokensSchema = z.object({
   accessToken: z.string(),
 });
 

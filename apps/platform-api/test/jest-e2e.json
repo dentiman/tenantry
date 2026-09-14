@@ -15,6 +15,7 @@
   },
   "moduleNameMapper": {
     "^@saas-skeleton/contracts/platform$": "<rootDir>/../../libs/contracts/src/platform/index.ts",
-    "^@saas-skeleton/shared/errors$": "<rootDir>/../../libs/shared/src/errors/index.ts"
+    "^@saas-skeleton/shared/errors$": "<rootDir>/../../libs/shared/src/errors/index.ts",
+    "^@saas-skeleton/shared/auth/throttler$": "<rootDir>/../../libs/shared/src/auth/throttler/index.ts"
   }
 }

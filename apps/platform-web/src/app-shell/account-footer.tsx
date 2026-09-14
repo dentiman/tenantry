@@ -12,6 +12,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/dropdown-menu';
 import { SidebarMenuButton, useSidebar } from '@saas-skeleton/ui/components/ui/sidebar';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
+import { platformAuthLogout } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 
 /** Плейсхолдер — версія самого застосунку, `package.json` кореня монорепо */
@@ -34,9 +35,9 @@ export function AppFooterBar() {
 
 /**
  * Тригер акаунта. На відміну від `apps/web`: `operator` замість `user`, без
- * `avatarUrl` (його немає в `PlatformUserResponse`), logout — лише
- * `clearSession()` + навігація на `/login` без виклику API: ендпоінта
- * `POST /auth/logout` у platform-api немає (MT-3, поки без refresh-механіки).
+ * `avatarUrl` (його немає в `PlatformUserResponse`). AUTH-2: `POST /auth/logout`
+ * з'явився в platform-api (дзеркало tenant-api) — кличемо його так само, не
+ * чекаючи на відповідь: вихід не має залежати від мережі.
  */
 function AccountMenu() {
   const { t } = useTranslation('layout');
@@ -46,6 +47,7 @@ function AccountMenu() {
   const { isMobile, setOpenMobile } = useSidebar();
 
   const logout = () => {
+    void platformAuthLogout().catch(() => undefined);
     clearSession();
     void navigate({ to: '/login' });
   };
