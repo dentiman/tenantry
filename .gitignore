@@ -32,6 +32,10 @@ apps/worker/logs/
 coverage/
 .DS_Store
 
+# Ізольовані git worktree-и фонових/cloud-агентів (isolation: "worktree") — створюються
+# всередині основного checkout-а, самі по собі тимчасові, ніколи не мають комітитись
+.claude/worktrees/
+
 # Скіл archify (.claude/skills/archify) комітиться без демо-баласту: 102 тести і 5 готових
 # демо-HTML — 5.5 МБ з 8 МБ, і жоден із них не потрібен рантайму (`archify doctor` зелений
 # без них, `archify demo` генерує демо на вимогу). Ігнор, щоб `npx skills update archify`

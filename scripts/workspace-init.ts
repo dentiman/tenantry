@@ -114,6 +114,10 @@ function buildEnv(n: number, ports: PortMap): Record<string, string> {
     S3_PORT: String(ports.s3),
     MAILPIT_SMTP_PORT: String(ports.mailpitSmtp),
     MAILPIT_UI_PORT: String(ports.mailpitUi),
+    // apps/worker/src/mail/mailer.service.ts читає SMTP_PORT (дефолт 1025 — порт слота 0),
+    // а не MAILPIT_SMTP_PORT (та лише для host-порту в docker-compose) — без цього воркер
+    // слота N мовчки слав би листи через Mailpit слота 0
+    SMTP_PORT: String(ports.mailpitSmtp),
     PORT: String(ports.api),
     PLATFORM_PORT: String(ports.platform),
     WEB_PORT: String(ports.web),

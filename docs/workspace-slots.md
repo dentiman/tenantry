@@ -83,6 +83,7 @@ Custom — лише скрипт ініціалізації (нижче) і па
    S3_PORT=8433
    MAILPIT_SMTP_PORT=1125
    MAILPIT_UI_PORT=8125
+   SMTP_PORT=1125
    PORT=3101
    PLATFORM_PORT=3102
    WEB_PORT=5273
