@@ -14,6 +14,9 @@ import { AppShell } from './app-shell/app-shell';
 import { isUnder } from './app-shell/paths';
 import { ToastHost } from './components/toast-host';
 import { LoginPage } from './pages/login';
+import { ResetPasswordPage } from './pages/reset-password';
+import { ResetPasswordConfirmPage } from './pages/reset-password-confirm';
+import { ConfirmEmailPage } from './pages/confirm-email';
 import { DashboardPage } from './pages/dashboard';
 import { UsersPage } from './pages/users';
 import { CustomersPage } from './pages/customers';
@@ -113,6 +116,31 @@ const loginRoute = createRoute({
   path: '/login',
   beforeLoad: requireGuest,
   component: LoginPage,
+});
+
+/**
+ * AUTH-3 (US4): публічні роути верхнього рівня, ПОЗА AppShell і поза
+ * префіксами area — лист відкривають на іншому, часто незалогіненому
+ * пристрої, тож гейт `requireAuth`/`requireGuest` тут навмисно не стоїть
+ * (contracts/http-api.md §«/account»: confirm-роути публічні за побудовою).
+ */
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage,
+});
+
+const resetPasswordConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password/confirm',
+  component: ResetPasswordConfirmPage,
+});
+
+/** Публічний і незалежний від AppShell (план D-13) — див. confirm-email.tsx */
+const confirmEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm-email',
+  component: ConfirmEmailPage,
 });
 
 /**
@@ -498,6 +526,9 @@ const notFoundRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  resetPasswordRoute,
+  resetPasswordConfirmRoute,
+  confirmEmailRoute,
   appRoute.addChildren([
     appIndexRoute,
     workspaceRoute.addChildren([

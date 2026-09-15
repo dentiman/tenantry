@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/comp
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { LoginSchema, type Login } from '@saas-skeleton/contracts';
 import { useAuthLogin } from '../api/generated/api';
@@ -74,6 +74,12 @@ export function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? t('login.submitting') : t('login.submit')}
             </Button>
+            <Link
+              to="/reset-password"
+              className="text-center text-sm text-muted-foreground underline underline-offset-4"
+            >
+              {t('login.forgotPassword')}
+            </Link>
           </form>
         </CardContent>
       </Card>

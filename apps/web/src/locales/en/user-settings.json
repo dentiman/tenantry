@@ -35,16 +35,25 @@
   },
   "account": {
     "title": "Account",
-    "description": "Facts about your account that only an administrator can change.",
+    "description": "Facts about your account, and how to change your email.",
     "email": "Email",
-    "emailHint": "Contact an administrator to change your email address.",
+    "emailHint": "Use the form below to change your email address.",
     "role": "Role",
     "status": "Status",
     "active": "Active",
     "disabled": "Disabled",
     "createdAt": "Member since",
     "lastSeenAt": "Last seen",
-    "never": "Never signed in"
+    "never": "Never signed in",
+    "changeEmail": {
+      "title": "Change email",
+      "description": "We'll send a confirmation link to the new address before it takes effect.",
+      "newEmail": "New email",
+      "currentPassword": "Current password",
+      "submit": "Send confirmation link",
+      "submitting": "Sending…",
+      "sent": "Check the new address for a confirmation link. It expires in 60 minutes."
+    }
   },
   "security": {
     "title": "Security",
@@ -91,5 +100,13 @@
     "theme": "Theme",
     "palette": "Color theme",
     "paletteDescription": "Applies to both light and dark mode."
+  },
+  "confirmEmail": {
+    "title": "Confirm email change",
+    "pending": "Confirming your new email address…",
+    "success": "Your email address has been changed.",
+    "goToAccount": "Back to account settings",
+    "goToLogin": "Go to sign in",
+    "invalidLink": "This link is invalid or has expired. Request a new one from account settings."
   }
 }
