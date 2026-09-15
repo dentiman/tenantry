@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, SlugTenantResolver, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule as SharedActivitiesModule,
+  CryptoModule,
   MessagingModule,
   NotificationsModule as SharedNotificationsModule,
   NumberingModule as SharedNumberingModule,
@@ -11,6 +12,7 @@ import {
 } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
+import { PasswordResetModule } from './auth/password-reset/password-reset.module';
 import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
 import { CalendarModule } from './calendar/calendar.module';
@@ -45,10 +47,13 @@ import { validateApiEnv } from './config/env.schema';
     AppThrottlerModule,
     MessagingModule.forProducer(),
     StorageModule,
+    // AUTH-3: шифрує токени одноразових посилань перед publish (payload читає pgboss/Jobs-екран)
+    CryptoModule,
     SharedActivitiesModule,
     SharedNotificationsModule,
     SharedNumberingModule,
     AuthModule,
+    PasswordResetModule,
     UsersModule,
     CustomersModule,
     CalendarModule,

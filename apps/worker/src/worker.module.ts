@@ -4,17 +4,22 @@ import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule,
+  CryptoModule,
   MessagingModule,
   NotificationsModule,
   StorageModule,
 } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
+import { validateWorkerEnv } from './config/env.schema';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
 import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-jobs.subscriber';
 import { DispatchScheduledNotificationsSubscriber } from './subscribers/dispatch-scheduled-notifications.subscriber';
 import { GenerateThumbnailSubscriber } from './subscribers/generate-thumbnail.subscriber';
 import { WelcomeEmailSubscriber } from './subscribers/welcome-email.subscriber';
+import { PasswordResetEmailSubscriber } from './subscribers/password-reset-email.subscriber';
+import { EmailChangeEmailSubscriber } from './subscribers/email-change-email.subscriber';
+import { EmailChangedNoticeSubscriber } from './subscribers/email-changed-notice.subscriber';
 import { MailerService } from './mail/mailer.service';
 import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
 
@@ -23,6 +28,8 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'],
+      // AUTH-3: без валідного ENCRYPTION_KEY воркер не розшифрує жоден токен у payload
+      validate: validateWorkerEnv,
     }),
     LoggerModule.forRootAsync(loggerConfig),
     // MT: без резолвера — tenantId приходить у конверті (MessageWorkerRegistrar піднімає CLS)
@@ -30,6 +37,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     PrismaModule,
     MessagingModule.forWorker(),
     StorageModule,
+    CryptoModule,
     ActivitiesModule,
     NotificationsModule,
   ],
@@ -41,6 +49,9 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     DispatchScheduledNotificationsSubscriber,
     GenerateThumbnailSubscriber,
     WelcomeEmailSubscriber,
+    PasswordResetEmailSubscriber,
+    EmailChangeEmailSubscriber,
+    EmailChangedNoticeSubscriber,
     MailerService,
   ],
 })

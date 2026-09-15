@@ -1,5 +1,10 @@
 import type { MessageDefinition } from './message-definition';
 import {
+  emailChangedEvent,
+  emailChangeRequestedEvent,
+  passwordResetRequestedEvent,
+} from './definitions/auth.messages';
+import {
   cleanupOrphanFilesCommand,
   generateThumbnailCommand,
 } from './definitions/files.messages';
@@ -52,6 +57,18 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
   {
     definition: userRegisteredEvent,
     consumers: [{ id: 'welcome-email' }],
+  },
+  {
+    definition: passwordResetRequestedEvent,
+    consumers: [{ id: 'password-reset-email' }],
+  },
+  {
+    definition: emailChangeRequestedEvent,
+    consumers: [{ id: 'email-change-email' }],
+  },
+  {
+    definition: emailChangedEvent,
+    consumers: [{ id: 'email-changed-notice' }],
   },
   {
     definition: generateThumbnailCommand,

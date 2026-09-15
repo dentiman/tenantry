@@ -6,6 +6,7 @@
 #   образи:  API_IMAGE PLATFORM_API_IMAGE WORKER_IMAGE WEB_IMAGE PLATFORM_WEB_IMAGE
 #   секрети: JWT_SECRET PLATFORM_JWT_SECRET S3_ACCESS_KEY S3_SECRET_KEY S3_ENDPOINT
 #            S3_CORS_ALLOWED_ORIGINS SMTP_HOST SMTP_FROM POSTGRES_PASSWORD
+#            ENCRYPTION_KEY (AUTH-3, api+worker) APP_PUBLIC_URL (AUTH-3, worker)
 #
 # Стан (postgres/seaweedfs) прибито до manager (Варіант B): volume local+bind у /srv →
 # бекап = весь сервер. Режим IP:port БЕЗ проксі: web/platform-web/seaweedfs — mode:host на 0.0.0.0
@@ -175,6 +176,8 @@ services:
       AUTH_REUSE_REVOKES_ALL_SESSIONS: ${AUTH_REUSE_REVOKES_ALL_SESSIONS:-false}
       # AUTH-2: refresh у httpOnly cookie — тестовий прод по http (без TLS)
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # AUTH-3: шифрує токени одноразових посилань перед публікацією (план D-11)
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
     networks: [saas_net]
     logging: *logging
     # RT-1: на SIGTERM api звільняє presence-leases і закриває sockets. Дефолтних 10 с
@@ -234,6 +237,11 @@ services:
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_FROM: ${SMTP_FROM}
+      # AUTH-3: розшифровує токен одноразового посилання лише в пам'яті перед рендером листа;
+      # той самий ключ, що в api — інакше воркер не прочитає власний payload
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      # Базовий URL tenant-web для лінків у листах (reset-password/confirm-email)
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
     networks: [saas_net]
     logging: *logging
     deploy:

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserResponseSchema } from '../user/user.schema';
+import { PasswordSchema, UserResponseSchema } from '../user/user.schema';
 
 // Нормалізація перед валідацією: у Zod 4 перевірка формату йде до transform-ів
 const normalizedEmail = z.string().trim().toLowerCase().pipe(z.email());
@@ -56,3 +56,19 @@ export const AuthResponseSchema = z.object({
 });
 
 export const MeResponseSchema = UserResponseSchema;
+
+/**
+ * AUTH-3: запит скидання пароля. Завжди 204 — існування email тенанта не
+ * підтверджується відповіддю (без оракула).
+ */
+export const PasswordResetRequestSchema = z.object({
+  email: normalizedEmail,
+  // Та сама недовірена підказка, що LoginSchema.tenant — звужує пошук юзера
+  tenant: z.string().trim().toLowerCase().max(63).optional(),
+});
+
+/** Підтвердження скидання — тенант і юзер приходять із префікса токена, не з тіла */
+export const PasswordResetConfirmSchema = z.object({
+  token: z.string().min(1),
+  newPassword: PasswordSchema,
+});

@@ -46,5 +46,12 @@ export class CleanupExpiredTokensSubscriber
       },
     });
     this.logger.log(`Deleted ${String(count)} dead auth sessions`);
+
+    // AUTH-3: одноразові посилання — той самий ретеншн, незалежно від purpose
+    // (used_at чи прострочені — token і так мертвий, рядок лишається слідом)
+    const { count: tokenCount } = await this.prisma.verificationToken.deleteMany({
+      where: { expiresAt: { lt: cutoff } },
+    });
+    this.logger.log(`Deleted ${String(tokenCount)} expired verification tokens`);
   }
 }

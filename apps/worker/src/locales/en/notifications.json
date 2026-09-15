@@ -2,5 +2,17 @@
   "welcome": {
     "subject": "Welcome to SaaS Skeleton!",
     "body": "<p>Hi {{name}},</p><p>Your account has been created. Welcome aboard!</p>"
+  },
+  "passwordReset": {
+    "subject": "Reset your password",
+    "body": "<p>Hi {{name}},</p><p>We received a request to reset your password. Click the link below to choose a new one. This link expires in 60 minutes and can only be used once.</p><p><a href=\"{{link}}\">{{link}}</a></p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>"
+  },
+  "emailChangeRequested": {
+    "subject": "Confirm your new email address",
+    "body": "<p>Hi {{name}},</p><p>Confirm this address to finish changing the email on your account. This link expires in 60 minutes and can only be used once.</p><p><a href=\"{{link}}\">{{link}}</a></p><p>If you didn't request this, you can safely ignore this email.</p>"
+  },
+  "emailChanged": {
+    "subject": "Your account email address was changed",
+    "body": "<p>Hi {{name}},</p><p>The email address on your account was just changed. If this was you, no action is needed.</p><p>If you didn't make this change, please contact your workspace administrator immediately.</p>"
   }
 }

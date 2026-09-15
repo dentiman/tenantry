@@ -32,6 +32,10 @@ process.env.REALTIME_KEY_PREFIX = `saas:rt:test:${String(process.pid)}`;
 // REDIS_URL тут НЕ задаємо: адреса — з .env (loadRepoEnv), інакше дефолт застосунку
 // (`redis.config.ts`, = docker-compose). Власний дефолт у тестах уже раз перебив .env
 
+// AUTH-3: без валідного ключа шифрування процес (у т.ч. тестовий) не піднімається —
+// e2e самі не мають секретів, тому підставляємо робочий 32-байтний base64-ключ
+process.env.ENCRYPTION_KEY ??= 'mKcyB/Ds6XNWifCcKUS7ARsdDdeoRpa2VVMDQpSF/fo=';
+
 // AUTH-0: e2e ходять з ОДНОГО IP і в одному процесі (--runInBand) — лічильники
 // throttler-а спільні для всіх сьютів у межах вікна. З бойовими порогами (5 логінів
 // на хвилину) сотні тестів ловили б 429 у випадковому місці. Бойові значення явно

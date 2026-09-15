@@ -37,6 +37,23 @@ const positiveIntString = z
 /** env завжди рядок: приймаємо лише однозначні `true`/`false`, без «1»/«yes»/«on» */
 const booleanString = z.enum(['true', 'false']);
 
+/**
+ * AUTH-3 (план D-11): AES-256-GCM ключ для `CryptoService` — шифрує токени одноразових
+ * посилань перед публікацією (`pgboss.job` поза RLS). Обов'язковий: без валідного ключа
+ * шифрувати нема чим, і процес не має права стартувати.
+ */
+const ENCRYPTION_KEY_LENGTH = 32;
+const encryptionKeySchema = z.string().refine(
+  (value) => {
+    try {
+      return Buffer.from(value, 'base64').length === ENCRYPTION_KEY_LENGTH;
+    } catch {
+      return false;
+    }
+  },
+  { message: `must be base64 and decode to exactly ${String(ENCRYPTION_KEY_LENGTH)} bytes` },
+);
+
 const originList = z.string().refine(
   (value) => {
     const origins = parseOrigins(value);
@@ -80,6 +97,9 @@ export const ApiEnvSchema = z.looseObject({
   // AUTH-2: refresh у httpOnly cookie. Дефолт true (прод/тестовий https); false —
   // локалка й тестовий прод по http (.env.example, docker/deploy.env)
   COOKIE_SECURE: booleanString.optional(),
+
+  // AUTH-3: секрет одноразових посилань у payload черги — без дефолту, обов'язковий
+  ENCRYPTION_KEY: encryptionKeySchema,
 });
 
 export type ApiEnv = z.infer<typeof ApiEnvSchema>;
