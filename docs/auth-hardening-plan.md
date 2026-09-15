@@ -22,7 +22,7 @@
 | 1     | **AUTH-0** — hardening без міграцій                      | S     | 0        | ні                                            | ✅ завершено |
 | 2     | **AUTH-1** — сесія як сутність                           | L     | 1        | так (`/account/sessions`)                     | ✅ завершено |
 | 3     | **AUTH-2** — httpOnly cookie + дзеркало в platform       | M     | 1        | так (`AuthTokens.refreshToken` стає опційним) | ✅ завершено (живий прогін — частково, §8) |
-| 4     | **AUTH-3** — відновлення доступу (`verification_tokens`) | M     | 1        | ні (тільки нові роути)                        | ⬜ не почато |
+| 4     | **AUTH-3** — відновлення доступу (`verification_tokens`) | M     | 1        | ні (тільки нові роути)                        | ✅ завершено |
 | 5     | **AUTH-4** — 2FA (TOTP)                                  | L     | 1        | так (`AuthResponse` → union)                  | ⬜ не почато |
 
 Статуси: ⬜ не почато · 🟨 в роботі · ✅ завершено й перевірено.
@@ -725,32 +725,39 @@ email. Інакше роут стає оракулом «чи є така люд
 
 ## 4.2. Кроки
 
-- [ ] Модель `VerificationToken` → таблиця `verification_tokens`:
+- [x] Модель `VerificationToken` → таблиця `verification_tokens`:
       `id`, `tenant_id`, `user_id`, `purpose`, `token_hash`, `payload Json`,
       `expires_at`, `used_at`, `created_at`, `created_ip`; індекс
       `(tenant_id, user_id, purpose)`; RLS за шаблоном §1.3.
-- [ ] Міграція `--name verification_tokens`.
-- [ ] `apps/api/src/auth/verification-token.service.ts`:
-      `issue(tx, {purpose, userId, payload, ttl})` → повертає **сирий** токен (єдиний
-      момент, коли він існує в пам'яті); `consume(purpose, token)` → рядок або `null`
-      (перевіряє `used_at`, `expires_at`, ставить `used_at` у тій самій транзакції).
-- [ ] Ендпоінти (усі `@Public()`, усі під throttler із заходу 1 — інакше це розсилач спаму): - `POST /auth/password-reset` `{ email, tenant? }` → 204 завжди; - `POST /auth/password-reset/confirm` `{ token, newPassword }` → 200 + нова пара
-      токенів (одразу залогінити — людина щойно довела володіння поштою); - `POST /account/email-change` (аутентифікований) `{ newEmail, currentPassword }` → 204; - `POST /account/email-change/confirm` `{ token }` → 200 + оновлений профіль.
-- [ ] **Резолюція тенанта на `/auth/password-reset`** — та сама механіка, що на логіні
-      (поле `tenant` як недовірена підказка + `SlugTenantResolver`). Токен у лінку
+- [x] Міграція `--name verification_tokens`.
+- [x] `apps/api/src/auth/verification-token.service.ts`:
+      `issue(tx, {purpose, userId, payload, ip})` → повертає **сирий** токен (єдиний
+      момент, коли він існує в пам'яті); `peek(purpose, token)` читає БЕЗ споживання
+      (kill-switch перевірка isActive — D-11/FR-033), `consume(tx, purpose, token)` →
+      рядок або `null` (умовний `updateMany`, ставить `used_at` атомарно).
+- [x] Ендпоінти (усі `@Public()`, усі під throttler із заходу 1 — інакше це розсилач спаму): - `POST /auth/password-reset` `{ email, tenant? }` → 204 завжди; - `POST /auth/password-reset/confirm` `{ token, newPassword }` → 200 + нова пара
+      токенів (одразу залогінити — людина щойно довела володіння поштою); - `POST /account/email-change` (аутентифікований) `{ newEmail, currentPassword }` → 204; - `POST /account/email-change/confirm` `{ token }` → 200 + оновлений профіль
+      (**D-3**: публічний, не аутентифікований — лист відкривають на іншому пристрої).
+- [x] **Резолюція тенанта на `/auth/password-reset`** — та сама механіка, що на логіні
+      (поле `tenant` як недовірена підказка + `SlugTenantResolver`, через
+      `TenantResolutionMiddleware`, без явного виклику в сервісі). Токен у лінку
       несе `tenantId` префіксом (як refresh), щоб `confirm` знав контекст без підказки.
-- [ ] Події `auth.password-reset-requested.v1` і `auth.email-change-requested.v1`
-      (`libs/shared/src/messaging/definitions/auth.messages.ts`) + рядки в
-      `MESSAGE_TOPOLOGY` + підписники в `apps/worker/src/subscribers/`.
-      **Payload несе тільки `userId` і сирий токен** — решту (locale, ім'я) підписник
-      читає з БД свіжими, як це робить `WelcomeEmailSubscriber`.
-- [ ] Шаблони листів — `apps/worker/src/locales/en/notifications.json` (worker має
+- [x] Події `auth.password-reset-requested.v1`, `auth.email-change-requested.v1`,
+      `auth.email-changed.v1` (`libs/shared/src/messaging/definitions/auth.messages.ts`)
+      + рядки в `MESSAGE_TOPOLOGY` + три підписники в `apps/worker/src/subscribers/`.
+      **D-11**: payload несе `tokenEncrypted` (AES-256-GCM, `CryptoService` перенесено
+      сюди з AUTH-4), не сирий токен — `pgboss.job` поза RLS і живе ~7 днів, а Jobs-екран
+      platform-web показує повний `data`. Решту (locale, ім'я) підписник читає з БД
+      свіжими, як `WelcomeEmailSubscriber`.
+- [x] Шаблони листів — `apps/worker/src/locales/en/notifications.json` (worker має
       власний i18next, спільного з фронтом немає).
-- [ ] Базова URL для лінка — `APP_PUBLIC_URL` в env (worker не знає, під яким доменом
-      живе фронт).
-- [ ] Фронт: `/reset-password` і `/reset-password/confirm?token=…` (публічні роути,
+- [x] Базова URL для лінка — `APP_PUBLIC_URL` в env, читається через `ConfigService` з
+      дефолтом у `apps/worker/src/config/app-public-url.ts` (worker не знає, під яким
+      доменом живе фронт; не в env.schema.ts — листи не блокують старт воркера).
+- [x] Фронт: `/reset-password` і `/reset-password/confirm?token=…` (публічні роути,
       поза `AppShell`), посилання «Forgot password?» на `/login`; секція зміни email
-      у `/user-settings/account` замість read-only-підпису.
+      у `/user-settings/account` замість read-only-підпису; **D-13**: `/confirm-email`
+      теж публічний роут верхнього рівня, поза AppShell і поза префіксами area.
 
 ## 4.3. Граблі
 
@@ -766,22 +773,29 @@ email. Інакше роут стає оракулом «чи є така люд
 
 ## 4.4. Тести (новий `apps/api/test/auth-recovery.e2e-spec.ts`)
 
-- [ ] Неіснуючий email → 204 і **жодної** опублікованої події (оракула немає).
-- [ ] Успішний цикл reset: токен → новий пароль → старий не працює → всі попередні
+- [x] Неіснуючий email → 204 і **жодної** опублікованої події (оракула немає).
+- [x] Успішний цикл reset: токен → новий пароль → старий не працює → всі попередні
       сесії мертві → повернена пара робоча.
-- [ ] Повторне використання токена → 400/410, пароль не змінився.
-- [ ] Протухлий токен (`expires_at` у минулому) → відмова.
-- [ ] Токен одного purpose не приймається іншим ендпоінтом.
-- [ ] Крос-tenant: токен тенанта A не діє в контексті B.
-- [ ] Зміна email: невірний `currentPassword` → 400 з полем; підтвердження змінює
+- [x] Повторне використання токена → 400, пароль не змінився.
+- [x] Протухлий токен (`expires_at` у минулому) → відмова.
+- [x] Токен одного purpose не приймається іншим ендпоінтом; підмінений tenant-префікс
+      теж 400.
+- [x] Крос-tenant: `verification_tokens` під RLS (`tenant-isolation.e2e-spec.ts`).
+- [x] Зміна email: невірний `currentPassword` → 400 з полем; підтвердження змінює
       `users.email`; зайнята адреса на момент підтвердження → 409.
+- [x] Кілл-свіч (FR-033): деактивований юзер між запитом і confirm → 400, `used_at`
+      лишається `null`, сесії не видано (`env.e2e-spec.ts` — `ENCRYPTION_KEY` окремо).
 
 ## 4.5. DoD заходу 4
 
-- [ ] Живий прогін: `pnpm docker:up` (Mailpit) + api + worker + web → «Forgot password»
-      → лист у http://localhost:8025 → скидання → вхід новим паролем
-- [ ] `pnpm api:test:e2e` зелений
-- [ ] Оновити «Табло» і §8
+- [x] Живий прогін: `pnpm docker:up` (Mailpit) + api + worker → «Forgot password» →
+      лист у Mailpit → скидання → вхід новим паролем; зміна email → лист на нову адресу →
+      confirm без авторизації → повідомлення на стару адресу; зайнята адреса → 409.
+      Backend-частина через curl проти реального dev-стека слота (workspace slot 1) —
+      живий клік по UI в браузері в межах цієї сесії не робився (той самий розрив,
+      що T068/T089 у фазах 2–3).
+- [x] `pnpm api:test:e2e` (264/264) і `pnpm platform:test:e2e` (23/23) зелені
+- [x] Оновити «Табло» і §8
 
 ---
 
@@ -937,6 +951,9 @@ union нормально; якщо ні — розділити на два respo
 | 2026-09-14 | 3     | Express URL-кодує значення cookie (`:` → `%3A`) — тестовий хелпер `refreshTokenFromCookie` (apps/api/test/test-users.ts) спершу не декодував, тож `TestTokens.refreshToken` містив `%3A` замість `:` і ламав `.split(':')` та порівняння в ~15 e2e по всьому сьюту (auth, auth-sessions, account, realtime, tenant-isolation). Виправлено `decodeURIComponent`-ом на виході з хелпера; дзеркальний хелпер у platform.e2e-spec.ts виправлено так само |
 | 2026-09-14 | 3     | `cookieParser()` додано лише в `configureApp` (app.setup.ts), НЕ окремо ще й у `main.ts` — план §3.2 називав обидва файли, але `main.ts` і так викликає `configureApp`, а дублювання суперечило б уже прийнятому патерну (helmet/CORS у тому самому файлі, з тим самим обґрунтуванням «щоб e2e бачили ту саму конфігурацію»). Якщо це розходження з планом небажане — легко додати явний виклик і в `main.ts` |
 | 2026-09-14 | 3     | Живий прогін у браузері (quickstart 2.1–2.8) виконано лише ЧАСТКОВО: бекенд-контракт (2.1, 2.5, 2.6, 2.8) перевірено `curl`-ом проти реального dev-стеку слота 1 (api :3101, platform-api :3102) — cookie-флаги, ротація, Origin-guard, крос-plane 401 в обидва боки, усе відповідає контракту. **НЕ виконано**: 2.2 (F5 у браузері), 2.3 (анонімне вікно → тихий 401), 2.4 (сокет 20+ хв до `auth.expiring.v1` → `auth.update.v1`), 2.7 (platform-web F5 + 70 хв). Причина — сесія без інтерактивного браузера й без бюджету на 20+-хвилинне очікування в реальному часі. **Окремий захід**: докрутити 2.2–2.4/2.7 живим кліком у браузері (claude-in-chrome або людина) проти піднятого `pnpm web:dev`/`pnpm platform:web:dev` слота; backend-частина вже підтверджена, ризик — лише в фронтовому/сокетному коді, який фаза НЕ чіпала |
+| 2026-09-15 | 4     | **Той самий клас інциденту, що 2026-09-14, спійманий одразу**: перший `cd libs/database && pnpm exec prisma migrate dev --name verification_tokens` пішов без явного `MIGRATE_DATABASE_URL`/`DATABASE_URL` і `prisma.config.ts` впав на дефолт `localhost:5432` (слот 0, головний checkout, контейнер `saas-skeleton-db` — живий 2+ доби). Вивід команди сам назвав адресу (`Datasource "db": … at "localhost:5432"`), тому інцидент помічено ДО продовження роботи, а не постфактум. Міграція була чисто адитивна (нова enum-таблиця + безпечні `ALTER COLUMN … SET DEFAULT`, які лише повторно ствердили вже наявні дефолти) — відкат чистий: `DROP TABLE verification_tokens; DROP TYPE "VerificationPurpose"; DELETE FROM _prisma_migrations WHERE migration_name = …` проти слота 0 (дані інших таблиць не чіпались), локальна папка міграції видалена і перестворена з явним `MIGRATE_DATABASE_URL=…:5532 DATABASE_URL=…:5532` перед командою. Висновок: `cd libs/database && pnpm exec prisma migrate dev` (як буквально написано в CLAUDE.md і в брифі задачі) **не безпечний за замовчуванням** у робочому середовищі агента — інструкцію варто доповнити explicit-env-префіксом; сирий bash-tool не успадковує `.env.local` між викликами |
+| 2026-09-15 | 4     | Живий прогін через Mailpit (quickstart 3.1–3.7, 3.3a, 3.3b) виявив НЕЗАЛЕЖНИЙ від AUTH-3 пре-існуючий розрив `docs/workspace-slots.md`: `MailerService` (apps/worker) читає `SMTP_PORT`/`SMTP_HOST`, а `pnpm ws:init` генерує в `.env.local` лише `MAILPIT_SMTP_PORT`/`MAILPIT_UI_PORT` — жодного мапінгу між ними немає. Наслідок: воркер у слоті 1 слав пошту на Mailpit СЛОТА 0 (порт 1025), а не свій (1125) — перший `curl` на `/auth/password-reset` дав 204, але лист «зник» (насправді пішов у чужий, спільний Mailpit). Обійдено локально (`SMTP_PORT=1125` дописано в `.env.local` цього слота, файл gitignored, `worker:dev` перезапущено) — після цього всі листи (password-reset, email-change, email-changed) видно у власному Mailpit слота (http://localhost:8125), лінки коректно ведуть на свій `APP_PUBLIC_URL` (:5273). **Не виправлено в самому `workspace-init.ts`** — це інфраструктурна грабля workspace-slots, поза скоупом AUTH-3; вартий окремого рядка в `docs/workspace-slots.md` § «Відкрите питання» (мапити `MAILPIT_SMTP_PORT` → `SMTP_PORT` при генерації `.env.local`) |
+| 2026-09-15 | 4     | **AUTH-3 зроблено.** Живий прогін проти реального dev-стеку (api+worker, слот 1, справжній Mailpit, справжня Postgres): 3.1 (лист у Mailpit, лінк на правильний `APP_PUBLIC_URL`), 3.2 (неіснуючий email — 0 нових листів), 3.3 (повний цикл: новий пароль працює, старий 401), 3.3a (`pgboss.job.data.tokenEncrypted` починається з `v1:`, сирого токена нема), 3.3b (деактивований юзер між запитом і confirm → 400, `used_at` лишився `null`, після реактивації акаунт незмінний), 3.4 (повторний confirm тим самим токеном → 400), 3.5 (невірний `currentPassword` → 400 з полем), 3.6 (confirm БЕЗ Authorization — «інший пристрій» — email змінено, лист-сповіщення прийшов на СТАРУ адресу), 3.7 (адресу зайняв інший юзер між запитом і confirm → 409 `fieldErrors.email`) — усе відповідає контракту. Наприкінці слот повернуто в чистий сід (`pnpm db:reset`), контейнери НЕ гашено. Живого кліку по UI в браузері не робилося (той самий розрив, що в заходах 2–3, T068/T089) — фронтові сторінки (`/reset-password`, `/reset-password/confirm`, `/confirm-email`, секція зміни email) типізовано, зібрано (`pnpm build` зелений) і покликано ті самі orval-хуки, але живого рендеру в браузері не перевірено |
 
 ---
 
