@@ -146,8 +146,12 @@ describe('Auth recovery (e2e)', () => {
       expect(activity?.actorType).toBe('user');
       expect(activity?.actorId).toBe(user.id);
 
-      // spec FR-021: жодної окремої user.sessions_revoked для цього шляху
-      const revoked = await prisma.activity.count({ where: { type: 'user.sessions_revoked' } });
+      // spec FR-021: жодної окремої user.sessions_revoked для цього шляху. Скоуп по
+      // actorId ЦЬОГО юзера — глобальний count ловив би сесії, відкликані в інших
+      // сьютах (account.e2e-spec.ts тощо), що ганяються в тій самій тестовій БД
+      const revoked = await prisma.activity.count({
+        where: { type: 'user.sessions_revoked', actorId: user.id },
+      });
       expect(revoked).toBe(0);
     });
 

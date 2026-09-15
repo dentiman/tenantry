@@ -36,6 +36,13 @@ process.env.REALTIME_KEY_PREFIX = `saas:rt:test:${String(process.pid)}`;
 // e2e самі не мають секретів, тому підставляємо робочий 32-байтний base64-ключ
 process.env.ENCRYPTION_KEY ??= 'mKcyB/Ds6XNWifCcKUS7ARsdDdeoRpa2VVMDQpSF/fo=';
 
+// AUTH-2: e2e перевіряють бойовий дефолт (Secure у cookie) БЕЗУМОВНО — `??=` тут не
+// підійшло б: `loadRepoEnv()` уже підставив особистий `COOKIE_SECURE=false`
+// розробника (потрібен для http://localhost у браузері) з кореневого .env, і без
+// цього перезапису auth.e2e-spec «Secure у заголовку» падає в кожного, хто вимкнув
+// Secure собі
+process.env.COOKIE_SECURE = 'true';
+
 // AUTH-0: e2e ходять з ОДНОГО IP і в одному процесі (--runInBand) — лічильники
 // throttler-а спільні для всіх сьютів у межах вікна. З бойовими порогами (5 логінів
 // на хвилину) сотні тестів ловили б 429 у випадковому місці. Бойові значення явно
