@@ -160,10 +160,10 @@ Custom — лише скрипт ініціалізації (нижче) і па
 
 - Спільний кеш образів Docker — ок, але Valkey/Postgres на кожен слот — це пам'ять:
   прикинути ліміт одночасних слотів на машині (не блокер, просто не виміряно).
-- **Знайдено під час живого прогону AUTH-3 (2026-09-15)**: `.env.local` генерує
-  `MAILPIT_SMTP_PORT`/`MAILPIT_UI_PORT`, але `apps/worker/src/mail/mailer.service.ts`
-  читає `SMTP_PORT`/`SMTP_HOST` — мапінгу між ними немає, тому `worker:dev` у слоті
-  N ≠ 0 мовчки шле пошту на Mailpit СЛОТА 0 (дефолт 1025), а не свій (докладніше —
-  `docs/auth-hardening-plan.md` §8, запис 2026-09-15). Обхід — дописати `SMTP_PORT`
-  руками в `.env.local` слота; правильний фікс — `workspace-init.ts` мусить генерувати
-  й `SMTP_PORT: MAILPIT_SMTP_PORT` (і, для симетрії, `SMTP_HOST=localhost`).
+- ~~Знайдено під час живого прогону AUTH-3 (2026-09-15): `.env.local` генерував лише
+  `MAILPIT_SMTP_PORT`/`MAILPIT_UI_PORT`, а `apps/worker/src/mail/mailer.service.ts`
+  читає `SMTP_PORT` — без мапінгу `worker:dev` у слоті N ≠ 0 мовчки слав пошту на
+  Mailpit СЛОТА 0.~~ **Виправлено (2026-09-15)**: `workspace-init.ts` тепер генерує і
+  `SMTP_PORT` (див. приклад `.env.local` вище). `SMTP_HOST` мапити не треба —
+  `mailer.service.ts` вже й так дефолтить на `localhost`, що коректно для будь-якого
+  слота. Докладніше — `docs/auth-hardening-plan.md` §8, запис 2026-09-15.
