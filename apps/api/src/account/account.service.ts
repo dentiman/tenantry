@@ -5,16 +5,26 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
-import { ActivityRecorder } from '@saas-skeleton/shared';
+import { PrismaService, TenantTransactions, VerificationPurpose } from '@saas-skeleton/database';
+import {
+  ActivityRecorder,
+  CryptoService,
+  MessagePublisher,
+  emailChangedEvent,
+  emailChangeRequestedEvent,
+  fieldConflictException,
+} from '@saas-skeleton/shared';
 import type {
   AuthSessionResponse,
   ChangeOwnPassword,
+  EmailChangeConfirm,
+  EmailChangeRequest,
   UpdateAccountProfile,
 } from '@saas-skeleton/contracts';
 import * as argon2 from 'argon2';
 import { AuthService, type IssuedAuthTokens } from '../auth/auth.service';
 import { AuthSessionService } from '../auth/auth-session.service';
+import { VerificationTokenService } from '../auth/verification-token.service';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import type { ClientContextData } from '../common/client-context.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
@@ -44,6 +54,9 @@ export class AccountService {
     private readonly activities: ActivityRecorder,
     private readonly sessions: AuthSessionService,
     private readonly realtime: RealtimeEmitter,
+    private readonly verificationTokens: VerificationTokenService,
+    private readonly messages: MessagePublisher,
+    private readonly crypto: CryptoService,
   ) {}
 
   findMe(userId: string): Promise<UserWithAvatar> {
@@ -181,5 +194,124 @@ export class AccountService {
     });
 
     this.logger.log(`Session ${sid} revoked by its owner (user: ${userId})`);
+  }
+
+  // ------------------------------------------------------------- AUTH-3: email
+
+  /**
+   * Підтвердження йде на НОВУ адресу (не на стару): інакше зловмисник, що вже
+   * захопив стару поштову скриньку, міняв би email на свою без жодної перевірки.
+   * Доказ володіння поточним акаунтом — пароль, а не сесія: той самий прийом, що
+   * ChangeOwnPassword.currentPassword.
+   */
+  async requestEmailChange(
+    userId: string,
+    data: EmailChangeRequest,
+    client: ClientContextData,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash || !(await argon2.verify(user.passwordHash, data.currentPassword))) {
+      this.logger.warn(`Email change refused - wrong current password: ${userId}`);
+      throw new BadRequestException({
+        message: 'Current password is incorrect',
+        fieldErrors: [
+          {
+            field: 'currentPassword',
+            message: 'Current password is incorrect',
+            code: 'invalid_current_password',
+          },
+        ],
+      });
+    }
+
+    const existing = await this.prisma.user.findFirst({ where: { email: data.newEmail } });
+    if (existing) {
+      throw fieldConflictException('newEmail', 'Email already registered');
+    }
+
+    await this.tenantTx.withTenantTx(async (tx) => {
+      const token = await this.verificationTokens.issue(tx, {
+        purpose: VerificationPurpose.EMAIL_CHANGE,
+        userId: user.id,
+        payload: { newEmail: data.newEmail },
+        ip: client.ip,
+      });
+
+      await this.messages.publish(tx, emailChangeRequestedEvent, {
+        userId: user.id,
+        tokenEncrypted: this.crypto.encrypt(token),
+        newEmail: data.newEmail,
+      });
+    });
+
+    this.logger.log(`Email change requested for ${user.email} → ${data.newEmail} (ID: ${userId})`);
+  }
+
+  /**
+   * Публічний (контракт §«/account»): лист відкривають на іншому пристрої,
+   * ідентичність доводить сам токен, контекст тенанта — з його префікса
+   * (VerificationTokenService.peek). Перевірка унікальності — ЗНОВУ: адресу
+   * могли зайняти між запитом і кліком по лінку.
+   */
+  async confirmEmailChange(data: EmailChangeConfirm): Promise<UserWithAvatar> {
+    const peeked = await this.verificationTokens.peek(VerificationPurpose.EMAIL_CHANGE, data.token);
+    if (!peeked || !peeked.user.isActive || !peeked.user.tenant.isActive) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const payload = peeked.token.payload as { newEmail?: unknown };
+    const newEmail = typeof payload.newEmail === 'string' ? payload.newEmail : null;
+    if (!newEmail) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const { user } = peeked;
+    const previousEmail = user.email;
+
+    const updated = await this.tenantTx.withTenantTx(async (tx) => {
+      const consumed = await this.verificationTokens.consume(
+        tx,
+        VerificationPurpose.EMAIL_CHANGE,
+        data.token,
+      );
+      if (!consumed) {
+        throw new BadRequestException('Invalid or expired token');
+      }
+
+      const taken = await tx.user.findFirst({ where: { email: newEmail, id: { not: user.id } } });
+      if (taken) {
+        throw fieldConflictException('email', 'Email already registered');
+      }
+
+      const result = await tx.user.update({
+        where: { id: user.id },
+        data: { email: newEmail },
+        include: { avatarFile: true },
+      });
+
+      await this.activities.record(tx, {
+        type: 'user.email_changed',
+        // Актор — сам юзер: підтвердив дію токеном, надісланим на його ж поштову скриньку
+        actor: { type: 'user', id: user.id, label: user.name ?? previousEmail },
+        payload: {
+          user: { kind: 'user', id: user.id, label: user.name ?? newEmail },
+          from: previousEmail,
+          to: newEmail,
+        },
+        links: [{ entityType: 'user', entityId: user.id, role: 'subject' }],
+      });
+
+      // На СТАРУ адресу — власник міг не ініціювати зміну сам (план §«Асинхронні
+      // повідомлення»); лист шле воркер, тут лише публікація факту
+      await this.messages.publish(tx, emailChangedEvent, {
+        userId: user.id,
+        previousEmail,
+      });
+
+      return result;
+    });
+
+    this.logger.log(`Email changed for user ${user.id}: ${previousEmail} → ${newEmail}`);
+    return updated;
   }
 }

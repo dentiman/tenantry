@@ -11,6 +11,16 @@ const HOUR_MS = 60 * MINUTE_MS;
 // RFC 5321: адреса довша за 254 символи не існує — довше в ключ Redis не кладемо
 const MAX_EMAIL_KEY_LENGTH = 254;
 
+/**
+ * AUTH-3 (events-and-config.md §5, plan D-15): пороги скидання пароля й зміни email —
+ * значення ДИЗАЙНУ, не зі спеки, e2e їх не піднімає (research R-17 стосується лише
+ * логіну — той самий IP б'є в НЕ пов'язані роути в решті сьютів). Константи, а не env.
+ */
+const PASSWORD_RESET_LIMIT_PER_HOUR = 3;
+const PASSWORD_RESET_IP_LIMIT_PER_HOUR = 20;
+const EMAIL_CHANGE_LIMIT_PER_HOUR = 5;
+const VERIFICATION_CONFIRM_LIMIT_PER_MINUTE = 10;
+
 // Reflector без залежностей: лише читає метадані декораторів
 const reflector = new Reflector();
 
@@ -117,6 +127,33 @@ export function createAppThrottlerModule(options: CreateAppThrottlerModuleOption
           limit: config.accountSensitivePerHour,
           skipIf: optIn(RATE_LIMITS.accountSensitive),
           getTracker: options.principalTracker,
+        },
+        {
+          // Той самий трекер, що login: email із тіла запиту скидання пароля + ip
+          name: RATE_LIMITS.passwordReset,
+          ttl: HOUR_MS,
+          limit: PASSWORD_RESET_LIMIT_PER_HOUR,
+          skipIf: optIn(RATE_LIMITS.passwordReset),
+          getTracker: emailAndIpTracker,
+        },
+        {
+          name: RATE_LIMITS.passwordResetIp,
+          ttl: HOUR_MS,
+          limit: PASSWORD_RESET_IP_LIMIT_PER_HOUR,
+          skipIf: optIn(RATE_LIMITS.passwordResetIp),
+        },
+        {
+          name: RATE_LIMITS.emailChange,
+          ttl: HOUR_MS,
+          limit: EMAIL_CHANGE_LIMIT_PER_HOUR,
+          skipIf: optIn(RATE_LIMITS.emailChange),
+          getTracker: options.principalTracker,
+        },
+        {
+          name: RATE_LIMITS.verificationConfirm,
+          ttl: MINUTE_MS,
+          limit: VERIFICATION_CONFIRM_LIMIT_PER_MINUTE,
+          skipIf: optIn(RATE_LIMITS.verificationConfirm),
         },
       ];
       return {

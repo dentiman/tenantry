@@ -32,6 +32,9 @@ export const ACTIVITY_TYPES = [
   'user.sessions_revoked',
   'user.enabled',
   'user.disabled',
+  // AUTH-3: зміна власного email через /account/email-change/confirm. Свідома дія
+  // над ідентичністю акаунта (план D-4) — журнал показує стару і нову адресу разом
+  'user.email_changed',
   'email.sent',
   // --- Кастомери (docs/customers.md §9). Окремі типи замість одного
   // 'customer.updated' із діффом — та сама доктрина, що в юзерах: журнал читають
@@ -95,6 +98,11 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = {
   }),
   'user.disabled': z.object({
     user: EntityRefSchema,
+  }),
+  'user.email_changed': z.object({
+    user: EntityRefSchema,
+    from: z.email(),
+    to: z.email(),
   }),
   'customer.created': z.object({
     customer: EntityRefSchema, // kind: 'customer'

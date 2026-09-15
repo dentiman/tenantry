@@ -31,6 +31,7 @@ model Tenant {
 
   users                   User[]
   authSessions            AuthSession[]
+  verificationTokens      VerificationToken[]
   files                   File[]
   attachments             Attachment[]
   activities              Activity[]
@@ -84,6 +85,7 @@ model User {
 
   tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   authSessions            AuthSession[]
+  verificationTokens      VerificationToken[]
   // Персональний інбокс (docs/notifications.md): іде разом із юзером — це його
   // особисті дані, а не журнал (журнал — activities, він переживає видалення)
   notifications           Notification[]           @relation("NotificationRecipient")
@@ -160,6 +162,42 @@ model AuthSession {
   @@index([tenantId, userId])
   @@index([tenantId, idleExpiresAt])
   @@map("auth_sessions")
+}
+
+/// AUTH-3: одноразові посилання (скидання пароля, зміна email). Одна таблиця на всі
+/// призначення (`purpose`) замість окремої на кожне — стани й механіка споживання
+/// (атомарний умовний UPDATE) однакові, різниться лише payload.
+model VerificationToken {
+  id       String              @id @default(uuid())
+  tenantId String              @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String              @map("user_id")
+  purpose  VerificationPurpose
+
+  /// `sha256:<hex>` — секрет 256 біт ентропії, той самий протокол, що в auth_sessions
+  tokenHash String @map("token_hash")
+
+  /// `EMAIL_CHANGE` → `{ newEmail }`; інші purpose payload не потребують
+  payload Json @default("{}")
+
+  /// `now + 60 хв` (константа VerificationTokenService)
+  expiresAt DateTime  @map("expires_at")
+  /// ≠ null → використано; атомарний умовний UPDATE ставить це поле
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  createdIp String?   @map("created_ip")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, userId, purpose])
+  @@map("verification_tokens")
+}
+
+enum VerificationPurpose {
+  PASSWORD_RESET
+  EMAIL_CHANGE
+  /// Флоу немає в цій фазі — резерв на інвайти майбутнього MT-4
+  INVITE
 }
 
 // Файлова підсистема (Files v1): метадані об'єктів S3-сховища.

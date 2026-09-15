@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { CreateUserSchema, PasswordSchema, UserLocaleSchema } from '../user/user.schema';
 
+const normalizedEmail = z.string().trim().toLowerCase().pipe(z.email());
+
 /**
  * Self-service редагування власного профілю. Свідомо ПІДМНОЖИНА UpdateUserSchema,
  * а не він сам: `role` і `isActive` тут відсутні як поняття — юзер не підвищує собі
@@ -65,4 +67,19 @@ export const AuthSessionResponseSchema = z.object({
   lastUsedAt: z.iso.datetime(),
   idleExpiresAt: z.iso.datetime(),
   absoluteExpiresAt: z.iso.datetime(),
+});
+
+/**
+ * AUTH-3: зміна власного email — доказ володіння паролем + підтвердження на НОВУ
+ * адресу (не на стару: інакше зловмисник, що вже захопив стару поштову скриньку,
+ * міняв би email на свою без жодного підтвердження).
+ */
+export const EmailChangeRequestSchema = z.object({
+  newEmail: normalizedEmail,
+  currentPassword: z.string().min(1),
+});
+
+/** Публічний — лист відкривають на іншому пристрої; контекст тенанта з префікса токена */
+export const EmailChangeConfirmSchema = z.object({
+  token: z.string().min(1),
 });

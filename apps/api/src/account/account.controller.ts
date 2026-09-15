@@ -10,21 +10,29 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { RATE_LIMITS, RateLimit, StorageService } from '@saas-skeleton/shared';
 import type { AuthSessionResponse, AuthTokens, UserResponse } from '@saas-skeleton/contracts';
 import { AuthTokensDto } from '../auth/dto/auth-response.dto';
 import { toAuthTokensResponse } from '../auth/auth.mapper';
 import { setRefreshCookie } from '../auth/refresh-cookie';
+import { Public } from '../auth/decorators/public.decorator';
 import { ClientContext, type ClientContextData } from '../common/client-context.decorator';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { UserResponseDto } from '../users/dto/user-response.dto';
-import { toUserResponseWithAvatar } from '../users/users.mapper';
+import { toUserResponseWithAvatar, toUserResponse } from '../users/users.mapper';
 import { AccountService } from './account.service';
 import { AuthSessionResponseDto } from './dto/auth-session-response.dto';
 import { ChangeOwnPasswordDto } from './dto/change-own-password.dto';
 import { UpdateAccountProfileDto } from './dto/update-account-profile.dto';
+import { EmailChangeRequestDto } from './dto/email-change-request.dto';
+import { EmailChangeConfirmDto } from './dto/email-change-confirm.dto';
 
 /**
  * Роути «про себе». Жоден із них не приймає id — суб'єкт завжди з токена.
@@ -108,5 +116,35 @@ export class AccountController {
     const tokens = await this.account.revokeAllSessions(actor.sub, actor, client);
     setRefreshCookie(res, tokens.refreshToken, tokens.idleExpiresAt);
     return toAuthTokensResponse(tokens);
+  }
+
+  /**
+   * AUTH-3: запит зміни email. Підтвердження йде на НОВУ адресу, тому тут лише
+   * 204 — сам email міняється у confirm нижче.
+   */
+  @Post('email-change')
+  @RateLimit(RATE_LIMITS.emailChange)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  async requestEmailChange(
+    @Body() dto: EmailChangeRequestDto,
+    @CurrentUser() actor: JwtPayload,
+    @ClientContext() client: ClientContextData,
+  ): Promise<void> {
+    await this.account.requestEmailChange(actor.sub, dto, client);
+  }
+
+  /**
+   * Публічний: лист відкривають на іншому пристрої, контекст тенанта і юзера — з
+   * префікса токена (contracts/http-api.md §«/account»: `email-change/confirm`).
+   */
+  @Public()
+  @Post('email-change/confirm')
+  @RateLimit(RATE_LIMITS.verificationConfirm)
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: UserResponseDto.Output })
+  async confirmEmailChange(@Body() dto: EmailChangeConfirmDto): Promise<UserResponse> {
+    const user = await this.account.confirmEmailChange(dto);
+    return toUserResponse(user);
   }
 }

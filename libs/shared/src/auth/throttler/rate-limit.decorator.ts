@@ -17,6 +17,18 @@ export const RATE_LIMITS = {
   refresh: 'refresh',
   /** 10/год на користувача — зміна пароля, «вийти звідусіль» (лише tenant-api) */
   accountSensitive: 'account-sensitive',
+  /** AUTH-3: 3/год на пару (email, ip) — запит скидання пароля; поріг — константа (план D-15) */
+  passwordReset: 'password-reset',
+  /** AUTH-3: 20/год на ip — стеля для запиту скидання пароля з одного IP */
+  passwordResetIp: 'password-reset-ip',
+  /** AUTH-3: 5/год на користувача — запит зміни email */
+  emailChange: 'email-change',
+  /**
+   * AUTH-3: 10/хв на ip — спільний для ОБОХ публічних confirm-роутів
+   * (`password-reset/confirm`, `email-change/confirm`): один поріг на «клацання
+   * по лінку з листа», значення в контракті однакове для обох
+   */
+  verificationConfirm: 'verification-confirm',
 } as const;
 
 export type RateLimitName = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];

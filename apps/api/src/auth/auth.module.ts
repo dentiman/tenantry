@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthSessionService } from './auth-session.service';
 import { AccessTokenService } from './access-token.service';
+import { VerificationTokenService } from './verification-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AppThrottlerGuard } from '@saas-skeleton/shared';
@@ -27,6 +28,7 @@ import { AppThrottlerGuard } from '@saas-skeleton/shared';
     AuthService,
     AuthSessionService,
     AccessTokenService,
+    VerificationTokenService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
@@ -48,6 +50,8 @@ import { AppThrottlerGuard } from '@saas-skeleton/shared';
   // токен ТИМ САМИМ кодом, що HTTP-guard
   // AuthSessionService експортується для account/users: відкликання сесій —
   // частина їхніх доменних транзакцій (зміна пароля, деактивація, revoke-all)
-  exports: [AuthService, AuthSessionService, AccessTokenService],
+  // VerificationTokenService — AUTH-3: спільний для password-reset (тут) і
+  // account/email-change (AccountModule), один сервіс на всі `purpose`
+  exports: [AuthService, AuthSessionService, AccessTokenService, VerificationTokenService],
 })
 export class AuthModule {}

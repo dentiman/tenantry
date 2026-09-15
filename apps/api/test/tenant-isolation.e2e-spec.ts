@@ -290,4 +290,24 @@ describe('Tenant isolation (e2e)', () => {
     const stillThere = await sysPrisma.authSession.findUnique({ where: { id: sessionB.id } });
     expect(stillThere?.revokedAt).toBeNull();
   });
+
+  // AUTH-3 (T095): verification_tokens під RLS, той самий прийом, що auth_sessions вище
+  it('токен зміни email tenant-а B не видимий під контекстом A', async () => {
+    const suffix = String(Date.now());
+    const userB = await createUserInTenantB(`vt-${suffix}`);
+    await sysPrisma.verificationToken.create({
+      data: {
+        tenantId: TENANT_B_ID,
+        userId: userB.id,
+        purpose: 'PASSWORD_RESET',
+        tokenHash: 'sha256:deadbeef',
+        expiresAt: new Date(Date.now() + 3600_000),
+      },
+    });
+
+    const visible = await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
+      tenantPrisma.verificationToken.findMany({ where: { userId: userB.id } }),
+    );
+    expect(visible).toEqual([]);
+  });
 });

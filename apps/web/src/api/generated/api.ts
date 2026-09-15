@@ -45,6 +45,8 @@ import type {
   CustomerDetailResponseDtoOutput,
   CustomerListResponseDtoOutput,
   CustomersFindAllParams,
+  EmailChangeConfirmDto,
+  EmailChangeRequestDto,
   FileDownloadUrlResponseDtoOutput,
   FileResponseDtoOutput,
   FilesDownloadUrlParams,
@@ -61,6 +63,8 @@ import type {
   NotificationsFindAllParams,
   NumberSeriesListResponseDtoOutput,
   NumberSeriesResponseDtoOutput,
+  PasswordResetConfirmDto,
+  PasswordResetRequestDto,
   PresenceSnapshotDtoOutput,
   RefreshDto,
   SetCalendarAttendeesDto,
@@ -489,6 +493,262 @@ export function useAuthMe<TData = Awaited<ReturnType<typeof authMe>>, TError = u
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getAuthMeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const passwordResetRequest = (
+  passwordResetRequestDto: PasswordResetRequestDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/auth/password-reset`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: passwordResetRequestDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getPasswordResetRequestMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof passwordResetRequest>>,
+    TError,
+    { data: PasswordResetRequestDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof passwordResetRequest>>,
+  TError,
+  { data: PasswordResetRequestDto },
+  TContext
+> => {
+  const mutationKey = ['passwordResetRequest'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof passwordResetRequest>>,
+    { data: PasswordResetRequestDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return passwordResetRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PasswordResetRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof passwordResetRequest>>
+>;
+export type PasswordResetRequestMutationBody = PasswordResetRequestDto;
+export type PasswordResetRequestMutationError = unknown;
+
+export const usePasswordResetRequest = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof passwordResetRequest>>,
+      TError,
+      { data: PasswordResetRequestDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof passwordResetRequest>>,
+  TError,
+  { data: PasswordResetRequestDto },
+  TContext
+> => {
+  const mutationOptions = getPasswordResetRequestMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const passwordResetConfirm = (
+  passwordResetConfirmDto: PasswordResetConfirmDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AuthResponseDtoOutput>(
+    {
+      url: `/api/auth/password-reset/confirm`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: passwordResetConfirmDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getPasswordResetConfirmMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof passwordResetConfirm>>,
+    TError,
+    { data: PasswordResetConfirmDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof passwordResetConfirm>>,
+  TError,
+  { data: PasswordResetConfirmDto },
+  TContext
+> => {
+  const mutationKey = ['passwordResetConfirm'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof passwordResetConfirm>>,
+    { data: PasswordResetConfirmDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return passwordResetConfirm(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PasswordResetConfirmMutationResult = NonNullable<
+  Awaited<ReturnType<typeof passwordResetConfirm>>
+>;
+export type PasswordResetConfirmMutationBody = PasswordResetConfirmDto;
+export type PasswordResetConfirmMutationError = unknown;
+
+export const usePasswordResetConfirm = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof passwordResetConfirm>>,
+      TError,
+      { data: PasswordResetConfirmDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof passwordResetConfirm>>,
+  TError,
+  { data: PasswordResetConfirmDto },
+  TContext
+> => {
+  const mutationOptions = getPasswordResetConfirmMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const presenceGet = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PresenceSnapshotDtoOutput>(
+    { url: `/api/presence`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getPresenceGetQueryKey = () => {
+  return [`/api/presence`] as const;
+};
+
+export const getPresenceGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof presenceGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getPresenceGetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof presenceGet>>> = ({ signal }) =>
+    presenceGet(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof presenceGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type PresenceGetQueryResult = NonNullable<Awaited<ReturnType<typeof presenceGet>>>;
+export type PresenceGetQueryError = unknown;
+
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof presenceGet>>,
+          TError,
+          Awaited<ReturnType<typeof presenceGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof presenceGet>>,
+          TError,
+          Awaited<ReturnType<typeof presenceGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getPresenceGetQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -1064,100 +1324,6 @@ export const useUsersSetStatus = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
-
-export const presenceGet = (
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<PresenceSnapshotDtoOutput>(
-    { url: `/api/presence`, method: 'GET', signal },
-    options,
-  );
-};
-
-export const getPresenceGetQueryKey = () => {
-  return [`/api/presence`] as const;
-};
-
-export const getPresenceGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof presenceGet>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-  request?: SecondParameter<typeof customInstance>;
-}) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getPresenceGetQueryKey();
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof presenceGet>>> = ({ signal }) =>
-    presenceGet(requestOptions, signal);
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof presenceGet>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type PresenceGetQueryResult = NonNullable<Awaited<ReturnType<typeof presenceGet>>>;
-export type PresenceGetQueryError = unknown;
-
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof presenceGet>>,
-          TError,
-          Awaited<ReturnType<typeof presenceGet>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof presenceGet>>,
-          TError,
-          Awaited<ReturnType<typeof presenceGet>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function usePresenceGet<TData = Awaited<ReturnType<typeof presenceGet>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof presenceGet>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getPresenceGetQueryOptions(options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
 
 export const customersFindAll = (
   params?: CustomersFindAllParams,
@@ -4299,6 +4465,168 @@ export const useAccountRevokeAllSessions = <TError = unknown, TContext = unknown
   TContext
 > => {
   const mutationOptions = getAccountRevokeAllSessionsMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountRequestEmailChange = (
+  emailChangeRequestDto: EmailChangeRequestDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/account/email-change`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: emailChangeRequestDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getAccountRequestEmailChangeMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountRequestEmailChange>>,
+    TError,
+    { data: EmailChangeRequestDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountRequestEmailChange>>,
+  TError,
+  { data: EmailChangeRequestDto },
+  TContext
+> => {
+  const mutationKey = ['accountRequestEmailChange'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountRequestEmailChange>>,
+    { data: EmailChangeRequestDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return accountRequestEmailChange(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountRequestEmailChangeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountRequestEmailChange>>
+>;
+export type AccountRequestEmailChangeMutationBody = EmailChangeRequestDto;
+export type AccountRequestEmailChangeMutationError = unknown;
+
+export const useAccountRequestEmailChange = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountRequestEmailChange>>,
+      TError,
+      { data: EmailChangeRequestDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountRequestEmailChange>>,
+  TError,
+  { data: EmailChangeRequestDto },
+  TContext
+> => {
+  const mutationOptions = getAccountRequestEmailChangeMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const accountConfirmEmailChange = (
+  emailChangeConfirmDto: EmailChangeConfirmDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<UserResponseDtoOutput>(
+    {
+      url: `/api/account/email-change/confirm`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: emailChangeConfirmDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getAccountConfirmEmailChangeMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountConfirmEmailChange>>,
+    TError,
+    { data: EmailChangeConfirmDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountConfirmEmailChange>>,
+  TError,
+  { data: EmailChangeConfirmDto },
+  TContext
+> => {
+  const mutationKey = ['accountConfirmEmailChange'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountConfirmEmailChange>>,
+    { data: EmailChangeConfirmDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return accountConfirmEmailChange(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AccountConfirmEmailChangeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountConfirmEmailChange>>
+>;
+export type AccountConfirmEmailChangeMutationBody = EmailChangeConfirmDto;
+export type AccountConfirmEmailChangeMutationError = unknown;
+
+export const useAccountConfirmEmailChange = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountConfirmEmailChange>>,
+      TError,
+      { data: EmailChangeConfirmDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountConfirmEmailChange>>,
+  TError,
+  { data: EmailChangeConfirmDto },
+  TContext
+> => {
+  const mutationOptions = getAccountConfirmEmailChangeMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

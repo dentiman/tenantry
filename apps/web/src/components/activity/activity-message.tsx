@@ -11,6 +11,7 @@ const KNOWN_TYPES = [
   'user.sessions_revoked',
   'user.enabled',
   'user.disabled',
+  'user.email_changed',
   'email.sent',
   'customer.created',
   'customer.archived',
@@ -109,6 +110,9 @@ export function ActivityMessage({ activity }: { activity: Activity }) {
           // Лише один тип має додаткове число — плодити окрему гілку заради нього
           // немає сенсу, зайвий ключ у values інші повідомлення просто ігнорують
           sessionCount: numField(payload, 'sessionCount'),
+          // AUTH-3: user.email_changed — адреси прості скаляри, не EntityRef
+          from: strField(payload, 'from'),
+          to: strField(payload, 'to'),
         };
 
   return (

@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './crypto';
 export * from './errors';
 export * from './messaging';
 export * from './storage';
