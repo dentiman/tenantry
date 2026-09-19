@@ -13,6 +13,7 @@ import { PanelRightIcon, XIcon } from 'lucide-react';
 
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 
 /**
  * Контекстна панель шела — ТРЕТЯ колонка розкладки, дзеркальна до сайдбара.
@@ -151,10 +152,11 @@ export function ContextPanelProvider({ children }: { children: ReactNode }) {
  * Ставиться СУСІДОМ `SidebarInset`, усередині `SidebarProvider` — тоді вона йде
  * на всю висоту, а хедер контенту закінчується на її межі.
  *
- * Ширина — `--context-panel-width`, дефолт **18rem/288px**. Це крок шкали (72 × 4px,
- * тобто `w-72`) і водночас константа самого реєстру: `SIDEBAR_WIDTH_MOBILE` у
- * `ui/sidebar.tsx` — рівно 18rem. У майбутньому ширина стане тягучою (resizable),
- * і саме тому вона вже сьогодні одна CSS-змінна, а не константа в класі.
+ * Ширина — `--context-panel-width`, дефолт і мінімум **18rem/288px** (крок шкали
+ * 72 × 4px, `w-72`, і водночас константа реєстру `SIDEBAR_WIDTH_MOBILE` у
+ * `ui/sidebar.tsx`). Тягуча: `ResizeHandle` на лівій межі (тільки в docked-режимі,
+ * `md`+) тягне саме цю змінну — `useResizablePanelWidth` мутує її напряму на
+ * `document.documentElement`, тому й задана вона тут через `var(...)`, а не клас.
  *
  * `sticky top-0 h-svh`, а не `fixed`: сторінка поруч скролиться вікном, і панель
  * мусить лишатись на місці, не виходячи з потоку — інакше вона не віднімала б
@@ -185,6 +187,18 @@ export function ContextPanelSlot({ className }: { className?: string }) {
         className,
       )}
     >
+      {/* Тільки в docked-режимі (`md`+): на вузькому екрані панель — накладка
+          на всю ширину, стискати там нічого */}
+      <ResizeHandle
+        edge="left"
+        grow="left"
+        cssVar="--context-panel-width"
+        storageKey="app-shell:context-panel-width"
+        defaultWidthPx={288}
+        minWidthPx={288}
+        maxRatio={0.4}
+        className="hidden md:block"
+      />
       <div ref={setNode} className="flex min-h-0 flex-1 flex-col" />
     </aside>
   );

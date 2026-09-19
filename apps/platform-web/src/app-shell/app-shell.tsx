@@ -46,8 +46,9 @@ export function AppShell() {
         <SidebarProvider
           style={
             {
-              '--sidebar-width': 'calc(14rem + var(--sidebar-width-icon) + 2px)',
-              '--context-panel-width': '18rem',
+              '--sidebar-width': 'calc(var(--area-sidebar-width, 14rem) + var(--sidebar-width-icon) + 2px)',
+              // `--context-panel-width` не оголошується тут — див.
+              // apps/web/src/app-shell/app-shell.tsx
             } as CSSProperties
           }
         >

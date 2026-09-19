@@ -1,6 +1,7 @@
 import { useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
+import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import { useSettingsBootstrap } from '../api/generated/api';
 import { DEFAULT_AREA, resolveArea } from './areas';
 
@@ -12,10 +13,15 @@ import { DEFAULT_AREA, resolveArea } from './areas';
  * список розмов із пошуком, а не пункти. Ті area, що справді є меню, беруть
  * спільний `AreaNav`.
  *
- * `w-auto flex-1` — свідоме перевизначення: `collapsible="none"` рендерить
- * `w-(--sidebar-width)`, а колонка мусить зайняти те, що лишилось після рейлу.
- * У `Sheet` на мобільному той самий клас дає повну ширину — окремого режиму не
- * потрібно.
+ * Ширина — `style={{width: 'var(--area-sidebar-width, 14rem)'}}`, свідоме
+ * перевизначення: `collapsible="none"` рендерить `w-(--sidebar-width)` (ширину
+ * ВСЬОГО блоку, рейл+area), а колонці належить тільки те, що лишилось після
+ * рейлу. Інлайн-стиль б'є клас за специфічністю, тож перевизначати сам клас не
+ * треба. `ResizeHandle` на правій межі тягне саме цю змінну — `app-shell.tsx`
+ * збирає з неї `--sidebar-width` (`calc(var(--area-sidebar-width, 14rem) + ...)`),
+ * тож зовнішній контейнер сайдбара завжди рівно на ширину рейлу ширший за area, і
+ * нового вільного/зайнятого простору між ними не з'являється. У `Sheet` на
+ * мобільному колонка так само займає що лишилось.
  *
  * **`min-w-0` тут обовʼязковий.** Flex-елемент за замовчуванням має
  * `min-width: auto`, тобто відмовляється стискатися нижче min-content свого
@@ -51,7 +57,20 @@ export function AreaSidebar() {
   const tenantName = bootstrap?.general.name ?? t('brand');
 
   return (
-    <Sidebar collapsible="none" className="w-auto min-w-0 flex-1">
+    <Sidebar
+      collapsible="none"
+      className="relative min-w-0 shrink-0"
+      style={{ width: 'var(--area-sidebar-width, 14rem)' }}
+    >
+      <ResizeHandle
+        edge="right"
+        grow="right"
+        cssVar="--area-sidebar-width"
+        storageKey="app-shell:area-sidebar-width"
+        defaultWidthPx={224}
+        minWidthPx={224}
+        maxRatio={0.4}
+      />
       <SidebarHeader className="h-14 shrink-0 justify-center border-b border-sidebar-border px-4">
         {/* Два рядки тієї самої форми, що мав бренд у сайдбарі до появи рейлу:
             назва тенанта зверху, під нею сірим — активний розділ. Знак

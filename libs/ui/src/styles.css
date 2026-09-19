@@ -408,3 +408,22 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+/**
+ * Реєстровий `sidebar.tsx` тримає `transition-[width]`/`transition-[left,right,width]
+ * duration-200` на `sidebar-gap`/`sidebar-container` — для ПЛАВНОГО collapse/expand
+ * (Cmd+B). Але `useResizablePanelWidth` (`resizable-shell-panels`) оновлює той самий
+ * `--sidebar-width` на кожен кадр живого драгу, і transition тоді доганяє курсор із
+ * 200мс лагом — сама колонка (наш інлайн-стиль, без transition) стрибає миттєво, а
+ * контейнер, що її стискає й дає межу з контентом, ще 200мс «доганяє».
+ *
+ * `useResizablePanelWidth` вішає `is-resizing-panel` на `<html>` рівно на час
+ * активного драгу (not на collapse — там анімація лишається бажаною). Правило поза
+ * `@layer`, тому переважає над Tailwind-утилітою `transition-[width]` незалежно від
+ * порядку шарів. `sidebar.tsx` лишається неторканим — фід іде через ту саму
+ * CSS-змінну, яку примітив і так читає.
+ */
+:where(html.is-resizing-panel) [data-slot='sidebar-gap'],
+:where(html.is-resizing-panel) [data-slot='sidebar-container'] {
+  transition: none;
+}

@@ -15,6 +15,7 @@
     "./components/page-breadcrumbs": "./src/components/page-breadcrumbs.tsx",
     "./components/page-header": "./src/components/page-header.tsx",
     "./components/page-header-slot": "./src/components/page-header-slot.tsx",
+    "./components/resize-handle": "./src/components/resize-handle.tsx",
     "./components/theme-select": "./src/components/theme-select.tsx",
     "./components/theme-switcher": "./src/components/theme-switcher.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",
@@ -25,7 +26,9 @@
     "./themes": "./src/themes/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -53,6 +56,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   }
 }
