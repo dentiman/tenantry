@@ -45,10 +45,13 @@ import { AreaSidebar } from './area-sidebar';
  *
  * `--sidebar-width` — це ширина ВСЬОГО блоку, тож задаємо її ЧЕРЕЗ ширину панелі:
  * стандартна тут панель, а рейл — фіксована обшивка, яку до неї додають. Панель
- * = 14rem (224px, крок `w-56` шкали Tailwind) — нижня межа класичного діапазону
- * навігаційної панелі 224…256px (`15rem`/240px — Linear, Notion; `16rem`/256px —
- * Material 2 і сток самого shadcn). Наступний крок угору, якщо колись стане
- * тісно, — `15rem`.
+ * = `--area-sidebar-width`, дефолт і мінімум 14rem (224px, крок `w-56` шкали
+ * Tailwind) — нижня межа класичного діапазону навігаційної панелі 224…256px
+ * (`15rem`/240px — Linear, Notion; `16rem`/256px — Material 2 і сток самого
+ * shadcn). Тягуча: `ResizeHandle` у `AreaSidebar` мутує саме цю змінну напряму
+ * на `document.documentElement` (`useResizablePanelWidth`), тому вона й винесена
+ * в CSS-змінну з фолбеком (`var(--area-sidebar-width, 14rem)`), а не захардкожена
+ * в `calc()`, — до першого пейнта хука фолбек дає той самий дефолт.
  *
  * `+ 2px` — не магія, а компенсація двох меж по 1px: правої в контейнера сайдбара
  * і правої в рейла. Без них панель вийшла б 222px замість 224px.
@@ -91,14 +94,11 @@ export function AppShell() {
         <SidebarProvider
           style={
             {
-              '--sidebar-width': 'calc(14rem + var(--sidebar-width-icon) + 2px)',
-              // Права колонка — 18rem/288px. Симетрія з лівою парою (рейл +
-              // колонка area = 274px) була першим значенням і виявилась тіснуватою
-              // для форми: 18rem дає ті ~14px, яких бракувало, і при цьому це не
-              // підібране число, а крок шкали (`w-72`) і константа реєстру
-              // (`SIDEBAR_WIDTH_MOBILE`). Змінна, а не клас, — бо ширина панелі
-              // стане тягучою (resizable), і тягнути треба буде саме її
-              '--context-panel-width': '18rem',
+              '--sidebar-width': 'calc(var(--area-sidebar-width, 14rem) + var(--sidebar-width-icon) + 2px)',
+              // `--context-panel-width` не оголошується тут: її дефолт і фолбек
+              // живуть у самому `context-panel-slot.tsx` (`var(--context-panel-width,18rem)`),
+              // а поточне значення виставляє `useResizablePanelWidth` на
+              // `document.documentElement` — та сама схема, що й для area
             } as CSSProperties
           }
         >

@@ -34,6 +34,8 @@ read the relevant doc before working in that area instead of expecting it here.
   (**start here** for any UI work, including `createDataGrid<TFilters, TItem>()`);
   `docs/frontend/ui-registry.md` — where to find a new component; `docs/frontend/theming.md` —
   color/typography tokens; `docs/frontend/app-shell.md` — two-level navigation shell;
+  `docs/frontend/layout-structure.md` — quick visual map + naming of shell columns/
+  panels (rail, area sidebar, context panel) for both frontends;
   `docs/frontend/ui-known-issues.md` — open vendored-code issues
 - `docs/chat.md`, `docs/bulk-operations.md` — **design fixed, not implemented.** Chat has an
   empty placeholder page/area in `apps/web`; bulk operations has a disabled demo slot on
