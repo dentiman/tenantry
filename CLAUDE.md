@@ -40,16 +40,14 @@ read the relevant doc before working in that area instead of expecting it here.
 - `docs/chat.md`, `docs/bulk-operations.md` — **design fixed, not implemented.** Chat has an
   empty placeholder page/area in `apps/web`; bulk operations has a disabled demo slot on
   `/users`. Don't treat either as a working feature.
-- `docs/ai-assistant-implementation.md` — **AI-0 is built**: the sidebar AI assistant running
-  on `FakeLlmProvider` only (no key, no network, no cost). Data model, the two access
-  boundaries, the streaming protocol and why a socket event may carry payload here, the queue
-  options, config. Read this before touching anything under `ai/`;
-  `docs/ai-assistant-plan.md` — the research behind it and the AI-1…AI-4 phase plan (those
-  phases stay open to revision — §9.1)
-- `docs/ai-assistant.md` — **earlier research, no decisions fixed yet.** Explores a sidebar AI/LLM
-  chat for the tenant portal (product-help vs. tenant-data assistant, UI placement, data
-  model, LLM-provider adapter, sync-vs-async generation pipeline). Distinct from
-  `docs/chat.md` (that's human/customer conversations); read before starting any AI-chat work.
+- `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
+  why, the research behind them (OpenAI-compat is lossy, provider strategies, tool-calling
+  mechanics, files), budget, privacy, and phases AI-0…AI-4. §0 keeps the decision sequence.
+  Distinct from `docs/chat.md` (that's human/customer conversations);
+  `docs/ai-assistant-implementation.md` — what AI-0 actually shipped, on `FakeLlmProvider` only
+  (no key, no network, no cost): data model, the two access boundaries, the streaming protocol
+  and why a socket event may carry payload here, queue options, config. Read the second before
+  touching anything under `ai/`, the first before planning the next phase.
 
 ## Commands
 
