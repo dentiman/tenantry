@@ -7,6 +7,8 @@
     "dev:debug": "nest start --debug --watch",
     "build": "nest build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js"
   },
@@ -42,6 +44,7 @@
     "@types/nodemailer": "^8.0.1",
     "ts-loader": "^9.5.0",
     "typescript": "^5.9.3",
+    "vitest": "^5.0.0",
     "webpack-node-externals": "^3.0.0"
   }
 }

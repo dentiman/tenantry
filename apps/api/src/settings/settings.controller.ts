@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
@@ -7,6 +7,7 @@ import type {
   GeneralSettingsResponse,
 } from '@saas-skeleton/contracts';
 import { Role } from '@saas-skeleton/database';
+import { AI_CONFIG, type AiConfig } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SettingsService } from './settings.service';
@@ -42,6 +43,7 @@ export class SettingsController {
   constructor(
     private readonly settings: SettingsService,
     private readonly activities: ActivitiesService,
+    @Inject(AI_CONFIG) private readonly aiConfig: AiConfig,
   ) {}
 
   /**
@@ -52,7 +54,9 @@ export class SettingsController {
   @ApiOkResponse({ type: SettingsBootstrapDto.Output })
   async bootstrap(): Promise<SettingsBootstrap> {
     const organization = await this.settings.current();
-    return toSettingsBootstrap(organization, this.settings.parseCalendar(organization.settings));
+    return toSettingsBootstrap(organization, this.settings.parseCalendar(organization.settings), {
+      ai: this.aiConfig.enabled,
+    });
   }
 
   @Get('general')

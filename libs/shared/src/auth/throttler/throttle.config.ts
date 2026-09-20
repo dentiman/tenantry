@@ -24,6 +24,7 @@ const ThrottleEnvSchema = z.object({
   AUTH_LOGIN_IP_LIMIT_PER_MINUTE: intFromEnv(20),
   AUTH_REFRESH_LIMIT_PER_MINUTE: intFromEnv(30),
   ACCOUNT_SENSITIVE_LIMIT_PER_HOUR: intFromEnv(10),
+  AI_ASK_LIMIT_PER_MINUTE: intFromEnv(10),
 });
 
 /**
@@ -38,6 +39,7 @@ export interface ThrottleConfig {
   loginIpPerMinute: number;
   refreshPerMinute: number;
   accountSensitivePerHour: number;
+  aiAskPerMinute: number;
   storageTimeoutMs: number;
 }
 
@@ -56,6 +58,7 @@ export function loadThrottleConfig(env: NodeJS.ProcessEnv = process.env): Thrott
     loginIpPerMinute: e.AUTH_LOGIN_IP_LIMIT_PER_MINUTE,
     refreshPerMinute: e.AUTH_REFRESH_LIMIT_PER_MINUTE,
     accountSensitivePerHour: e.ACCOUNT_SENSITIVE_LIMIT_PER_HOUR,
+    aiAskPerMinute: e.AI_ASK_LIMIT_PER_MINUTE,
     storageTimeoutMs: STORAGE_TIMEOUT_MS,
   };
 }

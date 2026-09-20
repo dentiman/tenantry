@@ -19,6 +19,10 @@ import {
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../components/notifications/notification-bell';
+import { AiPanel } from '../components/ai/ai-panel';
+import { AiPanelTrigger } from '../components/ai/ai-panel-trigger';
+import { useAiEnabled } from '../components/ai/use-ai-enabled';
+import { useAiPanelStore } from '../stores/ai-panel.store';
 import { AppFooterBar } from './account-footer';
 import { AppRail } from './app-rail';
 import { AreaSidebar } from './area-sidebar';
@@ -79,6 +83,11 @@ export function AppShell() {
    * Ключ — `pathname`, а не вся локація: зміна `?page=2` у гріді це та сама
    * сторінка, і скидати прокрутку там не треба.
    */
+  // Асистент: прапорець інсталяції і стан панелі. Обидва — поза роутером, тому
+  // панель переживає перехід між area без жодного ефекту «не забути зберегти»
+  const isAiEnabled = useAiEnabled();
+  const isAiOpen = useAiPanelStore((state) => state.isOpen);
+
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const viewportRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -131,6 +140,7 @@ export function AppShell() {
               <div className="ml-auto flex items-center gap-1">
                 <NotificationBell />
                 <ThemeSwitcher />
+                {isAiEnabled && <AiPanelTrigger />}
                 {/* Найправіший кут хедера — впритул до межі панелі, якою керує */}
                 <ContextPanelTrigger />
               </div>
@@ -158,6 +168,13 @@ export function AppShell() {
               лівий сайдбар підрізає його зліва. Порожня (сторінка нічого в неї
               не поклала) вона не займає нічого. Деталі — context-panel-slot.tsx */}
           <ContextPanelSlot />
+
+          {/* Асистент — НАЙПРАВІША колонка, сусід `ContextPanelSlot`, а не його
+              дитина: так само йде від верху вікна до низу і підрізає хедер
+              справа. Може бути відкритий одночасно з контекстною панеллю —
+              вони незалежні. Не рендериться зовсім, поки фіча вимкнена в
+              інсталяції (`features.ai` з bootstrap) */}
+          {isAiEnabled && isAiOpen && <AiPanel />}
         </SidebarProvider>
       </ContextPanelProvider>
     </PageHeaderSlotProvider>

@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { TenantContextService } from '@saas-skeleton/database';
-import type { Job } from 'pg-boss';
+import type { Job, WorkOptions } from 'pg-boss';
 import { MessageContextService } from './message-context.service';
 import { messageEnvelopeSchema, SYSTEM_ACTOR, type MessageEnvelope } from './message-envelope';
 import {
@@ -11,12 +11,39 @@ import {
 } from './message-subscriber.decorator';
 import { NonRetryableMessageError } from './messaging.errors';
 import { PgBossService } from './pg-boss.service';
-import { DEAD_LETTER_QUEUE, MESSAGE_TOPOLOGY, queueNameFor, type TopologyEntry } from './topology';
+import {
+  DEAD_LETTER_QUEUE,
+  MESSAGE_TOPOLOGY,
+  queueNameFor,
+  type ConsumerSpec,
+  type TopologyEntry,
+} from './topology';
 
 interface RegisteredConsumer {
   readonly queue: string;
   readonly entry: TopologyEntry;
+  readonly spec: ConsumerSpec;
   readonly handler: MessageSubscriberContract;
+}
+
+/**
+ * Опції воркера з маніфесту. Будуються УМОВНО: pg-boss валідує кожен переданий
+ * ключ, тому `undefined` у нього передавати не можна (`CLAUDE.md` §9). Споживач,
+ * який нічого не оголосив, отримує порожній обʼєкт — тобто рівно ті дефолти
+ * pg-boss, які діяли до появи цих полів.
+ */
+function workOptionsFor(spec: ConsumerSpec): WorkOptions {
+  const options: WorkOptions = {};
+  if (spec.localConcurrency !== undefined) {
+    options.localConcurrency = spec.localConcurrency;
+  }
+  if (spec.groupConcurrency !== undefined) {
+    options.groupConcurrency = spec.groupConcurrency;
+  }
+  if (spec.pollingIntervalSeconds !== undefined) {
+    options.pollingIntervalSeconds = spec.pollingIntervalSeconds;
+  }
+  return options;
 }
 
 /**
@@ -40,11 +67,18 @@ export class MessageWorkerRegistrar implements OnApplicationBootstrap {
     const consumers = this.resolveConsumers();
 
     for (const consumer of consumers) {
-      await this.pgBoss.boss.work(consumer.queue, async (jobs: Job[]) => {
-        for (const job of jobs) {
-          await this.runJob(consumer, job);
-        }
-      });
+      // `localConcurrency` піднімає КІЛЬКА незалежних воркерів на цю чергу, кожен зі
+      // своїм fetch-ом — саме тому паралельність береться звідти, а не з `batchSize`:
+      // батч приїхав би в ОДИН цей хендлер, і цикл нижче виконав би його послідовно.
+      await this.pgBoss.boss.work(
+        consumer.queue,
+        workOptionsFor(consumer.spec),
+        async (jobs: Job[]) => {
+          for (const job of jobs) {
+            await this.runJob(consumer, job);
+          }
+        },
+      );
 
       if (consumer.entry.cron) {
         // Порожній payload: конверт для cron-тіку добудовується в runJob із job.id,
@@ -87,7 +121,7 @@ export class MessageWorkerRegistrar implements OnApplicationBootstrap {
         const queue = queueNameFor(entry.definition.name, consumer.id);
         const handler = found.get(queue);
         if (handler) {
-          registered.push({ queue, entry, handler });
+          registered.push({ queue, entry, spec: consumer, handler });
           found.delete(queue);
         } else {
           missing.push(queue);

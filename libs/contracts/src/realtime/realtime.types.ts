@@ -1,5 +1,7 @@
 import type { z } from 'zod';
 import type {
+  AiMessageCompletedSchema,
+  AiMessageDeltaSchema,
   AuthExpiringSchema,
   CalendarEventChangedSchema,
   AuthUpdateResultSchema,
@@ -27,6 +29,8 @@ export type ResyncRequired = z.infer<typeof ResyncRequiredSchema>;
 export type NotificationCreated = z.infer<typeof NotificationCreatedSchema>;
 export type NotificationChanged = z.infer<typeof NotificationChangedSchema>;
 export type CalendarEventChanged = z.infer<typeof CalendarEventChangedSchema>;
+export type AiMessageDelta = z.infer<typeof AiMessageDeltaSchema>;
+export type AiMessageCompleted = z.infer<typeof AiMessageCompletedSchema>;
 export type RealtimeErrorCode = z.infer<typeof RealtimeErrorCodeSchema>;
 export type RealtimeError = z.infer<typeof RealtimeErrorSchema>;
 
@@ -41,6 +45,8 @@ export interface ServerToClientEvents {
   [REALTIME_EVENTS.notificationCreated]: (payload: NotificationCreated) => void;
   [REALTIME_EVENTS.notificationChanged]: (payload: NotificationChanged) => void;
   [REALTIME_EVENTS.calendarEventChanged]: (payload: CalendarEventChanged) => void;
+  [REALTIME_EVENTS.aiMessageDelta]: (payload: AiMessageDelta) => void;
+  [REALTIME_EVENTS.aiMessageCompleted]: (payload: AiMessageCompleted) => void;
 }
 
 export interface ClientToServerEvents {

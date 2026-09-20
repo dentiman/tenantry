@@ -165,7 +165,12 @@ describe('Organization settings API (e2e)', () => {
         defaultReminderMinutes: 10,
         defaultAllDayReminderMinutes: 900,
       },
-      features: {},
+      // AI-0: перший реальний мешканець зарезервованої мапи. Перевіряємо ФОРМУ,
+      // а не значення: `AI_ENABLED` — змінна оточення, і в розробника з увімкненим
+      // асистентом у `.env.local` жорстке `false` валило б цей тест на рівному
+      // місці. СЕМАНТИКУ прапорця (true/false у кожному стані) точково перевіряють
+      // ai.e2e-spec.ts і ai-disabled.e2e-spec.ts, які піднімають свій застосунок
+      features: { ai: expect.any(Boolean) },
     });
   });
 

@@ -20,6 +20,9 @@ const PASSWORD = 'RateLimitPass123';
 const PRODUCTION_LIMITS = {
   AUTH_LOGIN_LIMIT_PER_MINUTE: '5',
   AUTH_LOGIN_IP_LIMIT_PER_MINUTE: '20',
+  // AI-0: бойовий поріг питань до асистента — 10/хв НА КОРИСТУВАЧА
+  AI_ASK_LIMIT_PER_MINUTE: '10',
+  AI_ENABLED: 'true',
 };
 
 function withEnv(overrides: Record<string, string>): () => void {
@@ -162,6 +165,33 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
 
       // Інший IP цим лічильником не зачеплений
       await login('spray-21@example.com', 'WrongPassword123', nextIp()).expect(401);
+    });
+
+    /**
+     * AI-0: поки квот токенів немає (вони в AI-1), це єдиний рубіж проти циклу,
+     * який набиває чергу. Ліміт на КОРИСТУВАЧА, не на IP: асистент за логіном, а
+     * за корпоративним NAT ліміт на адресу вдарив би по цілій організації.
+     */
+    it('caps assistant questions per user and leaves a Retry-After', async () => {
+      await createTestUser(prisma, { email: 'ai-asker@example.com', password: PASSWORD });
+      const session = await login('ai-asker@example.com', PASSWORD, nextIp()).expect(200);
+      const token = (session.body as { tokens: { accessToken: string } }).tokens.accessToken;
+      const ask = (): request.Test =>
+        request(app.getHttpServer())
+          .post('/api/ai/conversation/messages')
+          .set({ Authorization: `Bearer ${token}` })
+          .send({ text: 'how do I rename the workspace?' });
+
+      // Перше питання проходить; далі розмова ЗАЙНЯТА (409) — але лічильник
+      // частоти рахує саме спроби, а не успіхи, тож 10-та ще проходить гейт
+      await ask().expect(202);
+      for (let attempt = 2; attempt <= 10; attempt++) {
+        await ask().expect(409);
+      }
+
+      const blocked = await ask().expect(429);
+      expect(blocked.body).toMatchObject({ statusCode: 429, code: 'TOO_MANY_REQUESTS' });
+      expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
     });
   });
 

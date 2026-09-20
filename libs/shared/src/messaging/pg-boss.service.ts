@@ -19,6 +19,12 @@ interface DesiredQueue {
   retryDelay: number;
   retryBackoff: boolean;
   policy: ConsumerQueuePolicy;
+  /**
+   * Властивість ЧЕРГИ, а не воркера: скільки робота може висіти в `active`, перш
+   * ніж її заберуть назад. Опційна — споживач, який її не оголосив, лишається на
+   * дефолті pg-boss (15 хв), як було до появи поля.
+   */
+  expireInSeconds?: number;
   deadLetter?: string;
 }
 
@@ -102,11 +108,17 @@ export class PgBossService implements OnModuleInit, OnApplicationShutdown {
       retryBackoff: desired.retryBackoff,
       deadLetter: desired.deadLetter,
     };
+    // Умовно: pg-boss валідує кожен переданий ключ і undefined не приймає
+    if (desired.expireInSeconds !== undefined) {
+      update.expireInSeconds = desired.expireInSeconds;
+    }
 
     const drifted =
       existing.retryLimit !== update.retryLimit ||
       existing.retryDelay !== update.retryDelay ||
       existing.retryBackoff !== update.retryBackoff ||
+      (desired.expireInSeconds !== undefined &&
+        existing.expireInSeconds !== desired.expireInSeconds) ||
       (existing.deadLetter ?? undefined) !== update.deadLetter;
 
     if (drifted) {
@@ -122,6 +134,9 @@ function desiredQueueOf(consumer: ConsumerSpec): DesiredQueue {
     retryDelay: consumer.retryDelaySeconds ?? DEFAULT_RETRY_DELAY_SECONDS,
     retryBackoff: consumer.retryBackoff ?? true,
     policy: consumer.policy ?? 'standard',
+    ...(consumer.expireInSeconds !== undefined && {
+      expireInSeconds: consumer.expireInSeconds,
+    }),
     deadLetter: DEAD_LETTER_QUEUE,
   };
 }

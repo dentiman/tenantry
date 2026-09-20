@@ -12,6 +12,7 @@ import { initSocket } from './realtime/socket';
 import { initPresenceSync } from './realtime/presence-sync';
 import { initNotificationSync } from './realtime/notification-sync';
 import { initCalendarSync } from './realtime/calendar-sync';
+import { initAiSync } from './realtime/ai-sync';
 import './i18n';
 import './index.css';
 
@@ -55,6 +56,7 @@ async function bootstrap(): Promise<void> {
   initPresenceSync(queryClient);
   initNotificationSync(queryClient);
   initCalendarSync(queryClient);
+  initAiSync(queryClient);
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {

@@ -22,6 +22,7 @@
   },
   "include": [
     "src/**/*",
+    "vitest.config.ts",
     "../../libs/contracts/src/**/*",
     "../../libs/database/src/**/*",
     "../../libs/shared/src/**/*"

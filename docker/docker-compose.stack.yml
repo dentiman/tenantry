@@ -77,6 +77,20 @@ x-realtime-env: &realtime-env
   REALTIME_LAST_SEEN_MARK_MS: ${REALTIME_LAST_SEEN_MARK_MS:-300000}
   REALTIME_LAST_SEEN_FLUSH_MS: ${REALTIME_LAST_SEEN_FLUSH_MS:-15000}
 
+x-ai-env: &ai-env
+  # AI-0: спільний блок для api і worker — api читає лише прапорець і межі, а
+  # генерує ВИКЛЮЧНО worker. Ключа провайдера тут немає й у AI-0 бути не може:
+  # єдиний легальний AI_PROVIDER — `fake`
+  AI_ENABLED: ${AI_ENABLED:-false}
+  AI_PROVIDER: ${AI_PROVIDER:-fake}
+  AI_MODEL: ${AI_MODEL:-fake-1}
+  AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-1024}
+  AI_HISTORY_TURNS: ${AI_HISTORY_TURNS:-10}
+  AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-60000}
+  AI_STREAM_FLUSH_MS: ${AI_STREAM_FLUSH_MS:-120}
+  AI_PARTIAL_PERSIST_MS: ${AI_PARTIAL_PERSIST_MS:-2000}
+  AI_ASK_LIMIT_PER_MINUTE: ${AI_ASK_LIMIT_PER_MINUTE:-10}
+
 x-s3-env: &s3-env
   S3_ENDPOINT: ${S3_ENDPOINT}
   S3_REGION: ${S3_REGION:-us-east-1}
@@ -165,7 +179,7 @@ services:
     # Override: спершу міграції (saas_migrator), потім старт (saas_app)
     entrypoint: ["/usr/src/app/docker/entrypoint-api.sh"]
     environment:
-      <<: [*db-env, *s3-env, *realtime-env]
+      <<: [*db-env, *s3-env, *realtime-env, *ai-env]
       NODE_ENV: production
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
@@ -232,7 +246,7 @@ services:
   worker:
     image: ${WORKER_IMAGE}
     environment:
-      <<: [*db-env, *s3-env, *realtime-broker-env]
+      <<: [*db-env, *s3-env, *realtime-broker-env, *ai-env]
       NODE_ENV: production
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
