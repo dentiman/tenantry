@@ -24,6 +24,14 @@ export interface PublishOptions {
   singletonKey?: string;
   startAfterSeconds?: number;
   priority?: number;
+  /**
+   * Група для `groupConcurrency` споживача (`ConsumerSpec.groupConcurrency`).
+   * Наш сценарій — справедливість між тенантами: `{ id: tenantId }`.
+   *
+   * Без оголошеного `groupConcurrency` у маніфесті поле нічого не робить, тому
+   * передавати його «про всяк випадок» немає сенсу.
+   */
+  group?: { id: string; tier?: string };
 }
 
 @Injectable()
@@ -66,6 +74,12 @@ export class MessagePublisher {
     }
     if (options.priority !== undefined) {
       sendOptions.priority = options.priority;
+    }
+    if (options.group !== undefined) {
+      sendOptions.group = {
+        id: options.group.id,
+        ...(options.group.tier !== undefined && { tier: options.group.tier }),
+      };
     }
 
     for (const consumer of entry.consumers) {

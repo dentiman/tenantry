@@ -1,4 +1,5 @@
 import type { MessageDefinition } from './message-definition';
+import { generateAiReplyCommand } from './definitions/ai.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
@@ -33,6 +34,42 @@ export interface ConsumerSpec {
   readonly retryDelaySeconds?: number;
   readonly retryBackoff?: boolean;
   readonly policy?: ConsumerQueuePolicy;
+  /**
+   * Скільки воркерів цієї черги підняти В ЦЬОМУ процесі. Дефолт pg-boss — 1, тобто
+   * ОДНА робота за раз на всю репліку: для листів і мініатюр це нормально, для
+   * довгої роботи (виклик LLM на десятки секунд) це означає, що другий користувач
+   * чекає, поки догенерується перший.
+   *
+   * Це per-node: три репліки з `localConcurrency: 4` дають 12 воркерів сумарно.
+   */
+  readonly localConcurrency?: number;
+  /**
+   * Скільки робіт ОДНІЄЇ групи можуть виконуватись одночасно в усьому кластері
+   * (pg-boss рахує це в БД). Група задається на публікації — `publish(..., { group })`.
+   *
+   * Наш єдиний сценарій — справедливість між тенантами: групою є `tenantId`, і один
+   * тенант фізично не може зайняти всі воркери. Обмеження оптимістичне: під гонкою
+   * кількох fetch-ів ліміт може бути коротко перевищений, тому це межа СПРАВЕДЛИВОСТІ,
+   * а не коректності (коректність — унікальний стан рядка в домені).
+   */
+  readonly groupConcurrency?: number;
+  /**
+   * Інтервал опитування черги. Дефолт pg-boss — 2 с, тобто до 2 с затримки до
+   * початку роботи. Знижується там, де ця затримка видима людині.
+   *
+   * Мінімум у pg-boss — 0.5 с. Альтернатива (`useListenNotify`) дала б мілісекунди,
+   * але вмикає LISTEN на весь інстанс — `docs/realtime.md` уже один раз відхилив
+   * `LISTEN/NOTIFY` як глобальний ресурс кластера.
+   */
+  readonly pollingIntervalSeconds?: number;
+  /**
+   * Скільки робота може бути в стані `active`, перш ніж її заберуть назад. Дефолт
+   * pg-boss — 15 хвилин, що для завислого зовнішнього виклику надто довго.
+   *
+   * На відміну від решти полів цієї групи, це властивість ЧЕРГИ (а не воркера), тому
+   * вона ще й синхронізується в `PgBossService.syncQueues()`.
+   */
+  readonly expireInSeconds?: number;
 }
 
 export interface TopologyEntry {
@@ -88,6 +125,34 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     definition: cleanupProcessedJobsCommand,
     consumers: [{ id: 'inbox-cleaner', retryLimit: 1 }],
     cron: '15 3 * * *',
+  },
+  {
+    // Перший споживач, якому дефолти pg-boss не підходять (docs/ai-assistant-plan.md §3.4).
+    //
+    // localConcurrency 4: дефолт 1 означав би ОДНУ генерацію на всю інсталяцію —
+    //   другий користувач чекав би, поки догенерується перший.
+    // groupConcurrency 2: група на публікації — tenantId, тож один тенант фізично
+    //   не може зайняти всі воркери. Межа справедливості, не коректності.
+    // pollingIntervalSeconds 0.5: дефолтні 2 с — це до 2 с тиші перед першим
+    //   токеном, і людина це бачить. `useListenNotify` дав би мілісекунди, але
+    //   вмикає LISTEN на весь інстанс, а docs/realtime.md уже раз відхилив
+    //   LISTEN/NOTIFY як глобальний ресурс кластера.
+    // expireInSeconds 120: дефолтні 15 хв для завислого зовнішнього виклику задовгі.
+    // retryLimit 1: один автоматичний ретрай покриває тимчасову відмову провайдера;
+    //   далі кнопка «Спробувати ще» краща за чергу. Ретрай перестрімлює відповідь
+    //   з нуля і шле chunkSeq 0, за яким клієнт викидає попередню спробу.
+    definition: generateAiReplyCommand,
+    consumers: [
+      {
+        id: 'ai-generator',
+        retryLimit: 1,
+        retryDelaySeconds: 2,
+        localConcurrency: 4,
+        groupConcurrency: 2,
+        pollingIntervalSeconds: 0.5,
+        expireInSeconds: 120,
+      },
+    ],
   },
   {
     // Єдиний рядок, який календар додає в топологію (docs/calendar.md §9.4):

@@ -29,6 +29,12 @@ export const RATE_LIMITS = {
    * по лінку з листа», значення в контракті однакове для обох
    */
   verificationConfirm: 'verification-confirm',
+  /**
+   * AI-0: 10/хв на користувача — питання до асистента. Не заміна квотам (вони
+   * в AI-1), а захист черги: цикл не має права набити її тисячею job-ів навіть
+   * на безкоштовному фейковому провайдері
+   */
+  aiAsk: 'ai-ask',
 } as const;
 
 export type RateLimitName = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];

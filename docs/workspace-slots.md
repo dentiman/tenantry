@@ -120,6 +120,29 @@ Custom — лише скрипт ініціалізації (нижче) і па
 (контейнери і volume-и слота; `.env.local` не видаляється — наступний `ws:init` без
 аргументу повертається на той самий слот).
 
+## Граблі: Prisma CLI не бачить `.env.local` слота
+
+**Спіймано живим прогоном 2026-09-20.** `libs/database/prisma.config.ts` читає
+`MIGRATE_DATABASE_URL` з `process.env`, а Prisma CLI, запущений із `libs/database`, кореневий
+`.env.local` **не вантажить** — на відміну від застосунків, у яких `ConfigModule` має
+`envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env']`.
+
+Наслідок: `cd libs/database && pnpm exec prisma migrate dev --name X` у worktree мовчки
+застосовує міграцію на `localhost:5432` — тобто на БД **слота 0, чужого checkout-а**, а не
+свого слота. Помилки не буде: команда відпрацює успішно, просто не там.
+
+```bash
+# Правильно — у будь-якому worktree зі своїм слотом:
+cd libs/database && MIGRATE_DATABASE_URL="postgresql://saas_migrator:saas_migrator@localhost:5532/saas_skeleton" \
+  pnpm exec prisma migrate dev --name my_migration
+```
+
+URL береться з `.env.local` свого слота. Після створення міграції варто звірити, що таблиці
+зʼявились саме у своїй БД (`docker exec <slot>-postgres-1 psql …`), а не в сусідній.
+
+`pnpm db:reset` і `pnpm ws:init` цієї проблеми не мають — вони запускаються з кореня й отримують
+оточення слота.
+
 ## Що змінено в репо
 
 - `docker/docker-compose.yml` — `name: saas-skeleton` → `name: ${COMPOSE_PROJECT_NAME:-saas-skeleton}`,

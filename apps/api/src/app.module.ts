@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, SlugTenantResolver, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule as SharedActivitiesModule,
+  AiModule as SharedAiModule,
   CryptoModule,
   MessagingModule,
   NotificationsModule as SharedNotificationsModule,
@@ -18,6 +19,7 @@ import { CustomersModule } from './customers/customers.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
+import { AiModule } from './ai/ai.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -52,6 +54,7 @@ import { validateApiEnv } from './config/env.schema';
     SharedActivitiesModule,
     SharedNotificationsModule,
     SharedNumberingModule,
+    SharedAiModule,
     AuthModule,
     PasswordResetModule,
     UsersModule,
@@ -59,6 +62,7 @@ import { validateApiEnv } from './config/env.schema';
     CalendarModule,
     SettingsModule,
     AccountModule,
+    AiModule,
     FilesModule,
     ActivitiesModule,
     NotificationsModule,

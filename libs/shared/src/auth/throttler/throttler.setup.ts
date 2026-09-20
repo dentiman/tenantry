@@ -150,6 +150,16 @@ export function createAppThrottlerModule(options: CreateAppThrottlerModuleOption
           getTracker: options.principalTracker,
         },
         {
+          // AI-0: на КОРИСТУВАЧА, не на ip — асистент за логіном, а за корпоративним
+          // NAT ліміт на адресу вдарив би по цілій організації (та сама логіка,
+          // що в `default` і `accountSensitive`)
+          name: RATE_LIMITS.aiAsk,
+          ttl: MINUTE_MS,
+          limit: config.aiAskPerMinute,
+          skipIf: optIn(RATE_LIMITS.aiAsk),
+          getTracker: options.principalTracker,
+        },
+        {
           name: RATE_LIMITS.verificationConfirm,
           ttl: MINUTE_MS,
           limit: VERIFICATION_CONFIRM_LIMIT_PER_MINUTE,

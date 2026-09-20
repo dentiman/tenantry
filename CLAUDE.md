@@ -40,7 +40,13 @@ read the relevant doc before working in that area instead of expecting it here.
 - `docs/chat.md`, `docs/bulk-operations.md` — **design fixed, not implemented.** Chat has an
   empty placeholder page/area in `apps/web`; bulk operations has a disabled demo slot on
   `/users`. Don't treat either as a working feature.
-- `docs/ai-assistant.md` — **research, no decisions fixed yet.** Explores a sidebar AI/LLM
+- `docs/ai-assistant-implementation.md` — **AI-0 is built**: the sidebar AI assistant running
+  on `FakeLlmProvider` only (no key, no network, no cost). Data model, the two access
+  boundaries, the streaming protocol and why a socket event may carry payload here, the queue
+  options, config. Read this before touching anything under `ai/`;
+  `docs/ai-assistant-plan.md` — the research behind it and the AI-1…AI-4 phase plan (those
+  phases stay open to revision — §9.1)
+- `docs/ai-assistant.md` — **earlier research, no decisions fixed yet.** Explores a sidebar AI/LLM
   chat for the tenant portal (product-help vs. tenant-data assistant, UI placement, data
   model, LLM-provider adapter, sync-vs-async generation pipeline). Distinct from
   `docs/chat.md` (that's human/customer conversations); read before starting any AI-chat work.
@@ -82,14 +88,16 @@ a contract or controller changes — see `docs/commands.md` for the full list in
 apps/api            Tenant NestJS API. Modules: auth, account (self-service profile/password/
                      sessions — no id in any path, subject is always the JWT), customers,
                      settings (org-level), files, activities, notifications, realtime
-                     (Socket.IO gateway), calendar. Pino logging, AllExceptionsFilter via
+                     (Socket.IO gateway), calendar, ai (assistant conversation; no id in any
+                     path either). Pino logging, AllExceptionsFilter via
                      configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
                      JWT/DB role), tenants CRUD, jobs monitoring (moved here because
                      `pgboss.*` sits outside RLS).
 apps/worker         NestJS application context, no HTTP. Message subscribers
                      (`src/subscribers/`) + cron via pg-boss, MailerService → Mailpit,
-                     local i18next for email content.
+                     local i18next for email content. AI reply generation lives here
+                     (`ai-generate-reply.subscriber.ts`) — the API never calls a model.
 apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zustand,
                      Tailwind 4, react-hook-form, shadcn/ui on Base UI, react-i18next.
                      Two-level nav shell (`AppRail` + `AreaSidebar`, docs/frontend/app-shell.md):
@@ -247,7 +255,12 @@ flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without
 14. App-level `tsconfig.json` `paths` **replace** inherited `paths` rather than merging with
     them — check the effective `baseUrl` whenever a subpath import behaves differently in an
     app than at the repo root.
-15. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
+15. A socket event normally says "re-read" and never carries the payload itself
+    (`docs/realtime.md`). The AI assistant's `ai.message-delta.v1` is the **one** exception,
+    and it is safe only because of two guards that must be copied together with the pattern:
+    a monotonic `chunkSeq` (a gap sends the client back to the REST transcript) and
+    `chunkSeq === 0` meaning "discard and restart". Postgres stays the source of truth.
+16. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
     `runWith`/`withTenantTx` silently affects zero rows under RLS instead of erroring.
 
 ## Fixed decisions

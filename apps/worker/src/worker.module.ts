@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule,
+  AiModule,
   CryptoModule,
   MessagingModule,
   NotificationsModule,
@@ -11,6 +12,7 @@ import {
 } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
+import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
 import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-jobs.subscriber';
@@ -40,9 +42,11 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     CryptoModule,
     ActivitiesModule,
     NotificationsModule,
+    AiModule,
   ],
   providers: [
     WorkerRealtimeEmitter,
+    AiGenerateReplySubscriber,
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,
     CleanupProcessedJobsSubscriber,

@@ -8,6 +8,7 @@ declare module 'react-i18next' {
       errors: typeof import('@saas-skeleton/i18n/locales/en/errors.json');
       validation: typeof import('@saas-skeleton/i18n/locales/en/validation.json');
       activities: typeof import('@saas-skeleton/i18n/locales/en/activities.json');
+      ai: typeof import('../locales/en/ai.json');
       auth: typeof import('../locales/en/auth.json');
       dashboard: typeof import('../locales/en/dashboard.json');
       jobs: typeof import('../locales/en/jobs.json');

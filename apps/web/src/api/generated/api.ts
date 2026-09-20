@@ -24,6 +24,9 @@ import type {
 import type {
   ActivitiesFindAllParams,
   ActivityListResponseDtoOutput,
+  AiConversationResponseDtoOutput,
+  AskAiRequestDto,
+  AskAiResponseDtoOutput,
   AuthResponseDtoOutput,
   AuthSessionResponseDtoOutput,
   AuthTokensDtoOutput,
@@ -4627,6 +4630,288 @@ export const useAccountConfirmEmailChange = <TError = unknown, TContext = unknow
   TContext
 > => {
   const mutationOptions = getAccountConfirmEmailChangeMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiConversation = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiConversationResponseDtoOutput>(
+    { url: `/api/ai/conversation`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiConversationQueryKey = () => {
+  return [`/api/ai/conversation`] as const;
+};
+
+export const getAiConversationQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiConversation>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversation>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiConversationQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiConversation>>> = ({ signal }) =>
+    aiConversation(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiConversation>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiConversationQueryResult = NonNullable<Awaited<ReturnType<typeof aiConversation>>>;
+export type AiConversationQueryError = unknown;
+
+export function useAiConversation<
+  TData = Awaited<ReturnType<typeof aiConversation>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversation>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiConversation>>,
+          TError,
+          Awaited<ReturnType<typeof aiConversation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiConversation<
+  TData = Awaited<ReturnType<typeof aiConversation>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversation>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiConversation>>,
+          TError,
+          Awaited<ReturnType<typeof aiConversation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiConversation<
+  TData = Awaited<ReturnType<typeof aiConversation>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversation>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiConversation<
+  TData = Awaited<ReturnType<typeof aiConversation>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversation>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiConversationQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiAsk = (
+  askAiRequestDto: AskAiRequestDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AskAiResponseDtoOutput>(
+    {
+      url: `/api/ai/conversation/messages`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: askAiRequestDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getAiAskMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiAsk>>,
+    TError,
+    { data: AskAiRequestDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiAsk>>,
+  TError,
+  { data: AskAiRequestDto },
+  TContext
+> => {
+  const mutationKey = ['aiAsk'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiAsk>>,
+    { data: AskAiRequestDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiAsk(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiAskMutationResult = NonNullable<Awaited<ReturnType<typeof aiAsk>>>;
+export type AiAskMutationBody = AskAiRequestDto;
+export type AiAskMutationError = unknown;
+
+export const useAiAsk = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiAsk>>,
+      TError,
+      { data: AskAiRequestDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof aiAsk>>,
+  TError,
+  { data: AskAiRequestDto },
+  TContext
+> => {
+  const mutationOptions = getAiAskMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiReset = (options?: SecondParameter<typeof customInstance>, signal?: AbortSignal) => {
+  return customInstance<AiConversationResponseDtoOutput>(
+    { url: `/api/ai/conversation/reset`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getAiResetMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof aiReset>>, TError, void, TContext>;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<Awaited<ReturnType<typeof aiReset>>, TError, void, TContext> => {
+  const mutationKey = ['aiReset'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiReset>>, void> = () => {
+    return aiReset(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiResetMutationResult = NonNullable<Awaited<ReturnType<typeof aiReset>>>;
+
+export type AiResetMutationError = unknown;
+
+export const useAiReset = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof aiReset>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof aiReset>>, TError, void, TContext> => {
+  const mutationOptions = getAiResetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiCancel = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    { url: `/api/ai/conversation/messages/${id}/cancel`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getAiCancelMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiCancel>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<Awaited<ReturnType<typeof aiCancel>>, TError, { id: string }, TContext> => {
+  const mutationKey = ['aiCancel'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiCancel>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return aiCancel(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiCancelMutationResult = NonNullable<Awaited<ReturnType<typeof aiCancel>>>;
+
+export type AiCancelMutationError = unknown;
+
+export const useAiCancel = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiCancel>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof aiCancel>>, TError, { id: string }, TContext> => {
+  const mutationOptions = getAiCancelMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

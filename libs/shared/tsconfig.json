@@ -5,5 +5,5 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },
-  "include": ["src/**/*", "../database/src/**/*"]
+  "include": ["src/**/*", "../database/src/**/*", "vitest.config.ts"]
 }

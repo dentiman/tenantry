@@ -1,0 +1,26 @@
+{
+  "title": "Assistant",
+  "toggle": "Toggle assistant",
+  "close": "Close assistant",
+  "newConversation": "New conversation",
+  "disclosure": "AI assistant — answers can be wrong. It has no access to your data.",
+  "empty": {
+    "title": "Ask about the product",
+    "hint": "How a feature works, where a setting lives, what a status means. Do not paste passwords or keys."
+  },
+  "composer": {
+    "placeholder": "Ask a question…",
+    "send": "Send",
+    "stop": "Stop"
+  },
+  "message": {
+    "thinking": "Thinking…",
+    "cancelled": "Stopped.",
+    "retry": "Try again"
+  },
+  "errorCodes": {
+    "PROVIDER_UNAVAILABLE": "The assistant is unavailable right now. Try again in a moment.",
+    "TIMEOUT": "The assistant took too long to answer. Try again.",
+    "INTERNAL": "Something went wrong while answering. Try again."
+  }
+}

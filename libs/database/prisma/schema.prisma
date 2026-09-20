@@ -47,6 +47,8 @@ model Tenant {
   calendarEventAttendees  CalendarEventAttendee[]
   calendarReminders       CalendarReminder[]
   scheduledNotifications  ScheduledNotification[]
+  aiConversations         AiConversation[]
+  aiMessages              AiMessage[]
 
   @@map("tenants")
 }
@@ -100,6 +102,7 @@ model User {
   eventAttendances        CalendarEventAttendee[]
   calendarReminders       CalendarReminder[]
   scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationRecipient")
+  aiConversations         AiConversation[]         @relation("AiConversationOwner")
 
   // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
   @@unique([tenantId, email])
@@ -832,4 +835,96 @@ model ScheduledNotification {
   @@index([tenantId, recipientId, fireAt])
   // Частковий індекс сканера (WHERE ще не доставлено) — сирим SQL у міграції
   @@map("scheduled_notifications")
+}
+
+// ============================================================================
+// AI-асистент (docs/ai-assistant-plan.md, фаза AI-0).
+//
+// Розмова ОСОБИСТА: RLS тут дає межу ТЕНАНТА, а межу людини тримає сервіс —
+// той самий поділ, що для приватних каналів чату і приватних подій календаря
+// («RLS — межа тенанта, а не учасника»). Тому композитний FK на users є, а
+// жодної ролі в схемі немає: ADMIN не отримує доступу за побудовою.
+// ============================================================================
+
+model AiConversation {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+
+  // RETIRED замість видалення: «нова розмова» скидає КОНТЕКСТ, а не історію.
+  // Активна рівно одна на юзера — це частковий унікальний індекс у міграції
+  // (Prisma їх не вміє), він же арбітр гонки двох вкладок на першому повідомленні
+  status AiConversationStatus @default(ACTIVE)
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastMessageAt DateTime? @map("last_message_at")
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK + Cascade: розмова належить людині, і разом із нею й зникає.
+  // SetNull тут був би безглуздим — безхазяйна особиста розмова нікому не видима
+  user     User        @relation("AiConversationOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+  messages AiMessage[]
+
+  // Опора під композитний FK повідомлень
+  @@unique([tenantId, id])
+  @@index([tenantId, userId, status])
+  @@map("ai_conversations")
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  RETIRED
+}
+
+model AiMessage {
+  id             String @id @default(uuid())
+  tenantId       String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  conversationId String @map("conversation_id")
+
+  // Серверний порядок у межах розмови. НЕ created_at: порядок, курсор і детектор
+  // дірок — це одне рішення, і мітка часу не дає жодного з них (docs/chat.md §4.3)
+  seq Int
+
+  role   AiMessageRole
+  // Статус відповіді — він же ЯКІР ІДЕМПОТЕНТНОСТІ генерації: воркер працює лише
+  // над PENDING/STREAMING і мовчки виходить на COMPLETE. Саме тому тут НЕ
+  // використовується MessageInboxService.runOnce — він заблокував би легальний
+  // ретрай після тимчасової відмови провайдера (design.md)
+  status AiMessageStatus
+
+  // Порожній рядок, а не null: відповідь у роботі вже має вміст, просто неповний
+  content   String  @default("")
+  // Код із контракту ApiError (AI_PROVIDER_UNAVAILABLE тощо) — текст рендерить фронт
+  errorCode String? @map("error_code")
+
+  // Резерв під AI-1 (облік токенів). Nullable-колонки зараз коштують нічого і
+  // економлять міграцію на таблиці, у якої на той час уже будуть рядки
+  model            String?
+  promptTokens     Int?    @map("prompt_tokens")
+  completionTokens Int?    @map("completion_tokens")
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation AiConversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+
+  // Арбітр порядку: він же індекс під читання стрічки розмови
+  @@unique([tenantId, conversationId, seq])
+  @@map("ai_messages")
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+enum AiMessageStatus {
+  PENDING
+  STREAMING
+  COMPLETE
+  FAILED
+  CANCELLED
 }

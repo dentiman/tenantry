@@ -22,6 +22,7 @@ export function toGeneralSettingsResponse(tenant: Tenant): GeneralSettingsRespon
 export function toSettingsBootstrap(
   tenant: Tenant,
   calendar: CalendarSettings,
+  features: Record<string, boolean>,
 ): SettingsBootstrap {
   return {
     general: {
@@ -33,7 +34,8 @@ export function toSettingsBootstrap(
     // Без цих полів неможливо намалювати сітку першим рендером (перший день
     // тижня і робочі години), а другий запит дав би стрибок розкладки
     calendar,
-    // V1 порожня: ключ закладений, щоб feature-gating не вимагав нового ендпоінта
-    features: {},
+    // Ключ був закладений порожнім саме під це: AI-0 став його першим споживачем
+    // (`features.ai`), і жодного нового ендпоінта для прапорця не знадобилось
+    features,
   };
 }

@@ -15,3 +15,4 @@ export * from './file';
 export * from './auth';
 export * from './job';
 export * from './realtime';
+export * from './ai';
