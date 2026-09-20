@@ -1,5 +1,30 @@
 schema: spec-driven
 
+# Fed into every artifact-generation request. Its job here is one thing: keep the
+# boundary between the three planning layers from drifting, because the CLI has no
+# epic primitive and nothing else enforces it.
+context: |
+  Three layers, split by how long the content stays true:
+
+  - docs/<feature>.md — why a decision was made, what is still open, research that
+    outlives every phase. Fixed decisions and the phase table live here.
+  - openspec/specs/<capability-path>/spec.md — behaviour the system must have.
+    Nothing that could change without a user noticing belongs here.
+  - openspec/changes/<name>/ — the work in flight. Archived when done, and an
+    archive is where knowledge goes to die.
+
+  Therefore: before archiving a change, promote anything in its design.md that will
+  still be true afterwards into docs/. Do not leave live reasoning in an archive.
+
+  An epic is a capability-path prefix (for example ai-assistant/*), not a change.
+  A phase is one change, named with its number (ai-1-…, ai-2-…) so `openspec list
+  --sort name` reproduces the order the CLI does not store. Cross-phase sequence and
+  dependencies live in the feature doc — there is no depends-on field.
+
+  Split a phase by the capability it touches, not by convenience. Work that changes
+  no externally observable behaviour legitimately declares skip_specs: true rather
+  than inventing a requirement to satisfy validation.
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
