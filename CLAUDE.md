@@ -40,6 +40,10 @@ read the relevant doc before working in that area instead of expecting it here.
 - `docs/chat.md`, `docs/bulk-operations.md` — **design fixed, not implemented.** Chat has an
   empty placeholder page/area in `apps/web`; bulk operations has a disabled demo slot on
   `/users`. Don't treat either as a working feature.
+- `docs/ai-assistant.md` — **research, no decisions fixed yet.** Explores a sidebar AI/LLM
+  chat for the tenant portal (product-help vs. tenant-data assistant, UI placement, data
+  model, LLM-provider adapter, sync-vs-async generation pipeline). Distinct from
+  `docs/chat.md` (that's human/customer conversations); read before starting any AI-chat work.
 
 ## Commands
 
