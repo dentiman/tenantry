@@ -23,15 +23,15 @@ api, platform-api, worker і обидва фронти, а ще e2e і брау�
 Кожен workspace отримує номер **слота N**. З нього виводяться всі імена й порти: зсув +100·N.
 Слот 0 — основний checkout без `.env.local`, у ньому все як зараз (дефолти).
 
-| Ресурс                                         | Слот 0      | Слот 1        | Формула    |
-| ---------------------------------------------- | ----------- | ------------- | ---------- |
-| Docker project                                 | `saas-skeleton` | `saas-skeleton-1` | `-${N}` |
-| Postgres                                       | 5432        | 5532          | +100·N     |
-| Valkey                                         | 6379        | 6479          | +100·N     |
-| SeaweedFS S3                                   | 8333        | 8433          | +100·N     |
-| Mailpit UI / SMTP                              | 8025 / 1025 | 8125 / 1125   | +100·N     |
-| api / platform-api                             | 3001 / 3002 | 3101 / 3102   | +100·N     |
-| web / platform-web                             | 5173 / 5174 | 5273 / 5274   | +100·N     |
+| Ресурс             | Слот 0          | Слот 1            | Формула |
+| ------------------ | --------------- | ----------------- | ------- |
+| Docker project     | `saas-skeleton` | `saas-skeleton-1` | `-${N}` |
+| Postgres           | 5432            | 5532              | +100·N  |
+| Valkey             | 6379            | 6479              | +100·N  |
+| SeaweedFS S3       | 8333            | 8433              | +100·N  |
+| Mailpit UI / SMTP  | 8025 / 1025     | 8125 / 1125       | +100·N  |
+| api / platform-api | 3001 / 3002     | 3101 / 3102       | +100·N  |
+| web / platform-web | 5173 / 5174     | 5273 / 5274       | +100·N  |
 
 Результат: окремі контейнери й volume-и (своя БД), свої процеси, свої e2e. Два workspace-и
 працюють одночасно, не зачіпаючи один одного.
@@ -69,8 +69,12 @@ Custom — лише скрипт ініціалізації (нижче) і па
 
 1. Визначити N: з аргументу; якщо не задано — з `WORKSPACE_SLOT` уже наявного `.env.local`
    (ідемпотентно, той самий workspace лишається на тому самому слоті); інакше перший
-   `N=1..50`, у якого всі 9 портів слота вільні (перевірка через `net`, спроба
-   `listen`/`EADDRINUSE`). `N=0` — помилка: слот 0 не через цей скрипт.
+   `N=1..50`, який не закріплений у `.env.local` іншого checkout-а з
+   `git worktree list` і в якого всі 9 портів слота вільні (перевірка через `net`, спроба
+   `listen`/`EADDRINUSE`). Це резервує слот навіть тоді, коли його контейнери й dev-процеси
+   зараз вимкнені. `N=0` і всі його базові порти зарезервовані за основним checkout-ом
+   завжди; їхня фактична зайнятість під час `ws:init` не має значення. Явний `pnpm ws:init N`
+   теж відхиляється, якщо N уже належить іншому worktree.
 2. Згенерувати `.env.local` (gitignored, перезаписується щоразу). Лише ПЕРЕВИЗНАЧЕНІ ключі —
    решта (`S3_ACCESS_KEY`, `SMTP_*` тощо) і так приходить із базового `.env`, бо
    `@nestjs/config`/Vite мерджать `.env.local` поверх `.env`, а не замінюють:
@@ -84,6 +88,7 @@ Custom — лише скрипт ініціалізації (нижче) і па
    MAILPIT_SMTP_PORT=1125
    MAILPIT_UI_PORT=8125
    SMTP_PORT=1125
+   API_PORT=3101
    PORT=3101
    PLATFORM_PORT=3102
    WEB_PORT=5273
@@ -104,6 +109,7 @@ Custom — лише скрипт ініціалізації (нижче) і па
    Секрети (`JWT_SECRET`/`PLATFORM_JWT_SECRET`) генеруються СВОЇ на кожен слот
    (`randomBytes(32).toString('hex')`) — не копіюються з базового `.env`, щоб токени різних
    слотів ніколи не були крос-валідні.
+
 3. `docker compose --env-file .env.local -f docker/docker-compose.yml up -d`.
 4. Дочекатись, поки Postgres слота почне приймати TCP (ретрай-цикл, до 15с) — і потім
    `pnpm db:reset` (ЗАВЖДИ, і на новому, і на вже ініціалізованому слоті — рішення
@@ -115,6 +121,27 @@ Custom — лише скрипт ініціалізації (нижче) і па
    (`DROP IF EXISTS` → `CREATE` → roles → migrate → seed), тому ретрай безпечний.
 5. Надрукувати адреси (web, platform-web, api/platform Swagger, Mailpit UI) і нагадати
    команди `*:dev` — вони підхоплять `.env.local` автоматично.
+
+Vite запускається зі `strictPort: true`: якщо призначений порт слота зайнятий, процес падає
+з явною помилкою, а не перескакує на наступний порт (який може належати іншому процесу або
+слоту). Tenant API і web-проксі віддають перевагу slot-specific `API_PORT` над generic
+`PORT`: Claude preview інжектить `PORT` зі свого launch config, але через це більше не може
+перемістити API non-zero слота на зарезервований `3001` або направити web-проксі на Vite.
+
+### Prisma і DB-команди у worktree
+
+`libs/database/load-root-env.ts` завантажується Prisma config-ом і всіма DB-скриптами. Він
+читає кореневі `.env`, потім `.env.local` (явні змінні shell/CI мають найвищий пріоритет),
+тому і кореневий `pnpm db:migrate:dev`, і прямий
+`cd libs/database && pnpm exec prisma migrate dev --name X` використовують
+`MIGRATE_DATABASE_URL` поточного слота, а `db:reset`/`db:roles`/`db:seed` — відповідні URL
+того самого слота.
+
+Для non-zero слота loader звіряє `POSTGRES_PORT` та всі локальні DB URL з формулою
+`5432 + 100·N` і завершує команду до підключення, якщо бачить інший порт. У linked git
+worktree без `.env.local` DB-команди також відхиляються з вимогою спершу виконати
+`pnpm ws:init`, замість небезпечного fallback на slot 0. Офлайнові `prisma generate`,
+`prisma validate` і `prisma format` цього обмеження не мають.
 
 `pnpm ws:down` → `docker compose --env-file .env.local -f docker/docker-compose.yml down -v`
 (контейнери і volume-и слота; `.env.local` не видаляється — наступний `ws:init` без
@@ -134,7 +161,10 @@ Custom — лише скрипт ініціалізації (нижче) і па
   `loadEnv(mode, <корінь репо>, '')`, а не хардкод. Це ЄДИНЕ місце, де справді бракувало
   читання кореневого `.env.local` — `apps/api`, `apps/platform-api`, `apps/worker` вже мали
   `envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env']` і підхоплюють слот
-  без жодних змін коду.
+  без жодних змін коду. Для обох Vite-серверів увімкнено `strictPort: true`.
+- `libs/database/load-root-env.ts` — єдина точка завантаження root `.env`/`.env.local` для
+  Prisma CLI та DB-скриптів, із перевіркою порту non-zero слота й fail-closed поведінкою у
+  неініціалізованому linked worktree.
 - `apps/api/src/main.ts`, `apps/platform-api/src/main.ts`, `apps/worker/src/main.ts` — один
   рядок логу при старті (`workspace slot: N`), щоб не плутати, який процес який слот
   обслуговує.

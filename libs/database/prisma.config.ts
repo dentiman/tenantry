@@ -1,3 +1,4 @@
+import './load-root-env';
 import { defineConfig } from 'prisma/config';
 
 // MT-0: CLI (migrate/studio/push) ходить під ВЛАСНИКОМ схеми saas_migrator, НЕ під runtime-роллю.

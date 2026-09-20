@@ -29,7 +29,13 @@ async function bootstrap(): Promise<void> {
   );
   SwaggerModule.setup('api/docs', app, cleanupOpenApiDoc(openApiDoc));
 
-  const port = process.env.PORT ?? 3001;
+  // API_PORT із workspace slot має пріоритет над generic PORT, який Claude preview
+  // інжектить зі свого slot-0 launch.json у кожен worktree. Формульний fallback
+  // захищає й уже створені .env.local, у яких API_PORT ще немає.
+  const workspaceSlot = Number(process.env.WORKSPACE_SLOT ?? '0');
+  const workspacePort =
+    Number.isInteger(workspaceSlot) && workspaceSlot > 0 ? 3001 + 100 * workspaceSlot : undefined;
+  const port = process.env.API_PORT ?? workspacePort ?? process.env.PORT ?? 3001;
   await app.listen(port);
 }
 

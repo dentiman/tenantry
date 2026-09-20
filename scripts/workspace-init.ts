@@ -6,16 +6,17 @@
  *
  * Запуск: pnpm ws:init [N]
  * - N не задано і .env.local вже є → повторно використовує той самий слот (ідемпотентно).
- * - N не задано і .env.local нема → перший слот 1..50, у якого всі порти вільні.
+ * - N не задано і .env.local нема → перший слот 1..50, який не закріплений за іншим
+ *   git worktree і в якого всі порти вільні.
  * - N задано → саме цей слот (перезаписує .env.local, якщо існував).
  *
  * ЗАВЖДИ виконує db:reset (рішення користувача: чистий стан і на новому, і на вже
  * ініціалізованому слоті) — тому це теж ДЕСТРУКТИВНА команда відносно БД цього слота.
  */
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync, execSync } from 'node:child_process';
+import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { createServer, connect } from 'node:net';
-import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const REPO_ROOT = join(__dirname, '..');
@@ -66,13 +67,60 @@ async function slotPortsFree(n: number): Promise<boolean> {
 }
 
 function readExistingSlot(): number | null {
-  if (!existsSync(ENV_LOCAL_PATH)) return null;
-  const content = readFileSync(ENV_LOCAL_PATH, 'utf8');
+  return readSlotFromEnv(ENV_LOCAL_PATH);
+}
+
+function readSlotFromEnv(path: string): number | null {
+  if (!existsSync(path)) return null;
+  const content = readFileSync(path, 'utf8');
   const match = /^WORKSPACE_SLOT=(\d+)$/m.exec(content);
   return match ? Number(match[1]) : null;
 }
 
+function reservedWorktreeSlots(): Map<number, string> {
+  const currentRoot = realpathSync(REPO_ROOT);
+  const output = execFileSync('git', ['worktree', 'list', '--porcelain'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  });
+  const reserved = new Map<number, string>([[0, 'основний checkout']]);
+
+  for (const line of output.split('\n')) {
+    if (!line.startsWith('worktree ')) continue;
+    const worktreePath = line.slice('worktree '.length);
+    if (!existsSync(worktreePath)) continue;
+    if (realpathSync(worktreePath) === currentRoot) continue;
+
+    const slot = readSlotFromEnv(join(worktreePath, '.env.local'));
+    if (slot === null) continue;
+
+    const previousOwner = reserved.get(slot);
+    if (previousOwner) {
+      throw new Error(
+        `Слот ${String(slot)} одночасно зарезервований ${previousOwner} і ${worktreePath}. ` +
+          'Виправ конфліктні .env.local перед продовженням.',
+      );
+    }
+    reserved.set(slot, worktreePath);
+  }
+
+  return reserved;
+}
+
+function assertNoPortOverlapWithSlotZero(n: number): void {
+  const reservedPorts = new Set(Object.values(portsForSlot(0)));
+  const collision = Object.values(portsForSlot(n)).find((port) => reservedPorts.has(port));
+  if (collision !== undefined) {
+    throw new Error(
+      `Слот ${String(n)} перетинається зі слотом 0 на порті ${String(collision)}. ` +
+        'Зміни формулу портів: базові порти слота 0 завжди зарезервовані.',
+    );
+  }
+}
+
 async function resolveSlot(argSlot: number | undefined): Promise<number> {
+  const reserved = reservedWorktreeSlots();
+
   if (argSlot !== undefined) {
     if (!Number.isInteger(argSlot) || argSlot < 1) {
       throw new Error(
@@ -80,16 +128,30 @@ async function resolveSlot(argSlot: number | undefined): Promise<number> {
           'Вкажи ціле число ≥ 1.',
       );
     }
+    assertNoPortOverlapWithSlotZero(argSlot);
+    const owner = reserved.get(argSlot);
+    if (owner) {
+      throw new Error(`Слот ${String(argSlot)} уже зарезервований worktree: ${owner}`);
+    }
     return argSlot;
   }
 
   const existing = readExistingSlot();
   if (existing !== null) {
+    assertNoPortOverlapWithSlotZero(existing);
+    const owner = reserved.get(existing);
+    if (owner) {
+      throw new Error(
+        `WORKSPACE_SLOT=${String(existing)} у цьому checkout конфліктує з worktree: ${owner}`,
+      );
+    }
     console.log(`.env.local уже задає WORKSPACE_SLOT=${String(existing)} — перевикористовую слот.`);
     return existing;
   }
 
   for (let n = 1; n <= MAX_SLOT_SEARCH; n++) {
+    assertNoPortOverlapWithSlotZero(n);
+    if (reserved.has(n)) continue;
     if (await slotPortsFree(n)) return n;
   }
   throw new Error(
@@ -118,6 +180,7 @@ function buildEnv(n: number, ports: PortMap): Record<string, string> {
     // а не MAILPIT_SMTP_PORT (та лише для host-порту в docker-compose) — без цього воркер
     // слота N мовчки слав би листи через Mailpit слота 0
     SMTP_PORT: String(ports.mailpitSmtp),
+    API_PORT: String(ports.api),
     PORT: String(ports.api),
     PLATFORM_PORT: String(ports.platform),
     WEB_PORT: String(ports.web),

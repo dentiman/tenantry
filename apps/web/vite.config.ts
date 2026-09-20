@@ -10,7 +10,13 @@ export default defineConfig(({ mode }) => {
   // порожній prefix, інакше loadEnv віддав би лише VITE_*-змінні.
   const rootEnv = loadEnv(mode, path.resolve(__dirname, '../..'), '');
   const port = Number(rootEnv.WEB_PORT ?? '5173');
-  const apiTarget = `http://localhost:${rootEnv.PORT ?? '3001'}`;
+  // Claude preview інжектить generic PORT для самого Vite-процесу; API_PORT не дає
+  // сприйняти цей порт як адресу tenant API у non-zero workspace slot. Формульний
+  // fallback покриває старі .env.local, створені до появи API_PORT.
+  const workspaceSlot = Number(rootEnv.WORKSPACE_SLOT ?? '0');
+  const workspaceApiPort =
+    Number.isInteger(workspaceSlot) && workspaceSlot > 0 ? 3001 + 100 * workspaceSlot : undefined;
+  const apiTarget = `http://localhost:${String(rootEnv.API_PORT ?? workspaceApiPort ?? rootEnv.PORT ?? '3001')}`;
 
   return {
     plugins: [react(), tailwindcss()],
@@ -22,6 +28,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port,
+      strictPort: true,
       proxy: {
         '/api': {
           target: apiTarget,

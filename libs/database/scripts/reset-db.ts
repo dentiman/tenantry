@@ -16,6 +16,7 @@
  *
  * Запуск: pnpm db:reset (з кореня) або pnpm --filter @saas-skeleton/database db:reset
  */
+import '../load-root-env';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { Client } from 'pg';

@@ -50,7 +50,9 @@ read the relevant doc before working in that area instead of expecting it here.
 ```bash
 pnpm docker:up             # Postgres 17 + Mailpit + Valkey + SeaweedFS
 pnpm ws:init [N]           # isolated dev stack for a worktree/agent workspace — see
-                           # docs/workspace-slots.md; only needed for DB/e2e/browser/Valkey work
+                           # docs/workspace-slots.md; reserves the slot across git worktrees
+                           # even while stopped; slot 0 is always reserved for the main checkout
+                           # only needed for DB/e2e/browser/Valkey work
 pnpm ws:down               # tear down that slot's containers and volumes
 pnpm db:generate           # Prisma client → libs/database/src/generated (gitignored)
 pnpm db:migrate:dev        # dev migration (don't pass `--name` through `pnpm ... -- --name X`,
@@ -71,6 +73,17 @@ pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT ru
 pnpm platform:test:e2e     # platform e2e
 pnpm web:test              # Vitest unit tests (currently calendar date/interaction logic)
 ```
+
+The HTTP ports shown above are slot-0 defaults. Non-zero slots use `+100·N` from their
+generated `.env.local`. Start dev processes through the repository `pnpm *:dev` scripts;
+Vite uses strict ports, and tenant API/web prefer slot-specific `API_PORT` so a tool-injected
+generic `PORT` cannot move them onto slot 0.
+
+Prisma config and all DB scripts load root `.env` followed by `.env.local` automatically.
+Never add an ad-hoc fallback or manually substitute slot-0 URLs. In a non-zero slot they
+validate every local DB URL against that slot's Postgres port; DB commands in a linked
+worktree without `.env.local` fail before connecting. Run `pnpm ws:init` first whenever live
+database work is required. Offline `prisma generate`, `validate`, and `format` are exempt.
 
 Generated OpenAPI/orval artifacts are committed. Regenerate and commit both together whenever
 a contract or controller changes — see `docs/commands.md` for the full list including
@@ -249,6 +262,10 @@ flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without
     app than at the repo root.
 15. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
     `runWith`/`withTenantTx` silently affects zero rows under RLS instead of erroring.
+16. Workspace ports are allocations, not a search hint. Slot 0 and its base ports always
+    belong to the main checkout; `ws:init` also reserves non-zero slots found in other git
+    worktrees even if their processes are stopped. Never work around a conflict by choosing
+    the next port or by setting `PORT` manually. See `docs/workspace-slots.md`.
 
 ## Fixed decisions
 

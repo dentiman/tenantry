@@ -221,6 +221,11 @@ pnpm platform:web:codegen
   cd libs/database && pnpm exec prisma migrate dev --name X
   ```
 
+  Prisma config and DB scripts load the repository `.env` followed by `.env.local`
+  automatically. In a non-zero workspace slot they reject local DB URLs whose port does not
+  match the slot, and linked worktrees without `.env.local` reject DB commands before
+  connecting. Do not bypass this guard with a slot-0 URL.
+
 ## Workspace infrastructure (cloud/agent workspaces)
 
 This repo supports isolated per-workspace dev stacks ("workspace slots",
@@ -228,6 +233,12 @@ This repo supports isolated per-workspace dev stacks ("workspace slots",
 SeaweedFS/Mailpit stack on ports shifted by `+100·N` and resets its database; `pnpm ws:down`
 tears it down again. It is safe to call `ws:init` repeatedly — it reuses the same slot for
 this checkout and always leaves the database in a clean, migrated, seeded state.
+
+Slot 0 and its base ports are permanently reserved for the main checkout, whether its
+processes are running or not. Automatic allocation also treats slots recorded in
+`.env.local` of other git worktrees as reserved while stopped. Do not select the next free
+port manually: Vite uses strict ports, and tenant API/web use slot-specific `API_PORT` to
+prevent tool-injected `PORT` from moving a non-zero process onto slot 0.
 
 Only run `pnpm ws:init` when the task actually needs live infrastructure:
 

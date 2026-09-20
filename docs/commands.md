@@ -87,6 +87,13 @@ pnpm ws:init 2    # саме слот 2
 самому слоті). Друкує адреси (web, platform-web, api/platform Swagger, Mailpit UI). Слот 0 —
 базовий checkout без `.env.local`, ним `ws:init` не керує.
 
+«Вільний» тут означає не лише відсутність listener-ів: `ws:init` читає `.env.local` усіх
+checkout-ів із `git worktree list` і не віддає вже закріплений слот іншому worktree, навіть
+коли той зараз вимкнений. Слот 0 та його порти завжди зарезервовані за основним checkout-ом.
+Vite також не шукає наступний вільний порт (`strictPort: true`), а падає при конфлікті.
+Згенерований `API_PORT` має пріоритет над generic `PORT`, який може інжектити Claude
+preview, тому tenant API non-zero слота не займає `3001`, навіть якщо slot 0 зараз вимкнений.
+
 Далі в цьому checkout — звичайні `pnpm api:dev`/`platform:dev`/`worker:dev`/`web:dev`/
 `platform:web:dev`: усі підхоплюють `.env.local` автоматично (`apps/api`, `apps/platform-api`,
 `apps/worker` — через `ConfigModule.forRoot({ envFilePath: [...] })`, `apps/web`/
@@ -147,6 +154,12 @@ pnpm db:migrate:dev
 Застосовує/створює міграції в dev-режимі (питає назву нової міграції інтерактивно —
 **не** передавати ім'я через `pnpm db:migrate:dev -- --name X`, pnpm дублює `--`, prisma
 йде в prompt і висить; для іменованої міграції: `cd libs/database && pnpm exec prisma migrate dev --name X`).
+
+Prisma config і DB-скрипти самі завантажують root `.env` + `.env.local`, тому обидві форми
+команди використовують `MIGRATE_DATABASE_URL` поточного workspace slot. У non-zero слоті
+локальний URL з портом іншого слота відхиляється до підключення; у linked worktree без
+`.env.local` спочатку треба виконати `pnpm ws:init` (виняток — офлайнові Prisma
+`generate`/`validate`/`format`).
 
 ### `pnpm db:migrate:deploy`
 

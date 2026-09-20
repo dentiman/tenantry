@@ -9,6 +9,7 @@
  *  - POSTGRES_ADMIN_URL — суперюзер (дефолт: postgresql://saas:saas@localhost:5432/postgres);
  *  - цільова БД — з DATABASE_URL (pathname) або аргументу --db <name>.
  */
+import '../load-root-env';
 import { Client } from 'pg';
 
 const DEFAULT_ADMIN_URL = 'postgresql://saas:saas@localhost:5432/postgres';
