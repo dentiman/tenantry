@@ -49,6 +49,32 @@ read the relevant doc before working in that area instead of expecting it here.
   and why a socket event may carry payload here, queue options, config. Read the second before
   touching anything under `ai/`, the first before planning the next phase.
 
+## Planning layers
+
+Spec-driven planning runs through OpenSpec (`openspec/`, schema `spec-driven`). The CLI has no
+epic primitive, so the split below is a convention — it is also written into
+`openspec/config.yaml` under `context`, which the CLI feeds into every artifact-generation
+request, so an agent working a change inherits it without being told.
+
+| Layer | Answers | Stays true |
+| --- | --- | --- |
+| `docs/<feature>.md` | why a decision was made, what is still open | longer than any phase |
+| `openspec/specs/<capability-path>/spec.md` | behaviour the system must have | until behaviour changes |
+| `openspec/changes/<name>/` | the work in flight | until archived |
+
+Two rules that are easy to lose:
+
+1. **Promote before archiving.** Anything in a change's `design.md` that will still be true
+   afterwards moves into `docs/` first. An archive is not a reference — nobody reads it, and
+   live reasoning left there is lost. (`docs/ai-assistant-implementation.md` exists because of
+   this rule, not by accident.)
+2. **An epic is a capability-path prefix** (`ai-assistant/*`), not a change. A phase is one
+   change named with its number (`ai-1-…`), so `openspec list --sort name` reproduces an order
+   the CLI does not store; cross-phase dependencies live in the feature doc, since there is no
+   `depends-on` field. Split a phase by the capability it touches — work that changes no
+   externally observable behaviour declares `skip_specs: true` rather than inventing a
+   requirement to pass validation.
+
 ## Commands
 
 ```bash
