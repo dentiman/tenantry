@@ -2976,7 +2976,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: 1fr;
       gap: 1rem;
       margin-top: 2rem;
     }
@@ -2986,6 +2986,98 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       border-radius: 0.75rem;
       border: 1px solid var(--panel-border);
       padding: 1.25rem;
+    }
+
+    .card.planned {
+      border-style: dashed;
+    }
+
+    .card-badge {
+      margin-left: auto;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      padding: 0.05rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    .card-columns {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .card-col-label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      opacity: 0.65;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-business {
+      border-right: 1px solid var(--panel-border);
+      padding-right: 1.5rem;
+    }
+
+    .card-business ul {
+      list-style: none;
+    }
+
+    .card-business li {
+      position: relative;
+      padding-left: 1.6rem;
+      margin-bottom: 0.65rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--text);
+    }
+
+    .card-business li::before {
+      content: "\2713";
+      position: absolute;
+      left: 0;
+      top: 0.05em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--backend-stroke) 22%, transparent);
+      color: var(--backend-stroke);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .card-tech ul {
+      list-style: none;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .card-tech li {
+      margin-bottom: 0.3rem;
+    }
+
+    @media (max-width: 560px) {
+      .card-columns {
+        grid-template-columns: 1fr;
+      }
+      .card-business {
+        border-right: none;
+        border-bottom: 1px solid var(--panel-border);
+        padding-right: 0;
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.75rem;
+      }
     }
 
     html[data-preset="signal-flow"] .card {
@@ -5585,13 +5677,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot cyan"></div>
           <h3>Multi-tenancy &amp; RLS</h3>
         </div>
-        <ul>
-          <li>&bull; tenant_id + RLS as the main enforcement</li>
-          <li>&bull; saas_migrator — schema owner (DDL)</li>
-          <li>&bull; saas_app — tenant runtime, RLS enforced</li>
-          <li>&bull; saas_platform — control plane, BYPASSRLS</li>
-          <li>&bull; 2 independent planes, separate JWT secrets</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>One deployment, many customer organizations (tenants)</li>
+              <li>Data isolated per organization, not per user</li>
+              <li>Two independent portals: TenantPortal (per organization) and SuperAdminPortal (platform)</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; tenant_id + RLS as the main enforcement</li>
+              <li>&bull; saas_migrator — schema owner (DDL)</li>
+              <li>&bull; saas_app — tenant runtime, RLS enforced</li>
+              <li>&bull; saas_platform — control plane, BYPASSRLS</li>
+              <li>&bull; 2 independent planes, separate JWT secrets</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5599,13 +5704,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot violet"></div>
           <h3>Message Queue &amp; Transactional Outbox — pg-boss</h3>
         </div>
-        <ul>
-          <li>&bull; publish(tx, …) inside the domain transaction</li>
-          <li>&bull; pg-boss queues ARE the outbox table</li>
-          <li>&bull; One queue per consumer: {message}/{consumer}</li>
-          <li>&bull; Shared DLQ across all consumers</li>
-          <li>&bull; Idempotency by messageId</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Background actions (emails, AI replies, notifications) never get lost</li>
+              <li>No duplicate sends, even on retry</li>
+              <li>Failed jobs are visible, not silently dropped</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; publish(tx, …) inside the domain transaction</li>
+              <li>&bull; pg-boss queues ARE the outbox table</li>
+              <li>&bull; One queue per consumer: {message}/{consumer}</li>
+              <li>&bull; Shared DLQ across all consumers</li>
+              <li>&bull; Idempotency by messageId</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5613,13 +5731,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot emerald"></div>
           <h3>Realtime</h3>
         </div>
-        <ul>
-          <li>&bull; Socket.IO gateway runs in every apps/api replica</li>
-          <li>&bull; Valkey (redis-streams-adapter) distributes events across all nodes</li>
-          <li>&bull; A browser connected to node A still gets events triggered on node B</li>
-          <li>&bull; No sticky sessions — Docker Swarm VIP just balances TCP</li>
-          <li>&bull; worker bridges background jobs in via the same headless Socket.IO Server</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Live in-app notifications on business events, no page refresh</li>
+              <li>"Who's online" presence</li>
+              <li>Delivered while the tab is open (not an OS-level push yet)</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; Socket.IO gateway runs in every apps/api replica</li>
+              <li>&bull; Valkey (redis-streams-adapter) distributes events across all nodes</li>
+              <li>&bull; A browser connected to node A still gets events triggered on node B</li>
+              <li>&bull; No sticky sessions — Docker Swarm VIP just balances TCP</li>
+              <li>&bull; worker bridges background jobs in via the same headless Socket.IO Server</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5627,12 +5758,24 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot amber"></div>
           <h3>Infrastructure</h3>
         </div>
-        <ul>
-          <li>&bull; Dev: docker compose (Postgres, Mailpit, Valkey, SeaweedFS)</li>
-          <li>&bull; Prod: single-node Docker Swarm</li>
-          <li>&bull; 6 images, 2 stacks (dev / prod)</li>
-          <li>&bull; GitLab CI → SSH docker-context deploy</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Runs on a single small server, no dedicated DevOps team</li>
+              <li>Self-hosted, no cloud vendor lock-in</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; Dev: docker compose (Postgres, Mailpit, Valkey, SeaweedFS)</li>
+              <li>&bull; Prod: single-node Docker Swarm</li>
+              <li>&bull; 6 images, 2 stacks (dev / prod)</li>
+              <li>&bull; GitLab CI → SSH docker-context deploy</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5640,13 +5783,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot amber"></div>
           <h3>S3-Compatible File Storage</h3>
         </div>
-        <ul>
-          <li>&bull; Storage abstraction — any S3-compatible backend via env vars</li>
-          <li>&bull; Self-hosted: SeaweedFS in dev (docker compose)</li>
-          <li>&bull; Cloud: swap to AWS S3 — same code path, no rewrite</li>
-          <li>&bull; Two-phase presigned upload — browser PUTs directly, bypassing the API</li>
-          <li>&bull; Magic-byte MIME check, thumbnails, orphan cleanup cron</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Attach files to any business entity (customers, tickets, etc.)</li>
+              <li>Large uploads don't slow down the app</li>
+              <li>Swap storage provider without touching application code</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; Storage abstraction — any S3-compatible backend via env vars</li>
+              <li>&bull; Self-hosted: SeaweedFS in dev (docker compose)</li>
+              <li>&bull; Cloud: swap to AWS S3 — same code path, no rewrite</li>
+              <li>&bull; Two-phase presigned upload — browser PUTs directly, bypassing the API</li>
+              <li>&bull; Magic-byte MIME check, thumbnails, orphan cleanup cron</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5654,12 +5810,24 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot emerald"></div>
           <h3>Valkey — Redis-compatible</h3>
         </div>
-        <ul>
-          <li>&bull; Valkey 8 — Redis-compatible fork, same wire protocol</li>
-          <li>&bull; Used today for: Socket.IO adapter + presence leases</li>
-          <li>&bull; No caching layer implemented yet</li>
-          <li>&bull; Future potential: same instance as an app cache — no new infra needed</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Powers live presence and notification delivery</li>
+              <li>Ready to double as an app cache later, no new infra</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; Valkey 8 — Redis-compatible fork, same wire protocol</li>
+              <li>&bull; Used today for: Socket.IO adapter + presence leases</li>
+              <li>&bull; No caching layer implemented yet</li>
+              <li>&bull; Future potential: same instance as an app cache — no new infra needed</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5667,15 +5835,29 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot rose"></div>
           <h3>Auth — JWT tokens</h3>
         </div>
-        <ul>
-          <li>&bull; Access token — 15 min JWT</li>
-          <li>&bull; Refresh token — tenantId:tokenId:secret</li>
-          <li>&bull; Rotated on every refresh</li>
-          <li>&bull; Reuse triggers theft detection</li>
-          <li>&bull; Self-service &quot;sign out everywhere&quot;</li>
-          <li>&bull; Planned: instant revoke — force-disconnect a live session now</li>
-          <li>&bull; Planned: two-factor auth (TOTP via authenticator app)</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>Secure login with short-lived sessions</li>
+              <li>Users can view &amp; revoke their own sessions per device</li>
+              <li>Stolen sessions are detected and blocked automatically</li>
+              <li>Self-service "forgot password" via email, and admins can reset a user's password directly</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; Access token — 15 min JWT</li>
+              <li>&bull; Refresh token — tenantId:tokenId:secret</li>
+              <li>&bull; Rotated on every refresh</li>
+              <li>&bull; Reuse triggers theft detection</li>
+              <li>&bull; Self-service &quot;sign out everywhere&quot;</li>
+              <li>&bull; Password reset — VerificationToken (email flow) + admin-set (POST /users/:id/password), both revoke all sessions</li>
+              <li>&bull; Planned: instant revoke — force-disconnect a live session now</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -5683,26 +5865,53 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <div class="card-dot orange"></div>
           <h3>i18n — Multi-language</h3>
         </div>
-        <ul>
-          <li>&bull; react-i18next on both frontends</li>
-          <li>&bull; worker has its own i18next for email</li>
-          <li>&bull; Backend returns codes, never text</li>
-          <li>&bull; English only today</li>
-          <li>&bull; TMS deferred until language #2</li>
-        </ul>
+        <div class="card-columns">
+          <div class="card-business">
+            <div class="card-col-label">Business</div>
+            <ul>
+              <li>UI language stays in sync between backend and frontend</li>
+              <li>English shipped; adding a market means adding translations, not code</li>
+            </ul>
+          </div>
+          <div class="card-tech">
+            <div class="card-col-label">Technical</div>
+            <ul>
+              <li>&bull; react-i18next on both frontends</li>
+              <li>&bull; worker has its own i18next for email</li>
+              <li>&bull; Backend returns codes, never text</li>
+              <li>&bull; English only today</li>
+              <li>&bull; TMS deferred until language #2</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot slate"></div>
-          <h3>Delivered business &amp; frontend features</h3>
+          <h3>Delivered business features</h3>
         </div>
         <ul>
-          <li>&bull; Customers — reference CRUD module</li>
-          <li>&bull; Calendar — RSVP, timezones, reminders</li>
-          <li>&bull; Activity Log — durable event feed</li>
-          <li>&bull; Notifications — realtime in-app inbox</li>
-          <li>&bull; Two-level app shell + DataGrid</li>
+          <li>&bull; Customers — organizations &amp; contacts, human-readable reference numbers</li>
+          <li>&bull; Calendar — events, attendees, RSVP, personal reminders</li>
+          <li>&bull; Activity log — who did what, when, per record</li>
+          <li>&bull; User management — create/deactivate users, self-service password change</li>
+          <li>&bull; AI assistant panel — early stage, no live model connected yet</li>
+          <li>&bull; SuperAdminPortal — operators manage tenants &amp; monitor background jobs</li>
+        </ul>
+      </div>
+
+      <div class="card planned">
+        <div class="card-header">
+          <div class="card-dot slate"></div>
+          <h3>Roadmap</h3>
+          <span class="card-badge">Planned, not built</span>
+        </div>
+        <ul>
+          <li>&bull; Two-factor authentication (TOTP)</li>
+          <li>&bull; Realtime chat between users</li>
+          <li>&bull; Bulk operations on records</li>
+          <li>&bull; Billing &amp; support tickets module</li>
         </ul>
       </div>
     </div>
