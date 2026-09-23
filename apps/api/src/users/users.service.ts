@@ -14,6 +14,7 @@ import { Role } from '@saas-skeleton/database';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+import { DefaultChannelService } from '../chat/default-channel.service';
 import { AuthSessionService } from '../auth/auth-session.service';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
 // Пара phone/phoneCountry узгоджується одним правилом на застосунок (common/phone.ts):
@@ -35,6 +36,7 @@ export class UsersService {
     private readonly notifications: NotificationRecorder,
     private readonly sessions: AuthSessionService,
     private readonly realtime: RealtimeEmitter,
+    private readonly defaultChannel: DefaultChannelService,
   ) {}
 
   async findAll(query: UserQuery): Promise<{
@@ -119,6 +121,11 @@ export class UsersService {
         data: { ...rest, ...phonePatch, passwordHash },
         include: { avatarFile: true },
       });
+
+      // Дефолтний канал — частина появи людини в тенанті, а не окремий крок:
+      // у тій самій транзакції, тож «юзер є, але поза каналом» не існує як стан
+      // (docs/chat.md §7.4, design.md D3)
+      await this.defaultChannel.ensureMembership(tx, created);
 
       await this.activities.record(tx, {
         type: 'user.created',

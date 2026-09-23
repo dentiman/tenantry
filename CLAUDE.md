@@ -37,9 +37,12 @@ read the relevant doc before working in that area instead of expecting it here.
   `docs/frontend/layout-structure.md` — quick visual map + naming of shell columns/
   panels (rail, area sidebar, context panel) for both frontends;
   `docs/frontend/ui-known-issues.md` — open vendored-code issues
-- `docs/chat.md`, `docs/bulk-operations.md` — **design fixed, not implemented.** Chat has an
-  empty placeholder page/area in `apps/web`; bulk operations has a disabled demo slot on
-  `/users`. Don't treat either as a working feature.
+- `docs/chat.md` — **the** reference for chat. §7 holds the phase plan; **CHAT-0.1 is built**
+  (internal conversations over REST: `seq`, cursor feed, `clientMessageId`, read state, the
+  default channel, the Chat area screen) and **there is no realtime in it yet** — the screen
+  refreshes on window focus and after sending, by design. §7.6 lists the invariants `0.2`/`0.3`
+  build on; don't break them. `docs/bulk-operations.md` — **design fixed, not implemented**
+  (a disabled demo slot on `/users`); not a working feature.
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
   why, the research behind them (OpenAI-compat is lossy, provider strategies, tool-calling
   mechanics, files), budget, privacy, and phases AI-0…AI-4. §0 keeps the decision sequence.
@@ -126,8 +129,9 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      sessions — no id in any path, subject is always the JWT), customers,
                      settings (org-level), files, activities, notifications, realtime
                      (Socket.IO gateway), calendar, ai (assistant conversation; no id in any
-                     path either). Pino logging, AllExceptionsFilter via
-                     configureApp() (shared between main.ts and e2e).
+                     path either), chat (CHAT-0.1: internal conversations, server-assigned
+                     `seq`, one access service, no queue/socket seams yet). Pino logging,
+                     AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
                      JWT/DB role), tenants CRUD, jobs monitoring (moved here because
                      `pgboss.*` sits outside RLS).
@@ -341,7 +345,8 @@ than repeated here:
   reference data — see `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline currently has no failure-visibility surface.
-- **Chat and bulk operations**: fully designed (`docs/chat.md`, `docs/bulk-operations.md`),
-  not implemented — see the documentation map above.
+- **Chat**: `CHAT-0.1` shipped (REST-only internal chat). `0.2` (realtime, notifications),
+  `0.3` (participant management, mentions, attachments) and `CHAT-1…4` are designed and not
+  built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

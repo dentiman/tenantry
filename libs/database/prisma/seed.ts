@@ -111,10 +111,95 @@ async function main(): Promise<void> {
     create: { tenantId: tenant.id, name: 'customer', scope: '', lastValue: demoCustomers.length },
   });
 
+  // Дефолтний канал чату — ДВА незалежно ідемпотентні кроки, а не один.
+  // Причина конкретна: на свіжій БД канал для цього тенанта створює backfill у
+  // міграції (тенант там уже є, юзерів ще немає), і «створити канал разом із
+  // членством» просто не спрацювало б — канал уже є, а адмін щойно зʼявився і
+  // лишився б поза ним. Тому окремо канал, окремо членство.
+  //
+  // Ідемпотентність тримає не назва, а частковий унікальний індекс
+  // `(tenant_id) WHERE is_default` (design.md D3): шукаємо по ньому — назву
+  // колись перейменують, і пошук по 'General' почав би створювати другий канал.
+  //
+  // tenantId скрізь явний: сід іде під saas_platform (BYPASSRLS), і DB-default
+  // (current_setting) дав би NULL
+  const channel =
+    (await prisma.conversation.findFirst({
+      where: { tenantId: tenant.id, isDefault: true },
+      select: { id: true },
+    })) ??
+    (await prisma.$transaction(async (tx) => {
+      const created = await tx.conversation.create({
+        data: {
+          tenantId: tenant.id,
+          kind: 'INTERNAL',
+          access: 'private',
+          isDefault: true,
+          title: 'General',
+          lastSeq: 1,
+          lastMessageAt: new Date(),
+        },
+        select: { id: true },
+      });
+      // Стрічка непорожня з першої секунди. Текст не зберігається: type + params,
+      // рендер через i18next (docs/chat.md §4.7)
+      await tx.chatMessage.create({
+        data: {
+          tenantId: tenant.id,
+          conversationId: created.id,
+          seq: 1,
+          kind: 'SYSTEM',
+          senderType: 'system',
+          payload: { type: 'conversation.created' },
+        },
+      });
+      return created;
+    }));
+
+  const membership = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId: channel.id, userId: admin.id } },
+    select: { userId: true },
+  });
+
+  if (!membership) {
+    await prisma.$transaction(async (tx) => {
+      const { lastSeq } = await tx.conversation.update({
+        where: { id: channel.id },
+        data: { lastSeq: { increment: 1 }, lastMessageAt: new Date() },
+        select: { lastSeq: true },
+      });
+      await tx.chatMessage.create({
+        data: {
+          tenantId: tenant.id,
+          conversationId: channel.id,
+          seq: lastSeq,
+          kind: 'SYSTEM',
+          senderType: 'system',
+          payload: {
+            type: 'member.added',
+            member: { id: admin.id, label: admin.name ?? admin.email },
+          },
+        },
+      });
+      await tx.conversationParticipant.create({
+        data: {
+          tenantId: tenant.id,
+          conversationId: channel.id,
+          userId: admin.id,
+          role: 'member',
+          // Приєднання не створює непрочитаних
+          joinSeq: lastSeq,
+          lastReadSeq: lastSeq,
+        },
+      });
+    });
+  }
+
   console.log(
     `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`,
   );
   console.log(`Seeded ${String(demoCustomers.length)} demo customers`);
+  console.log('Seeded the default chat channel "General"');
   console.log(
     `Seeded platform operator: ${platformAdmin.email} (password: ${PLATFORM_ADMIN_PASSWORD})`,
   );

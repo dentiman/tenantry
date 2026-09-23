@@ -10,6 +10,58 @@
     "empty": {
       "title": "No conversation selected",
       "description": "Pick a conversation from the list to start reading it."
-    }
+    },
+    "unavailable": {
+      "title": "Conversation unavailable",
+      "description": "It may have been removed, or you are not a participant."
+    },
+    "participants_one": "{{count}} participant",
+    "participants_other": "{{count}} participants"
+  },
+  "list": {
+    "search": "Search conversations",
+    "noMessages": "No messages yet",
+    "noMatches": "Nothing matches",
+    "noMatchesHint": "Try a different name.",
+    "loadMore": "Load more",
+    "loadError": "Could not load conversations"
+  },
+  "transcript": {
+    "loading": "Loading conversation",
+    "loadingOlder": "Loading earlier messages",
+    "beginning": "Beginning of the conversation",
+    "loadError": "Could not load the conversation"
+  },
+  "message": {
+    "sending": "Sending…",
+    "failed": "Not sent"
+  },
+  "composer": {
+    "label": "Message",
+    "placeholder": "Write a message…",
+    "send": "Send"
+  },
+  "newConversation": {
+    "title": "New conversation",
+    "participants": "Participants",
+    "participantsPlaceholder": "Pick colleagues",
+    "name": "Name",
+    "namePlaceholder": "Optional"
+  },
+  "conversation": {
+    "justYou": "Just you"
+  },
+  "system": {
+    "actorSystem": "System",
+    "conversationCreated": "{{actor}} created the conversation",
+    "memberAdded": "{{actor}} added {{member}}"
+  },
+  "actions": {
+    "newConversation": "New conversation",
+    "create": "Create",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "discard": "Discard",
+    "refresh": "Refresh"
   }
 }

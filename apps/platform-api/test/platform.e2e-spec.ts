@@ -148,6 +148,27 @@ describe('Platform API (e2e)', () => {
       const admin = await prisma.user.findFirst({ where: { email: 'boss@acme.test' } });
       expect(admin?.tenantId).toBe(String(response.body.id));
       expect(admin?.role).toBe('ADMIN');
+
+      // Дефолтний канал чату народжується разом із тенантом (docs/chat.md §7.4):
+      // інакше тенант із control plane лишився б єдиним без нього, а tenant-api
+      // його не полагодить — там канал уже інваріант
+      const channels = await prisma.conversation.findMany({
+        where: { tenantId: String(response.body.id), isDefault: true },
+      });
+      expect(channels).toHaveLength(1);
+      const membership = await prisma.conversationParticipant.findMany({
+        where: { conversationId: channels[0]?.id },
+      });
+      expect(membership.map((m) => m.userId)).toEqual([admin?.id]);
+      // Стрічка непорожня з першої секунди
+      const entries = await prisma.chatMessage.findMany({
+        where: { conversationId: channels[0]?.id },
+        orderBy: { seq: 'asc' },
+      });
+      expect(entries.map((e) => (e.payload as { type: string }).type)).toEqual([
+        'conversation.created',
+        'member.added',
+      ]);
     });
 
     it('rejects duplicate slug with 409 field error', async () => {

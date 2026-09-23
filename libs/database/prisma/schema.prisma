@@ -29,26 +29,29 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users                   User[]
-  authSessions            AuthSession[]
-  verificationTokens      VerificationToken[]
-  files                   File[]
-  attachments             Attachment[]
-  activities              Activity[]
-  activityLinks           ActivityLink[]
-  notifications           Notification[]
-  notificationStates      NotificationState[]
-  notificationPreferences NotificationPreference[]
-  customers               Customer[]
-  customerContacts        CustomerContact[]
-  numberSequences         NumberSequence[]
-  numberSeries            NumberSeries[]
-  calendarEvents          CalendarEvent[]
-  calendarEventAttendees  CalendarEventAttendee[]
-  calendarReminders       CalendarReminder[]
-  scheduledNotifications  ScheduledNotification[]
-  aiConversations         AiConversation[]
-  aiMessages              AiMessage[]
+  users                    User[]
+  authSessions             AuthSession[]
+  verificationTokens       VerificationToken[]
+  files                    File[]
+  attachments              Attachment[]
+  activities               Activity[]
+  activityLinks            ActivityLink[]
+  notifications            Notification[]
+  notificationStates       NotificationState[]
+  notificationPreferences  NotificationPreference[]
+  customers                Customer[]
+  customerContacts         CustomerContact[]
+  numberSequences          NumberSequence[]
+  numberSeries             NumberSeries[]
+  calendarEvents           CalendarEvent[]
+  calendarEventAttendees   CalendarEventAttendee[]
+  calendarReminders        CalendarReminder[]
+  scheduledNotifications   ScheduledNotification[]
+  aiConversations          AiConversation[]
+  aiMessages               AiMessage[]
+  conversations            Conversation[]
+  conversationParticipants ConversationParticipant[]
+  chatMessages             ChatMessage[]
 
   @@map("tenants")
 }
@@ -85,24 +88,26 @@ model User {
   // виглядала б як редагування профілю. З доменного коду не чіпати.
   lastSeenAt   DateTime? @map("last_seen_at")
 
-  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   authSessions            AuthSession[]
   verificationTokens      VerificationToken[]
   // Персональний інбокс (docs/notifications.md): іде разом із юзером — це його
   // особисті дані, а не журнал (журнал — activities, він переживає видалення)
-  notifications           Notification[]           @relation("NotificationRecipient")
-  notificationState       NotificationState?       @relation("NotificationState")
-  notificationPreferences NotificationPreference[] @relation("NotificationPreference")
+  notifications           Notification[]            @relation("NotificationRecipient")
+  notificationState       NotificationState?        @relation("NotificationState")
+  notificationPreferences NotificationPreference[]  @relation("NotificationPreference")
   // FK НЕ композитний свідомо: onDelete SetNull з композитним FK занулив би і tenant_id
   // (Prisma не вміє SET NULL з переліком колонок). Крос-tenant захист — RLS на обох таблицях.
-  avatarFile              File?                    @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
-  uploadedFiles           File[]                   @relation("UploadedFiles")
-  ownedCustomers          Customer[]               @relation("CustomerOwner")
-  organizedEvents         CalendarEvent[]          @relation("CalendarEventOwner")
+  avatarFile              File?                     @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  uploadedFiles           File[]                    @relation("UploadedFiles")
+  ownedCustomers          Customer[]                @relation("CustomerOwner")
+  organizedEvents         CalendarEvent[]           @relation("CalendarEventOwner")
   eventAttendances        CalendarEventAttendee[]
   calendarReminders       CalendarReminder[]
-  scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationRecipient")
-  aiConversations         AiConversation[]         @relation("AiConversationOwner")
+  scheduledNotifications  ScheduledNotification[]   @relation("ScheduledNotificationRecipient")
+  aiConversations         AiConversation[]          @relation("AiConversationOwner")
+  conversationMemberships ConversationParticipant[]
+  chatMessages            ChatMessage[]             @relation("ChatMessageSender")
 
   // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
   @@unique([tenantId, email])
@@ -140,8 +145,8 @@ model AuthSession {
   prevRotatedAt DateTime? @map("prev_rotated_at")
   generation    Int       @default(0)
 
-  issuedAt   DateTime @default(now()) @map("issued_at")
-  lastUsedAt DateTime @default(now()) @map("last_used_at")
+  issuedAt          DateTime @default(now()) @map("issued_at")
+  lastUsedAt        DateTime @default(now()) @map("last_used_at")
   /// Посувається кожною ротацією — «сесія жива, поки нею користуються»
   idleExpiresAt     DateTime @map("idle_expires_at")
   /// Рахується від `issuedAt` і НЕ посувається: стеля життя пристрою
@@ -927,4 +932,183 @@ enum AiMessageStatus {
   COMPLETE
   FAILED
   CANCELLED
+}
+
+// ============================================================================
+// Чат (CHAT-0.1). Повна модель і рішення — docs/chat.md §4.2, §4.3, §6;
+// що з колонок заводиться зараз, а що чекає своєї фази — §7.4 і design.md D7:
+// одразу лише те, чия поява потім вимагала б backfill-у або зміни вже написаних
+// запитів. Тому тут немає ні channel_id, ні direction, ні customer_id —
+// їх додасть фаза, яка їх читає.
+//
+// RLS тут — межа ТЕНАНТА. Межу учасника (приватний канал не видно навіть ADMIN)
+// тримає сервіс: те саме рішення, що для приватних подій календаря і AI-розмов
+// («RLS — межа тенанта, а не учасника», docs/chat.md §5 п. 6).
+// ============================================================================
+
+model Conversation {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  // Явна дискримінанта, а НЕ похідна від каналу: від неї залежать правила доступу
+  kind   ConversationKind   @default(INTERNAL)
+  // ЗВЕТЬСЯ access, а не visibility: `visibility` уже зайняте на ChatMessage у
+  // зовсім іншому значенні (публічна репліка vs внутрішня нотатка), і дві
+  // однойменні колонки з різною семантикою в сусідніх таблицях — найдешевший
+  // спосіб отримати помилку в запиті доступу (docs/chat.md §4.1).
+  // Створюється ЛИШЕ 'private'; гілка 'tenant' у резолвері не написана, доки не
+  // зʼявиться сценарій «оголошення для всіх» (§6)
+  access String             @default("private")
+  status ConversationStatus @default(OPEN)
+
+  // Дефолтний канал тенанта («General»). Колонка, а не пошук по title: назву
+  // колись перейменують, і пошук зламається мовчки. Рівно один на тенант —
+  // це частковий унікальний індекс у міграції (design.md D3)
+  isDefault Boolean @default(false) @map("is_default")
+
+  title String?
+
+  // --- денормалізація під список розмов (docs/chat.md §4.3) ---
+  // Лічильник порядку: інкремент цього рядка І Є видачею seq повідомленню.
+  // Він же серіалізує вставки в МЕЖАХ розмови (рядок залочено) і лишає різні
+  // розмови повністю паралельними
+  lastSeq            Int       @default(0) @map("last_seq")
+  lastMessageAt      DateTime? @map("last_message_at")
+  // Тільки для TEXT-реплік. Системний запис сюди НЕ пише: прев'ю — текстова
+  // колонка, а в системного запису тексту немає за доктриною (type + params,
+  // рендер i18next). NULL = «повідомлень ще немає» (design.md D5)
+  lastMessagePreview String?   @map("last_message_preview")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     ChatMessage[]
+
+  // Опора під композитні FK дочірніх таблиць
+  @@unique([tenantId, id])
+  // Список розмов — найгарячіший запит модуля: «мої», завжди свіжі згори
+  @@index([tenantId, lastMessageAt(sort: Desc)])
+  @@map("conversations")
+}
+
+enum ConversationKind {
+  INTERNAL
+  CUSTOMER
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  SNOOZED
+  RESOLVED
+}
+
+// Хто «в розмові» + персональний стан прочитаного. Прочитане — КУРСОР, а не
+// прапорець на кожному повідомленні: прапорець дав би N×M рядків і все одно не
+// відповів би на питання «докуди дочитав кожен» (docs/chat.md §4.3)
+model ConversationParticipant {
+  conversationId String @map("conversation_id")
+  tenantId       String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId         String @map("user_id")
+
+  role String @default("member")
+
+  // seq на момент вступу: роздільник «до вашого приєднання» в стрічці. Історію
+  // до вступу видно ВСЮ — людину додають у канал заради контексту (§4.4)
+  joinSeq Int @default(0) @map("join_seq")
+
+  lastReadSeq Int       @default(0) @map("last_read_seq")
+  lastReadAt  DateTime? @map("last_read_at")
+  // Денормалізований лічильник: бейдж у списку читається без COUNT
+  unreadCount Int       @default(0) @map("unread_count")
+
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  // Рядок НЕ видаляємо: видалений забрав би з собою авторство системних записів
+  // («X додав Y») і можливість показати, хто був у каналі раніше. Доступ —
+  // left_at IS NULL
+  leftAt   DateTime? @map("left_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитні FK: учасник не може вказати ні на розмову, ні на юзера чужого тенанта
+  conversation Conversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  user         User         @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  // «Мої розмови» і перевірка доступу
+  @@index([tenantId, userId, leftAt])
+  @@map("conversation_participants")
+}
+
+// Репліка, внутрішня нотатка і системний запис — ОДНА таблиця: одна стрічка =
+// один курсор. Злиття двох пагінованих фідів на клієнті дає дірки на межах
+// сторінок (docs/chat.md §4.7)
+model ChatMessage {
+  id             String @id @default(uuid())
+  tenantId       String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  conversationId String @map("conversation_id")
+
+  // Монотонний порядковий номер У МЕЖАХ РОЗМОВИ — джерело порядку, курсора і
+  // детектора дірок. НЕ created_at: мітка часу не дає жодного з трьох (§4.3)
+  seq Int
+
+  kind       MessageKind
+  visibility MessageVisibility @default(PUBLIC)
+
+  // user | system (customer/bot зʼявляться з каналами). Рядок, а не enum —
+  // за docs/chat.md §4.2
+  senderType   String  @map("sender_type")
+  senderUserId String? @map("sender_user_id")
+  // Снапшот підпису відправника — як actorLabel в activities: юзера можуть
+  // деактивувати чи перейменувати, транскрипт мусить лишитись читабельним
+  senderLabel  String? @map("sender_label")
+
+  // NULL для kind = SYSTEM: у системного запису тексту немає
+  body    String? @db.Text
+  // Для SYSTEM — { type, params }, рендер через i18next
+  payload Json    @default("{}")
+
+  // Ідемпотентність надсилання. Арбітр — частковий UNIQUE у міграції, не
+  // перевірка в коді: перевірка програє гонці двох запитів (§4.5)
+  clientMessageId String? @map("client_message_id")
+
+  // У цьому зрізі завжди SENT. Колонка все одно є: у CHAT-2 вона приймає QUEUED
+  // від канального адаптера, а без неї футер бульбашки довелося б писати вдруге
+  status MessageStatus @default(SENT)
+
+  // М'яке видалення: «видалено для всіх» лишає рядок, щоб нумерація seq не мала дірок
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  // FK НЕ композитний — та сама грабля, що в CalendarEvent.owner: Prisma не вміє
+  // SET NULL з переліком колонок і занулила б заодно tenant_id. Саме SetNull:
+  // транскрипт переживає видалення людини, підпис лишається в sender_label
+  sender       User?        @relation("ChatMessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  // Арбітр порядку — він же індекс під читання стрічки. Окремого DESC-індексу
+  // немає свідомо: Postgres сканує btree у зворотному напрямку так само дешево,
+  // а це найбільша таблиця системи (docs/chat.md §5 п. 5)
+  @@unique([tenantId, conversationId, seq])
+  @@map("chat_messages")
+}
+
+enum MessageKind {
+  TEXT
+  SYSTEM
+}
+
+enum MessageVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
 }

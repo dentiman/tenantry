@@ -5,6 +5,9 @@ import type { CreateTenant, TenantQuery, UpdateTenant } from '@saas-skeleton/con
 import { fieldConflictException } from '@saas-skeleton/shared/errors';
 import * as argon2 from 'argon2';
 
+/** Назва дефолтного каналу чату (docs/chat.md §7.4) */
+const DEFAULT_CHANNEL_TITLE = 'General';
+
 /**
  * CRUD тенантів — ЄДИНЕ місце в системі, де tenant-и створюються/suspend-яться
  * (у tenant-api під RLS це неможливо структурно: WITH CHECK на tenants).
@@ -79,7 +82,7 @@ export class TenantsService {
       const created = await tx.tenant.create({
         data: { slug: data.slug, name: data.name, locale: data.locale },
       });
-      await tx.user.create({
+      const admin = await tx.user.create({
         data: {
           tenantId: created.id,
           email: data.admin.email,
@@ -89,6 +92,60 @@ export class TenantsService {
           locale: data.locale,
         },
       });
+
+      // Дефолтний канал чату народжується РАЗОМ із тенантом (design.md D3):
+      // інакше тенант, створений оператором, лишився б єдиним без нього, а
+      // tenant-api його не полагодить — там канал уже вважається інваріантом.
+      // tenantId скрізь явний: system-клієнт BYPASSRLS, DB-default (current_setting)
+      // тут дав би NULL
+      const channel = await tx.conversation.create({
+        data: {
+          tenantId: created.id,
+          kind: 'INTERNAL',
+          access: 'private',
+          isDefault: true,
+          title: DEFAULT_CHANNEL_TITLE,
+          lastSeq: 2,
+          lastMessageAt: new Date(),
+        },
+      });
+      await tx.conversationParticipant.create({
+        data: {
+          tenantId: created.id,
+          conversationId: channel.id,
+          userId: admin.id,
+          role: 'member',
+          // Приєднання не створює непрочитаних
+          joinSeq: 2,
+          lastReadSeq: 2,
+        },
+      });
+      // Стрічка непорожня з першої секунди. Текст не зберігається: type + params,
+      // рендер через i18next (docs/chat.md §4.7)
+      await tx.chatMessage.createMany({
+        data: [
+          {
+            tenantId: created.id,
+            conversationId: channel.id,
+            seq: 1,
+            kind: 'SYSTEM',
+            senderType: 'system',
+            payload: { type: 'conversation.created' },
+          },
+          {
+            tenantId: created.id,
+            conversationId: channel.id,
+            seq: 2,
+            kind: 'SYSTEM',
+            senderType: 'system',
+            payload: {
+              type: 'member.added',
+              member: { id: admin.id, label: admin.name ?? admin.email },
+            },
+          },
+        ],
+      });
+
       return created;
     });
 

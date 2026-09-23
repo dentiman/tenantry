@@ -76,5 +76,9 @@
   },
   "presence": {
     "online": "Online now"
+  },
+  "messageScroller": {
+    "scrollToEnd": "Scroll to end",
+    "scrollToStart": "Scroll to start"
   }
 }

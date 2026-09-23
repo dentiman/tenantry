@@ -24,6 +24,7 @@ import { CustomerDetailPage } from './pages/customer-detail';
 import { UserDetailPage } from './pages/user-detail';
 import { CalendarPage } from './pages/calendar';
 import { ChatPage } from './pages/chat';
+import { ChatConversationPage } from './pages/chat-conversation';
 import { PlaygroundPage } from './pages/playground';
 import { PlaygroundComboboxPage } from './pages/playground-combobox';
 import { PlaygroundInputPage } from './pages/playground-input';
@@ -309,9 +310,8 @@ const calendarEventRoute = createRoute({
 });
 
 /**
- * Area «Chat». Layout + index від першого дня, хоча сторінка поки одна: на
- * layout-роуті сидітиме гейт area, а `/chat/$conversationId` додається дитиною,
- * не переписуванням. Сам роут розмови не заводимо — мертвих роутів не тримаємо.
+ * Area «Chat». Layout + index, як і задумувалось: index лишається станом
+ * «розмову не вибрано», а сама розмова — дитина, додана без переписування.
  */
 const chatRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -322,6 +322,17 @@ const chatIndexRoute = createRoute({
   getParentRoute: () => chatRoute,
   path: '/',
   component: ChatPage,
+});
+
+/**
+ * Відкрита розмова. `bleed`: стрічка і композер самі тримають свої відступи,
+ * а сторінка має займати всю висоту — інакше композер поїхав би за екран.
+ */
+const chatConversationRoute = createRoute({
+  getParentRoute: () => chatRoute,
+  path: '$conversationId',
+  component: ChatConversationPage,
+  staticData: { layout: 'bleed' },
 });
 
 /**
@@ -539,7 +550,7 @@ const routeTree = rootRoute.addChildren([
       customerDetailRoute,
     ]),
     calendarRoute.addChildren([calendarIndexRoute, calendarViewRoute, calendarEventRoute]),
-    chatRoute.addChildren([chatIndexRoute]),
+    chatRoute.addChildren([chatIndexRoute, chatConversationRoute]),
     settingsRoute.addChildren([
       settingsGeneralRoute,
       settingsCalendarRoute,

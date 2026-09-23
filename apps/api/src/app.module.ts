@@ -20,6 +20,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
 import { AiModule } from './ai/ai.module';
+import { ChatModule } from './chat/chat.module';
 import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -63,6 +64,7 @@ import { validateApiEnv } from './config/env.schema';
     SettingsModule,
     AccountModule,
     AiModule,
+    ChatModule,
     FilesModule,
     ActivitiesModule,
     NotificationsModule,
