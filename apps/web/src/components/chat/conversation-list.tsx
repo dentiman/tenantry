@@ -20,7 +20,6 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 import { useAuthStore } from '../../stores/auth.store';
 import { compactTime, conversationLabel, initialsOf } from './chat-labels';
 import { flattenConversations, useConversationList, type Conversation } from './use-chat';
-import { NewConversationDialog } from './new-conversation-dialog';
 
 /**
  * Друга колонка area «Chat»: курсорний фід розмов, а не `DataGrid` (docs/chat.md §6).
@@ -53,22 +52,25 @@ export function ConversationList() {
   }, [conversations, search, viewerId, t]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 p-3">
-      <NewConversationDialog />
-
-      <InputGroup>
-        <InputGroupAddon>
-          <Search />
-        </InputGroupAddon>
-        <InputGroupInput
-          value={search}
-          placeholder={t('list.search')}
-          aria-label={t('list.search')}
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-        />
-      </InputGroup>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Пошук — смуга з власною лінією знизу, а не плитка в полях колонки: та
+          сама роль, що в тулбара над таблицею кастомерів. Поля має ТІЛЬКИ вона,
+          фід під нею йде від стінки до стінки */}
+      <div className="shrink-0 border-b border-sidebar-border p-2">
+        <InputGroup>
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={search}
+            placeholder={t('list.search')}
+            aria-label={t('list.search')}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+        </InputGroup>
+      </div>
 
       <ScrollArea className="min-h-0 flex-1">
         {query.isLoading && <ConversationListSkeleton />}
@@ -106,7 +108,10 @@ export function ConversationList() {
           </Empty>
         )}
 
-        <ul className="flex flex-col gap-0.5">
+        {/* Без проміжків між рядками: рядок — не плитка, а смуга на всю ширину
+            колонки (форма рядка гріда). Роздільних ліній теж немає — у 224px з
+            аватаром кожні ~56px вони б рябіли, ритм тримають самі аватари */}
+        <ul className="flex flex-col">
           {visible.map((conversation) => (
             <li key={conversation.id}>
               <ConversationRow conversation={conversation} viewerId={viewerId} />
@@ -155,11 +160,13 @@ function ConversationRow({
     <Link
       to="/chat/$conversationId"
       params={{ conversationId: conversation.id }}
-      className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      /* `ring-inset`: у смуги без скруглень і без полів звичайне кільце
+         обрізалось би стінками колонки */
+      className="block outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
     >
       <Item
         size="sm"
-        className={isActive ? 'bg-accent' : 'hover:bg-accent/60'}
+        className={cn('rounded-none', isActive ? 'bg-accent' : 'hover:bg-accent/60')}
         data-active={isActive}
       >
         <ItemMedia>
@@ -202,7 +209,7 @@ function ConversationRow({
 
 function ConversationListSkeleton() {
   return (
-    <ul className="flex flex-col gap-2 p-1">
+    <ul className="flex flex-col gap-2 p-3">
       {[0, 1, 2, 3].map((index) => (
         <li key={index} className="flex items-center gap-3">
           <Skeleton className="size-9 rounded-full" />

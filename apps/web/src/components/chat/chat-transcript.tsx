@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, RotateCw } from 'lucide-react';
+import { AlertCircle, Clock, RotateCw } from 'lucide-react';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -28,7 +28,9 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
-import { formatDate, formatTime } from '@saas-skeleton/ui/lib/format';
+import { formatDate, formatDateTime, formatTime } from '@saas-skeleton/ui/lib/format';
+import { cn } from '@saas-skeleton/ui/lib/utils';
+import { CHAT_COLUMN } from './chat-layout';
 import { useChatOutboxStore, type OutboxMessage } from '../../stores/chat-outbox.store';
 import { initialsOf, systemEntryText } from './chat-labels';
 import { flattenTranscript, useMarkRead, useTranscript, type ChatMessage } from './use-chat';
@@ -124,7 +126,7 @@ export function ChatTranscript({
           {/* `justify-end` — коротка розмова притискається до композера, як у
               будь-якому месенджері. Коли вміст переростає вʼюпорт, вільного
               місця немає і правило нічого не змінює */}
-          <MessageScrollerContent className="justify-end gap-4">
+          <MessageScrollerContent className={cn('justify-end gap-4', CHAT_COLUMN)}>
             {/* Догортання вгору: як тільки маркер початку видно — тягнемо старішу
                 сторінку. Курсор порожній — початок розмови, і маркер це каже */}
             <TranscriptStart
@@ -168,6 +170,20 @@ export function ChatTranscript({
 
 const EMPTY_OUTBOX: OutboxMessage[] = [];
 
+/**
+ * Службові рядки стрічки — роздільник дати, «початок розмови», системні записи
+ * («X додав Y») — тихіші за репліки: менший кегль і на тон слабший колір.
+ *
+ * Базовий `Marker` дає `text-sm text-muted-foreground`, тобто рівно ту саму вагу,
+ * що й текст репліки. Але це не зміст розмови, а підписи до неї: читають їх раз,
+ * а стоять вони між кожними двома днями. `/70` — той самий четвертий рівень
+ * тексту, що в підзаголовка сторінки (`page-header.tsx`); окремого токена під
+ * нього не заводимо з тієї ж причини — рівень на двох споживачів це виняток зі
+ * шкали, а не її щабель. Риски роздільника лишаються `border`: вони вже
+ * найслабші в темі.
+ */
+const TRANSCRIPT_MARKER = 'text-xs text-muted-foreground/70';
+
 /** Маркер початку історії — він же тригер довантаження */
 function TranscriptStart({
   hasMore,
@@ -205,7 +221,7 @@ function TranscriptStart({
       {isFetching ? (
         <Spinner aria-label={t('transcript.loadingOlder')} />
       ) : hasMore ? null : (
-        <Marker variant="separator">
+        <Marker variant="separator" className={TRANSCRIPT_MARKER}>
           <MarkerContent>{t('transcript.beginning')}</MarkerContent>
         </Marker>
       )}
@@ -230,22 +246,43 @@ function TranscriptRow({
 
   if (row.kind === 'day') {
     return (
-      <Marker variant="separator">
+      <Marker variant="separator" className={TRANSCRIPT_MARKER}>
         <MarkerContent>{row.label}</MarkerContent>
       </Marker>
     );
   }
 
   if (row.kind === 'outbox') {
+    const isFailed = row.entry.state === 'failed';
     return (
       <MessageGroup>
         <Message align="end">
           <MessageContent>
-            <Bubble align="end" variant={row.entry.state === 'failed' ? 'destructive' : 'default'}>
-              <BubbleContent>{row.entry.body}</BubbleContent>
+            <Bubble align="end" variant={isFailed ? 'destructive' : 'default'}>
+              <BubbleBody
+                body={row.entry.body}
+                tone={isFailed ? 'failed' : 'own'}
+                meta={
+                  <>
+                    {/* Годинник замість рядка «Sending…» — форма месенджера:
+                        стан репліки читається там же, де її час, і не додає
+                        стрічці ще одного рядка. Для читача з екранного диктора
+                        іконка нічого не каже, тому текст лишається в sr-only */}
+                    {!isFailed && (
+                      <>
+                        <Clock className="size-3" />
+                        <span className="sr-only">{t('message.sending')}</span>
+                      </>
+                    )}
+                    <MessageTime iso={row.entry.createdAt} />
+                  </>
+                }
+              />
             </Bubble>
-            <MessageFooter>
-              {row.entry.state === 'failed' ? (
+            {/* Футер лишається ТІЛЬКИ у провалу: там не мітка, а дії, і їм
+                місце під бульбашкою, а не всередині неї */}
+            {isFailed && (
+              <MessageFooter>
                 <span className="flex items-center gap-2">
                   <AlertCircle className="text-destructive" />
                   {t('message.failed')}
@@ -268,10 +305,8 @@ function TranscriptRow({
                     {t('actions.discard')}
                   </Button>
                 </span>
-              ) : (
-                t('message.sending')
-              )}
-            </MessageFooter>
+              </MessageFooter>
+            )}
           </MessageContent>
         </Message>
       </MessageGroup>
@@ -283,7 +318,7 @@ function TranscriptRow({
   if (message.kind === 'SYSTEM') {
     const text = systemEntryText(message, t);
     return text ? (
-      <Marker variant="separator">
+      <Marker variant="separator" className={TRANSCRIPT_MARKER}>
         <MarkerContent>{text}</MarkerContent>
       </Marker>
     ) : null;
@@ -308,14 +343,87 @@ function TranscriptRow({
           {/* Автор підписується один раз на групу підряд ідучих реплік */}
           {!isOwn && !groupedWithPrevious && <MessageHeader>{label}</MessageHeader>}
           <Bubble align={isOwn ? 'end' : 'start'} variant={isOwn ? 'default' : 'muted'}>
-            <BubbleContent>{message.body}</BubbleContent>
+            <BubbleBody
+              body={message.body ?? ''}
+              tone={isOwn ? 'own' : 'other'}
+              meta={<MessageTime iso={message.createdAt} />}
+            />
           </Bubble>
-          <MessageFooter>
-            <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
-          </MessageFooter>
         </MessageContent>
       </Message>
     </MessageGroup>
+  );
+}
+
+/** Кегль мітки один на всі стани — вона однакова і в чужій, і в своїй бульбашці */
+const META_CLASS = 'text-[0.6875rem] leading-none font-normal tabular-nums';
+
+const META_TONE = {
+  own: 'text-primary-foreground/70',
+  other: 'text-muted-foreground',
+  failed: 'text-destructive/70',
+} as const;
+
+/**
+ * Текст репліки з мітками (час, стан) У ПРАВОМУ НИЖНЬОМУ КУТІ САМОЇ БУЛЬБАШКИ —
+ * форма Telegram / WhatsApp / iMessage, а не окремий рядок `MessageFooter` під
+ * нею.
+ *
+ * ── Чому не футер ─────────────────────────────────────────────────────────────
+ * Футер — блок під бульбашкою: кожна репліка коштувала б ~18px вертикалі й
+ * власного рядка, а стрічка з коротких «ок» перетворювалась на драбину з
+ * підписів. Час — атрибут репліки, а не подія стрічки, тож він належить плитці.
+ * Заразом звільняється місце під статуси доставки (`sent → delivered → read`,
+ * docs/chat.md §4.14.1): вони стануть поруч із часом, як у будь-якому
+ * месенджері, а не третім рядком.
+ *
+ * ── Механіка: чому потрібна невидима розпірка ─────────────────────────────────
+ * Мітка стоїть `absolute` у куті, тобто випадає з потоку і НЕ розсуває текст.
+ * Щоб останній рядок не заліз під неї, одразу за текстом у потік ставиться
+ * невидима копія тієї самої мітки. Вона має рівно ту саму ширину (той самий
+ * вміст, той самий кегль — не число «на око»), тож поводиться як у месенджерах:
+ *   • хвіст останнього рядка короткий → мітка стає поруч, у тому ж рядку;
+ *   • хвіст довгий → розпірка переноситься сама, бульбашка отримує зайвий
+ *     короткий рядок, і мітка сідає в нього.
+ * Розглянуті й відкинуті альтернативи: `flex-wrap` (текст стає flex-елементом і
+ * мітка ніколи не стає в один рядок із ЧАСТИНОЮ абзацу), `float` (не працює з
+ * `overflow-hidden` бульбашки і ламає перенос довгих слів), вимір ширини в JS
+ * (layout-читання на кожну репліку заради сталого `HH:mm`).
+ *
+ * `select-none` на розпірці — щоб копіювання тексту репліки не тягнуло за собою
+ * другий час; `aria-hidden` — щоб диктор не читав його двічі.
+ *
+ * `whitespace-pre-wrap`: композер приймає перенос рядка (Shift+Enter), і без
+ * цього багаторядкова репліка склеювалась в один абзац.
+ */
+function BubbleBody({
+  body,
+  meta,
+  tone,
+}: {
+  body: string;
+  meta: ReactNode;
+  tone: keyof typeof META_TONE;
+}) {
+  const metaClass = cn('inline-flex items-center gap-1', META_CLASS, META_TONE[tone]);
+
+  return (
+    <BubbleContent className="relative">
+      <span className="whitespace-pre-wrap">{body}</span>
+      <span aria-hidden className={cn(metaClass, 'invisible ml-2 select-none align-bottom')}>
+        {meta}
+      </span>
+      <span className={cn(metaClass, 'absolute right-3 bottom-2')}>{meta}</span>
+    </BubbleContent>
+  );
+}
+
+/** `title` — повна дата: у стрічці видно тільки `HH:mm`, а день може бути не сьогодні */
+function MessageTime({ iso }: { iso: string }) {
+  return (
+    <time dateTime={iso} title={formatDateTime(iso)}>
+      {formatTime(iso)}
+    </time>
   );
 }
 

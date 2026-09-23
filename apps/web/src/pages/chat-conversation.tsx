@@ -12,12 +12,13 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { MessagesSquare } from 'lucide-react';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { useChatFindOne } from '../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 import { ChatComposer } from '../components/chat/chat-composer';
 import { ChatTranscript } from '../components/chat/chat-transcript';
+import { NewConversationDialog } from '../components/chat/new-conversation-dialog';
 import { conversationLabel } from '../components/chat/chat-labels';
 import { useRefreshChat, useSendMessage } from '../components/chat/use-chat';
 
@@ -83,34 +84,40 @@ export function ChatConversationPage() {
 
   return (
     <>
-      <PageBreadcrumbs items={[{ label: t('title'), to: '/chat' }, { label }]} />
+      {/* Ідентичність розмови живе РІВНО в хедері шела — там же, де в списків
+          (`page-header.tsx`: «заголовок двічі» був знятий саме як помилка).
+          Власна смуга заголовка всередині сторінки прибрана: вона повторювала
+          крихти, коштувала ще один рядок вертикалі над стрічкою і давала другу
+          лінію одразу під лінією хедера. Кількість учасників стала
+          підзаголовком, оновлення й створення розмови — діями хедера */}
+      <PageHeader
+        label="ChatConversationPage"
+        breadcrumbs={[{ label: t('title'), to: '/chat' }, { label }]}
+        subtitle={t('page.participants', { count: conversation.participants.length })}
+        actions={
+          <>
+            {/* Явне оновлення: без realtime екран мусить давати спосіб спитати
+                сервер, а не робити вигляд, що він живий */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('actions.refresh')}
+              onClick={() => {
+                void refresh();
+              }}
+            >
+              <RotateCw />
+            </Button>
+            <NewConversationDialog />
+          </>
+        }
+      />
       {/* `h-[calc(100vh-3.5rem)]` компенсує `h-14` хедера шела — той самий
           прийом, що в календарі й `playground-architecture`. Без нього сторінка
           у `bleed`-обгортці (`min-h-full`, висота НЕ визначена) міряється
           вмістом, і композер повисає посеред екрана замість того, щоб
           триматись низу, а стрічка не отримує власної області прокрутки */}
       <div className="flex h-[calc(100vh-3.5rem)] min-h-[20rem] flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold text-foreground">{label}</h1>
-            <p className="truncate text-xs text-muted-foreground">
-              {t('page.participants', { count: conversation.participants.length })}
-            </p>
-          </div>
-          {/* Явне оновлення: без realtime екран мусить давати спосіб спитати
-              сервер, а не робити вигляд, що він живий */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('actions.refresh')}
-            onClick={() => {
-              void refresh();
-            }}
-          >
-            <RotateCw />
-          </Button>
-        </header>
-
         <ChatTranscript
           conversation={conversation}
           viewerId={viewerId}

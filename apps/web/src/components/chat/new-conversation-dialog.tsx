@@ -60,11 +60,15 @@ export function NewConversationDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={close}>
+      {/* Головна дія area живе в хедері шела, поруч із крихтами — та сама
+          форма, що `CreateCustomerModal` на `/customers`: суцільна кнопка
+          `size="sm"`, іконка ЗА текстом. У колонці розмов її більше немає —
+          там вона з'їдала рядок над пошуком і не давала фіду впертися в стінки */}
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="w-full">
-            <MessageSquarePlus />
+          <Button size="sm">
             {t('actions.newConversation')}
+            <MessageSquarePlus />
           </Button>
         }
       />

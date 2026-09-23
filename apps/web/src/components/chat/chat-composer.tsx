@@ -4,6 +4,8 @@ import { SendHorizontal } from 'lucide-react';
 import { CHAT_MAX_MESSAGE_CHARS } from '@saas-skeleton/contracts';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
+import { cn } from '@saas-skeleton/ui/lib/utils';
+import { CHAT_COLUMN } from './chat-layout';
 
 /** Стеля автовисоти: далі textarea скролиться, а не з'їдає стрічку */
 const MAX_HEIGHT_PX = 160;
@@ -67,41 +69,45 @@ export function ChatComposer({ onSend, isDisabled = false }: ChatComposerProps) 
   }, [value, isDisabled, onSend]);
 
   return (
-    <div className="flex items-end gap-2 border-t border-border bg-background px-4 py-3">
-      <Textarea
-        ref={textareaRef}
-        rows={1}
-        value={value}
-        maxLength={CHAT_MAX_MESSAGE_CHARS}
-        disabled={isDisabled}
-        placeholder={t('composer.placeholder')}
-        aria-label={t('composer.label')}
-        className="max-h-40 min-h-9 resize-none"
-        onChange={(event) => {
-          setValue(event.target.value);
-        }}
-        onKeyDown={(event) => {
-          if (
-            shouldSendOnKey({
-              key: event.key,
-              shiftKey: event.shiftKey,
-              isComposing: event.nativeEvent.isComposing,
-            })
-          ) {
-            event.preventDefault();
-            submit();
-          }
-        }}
-      />
-      <Button
-        type="button"
-        size="icon"
-        disabled={!canSend}
-        aria-label={t('composer.send')}
-        onClick={submit}
-      >
-        <SendHorizontal />
-      </Button>
+    // Лінія і фон — на всю ширину, саме поле — у читальній колонці під
+    // бульбашками (`chat-layout.ts`)
+    <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+      <div className={cn('flex items-end gap-2', CHAT_COLUMN)}>
+        <Textarea
+          ref={textareaRef}
+          rows={1}
+          value={value}
+          maxLength={CHAT_MAX_MESSAGE_CHARS}
+          disabled={isDisabled}
+          placeholder={t('composer.placeholder')}
+          aria-label={t('composer.label')}
+          className="max-h-40 min-h-9 resize-none"
+          onChange={(event) => {
+            setValue(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (
+              shouldSendOnKey({
+                key: event.key,
+                shiftKey: event.shiftKey,
+                isComposing: event.nativeEvent.isComposing,
+              })
+            ) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          disabled={!canSend}
+          aria-label={t('composer.send')}
+          onClick={submit}
+        >
+          <SendHorizontal />
+        </Button>
+      </div>
     </div>
   );
 }

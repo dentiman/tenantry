@@ -7,7 +7,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
-import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
+import { PageHeader } from '@saas-skeleton/ui/components/page-header';
+import { NewConversationDialog } from '../components/chat/new-conversation-dialog';
 
 /**
  * Індексна сторінка area «Chat»: тут відкриється вибрана розмова.
@@ -20,7 +21,11 @@ export function ChatPage() {
 
   return (
     <>
-      <PageBreadcrumbs items={[{ label: t('title') }]} />
+      <PageHeader
+        label="ChatPage"
+        breadcrumbs={[{ label: t('title') }]}
+        actions={<NewConversationDialog />}
+      />
       <Empty className="h-full">
         <EmptyHeader>
           <EmptyMedia variant="icon">
