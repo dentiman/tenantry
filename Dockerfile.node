@@ -52,9 +52,14 @@ RUN groupadd -r app && useradd -r -g app -u 1001 appuser \
 
 COPY --from=prod-deps --chown=appuser:app /usr/src/app/node_modules ./node_modules
 COPY --from=builder   --chown=appuser:app /usr/src/app/apps/${APP}/dist ./apps/${APP}/dist
-# Схема + міграції + config для entrypoint-міграцій (реально використовує лише api)
-COPY --from=builder   --chown=appuser:app /usr/src/app/libs/database/prisma ./libs/database/prisma
-COPY --from=builder   --chown=appuser:app /usr/src/app/libs/database/prisma.config.ts ./libs/database/prisma.config.ts
+# Увесь libs/database (реально використовує лише entrypoint-міграція api), не поіменний
+# список файлів: entrypoint виконує prisma.config.ts як сирий TS (не бандлиться webpack-ом
+# на відміну від apps/*/dist), тож будь-який новий relative-import звідти (як колись
+# load-root-env.ts) більше не зламає runtime мовчки — файл просто приїде разом з рештою
+# директорії. Прибираємо лише те, що свідомо дублює вже скопійоване: власний node_modules
+# (hoisted корінь уже є вище) і згенерований Prisma-клієнт (він і так забандлений у dist).
+COPY --from=builder   --chown=appuser:app /usr/src/app/libs/database ./libs/database
+RUN rm -rf ./libs/database/node_modules ./libs/database/src/generated
 COPY --chown=appuser:app docker/entrypoint-api.sh ./docker/entrypoint-api.sh
 RUN chmod +x docker/entrypoint-api.sh
 
