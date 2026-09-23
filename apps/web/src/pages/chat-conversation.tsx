@@ -21,6 +21,7 @@ import { ChatTranscript } from '../components/chat/chat-transcript';
 import { NewConversationDialog } from '../components/chat/new-conversation-dialog';
 import { conversationLabel } from '../components/chat/chat-labels';
 import { useRefreshChat, useSendMessage } from '../components/chat/use-chat';
+import { randomUUID } from '../lib/uuid';
 
 /**
  * Відкрита розмова. Свіжість без realtime: перечитування на фокус вікна і після
@@ -43,7 +44,7 @@ export function ChatConversationPage() {
 
   const onSend = useCallback(
     (body: string) => {
-      send(body, crypto.randomUUID());
+      send(body, randomUUID());
     },
     [send],
   );
