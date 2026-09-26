@@ -2,7 +2,6 @@ import {
   AlignLeftIcon,
   ChevronRightIcon,
   ComponentIcon,
-  NetworkIcon,
   PanelTopIcon,
   RectangleHorizontalIcon,
 } from 'lucide-react';
@@ -52,8 +51,8 @@ function ComponentsSubgroupLabel({ children }: { children: string }) {
  * усередині — дві логічні підгрупи без власного колапсу:
  * **General Components** (спільна `libs/ui`, придатна й для `platform-web`,
  * напр. Buttons) і **Platform Components** (бізнес-орієнтовані, з бекендом,
- * лише в tenant-порталі, напр. User Select). Решта стендів (форми, dialog,
- * architecture) лишаються пласким списком нижче — вони не про каталог
+ * лише в tenant-порталі, напр. User Select). Решта стендів (форми, dialog)
+ * лишаються пласким списком нижче — вони не про каталог
  * примітивів, а про компоновку/сценарії.
  */
 export function PlaygroundSidebar() {
@@ -171,12 +170,6 @@ export function PlaygroundSidebar() {
             to: '/playground/dialog',
             label: t('nav.dialog'),
             icon: <PanelTopIcon />,
-            match: 'exact',
-          },
-          {
-            to: '/playground/architecture',
-            label: t('nav.architecture'),
-            icon: <NetworkIcon />,
             match: 'exact',
           },
         ]}

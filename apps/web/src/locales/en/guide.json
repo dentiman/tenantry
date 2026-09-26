@@ -1,0 +1,402 @@
+{
+  "sections": {
+    "overview": "Overview",
+    "modules": "Modules & services",
+    "delivery": "Development & delivery",
+    "architecture": "Architecture",
+    "subsystems": "Key subsystems"
+  },
+  "overview": {
+    "eyebrow": "Product introduction",
+    "title": "SaaS Skeleton",
+    "lead": "The foundation for building multi-tenant CRM and ERP products. Sign-in, organizations, background jobs, files, live updates, notifications and the UI are already done — a new product starts straight from its own business logic.",
+    "chips": [
+      "Multi-tenancy",
+      "Two planes: customers and operators",
+      "Live updates",
+      "AI assistant",
+      "Light and dark themes"
+    ],
+    "about": {
+      "title": "What the product is",
+      "paragraphs": [
+        "This is not a finished CRM but a skeleton you fork into a specific product. It has two separate parts: a workspace for customer organizations and an operator console used to onboard and support those organizations.",
+        "Each organization sees only its own data — the database itself guarantees this, not developer discipline. Customers and Calendar inside are working reference modules: a new section copies their structure instead of inventing its own."
+      ]
+    },
+    "goal": {
+      "title": "Main goal",
+      "paragraphs": [
+        "A new domain module — tickets, billing, inventory — should take days, not weeks. Everything every SaaS repeats is solved once and the same way.",
+        "Key guarantees — organization isolation, an event only together with the saved fact, files bypassing the server — are built into the design, so a new module cannot “forget” them."
+      ]
+    }
+  },
+  "modules": {
+    "description": "What the product already has and what comes next — from done to planned. Each card's status follows the roadmap.",
+    "filter": {
+      "label": "Filter by status",
+      "all": "All"
+    },
+    "status": {
+      "done": "Done",
+      "partial": "Partial",
+      "designed": "Designed",
+      "planned": "Planned"
+    },
+    "statusHint": {
+      "done": "Works end to end and is used in the UI",
+      "partial": "The first slice works; the next phases are described in the docs",
+      "designed": "The decision is written down in the docs; no code yet",
+      "planned": "On the roadmap; no design yet"
+    },
+    "audience": {
+      "admin": "Admin",
+      "operator": "Operator",
+      "developer": "Developer"
+    },
+    "groups": {
+      "workspace": {
+        "title": "Workspace",
+        "description": "Business sections the organization's team works with every day"
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "How people learn about changes and talk inside the product"
+      },
+      "ai": {
+        "title": "AI",
+        "description": "An assistant inside the product"
+      },
+      "access": {
+        "title": "Access & security",
+        "description": "Who can sign in and what they see"
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Two different subjects: the organization and the person"
+      },
+      "platform": {
+        "title": "Operator console",
+        "description": "A separate part of the product for the team that serves every organization"
+      },
+      "services": {
+        "title": "Shared services",
+        "description": "What every module relies on — built once"
+      },
+      "interface": {
+        "title": "Interface",
+        "description": "A shared library for both parts of the product"
+      }
+    },
+    "items": {
+      "customers": {
+        "title": "Customers",
+        "description": "Organizations and individuals with contacts, their own numbers, archiving and a tabbed record card."
+      },
+      "calendar": {
+        "title": "Calendar",
+        "description": "Events with attendees, RSVP and reminders; day, week, month and agenda views."
+      },
+      "users": {
+        "title": "Users",
+        "description": "The organization's team: creating users, roles, online status and “last seen”."
+      },
+      "tickets": {
+        "title": "Tickets",
+        "description": "The next reference module: requests, queues and assignees."
+      },
+      "billing": {
+        "title": "Billing",
+        "description": "Invoices and payments through a provider: a fake one first, then Stripe."
+      },
+      "bulkOperations": {
+        "title": "Bulk operations",
+        "description": "One action over many records at once, with progress and a per-record report."
+      },
+      "chat": {
+        "title": "Chat",
+        "description": "Internal conversations, the General channel and unread counts. Live updates are the next phase."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "A personal inbox with a bell: unread, archive and per-type preferences."
+      },
+      "reminders": {
+        "title": "Reminders",
+        "description": "Scheduled notifications that arrive at the right moment — for example, before an event."
+      },
+      "activityFeed": {
+        "title": "Activity feed",
+        "description": "A plain-language history of who changed what in a record."
+      },
+      "presence": {
+        "title": "Presence",
+        "description": "Who is online right now and when a person was last seen."
+      },
+      "email": {
+        "title": "Email",
+        "description": "Welcome email, password reset and email confirmation in the user's language."
+      },
+      "assistant": {
+        "title": "AI assistant",
+        "description": "A side panel with a reply that types out live and a stop button. Runs on a test model for now."
+      },
+      "aiProviders": {
+        "title": "Real models and tools",
+        "description": "Provider connections, actions on the user's behalf, working with files, budget."
+      },
+      "signIn": {
+        "title": "Sign-in and sessions",
+        "description": "A short-lived access token, refresh through a secure cookie, revocation on reuse."
+      },
+      "devices": {
+        "title": "Devices",
+        "description": "A list of active sessions: sign out of one device or all of them at once."
+      },
+      "accessRecovery": {
+        "title": "Access recovery",
+        "description": "Password reset and email confirmation through one-time links."
+      },
+      "abuseProtection": {
+        "title": "Brute-force protection",
+        "description": "Rate limiting, allowed origins and configuration checks at startup."
+      },
+      "roles": {
+        "title": "Roles and permissions",
+        "description": "Admin and user today. Fine-grained per-action permissions are still ahead."
+      },
+      "twoFactor": {
+        "title": "Two-factor sign-in",
+        "description": "One-time codes from an authenticator app."
+      },
+      "orgSettings": {
+        "title": "Organization settings",
+        "description": "General options, calendar, document numbering and activity types."
+      },
+      "personalSettings": {
+        "title": "Personal settings",
+        "description": "Profile, account, security, notifications and appearance — everything that leaves with the person."
+      },
+      "languages": {
+        "title": "Interface languages",
+        "description": "The whole translation infrastructure is in place; only English is enabled so far."
+      },
+      "tenants": {
+        "title": "Organizations",
+        "description": "Creating an organization together with its first admin, enabling and disabling it."
+      },
+      "backgroundJobs": {
+        "title": "Background jobs",
+        "description": "Queues and jobs across the whole installation: what is running and what failed."
+      },
+      "operatorSignIn": {
+        "title": "Separate operator sign-in",
+        "description": "Its own accounts and keys — an operator and an organization user never mix."
+      },
+      "failureTriage": {
+        "title": "Failure triage",
+        "description": "Inspecting failed jobs, replaying them and tracing the whole chain of one action."
+      },
+      "subdomains": {
+        "title": "Subdomains and invitations",
+        "description": "Its own address for every organization and an email invitation for the first admin."
+      },
+      "files": {
+        "title": "Files",
+        "description": "Uploads straight to storage, content verification, thumbnails and cleanup of abandoned files."
+      },
+      "events": {
+        "title": "Events and background jobs",
+        "description": "One action triggers many reactions without losses or duplicates."
+      },
+      "numbering": {
+        "title": "Numbering",
+        "description": "Human-readable document numbers, separate per organization, with no gaps after deletion."
+      },
+      "liveUpdates": {
+        "title": "Live updates",
+        "description": "The screen finds out about changes made by other people on its own."
+      },
+      "errorHandling": {
+        "title": "Unified error handling",
+        "description": "One error format everywhere: field highlights in forms, toasts for the rest."
+      },
+      "commandPalette": {
+        "title": "Command palette ⌘K",
+        "description": "One field for navigation, search and quick creation."
+      },
+      "shell": {
+        "title": "Navigation shell",
+        "description": "A rail of areas plus the active area's side menu."
+      },
+      "tables": {
+        "title": "Tables",
+        "description": "Filters, sorting, pagination, column visibility and order."
+      },
+      "forms": {
+        "title": "Forms",
+        "description": "Ready-made fields with validation and server error display."
+      },
+      "contextPanel": {
+        "title": "Context panel",
+        "description": "Record details on the right without leaving the list."
+      },
+      "themes": {
+        "title": "Themes",
+        "description": "Light and dark, built on shared color tokens."
+      },
+      "playground": {
+        "title": "Playground",
+        "description": "A component showcase for checking both themes before use."
+      },
+      "workspaceSlots": {
+        "title": "Isolated dev stacks",
+        "description": "A separate database and ports for every branch or agent — parallel work without conflicts."
+      },
+      "deploy": {
+        "title": "Deployment",
+        "description": "GitLab CI builds the images and deploys the stack to Docker Swarm."
+      },
+      "changePlanning": {
+        "title": "Change planning",
+        "description": "Every phase is a separate spec with requirements and tasks."
+      },
+      "observability": {
+        "title": "Observability",
+        "description": "Error tracking, log aggregation and service health checks."
+      }
+    }
+  },
+  "delivery": {
+    "description": "How the product is built, verified and shipped — tools for the development team."
+  },
+  "architecture": {
+    "description": "A map of the system: what it consists of and how requests, background jobs and live updates travel between its parts. Hover a node to highlight its connections.",
+    "openFull": "Open separately",
+    "frameTitle": "SaaS Skeleton architecture diagram"
+  },
+  "subsystems": {
+    "description": "What stands behind the diagram's nodes: for each subsystem — what it gives the business and how it works technically.",
+    "businessLabel": "For the business",
+    "technicalLabel": "Technical",
+    "items": {
+      "multitenancy": {
+        "title": "Multi-tenancy & RLS",
+        "business": [
+          "One deployment, many customer organizations",
+          "Data is isolated per organization, not per user",
+          "Two independent portals: the organization's workspace and the operator console"
+        ],
+        "technical": [
+          "tenant_id + Postgres RLS as the main isolation mechanism",
+          "saas_migrator — schema owner (DDL)",
+          "saas_app — tenant runtime, RLS enforced",
+          "saas_platform — control plane, BYPASSRLS",
+          "Two independent planes with separate JWT secrets"
+        ]
+      },
+      "messaging": {
+        "title": "Queue & transactional outbox",
+        "business": [
+          "Background actions — emails, AI replies, notifications — never get lost",
+          "No duplicates, even on retry",
+          "Failed jobs are visible, not silently dropped"
+        ],
+        "technical": [
+          "publish(tx, …) inside the domain transaction",
+          "pg-boss queues are the outbox table",
+          "One queue per consumer: {message}/{consumer}",
+          "A shared DLQ across all consumers",
+          "Idempotency by messageId"
+        ]
+      },
+      "realtime": {
+        "title": "Live updates",
+        "business": [
+          "In-app notifications on business events without a page reload",
+          "Who is online right now",
+          "Delivered while the tab is open (no OS-level push yet)"
+        ],
+        "technical": [
+          "A Socket.IO gateway in every apps/api replica",
+          "Valkey (redis-streams-adapter) fans events out across all nodes",
+          "A browser on node A receives an event that happened on node B",
+          "No sticky sessions — the Docker Swarm VIP balances TCP",
+          "The worker delivers events through the same headless Socket.IO Server"
+        ]
+      },
+      "auth": {
+        "title": "Authentication",
+        "business": [
+          "Secure sign-in with short-lived sessions",
+          "Users see their devices and can end a session on any of them",
+          "A stolen session is detected and blocked automatically",
+          "Password recovery by email, and an admin can set a password directly"
+        ],
+        "technical": [
+          "Access token — a 15-minute JWT",
+          "Refresh token in an httpOnly cookie, rotated on every refresh",
+          "Reusing an old token revokes the session",
+          "Self-service “sign out everywhere”",
+          "A password reset (email or admin) revokes all sessions"
+        ]
+      },
+      "files": {
+        "title": "File storage (S3)",
+        "business": [
+          "Files can be attached to any business entity",
+          "Large uploads don't slow the app down",
+          "The storage provider can be swapped without code changes"
+        ],
+        "technical": [
+          "Any S3-compatible storage via environment variables",
+          "Self-hosted: SeaweedFS in dev (docker compose)",
+          "Cloud: AWS S3 — the same code, no rewrite",
+          "Two-phase presigned upload — the browser uploads directly, bypassing the API",
+          "Magic-byte type check, thumbnails, orphan cleanup cron"
+        ]
+      },
+      "valkey": {
+        "title": "Valkey",
+        "business": [
+          "Powers online presence and notification delivery",
+          "Can later double as an app cache — no new infrastructure"
+        ],
+        "technical": [
+          "Valkey 8 — a Redis-compatible fork, the same wire protocol",
+          "Used today for the Socket.IO adapter and presence leases",
+          "No caching layer yet",
+          "The same instance can serve as an app cache"
+        ]
+      },
+      "i18n": {
+        "title": "Multi-language",
+        "business": [
+          "The interface language stays in sync between the server and the frontend",
+          "A new market means new translations, not new code"
+        ],
+        "technical": [
+          "react-i18next on both frontends",
+          "The worker has its own i18next for emails",
+          "The backend returns codes, never text",
+          "English only for now",
+          "A TMS is deferred until the second language"
+        ]
+      },
+      "infrastructure": {
+        "title": "Infrastructure",
+        "business": [
+          "Runs on a single small server, no dedicated DevOps team",
+          "Self-hosted, no cloud vendor lock-in"
+        ],
+        "technical": [
+          "Dev: docker compose (Postgres, Mailpit, Valkey, SeaweedFS)",
+          "Prod: single-node Docker Swarm",
+          "6 images, 2 stacks (dev / prod)",
+          "GitLab CI → deploy via docker-context over SSH"
+        ]
+      }
+    }
+  }
+}

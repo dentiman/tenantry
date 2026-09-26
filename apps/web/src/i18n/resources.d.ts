@@ -11,6 +11,7 @@ declare module 'react-i18next' {
       ai: typeof import('../locales/en/ai.json');
       auth: typeof import('../locales/en/auth.json');
       dashboard: typeof import('../locales/en/dashboard.json');
+      guide: typeof import('../locales/en/guide.json');
       jobs: typeof import('../locales/en/jobs.json');
       layout: typeof import('../locales/en/layout.json');
       playground: typeof import('../locales/en/playground.json');

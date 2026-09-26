@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import {
   Blocks,
+  BookOpenText,
   CalendarDays,
   LayoutGrid,
   MessagesSquare,
@@ -12,6 +13,7 @@ import type { UserResponse } from '@saas-skeleton/contracts';
 import { isUnder, type AreaPrefix } from './paths';
 import { CalendarSidebar } from './areas/calendar-sidebar';
 import { ChatSidebar } from './areas/chat-sidebar';
+import { GuideSidebar } from './areas/guide-sidebar';
 import { PlaygroundSidebar } from './areas/playground-sidebar';
 import { SettingsSidebar } from './areas/settings-sidebar';
 import { UserSettingsSidebar } from './areas/user-settings-sidebar';
@@ -23,6 +25,7 @@ export type AreaId =
   | 'chat'
   | 'settings'
   | 'playground'
+  | 'guide'
   | 'user-settings';
 
 export interface AppArea {
@@ -96,6 +99,15 @@ export const APP_AREAS: readonly AppArea[] = [
     labelKey: 'areas.playground',
     icon: Blocks,
     Sidebar: PlaygroundSidebar,
+  },
+  {
+    // Путівник по продукту — одна довга сторінка; друга колонка — її зміст
+    // (параграфи зі scroll-spy), а не меню роутів
+    id: 'guide',
+    prefix: '/guide',
+    labelKey: 'areas.guide',
+    icon: BookOpenText,
+    Sidebar: GuideSidebar,
   },
   {
     id: 'user-settings',

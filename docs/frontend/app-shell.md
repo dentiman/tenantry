@@ -55,6 +55,7 @@ interface AppArea {
 | **Chat**          | `/chat`          | так                          | список розмов (поки порожній стан)                        |
 | **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · Activity                 |
 | **Playground**    | `/playground`    | так                          | Buttons (далі — стенди інших примітивів)                  |
+| **Guide**         | `/guide`         | так                          | зміст путівника: параграфи ОДНІЄЇ сторінки, scroll-spy    |
 | **User settings** | `/user-settings` | **ні** — з дропдауна аватара | Profile · Account · Security · Notifications · Appearance |
 
 Чотири рішення, які тут не косметичні:
@@ -117,6 +118,7 @@ rootRoute                     beforeLoad: нормалізатор legacy-URL (�
   │ └ /  calendar  numbering  activity
   ├ /playground               layout
   │ └ /                       PlaygroundPage (стенд кнопок)
+  ├ /guide                    GuidePage — одна довга сторінка, параграфи — якорі
   ├ /user-settings            layout
   │ └ /  account  security  notifications  appearance
   └ $                         NotFoundPage — шлях поза будь-якою area

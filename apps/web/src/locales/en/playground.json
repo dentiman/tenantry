@@ -14,7 +14,6 @@
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
     "inlineForm": "Inline form",
-    "architecture": "Architecture",
     "dataGrid": "Data grid"
   },
   "eyebrow": "Design system",
@@ -679,10 +678,6 @@
         "description": "Field orientation=\"horizontal\" — the settings-row shape. Not a form-per-row layout, but the closest relative of one, so it belongs on this stand."
       }
     }
-  },
-  "architecture": {
-    "title": "Architecture diagram",
-    "frameTitle": "SaaS Skeleton architecture diagram"
   },
   "datePicker": {
     "title": "Date picker",

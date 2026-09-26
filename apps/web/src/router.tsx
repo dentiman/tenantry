@@ -36,7 +36,7 @@ import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
 import { PlaygroundDataGridPage } from './pages/playground-data-grid';
-import { PlaygroundArchitecturePage } from './pages/playground-architecture';
+import { GuidePage } from './pages/guide';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
 import { UserSettingsSecurityPage } from './pages/user-settings/security';
@@ -522,15 +522,15 @@ const playgroundDialogRoute = createRoute({
 });
 
 /**
- * Стенд «Architecture diagram» — Archify-згенерований HTML в `<iframe>`
- * (`public/diagrams/architecture.html`). `bleed`: діаграма сама керує своєю
- * вертикаллю на всю висоту вікна, полям шела тут не місце.
+ * Area «Guide» — путівник по продукту. Одна сторінка без дочірніх роутів:
+ * параграфи — секції з якорями, навігацію по них веде друга колонка
+ * (`areas/guide-sidebar.tsx`) прокруткою, а не переходами. Звичайна розкладка,
+ * не `bleed`: сторінку скролить шел.
  */
-const playgroundArchitectureRoute = createRoute({
-  getParentRoute: () => playgroundRoute,
-  path: 'architecture',
-  component: PlaygroundArchitecturePage,
-  staticData: { layout: 'bleed' },
+const guideRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/guide',
+  component: GuidePage,
 });
 
 /**
@@ -591,8 +591,8 @@ const routeTree = rootRoute.addChildren([
         playgroundComponentsUserSelectRoute,
       ]),
       playgroundDialogRoute,
-      playgroundArchitectureRoute,
     ]),
+    guideRoute,
     notFoundRoute,
   ]),
 ]);
