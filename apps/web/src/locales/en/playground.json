@@ -14,7 +14,8 @@
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
     "inlineForm": "Inline form",
-    "architecture": "Architecture"
+    "architecture": "Architecture",
+    "dataGrid": "Data grid"
   },
   "eyebrow": "Design system",
   "origin": {
@@ -156,8 +157,7 @@
       "api": "API reference"
     },
     "placeholders": {
-      "search": "Search…",
-      "pickOne": "Pick one…"
+      "search": "Search…"
     },
     "empty": "Nothing found",
     "sections": {
@@ -215,9 +215,6 @@
     "states": {
       "disabled": "Disabled",
       "emptyHint": "Open the popup to see the empty state — no items, one message."
-    },
-    "placeholders": {
-      "search": "Search…"
     },
     "usage": {},
     "api": {
@@ -710,6 +707,74 @@
       "compact": "Eight digits in a row, yyyymmdd.",
       "namedMonth": "Month by name, full or short, in any position.",
       "invalid": "Not a date: the field silently returns to its last valid value."
+    }
+  },
+  "dataGrid": {
+    "subtitle": "Mock invoices — 50 rows × 32 fields to exercise field sets, the field panel and column reordering.",
+    "ariaLabel": "Invoices",
+    "searchLabel": "Search invoices",
+    "searchPlaceholder": "Search by number or customer…",
+    "statusLabel": "Status",
+    "statusAll": "All statuses",
+    "status": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue",
+      "VOID": "Void"
+    },
+    "toolbar": {
+      "total": "Total",
+      "selected": "Selected"
+    },
+    "fieldSets": {
+      "main": "Main",
+      "finance": "Finance",
+      "collections": "Collections",
+      "audit": "Audit"
+    },
+    "fields": {
+      "number": "Invoice",
+      "customer": "Customer",
+      "status": "Status",
+      "issueDate": "Issued",
+      "dueDate": "Due",
+      "paidDate": "Paid on",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "tax": "Tax",
+      "total": "Total",
+      "amountPaid": "Amount paid",
+      "balanceDue": "Balance due",
+      "paymentTerms": "Payment terms",
+      "paymentMethod": "Payment method",
+      "owner": "Owner",
+      "billingEmail": "Billing email",
+      "billingCountry": "Country",
+      "billingCity": "City",
+      "poNumber": "PO number",
+      "project": "Project",
+      "department": "Department",
+      "lineItems": "Line items",
+      "remindersSent": "Reminders",
+      "lastReminder": "Last reminder",
+      "daysOverdue": "Days overdue",
+      "notes": "Notes",
+      "tags": "Tags",
+      "source": "Source",
+      "exported": "Exported",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    },
+    "empty": "No invoices found",
+    "yes": "Yes",
+    "no": "No",
+    "panelLayout": {
+      "label": "Field panel layout",
+      "auto": "Auto",
+      "list": "List",
+      "split": "Two columns"
     }
   }
 }

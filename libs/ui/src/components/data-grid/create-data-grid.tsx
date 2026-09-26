@@ -20,6 +20,7 @@ import type { DataGridSelectionState } from './use-data-grid-selection';
 import { useDataGridFields } from './use-data-grid-fields';
 import type { DataGridFieldsModel } from './use-data-grid-fields';
 import { DataGridFieldSets, DataGridFieldSettings } from './field-settings';
+import type { DataGridFieldSettingsLayout } from './field-settings';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import type {
   DataGridColumn,
@@ -109,6 +110,8 @@ interface DataGridToolbarSlotProps<TFilters extends DataGridFiltersBase, TItem> 
 }
 
 interface DataGridFieldSettingsProps {
+  /** Розкладка секцій панелі; `auto` — дві колонки, коли полів багато (див. field-settings) */
+  layout?: DataGridFieldSettingsLayout;
   className?: string;
 }
 
@@ -282,7 +285,19 @@ export function createDataGrid<
     return (
       <DataGrid
         {...props}
-        columns={fieldsModel?.visibleFields ?? columns ?? []}
+        columns={fieldsModel?.displayFields ?? columns ?? []}
+        reorder={
+          fieldsModel
+            ? {
+                lockedIds: fieldsModel.displayFields
+                  .filter(fieldsModel.isPinned)
+                  .map((field) => field.id),
+                onMove: (fieldId, beforeId) => {
+                  fieldsModel.dispatch({ type: 'move', fieldId, beforeId });
+                },
+              }
+            : undefined
+        }
         grid={grid}
         list={list}
         selection={selection}
@@ -290,12 +305,12 @@ export function createDataGrid<
     );
   }
 
-  function FieldSettings({ className }: DataGridFieldSettingsProps) {
+  function FieldSettings({ layout, className }: DataGridFieldSettingsProps) {
     const { fieldsModel } = useGridContext();
     if (!fieldsModel) {
       return null;
     }
-    return <DataGridFieldSettings model={fieldsModel} className={className} />;
+    return <DataGridFieldSettings model={fieldsModel} layout={layout} className={className} />;
   }
 
   function FieldSets({ sets, className }: DataGridFieldSetsProps) {

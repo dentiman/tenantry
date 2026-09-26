@@ -101,8 +101,8 @@ Switch `Grid.FieldSettings` from `DropdownMenu` to `Popover` with a plain list:
 - Rows: `⋮⋮ handle` (button, `aria-label="Reorder <label>"`) · `Checkbox` · label. Sections
   "Shown" / "Hidden" as small headings; Hidden omitted when empty; "Reset to default" at the
   bottom. The gear trigger, placement freedom and `actionsHeader` slot do not change.
-- Pointer: rows reorder **live** while dragging (the `use-row-reorder` behaviour), commit on
-  release. Keyboard: on a focused handle Arrow Up/Down dispatches `moveField` one step and
+- Pointer: rows reorder **live** while dragging — every target change dispatches `move`, so the
+  table follows the panel; Escape restores the original position. Keyboard: on a focused handle Arrow Up/Down dispatches `moveField` one step and
   announces "<label>, position n of m" in an `aria-live="polite"` region inside the popover.
 
 ### D5. Shared pointer-reorder primitive
@@ -139,6 +139,38 @@ Users: `name` `reorderable: false` (already first — matches Airtable's primary
 Customers: `name` stays reorderable (No. precedes it in every set; pinning would change today's
 look). Set lists are reviewed so their order is intentional now that it is honoured.
 
+### D9. Many fields: bounded panel, two columns, hidden-only search
+
+Found on the playground stand (32 fields): the unbounded popover grew to 1125 px in a 969 px
+window, flipped to the side and left the last fields and Reset unreachable.
+
+- **Bounded height** `min(32rem, var(--available-height))`; the popup is a flex column: body →
+  Reset footer (fixed). Lists scroll in `ScrollArea` (project rule, not `overflow-y-auto`); the
+  Shown list's viewport is the reorder hook's `scrollContainer`, so dragging near an edge scrolls.
+- **Layout `auto`** (default; `list` / `split` can be forced via `Grid.FieldSettings layout`):
+  more than 20 fields → two columns, Shown left and Hidden right, each with a fixed header (title
+  + count) and its own scroll, like "Edit columns" in HubSpot/Salesforce — what is shown and what
+  can be added are visible at once, and the shown fields (the ones being dragged and toggled)
+  never scroll out of view. The width (34rem) is justified only when the lists are long: for 7
+  fields the right column would be nearly empty, so small grids keep the 16rem single column.
+  Compared side by side on the stand (list 256×512 with one 1084 px scroll vs split 544×512 with
+  Shown fitting and Hidden 804 px) before choosing. `grid-rows-[minmax(0,1fr)]` keeps the row
+  bounded by the panel, otherwise the columns would stretch it and never scroll.
+- **Search only over Hidden**, in the Hidden header on one line with the title; the count is the
+  search field's right-hand addon (`InputGroupAddon`, "matching / total" while filtering). Shown
+  fields are as many as the table has columns — they are visible anyway and nobody searches them;
+  what people look for is what to add. So Shown is never filtered and stays draggable during a
+  search. Threshold is counted over **all** fields (> 20), not hidden ones, so the search does not
+  vanish under the user's hand after showing a few. Matches label or field id (ids are what
+  appears in URLs and conversations), case-insensitive.
+- **No autofocus**: the panel is opened far more often to toggle or reorder than to search.
+  `initialFocus` returns `true` only for keyboard opening (focus enters the panel so it can be
+  tabbed through); pointer opening leaves focus on the gear. The query resets after the close
+  animation, so the next opening doesn't flash a stale filter.
+- In `split` the height is **fixed** (`h-`), not capped (`max-h-`): with a cap the panel followed
+  its content and shrank on every typed letter as the search narrowed Hidden (512 → 305 px on the
+  stand). `list` keeps the cap — a short list shouldn't open as a tall empty panel.
+
 ## Risks / Trade-offs
 
 - [Popover replaces the menu → different keyboard model] → covered by the spec's keyboard
@@ -147,9 +179,9 @@ look). Set lists are reviewed so their order is intentional now that it is honou
   drag that crossed it.
 - [Pinning changes visual order on existing pages] → only Users pins, where the pinned field is
   already first.
-- [Live reorder in the panel while the table also re-renders] → the table updates on drop, not
-  per step (panel reorders a local copy, dispatches on release; keyboard dispatches per step —
-  single column move, cheap).
+- [Live reorder in the panel re-renders the table per step] → accepted: each step is a single
+  `move` of one column (cheap), and seeing the table follow the panel is useful feedback; the
+  hook only updates React state when the target changes, not per pointer pixel.
 
 ## Migration Plan
 

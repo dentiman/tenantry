@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowDown,
   ArrowUp,
@@ -12,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { pageItems } from '../../lib/page-items';
+import { useSortableReorder } from '../../hooks/use-sortable-reorder';
 import type { DataGridQueryResult } from './data-grid-query';
 import type { DataGridSelectionState } from './use-data-grid-selection';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from './types';
@@ -76,6 +78,15 @@ interface DataGridProps<T extends { id: string }> {
    * без rowActions — тоді комірки рядків у ній порожні, але шестерні є де стояти
    */
   actionsHeader?: ReactNode;
+  /**
+   * Перетягування заголовків колонок (порядок полів). Колонки вибору й дій у ньому не
+   * беруть участі; закріплені (`lockedIds`) стоять першими й не тягнуться. Без пропа
+   * заголовки статичні.
+   */
+  reorder?: {
+    lockedIds: string[];
+    onMove: (columnId: string, beforeId: string | null) => void;
+  };
   /** За замовчуванням — item.id (усі сутності мають uuid id); переозначити для інших ключів */
   getRowId?: (item: T) => string;
   /**
@@ -196,6 +207,7 @@ export function DataGrid<T extends { id: string }>({
   columns,
   rowActions,
   actionsHeader,
+  reorder,
   getRowId = (item) => item.id,
   isRowMuted,
   grid,
@@ -230,6 +242,23 @@ export function DataGrid<T extends { id: string }>({
   // Рахується з РЕАЛЬНО відрендерених колонок — colSpan empty-стану йде за схованими
   const columnCount = columns.length + (selection ? 1 : 0) + (hasActionsColumn ? 1 : 0);
 
+  // Drop-режим: колонки НЕ зсуваються під рукою (це рухало б кожну клітинку кожного
+  // рядка й підкидало ціль під вказівником) — лише привид і лінія вставки, порядок
+  // застосовується на відпусканні. Rules of Hooks: викликається й без `reorder`
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const { drag, itemRef, handleProps, getElement } = useSortableReorder({
+    axis: 'x',
+    ids: reorder ? columns.map((column) => column.id) : [],
+    lockedIds: reorder?.lockedIds ?? [],
+    enabled: reorder !== undefined,
+    mode: 'drop',
+    onMove: (columnId, beforeId) => {
+      reorder?.onMove(columnId, beforeId);
+    },
+    scrollContainer: () =>
+      surfaceRef.current?.querySelector<HTMLElement>('[data-slot=table-container]') ?? null,
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -249,6 +278,70 @@ export function DataGrid<T extends { id: string }>({
     }
   };
 
+  /**
+   * Лінія вставки (2px primary на всю висоту таблиці, як в Airtable) і привид
+   * заголовка під вказівником. Позиції читаються з DOM у рендері, спричиненому
+   * рухом вказівника, — окремого стану під них не треба.
+   */
+  function renderDragOverlay(): ReactNode {
+    const surfaceNode = surfaceRef.current;
+    const dragged = drag ? getElement(drag.id) : undefined;
+    const container = surfaceNode?.querySelector<HTMLElement>('[data-slot=table-container]');
+    if (!drag || !surfaceNode || !dragged || !container) {
+      return null;
+    }
+    const draggedIndex = columns.findIndex((column) => column.id === drag.id);
+    const draggedColumn = columns[draggedIndex];
+    const lastColumn = columns.at(-1);
+    // Ціль «туди ж, де стоїть» — лінію не показуємо: відпускання нічого не змінить
+    const isNoop = drag.beforeId === (columns[draggedIndex + 1]?.id ?? null);
+    const anchor = drag.beforeId
+      ? getElement(drag.beforeId)
+      : lastColumn && getElement(lastColumn.id);
+    const surfaceBox = surfaceNode.getBoundingClientRect();
+    const containerBox = container.getBoundingClientRect();
+    const draggedBox = dragged.getBoundingClientRect();
+    let line: ReactNode = null;
+    if (!isNoop && anchor) {
+      const anchorBox = anchor.getBoundingClientRect();
+      const edge = drag.beforeId ? anchorBox.left : anchorBox.right;
+      // Не виходить за видиму частину прокручуваної таблиці
+      const x = Math.min(Math.max(edge, containerBox.left), containerBox.right - 2);
+      line = (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-20 w-0.5 -translate-x-1/2 rounded-full bg-primary"
+          style={{
+            left: x - surfaceBox.left,
+            top: containerBox.top - surfaceBox.top,
+            height: containerBox.height,
+          }}
+        />
+      );
+    }
+    const ghost = createPortal(
+      <div
+        aria-hidden
+        className="pointer-events-none fixed z-50 flex items-center rounded-md bg-popover px-2 text-sm font-medium text-popover-foreground opacity-90 shadow-md ring-1 ring-foreground/10"
+        style={{
+          left: drag.pointerX - drag.offsetX,
+          top: draggedBox.top,
+          width: draggedBox.width,
+          height: draggedBox.height,
+        }}
+      >
+        <span className="truncate">{draggedColumn?.header}</span>
+      </div>,
+      document.body,
+    );
+    return (
+      <>
+        {line}
+        {ghost}
+      </>
+    );
+  }
+
   /** Той самий цикл, що давав React Aria: та сама колонка → зміна напряму, інша → ascending */
   const toggleSort = (columnId: string): void => {
     const isCurrent = sortDescriptor?.column === columnId;
@@ -258,9 +351,18 @@ export function DataGrid<T extends { id: string }>({
     });
   };
 
+  const dragOverlay = renderDragOverlay();
+
   return (
     <div>
-      <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+      <div
+        ref={surfaceRef}
+        className={cn(
+          'relative',
+          isPlaceholderData ? 'opacity-60 transition-opacity' : 'transition-opacity',
+        )}
+      >
+        {dragOverlay}
         <DataGridTableSurface surface={surface}>
           <Table aria-label={ariaLabel} separator={surface === 'card' ? 'inset' : 'full'}>
             <TableHeader>
@@ -287,13 +389,28 @@ export function DataGrid<T extends { id: string }>({
                     : sortDescriptor.direction === 'ascending'
                       ? ArrowUp
                       : ArrowDown;
+                  const isDraggable =
+                    reorder !== undefined && !reorder.lockedIds.includes(column.id);
                   return (
                     <TableHead
                       key={column.id}
+                      ref={reorder ? itemRef(column.id) : undefined}
                       aria-sort={
                         column.sortable ? (isSorted ? sortDescriptor.direction : 'none') : undefined
                       }
-                      className={column.align === 'end' ? 'text-end' : undefined}
+                      className={cn(
+                        column.align === 'end' && 'text-end',
+                        isDraggable && 'cursor-grab',
+                        // Колонка «в руці» лишається на місці напівпрозорою — видно, звідки її взяли
+                        drag?.id === column.id && 'opacity-40',
+                      )}
+                      onPointerDown={(event) => {
+                        // Лише миша/перо: на дотику жест по заголовку — це прокрутка
+                        // таблиці, а порядок там міняють у меню полів
+                        if (isDraggable && event.pointerType !== 'touch') {
+                          handleProps(column.id).onPointerDown(event);
+                        }
+                      }}
                     >
                       {column.sortable ? (
                         <Button

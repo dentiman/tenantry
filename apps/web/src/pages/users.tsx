@@ -108,8 +108,11 @@ export function UsersPage() {
       id: 'name',
       header: t('table.user'),
       isRowHeader: true,
-      // Вхід у картку юзера — рядок без нього нікуди не веде, тож не ховається
+      // Вхід у картку юзера — рядок без нього нікуди не веде, тож не ховається;
+      // і закріплений першим (як primary field в Airtable): ідентичність — точка
+      // відліку рядка, переставляти її між атрибутами немає сенсу
       hideable: false,
+      reorderable: false,
       sortable: true,
       // max-w потрібен саме на клітинці: у table-layout:auto без нього колонка
       // розтягнеться під найдовший email і truncate ніколи не спрацює

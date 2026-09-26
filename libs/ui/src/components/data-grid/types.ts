@@ -63,6 +63,12 @@ export interface DataGridColumn<T> {
   hideable?: boolean;
   /** Сховане, доки його не ввімкне набір полів або користувач */
   defaultHidden?: boolean;
+  /**
+   * false — поле закріплене на початку (у порядку декларації серед закріплених):
+   * без ручки в меню, заголовок не тягнеться, перед ним нічого не вставити.
+   * Аналог primary field в Airtable. Дефолт true
+   */
+  reorderable?: boolean;
 }
 
 /**
@@ -76,7 +82,7 @@ export type DataGridField<T> = DataGridColumn<T>;
 /**
  * Іменований набір видимих полів (пресет) — задається кодом сторінки, користувач його
  * не змінює: ручна правка полів переводить грід у єдиний Custom-набір.
- * Порядок `fields` не впливає на порядок рендера — він завжди як у декларації полів.
+ * Порядок `fields` — це і порядок рендера (закріплені поля все одно стоять першими).
  */
 export interface DataGridFieldSet {
   id: string;
@@ -101,11 +107,19 @@ export interface DataGridFieldsState {
    * знати, що активний пресет уже застосований (інакше — застосувати з коду).
    */
   preset: { id: string; fields: string[] } | null;
-  /**
-   * МАПА видимості Custom, а не список видимих id: поле, додане в новому релізі,
-   * відсутнє в мапі й бере свій `defaultHidden`, а не зникає мовчки. null — Custom ще немає
-   */
-  custom: Record<string, boolean> | null;
+  /** Custom-набір; null — Custom ще немає */
+  custom: DataGridCustomFieldSet | null;
+}
+
+/**
+ * Custom: видимість і порядок — окремі осі, як у TanStack (`columnVisibility` +
+ * `columnOrder`). Видимість — МАПА, а не список видимих id: поле з нового релізу
+ * відсутнє в мапі й бере свій `defaultHidden`. Порядок — УСІХ полів, включно з
+ * прихованими: вимкнене й знову ввімкнене поле повертається на своє місце.
+ */
+export interface DataGridCustomFieldSet {
+  visible: Record<string, boolean>;
+  order: string[];
 }
 
 /** Entity-специфічний текст; без нього DataGrid бере дефолт із common (loading/empty) */

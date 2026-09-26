@@ -86,6 +86,14 @@
     "heading": "Fields",
     "reset": "Reset to default",
     "sets": "Field sets",
-    "customSet": "Custom"
+    "customSet": "Custom",
+    "shown": "Shown",
+    "hidden": "Hidden",
+    "reorder": "Reorder {{label}}",
+    "moved": "{{label}}, position {{position}} of {{total}}",
+    "search": "Search fields",
+    "searchPlaceholder": "Search fields…",
+    "noMatches": "No matching fields",
+    "allShown": "All fields are shown"
   }
 }

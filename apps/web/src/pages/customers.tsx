@@ -106,6 +106,8 @@ export function CustomersPage() {
       header: t('table.name'),
       isRowHeader: true,
       // Вхід у картку кастомера — без нього рядок нікуди не веде, тож не ховається
+      // (але переставляється: № стоїть перед ним у кожному наборі, закріплення
+      // «першим» змінило б звичний вигляд списку)
       hideable: false,
       sortable: true,
       className: 'max-w-[22rem]',

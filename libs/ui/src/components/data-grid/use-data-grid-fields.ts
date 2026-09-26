@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   canHideField,
   isHideable,
+  isPinned,
   reduceFieldsState,
+  resolveFields,
   resolveVisibility,
   sanitizeStoredFieldsState,
   serializeFieldsState,
@@ -69,12 +71,13 @@ export function writeFieldsState(
 export interface DataGridFieldsModel<TItem> {
   /** Усі оголошені поля (порядок декларації) — для меню полів */
   fields: DataGridField<TItem>[];
-  /** Видимі поля в порядку декларації — для рендерера (таблиці, карток) */
-  visibleFields: DataGridField<TItem>[];
+  /** Видимі поля в порядку ПОКАЗУ (набір/Custom, закріплені першими) — для рендерера */
+  displayFields: DataGridField<TItem>[];
   visibleIds: ReadonlySet<string>;
   state: DataGridFieldsState;
   dispatch: (action: FieldsAction) => void;
   isHideable: (field: DataGridField<TItem>) => boolean;
+  isPinned: (field: DataGridField<TItem>) => boolean;
   canHide: (fieldId: string) => boolean;
 }
 
@@ -93,10 +96,21 @@ export function useDataGridFields<TItem>({
   // Поля приходять щорендера новим масивом (cell-замикання) — мемо залежить від
   // рядкового ключа id/прапорців, а не від ідентичності масиву
   const metaKey = JSON.stringify(
-    fields.map((field) => [field.id, field.hideable ?? true, field.defaultHidden ?? false]),
+    fields.map((field) => [
+      field.id,
+      field.hideable ?? true,
+      field.defaultHidden ?? false,
+      field.reorderable ?? true,
+    ]),
   );
   const meta = useMemo<FieldMeta[]>(
-    () => fields.map(({ id, hideable, defaultHidden }) => ({ id, hideable, defaultHidden })),
+    () =>
+      fields.map(({ id, hideable, defaultHidden, reorderable }) => ({
+        id,
+        hideable,
+        defaultHidden,
+        reorderable,
+      })),
     [metaKey],
   );
   const storageKey = gridId === undefined ? undefined : fieldsStorageKey(gridId);
@@ -127,14 +141,20 @@ export function useDataGridFields<TItem>({
   );
 
   const visibleIds = useMemo(() => resolveVisibility(meta, state), [meta, state]);
+  const displayIds = useMemo(() => resolveFields(meta, state), [meta, state]);
+  const byId = new Map(fields.map((field) => [field.id, field]));
 
   return {
     fields,
-    visibleFields: fields.filter((field) => visibleIds.has(field.id)),
+    displayFields: displayIds.flatMap((id) => {
+      const field = byId.get(id);
+      return field ? [field] : [];
+    }),
     visibleIds,
     state,
     dispatch,
     isHideable,
+    isPinned,
     canHide: (fieldId) => canHideField(visibleIds, fieldId),
   };
 }

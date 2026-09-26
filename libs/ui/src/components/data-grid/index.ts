@@ -15,6 +15,7 @@ export type { DataGridSurface } from './data-grid';
 export type { DataGridFiltersState } from './use-data-grid-filters';
 export type { DataGridSelectionState } from './use-data-grid-selection';
 export type { DataGridFieldsModel } from './use-data-grid-fields';
+export type { DataGridFieldSettingsLayout } from './field-settings';
 export type {
   DataGridFilterDef,
   DataGridFiltersSize,

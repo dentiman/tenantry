@@ -30,6 +30,7 @@ export type NavPath =
   | '/playground/inline-form'
   | '/playground/components/buttons'
   | '/playground/components/combobox'
+  | '/playground/components/data-grid'
   | '/playground/components/input'
   | '/playground/components/select'
   | '/playground/components/tabs'

@@ -35,6 +35,7 @@ import { PlaygroundDialogPage } from './pages/playground-dialog';
 import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
+import { PlaygroundDataGridPage } from './pages/playground-data-grid';
 import { PlaygroundArchitecturePage } from './pages/playground-architecture';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAccountPage } from './pages/user-settings/account';
@@ -496,6 +497,17 @@ const playgroundComponentsTabsRoute = createRoute({
   component: PlaygroundTabsPage,
 });
 
+/**
+ * Стенд DataGrid на фейкових інвойсах. `bleed` — як у справжніх списків
+ * (Customers/Users): грід сам тримає поля й упирається в краї полотна
+ */
+const playgroundComponentsDataGridRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'data-grid',
+  component: PlaygroundDataGridPage,
+  staticData: { layout: 'bleed' },
+});
+
 /** Platform Components: бізнес-орієнтовані, з бекендом, лише в tenant-порталі */
 const playgroundComponentsUserSelectRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
@@ -571,6 +583,7 @@ const routeTree = rootRoute.addChildren([
       playgroundComponentsRoute.addChildren([
         playgroundComponentsButtonsRoute,
         playgroundComponentsComboboxRoute,
+        playgroundComponentsDataGridRoute,
         playgroundComponentsInputRoute,
         playgroundComponentsSelectRoute,
         playgroundComponentsTabsRoute,

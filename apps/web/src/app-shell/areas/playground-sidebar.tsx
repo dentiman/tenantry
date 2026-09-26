@@ -96,6 +96,14 @@ export function PlaygroundSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/data-grid'}
+                      render={<Link to="/playground/components/data-grid" />}
+                    >
+                      {t('nav.dataGrid')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
                       isActive={pathname === '/playground/components/input'}
                       render={<Link to="/playground/components/input" />}
                     >

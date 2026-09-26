@@ -12,8 +12,8 @@ import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { UserPresenceBadge } from '../presence-dot';
 import { cn } from '@saas-skeleton/ui/lib/utils';
+import { moveBefore, useSortableReorder } from '@saas-skeleton/ui/hooks/use-sortable-reorder';
 import { UserPickerList } from './user-picker-list';
-import { useRowReorder } from './use-row-reorder';
 import { useUserDirectory } from './use-user-directory';
 import { isResolved, type PickedOption, type UserOption } from './user-option';
 
@@ -74,7 +74,19 @@ export function UserMultiList({
   // рівно тієї ж ширини, що й рядки над ним
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const { options, picked, total, isFetching, query, setQuery } = useUserDirectory(value, known);
-  const { dragId, handleProps } = useRowReorder(value, onChange, reorderable, lockedIds);
+  // Спільний з меню полів гріда хук: live — порядок міняється під рукою, привида немає;
+  // закріплені стоять на початку (їх туди повертає `onValueChange`), перед ними не вставити
+  const { drag, itemRef, handleProps } = useSortableReorder({
+    axis: 'y',
+    ids: value,
+    lockedIds,
+    enabled: reorderable,
+    mode: 'live',
+    onMove: (id, beforeId) => {
+      onChange(moveBefore(value, id, beforeId));
+    },
+  });
+  const dragId = drag?.id ?? null;
 
   // Чи є в списку хоч один рядок із хрестиком: якщо є, закріплений тримає під
   // нього порожнє місце — інакше його бейдж стояв би на 32px правіше за всі інші
@@ -115,7 +127,7 @@ export function UserMultiList({
               return (
                 <li
                   key={option.id}
-                  data-row
+                  ref={itemRef(option.id)}
                   className={cn(
                     // Фон — `bg-muted/60`, а НЕ `bg-card`: рядок стоїть усередині
                     // `Card` (playground) чи панелі події, тобто на поверхні

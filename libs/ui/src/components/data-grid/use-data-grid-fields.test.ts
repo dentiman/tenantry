@@ -38,7 +38,7 @@ describe('fields state storage', () => {
     const state = {
       activeSetId: CUSTOM_FIELD_SET_ID,
       preset: null,
-      custom: { phone: false, tags: true },
+      custom: { visible: { phone: false, tags: true }, order: ['tags', 'name', 'phone'] },
     };
     writeFieldsState(storage, key, state);
     expect(readFieldsState(storage, key, fields)).toEqual(state);
