@@ -18,8 +18,8 @@ with a checked, non-interactive (locked) checkbox. The Hidden section SHALL NOT 
 field is hidden.
 
 #### Scenario: User opens the gear menu
-- **WHEN** the user activates the gear button on the Customers list with "Main" active
-- **THEN** a panel opens with Shown listing the Main fields in display order, each checked, and
+- **WHEN** the user activates the gear button on the Customers list with default fields
+- **THEN** a panel opens with Shown listing the visible fields in display order, each checked, and
   Hidden listing "Tags", unchecked
 
 #### Scenario: Field declared non-hideable

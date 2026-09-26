@@ -21,7 +21,6 @@ import type { CustomersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridField,
-  DataGridFieldSet,
   DataGridFilterDef,
   DataGridRowAction,
 } from '@saas-skeleton/ui/components/data-grid';
@@ -106,8 +105,8 @@ export function CustomersPage() {
       header: t('table.name'),
       isRowHeader: true,
       // Вхід у картку кастомера — без нього рядок нікуди не веде, тож не ховається
-      // (але переставляється: № стоїть перед ним у кожному наборі, закріплення
-      // «першим» змінило б звичний вигляд списку)
+      // (але переставляється: № стоїть перед ним, і закріплення «першим» змінило б
+      // звичний вигляд списку)
       hideable: false,
       sortable: true,
       className: 'max-w-[22rem]',
@@ -156,7 +155,7 @@ export function CustomersPage() {
     {
       id: 'tags',
       header: t('table.tags'),
-      // Робочий інструмент продажів — за замовчуванням лише в наборі полів Sales
+      // Робочий інструмент продажів, а не огляду — за замовчуванням схована, вмикається в панелі полів
       defaultHidden: true,
       cell: (c) =>
         c.tags.length === 0 ? (
@@ -177,22 +176,6 @@ export function CustomersPage() {
       sortable: true,
       cell: (c) => <DateTimeCell value={c.createdAt} />,
     },
-  ];
-
-  // Набори полів під задачу: Main — огляд, Sales — з ким працюємо і хто веде, Contact —
-  // щоб швидко набрати. Порядок полів усюди як у декларації вище
-  const fieldSets: DataGridFieldSet[] = [
-    {
-      id: 'main',
-      label: t('fieldSets.main'),
-      fields: ['number', 'name', 'phone', 'status', 'owner', 'createdAt'],
-    },
-    {
-      id: 'sales',
-      label: t('fieldSets.sales'),
-      fields: ['name', 'status', 'owner', 'tags', 'createdAt'],
-    },
-    { id: 'contact', label: t('fieldSets.contact'), fields: ['number', 'name', 'phone', 'status'] },
   ];
 
   const rowActions: DataGridRowAction<Customer>[] = [
@@ -297,12 +280,6 @@ export function CustomersPage() {
           size="sm"
         />
       </div>
-
-      {/* Таби наборів полів — ОСТАННІМИ перед таблицею, впритул до неї: вони
-          керують її полями, а не списком загалом (фільтри вище — ЩО в списку).
-          Смуга мінімальна по вертикалі, індикатор активного табу лягає на цю
-          ж лінію border-b — таб читається приклеєним до хедера таблиці */}
-      <Grid.FieldSets sets={fieldSets} className="border-b border-border px-6" />
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}

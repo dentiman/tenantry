@@ -23,10 +23,14 @@ selected. A page that offers no field sets SHALL show no field-set tabs.
 - **WHEN** the user focuses the field-set tabs and uses the arrow keys and Enter/Space
 - **THEN** focus moves between tabs and the chosen tab becomes the active field set
 
-#### Scenario: Tabs sit directly above the table on tenant lists
-- **WHEN** the user opens the Customers or Users list
+#### Scenario: Tabs sit directly above the table
+- **WHEN** the user opens a list that offers field sets (e.g. the invoices playground stand)
 - **THEN** the field-set tabs are the last element before the table, below the filter toolbar,
   adjoining the table's header
+
+#### Scenario: List without field sets
+- **WHEN** the user opens the Customers or Users list
+- **THEN** no field-set tabs are shown and the gear still controls the fields
 
 ### Requirement: Switching a field set changes only the visible fields
 The system SHALL, on selecting a field-set tab, show exactly that set's fields (non-hideable

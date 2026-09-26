@@ -23,11 +23,6 @@
     "tags": "Tags",
     "created": "Created"
   },
-  "fieldSets": {
-    "main": "Main",
-    "sales": "Sales",
-    "contact": "Contact"
-  },
   "kind": {
     "ORGANIZATION": "Company",
     "PERSON": "Individual"

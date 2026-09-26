@@ -31,7 +31,6 @@ import type { UsersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridField,
-  DataGridFieldSet,
   DataGridFilterDef,
   DataGridRowAction,
 } from '@saas-skeleton/ui/components/data-grid';
@@ -194,20 +193,6 @@ export function UsersPage() {
     },
   ];
 
-  // Main — повний огляд; Access — хто і з якою роллю має доступ і чи ним користується
-  const fieldSets: DataGridFieldSet[] = [
-    {
-      id: 'main',
-      label: t('fieldSets.main'),
-      fields: ['name', 'phone', 'role', 'isActive', 'lastSeen', 'createdAt'],
-    },
-    {
-      id: 'access',
-      label: t('fieldSets.access'),
-      fields: ['name', 'role', 'isActive', 'lastSeen'],
-    },
-  ];
-
   const rowActions: DataGridRowAction<UserListResponseDtoOutputItemsItem>[] = [
     {
       id: 'password',
@@ -335,12 +320,6 @@ export function UsersPage() {
           )}
         />
       </div>
-
-      {/* Таби наборів полів — ОСТАННІМИ перед таблицею, впритул до неї: вони
-          керують її полями, а не списком загалом (фільтри вище — ЩО в списку).
-          Смуга мінімальна по вертикалі, індикатор активного табу лягає на цю
-          ж лінію border-b — таб читається приклеєним до хедера таблиці */}
-      <Grid.FieldSets sets={fieldSets} className="border-b border-border px-6" />
 
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}
