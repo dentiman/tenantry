@@ -320,15 +320,13 @@ function ModuleCard({ module }: { module: ProductModule }) {
   const { t } = useTranslation('guide');
   const Icon = module.icon;
   // Незроблене не повинно візуально конкурувати з готовим: та сама картка,
-  // але приглушена іконка і пунктирний контур
+  // але приглушена іконка, пунктирний контур і вдвічі прозоріша поверхня.
+  // Зовсім без фону не можна — на брендовому фоні лишалась сама обводка
   const isBuilt = module.status === 'done' || module.status === 'partial';
 
   return (
     <Card
-      className={cn(
-        'h-full',
-        !isBuilt && 'bg-transparent shadow-none ring-1 ring-border ring-dashed',
-      )}
+      className={cn('h-full', !isBuilt && 'bg-card/50 shadow-none ring-1 ring-border ring-dashed')}
     >
       <CardHeader>
         <div

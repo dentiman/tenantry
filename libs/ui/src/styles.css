@@ -17,6 +17,8 @@
    Дефолтна тема (`gray`) файла НЕ має — її значення стоять прямо в `:root`/`.dark`.
    Контракт, реєстр і план перемикача — `docs/frontend/theming.md`. */
 @import './themes/slate.css';
+/* Брендовий фон «вітринних» сторінок і скляний шел над ним — див. сам файл */
+@import './brand-backdrop.css';
 
 @custom-variant dark (&:is(.dark *));
 

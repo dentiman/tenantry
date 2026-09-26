@@ -17,6 +17,7 @@ import {
   ContextPanelTrigger,
 } from '@saas-skeleton/ui/components/context-panel-slot';
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
+import { BrandBackdrop } from '@saas-skeleton/ui/components/brand-backdrop';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../components/notifications/notification-bell';
 import { AiPanel } from '../components/ai/ai-panel';
@@ -65,6 +66,9 @@ export function AppShell() {
   // `/workspace/users` полотно, а сусідня `/workspace/users/$userId` ні
   const matches = useMatches();
   const isBleed = matches.at(-1)?.staticData.layout === 'bleed';
+  // Так само від сторінки — брендовий фон і скляний шел над ним
+  // (`libs/ui/src/brand-backdrop.css`). Робочі екрани його не оголошують
+  const backdrop = matches.at(-1)?.staticData.backdrop;
 
   /**
    * Прокрутка скидається на початок при переході на іншу сторінку.
@@ -101,6 +105,7 @@ export function AppShell() {
     <PageHeaderSlotProvider>
       <ContextPanelProvider>
         <SidebarProvider
+          data-backdrop={backdrop}
           style={
             {
               '--sidebar-width': 'calc(var(--area-sidebar-width, 14rem) + var(--sidebar-width-icon) + 2px)',
@@ -111,6 +116,10 @@ export function AppShell() {
             } as CSSProperties
           }
         >
+          {/* Фон — ПЕРША дитина і без z-index: так він під фіксованим
+            сайдбаром і під `SidebarInset`, але над непрозорим `body` */}
+          {backdrop === 'brand' && <BrandBackdrop />}
+
           {/* collapsible="icon": згортання стискає контейнер до ширини рейлу, а
             overflow-hidden відрізає панель. Тобто SidebarTrigger і Cmd+B тепер
             ховають ДРУГУ колонку, а рейл із брендом лишаються — поведінка VS Code */}
@@ -134,7 +143,10 @@ export function AppShell() {
               сторінки. Побічний виграш: хедер тепер поза скролером, а не
               `sticky` над ним */}
           <SidebarInset className="h-svh min-w-0 overflow-hidden">
-            <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6">
+            <header
+              data-slot="app-header"
+              className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6"
+            >
               <SidebarTrigger className="-ml-2" />
               <PageHeaderSlot className="min-w-0 flex-1" />
               <div className="ml-auto flex items-center gap-1">

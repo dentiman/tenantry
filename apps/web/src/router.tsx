@@ -531,6 +531,7 @@ const guideRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/guide',
   component: GuidePage,
+  staticData: { backdrop: 'brand' },
 });
 
 /**
@@ -620,5 +621,13 @@ declare module '@tanstack/react-router' {
    */
   interface StaticDataRouteOption {
     layout?: 'padded' | 'bleed';
+    /**
+     * Брендовий фон на все вікно, а шел над ним — скляний (напівпрозорий
+     * сайдбар із блюром, прозоре полотно). Для «вітринних» сторінок (гід,
+     * майбутній дашборд-вітрина); робочі екрани його не беруть і лишаються
+     * суцільними. Та сама логіка, що з `layout`: властивість екрана, а не
+     * даних. Стилі — `libs/ui/src/brand-backdrop.css`.
+     */
+    backdrop?: 'brand';
   }
 }

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./api/*": "./src/api/*.ts",
+    "./components/brand-backdrop": "./src/components/brand-backdrop.tsx",
     "./components/context-panel-slot": "./src/components/context-panel-slot.tsx",
     "./components/copy-to-clipboard": "./src/components/copy-to-clipboard.tsx",
     "./components/data-grid": "./src/components/data-grid/index.ts",

@@ -1,0 +1,184 @@
+/**
+ * Брендовий фон «вітринних» сторінок (прототип на `/guide`).
+ *
+ * Звичайні робочі екрани (гріди, форми, календар) цього файла НЕ торкаються:
+ * усе нижче спрацьовує тільки під `[data-backdrop='brand']`, який `AppShell`
+ * ставить на обгортку шела, коли роут оголосив `staticData.backdrop`.
+ *
+ * Референс — DeepSeek Harness (`deepseek.com/harness`), знято з живої сторінки
+ * 2026-09-26 без анімації:
+ *   • сітка 90px, лінія 1px білого з альфою ≈4% на майже чорному `#0a0a0a`
+ *     (у нас замінена точками — див. `.brand-backdrop__dots`);
+ *   • 2–3 розмиті радіальні плями темно-синього (`#1a3870` → `#4a8ac4`),
+ *     `blur(60…100px)`, `opacity .2….4`;
+ *   • поверхні — не суцільні, а біле скло 2…6% + верхній inset-хайлайт 12%.
+ * Колір плям у нас не захардкожений, а виведений з `--primary`: тема або тенант
+ * міняє бренд — фон міняється разом із ним.
+ *
+ * Дві частини:
+ *   1. ТОКЕНИ фону (`--backdrop-*`) і скляні варіанти поверхонь (`--*-glass`).
+ *   2. ПЕРЕВИЗНАЧЕННЯ під `[data-backdrop]`: поверхні шела стають склом.
+ */
+
+/* ── 1. Токени ──────────────────────────────────────────────────────────────
+   `--*-glass` оголошені на `:root` через `var(--sidebar)` / `var(--card)`, і
+   це не дрібниця: custom property підставляє `var()` там, де її ОГОЛОШЕНО, і
+   нащадки успадковують уже готовий колір. Тому під `[data-backdrop]` можна
+   написати `--sidebar: var(--sidebar-glass)` без циклу — пряме
+   `--sidebar: color-mix(... var(--sidebar) ...)` на тому самому елементі було б
+   циклічним посиланням і мовчки зробило б токен невалідним. `.dark` висить на
+   тому самому `<html>`, тож скло автоматично береться з темної поверхні. */
+:root {
+  --sidebar-glass: color-mix(in oklab, var(--sidebar) 62%, transparent);
+  --card-glass: color-mix(in oklab, var(--card) 60%, transparent);
+  --border-glass: color-mix(in oklab, var(--foreground) 10%, transparent);
+
+  /* Холодний майже-білий: нейтральний zinc-сірий дефолту поруч із синіми
+     плямами читався б брудним */
+  --backdrop-base: oklch(0.985 0.006 255);
+  --backdrop-dot: color-mix(in oklab, var(--primary) 10%, transparent);
+  --backdrop-glow-1: color-mix(in oklch, var(--primary) 32%, white);
+  --backdrop-glow-2: color-mix(in oklch, var(--primary) 18%, white);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.75 0.14 200) 30%, white);
+  --backdrop-glow-opacity: 0.2;
+  --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 70%);
+}
+
+.dark {
+  /* Холодний майже-чорний замість нотіонівського `#191919`: DeepSeek сидить на
+     `#0a0a0a`, але в нас на цьому фоні ще й скляний шел — трохи світліше дає
+     сайдбару хоч якусь різницю до полотна */
+  --backdrop-base: oklch(0.155 0.012 258);
+  --backdrop-dot: rgb(255 255 255 / 5%);
+  /* Не яскравий `--primary`, а його глибокий «нічний» відтінок — рівно те,
+     що робить DeepSeek (`#1a3870` при бренді `#6799fe`) */
+  --backdrop-glow-1: color-mix(in oklch, var(--primary) 70%, black);
+  --backdrop-glow-2: color-mix(in oklch, var(--primary) 45%, black);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.6 0.12 205) 55%, black);
+  --backdrop-glow-opacity: 0.5;
+  --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 6%);
+}
+
+/* ── 2. Шел поверх фону ───────────────────────────────────────────────────── */
+[data-backdrop='brand'] {
+  /* Полотно й хедер прозорі — під ними фон */
+  --background: transparent;
+  --sidebar: var(--sidebar-glass);
+  --card: var(--card-glass);
+  --border: var(--border-glass);
+  --sidebar-border: var(--border-glass);
+  /* Заливки дрібних елементів — не суцільний сірий, а накладка кольору
+     тексту, як у смуги табів (`--accent`, §1.3.3 theming.md). Суцільні
+     `#2f2f2f`/`#262626` на кольоровому фоні читались латками чужої теми;
+     накладка бере відтінок плями під собою.
+     `--secondary` — бейдж `secondary`, кнопка `secondary`: рівень 300, як таби.
+     `--muted` — плитки іконок у картках: рівень 200, на сходинку тихіший.
+     `var(--foreground)` тут не циклічний — перевизначаємо інші токени */
+  --secondary: var(--accent);
+  --muted: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+/* Скло бічних колонок: сильне розмиття на ВЕЛИКИХ нерухомих поверхнях. Під
+   ними фон теж нерухомий (`fixed`), тож блюр рахується один раз, а не на
+   кожен кадр скролу. Карткам — окреме, мінімальне (див. нижче) */
+[data-backdrop='brand'] [data-slot='sidebar-inner'],
+[data-backdrop='brand'] [data-slot='context-panel'],
+[data-backdrop='brand'] [data-slot='ai-panel'] {
+  backdrop-filter: blur(24px) saturate(1.4);
+}
+
+/* `AreaSidebar` — другий `Sidebar` (`collapsible="none"`) ВСЕРЕДИНІ першого.
+   Суцільним це не видно, а у склі два шари по 62% дали б колонку area помітно
+   щільнішою за рейл. Скло одне — на зовнішньому контейнері */
+[data-backdrop='brand'] [data-slot='sidebar-inner'] [data-slot='sidebar'] {
+  background-color: transparent;
+}
+
+/* Хедер контенту — майже прозорий: легкий серпанок кольору фону + блюр.
+   Точки й плями під ним розмиваються в м'яку смугу, і хедер читається окремим
+   ярусом, не забираючи в сторінки фон, як це зробило б скло сайдбара.
+   `data-slot="app-header"` ставить шел (`app-shell.tsx`) */
+[data-backdrop='brand'] [data-slot='app-header'] {
+  background-color: color-mix(in oklab, var(--backdrop-base) 30%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Картки — легке скло: 60% поверхні + мінімальний блюр. Без блюру на такій
+   прозорості крізь картку (а надто крізь «заплановану», де фон ще вдвічі
+   прозоріший) читались точки візерунка. Радіус свідомо малий: картки їдуть
+   при прокрутці, і фільтр перераховується щокадру — 6px на порядок дешевший
+   за 24px сайдбара */
+[data-backdrop='brand'] [data-slot='card'] {
+  box-shadow: var(--glass-highlight), var(--surface-shadow);
+  backdrop-filter: blur(6px);
+}
+
+/* ── Сам фон ──────────────────────────────────────────────────────────────── */
+.brand-backdrop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--backdrop-base);
+  animation: brand-backdrop-in 320ms ease-out;
+}
+
+/* Точки, а не сітка. Лінійна сітка зливалась із межами шела (сайдбар, хедер,
+   картки — ті самі 1px-лінії), точки з ними не сплутаєш.
+
+   Точки є лише ТАМ, ДЕ ПЛЯМИ: маска — три еліпси з центрами плям нижче
+   (`glow--1` ≈ 22%/12%, `glow--2` ≈ 71%/29%, `glow--3` ≈ 60%/100%), шари маски
+   додаються. Рухаєш пляму — переносиш і її еліпс тут */
+.brand-backdrop__dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--backdrop-dot) 1.5px, transparent 2px);
+  background-size: 12px 12px;
+  mask-image:
+    radial-gradient(ellipse 34vw 38vh at 22% 12%, #000 0%, transparent 100%),
+    radial-gradient(ellipse 22vw 26vh at 71% 29%, #000 0%, transparent 100%),
+    radial-gradient(ellipse 28vw 26vh at 60% 100%, #000 0%, transparent 100%);
+}
+
+.brand-backdrop__glow {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: var(--backdrop-glow-opacity);
+  filter: blur(90px);
+}
+
+.brand-backdrop__glow--1 {
+  top: -18vh;
+  left: -8vw;
+  width: 60vw;
+  height: 60vh;
+  background: radial-gradient(closest-side, var(--backdrop-glow-1), transparent);
+}
+
+.brand-backdrop__glow--2 {
+  top: 8vh;
+  right: 10vw;
+  width: 38vw;
+  height: 42vh;
+  background: radial-gradient(closest-side, var(--backdrop-glow-2), transparent);
+}
+
+.brand-backdrop__glow--3 {
+  bottom: -22vh;
+  left: 35vw;
+  width: 50vw;
+  height: 45vh;
+  background: radial-gradient(closest-side, var(--backdrop-glow-3), transparent);
+}
+
+@keyframes brand-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-backdrop {
+    animation: none;
+  }
+}
