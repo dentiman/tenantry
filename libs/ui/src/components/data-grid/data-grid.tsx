@@ -71,6 +71,11 @@ interface DataGridProps<T extends { id: string }> {
   ariaLabel: string;
   columns: DataGridColumn<T>[];
   rowActions?: DataGridRowAction<T>[];
+  /**
+   * Вміст хедер-комірки колонки дій (напр. шестерня колонок). Задає колонку дій і
+   * без rowActions — тоді комірки рядків у ній порожні, але шестерні є де стояти
+   */
+  actionsHeader?: ReactNode;
   /** За замовчуванням — item.id (усі сутності мають uuid id); переозначити для інших ключів */
   getRowId?: (item: T) => string;
   /**
@@ -190,6 +195,7 @@ export function DataGrid<T extends { id: string }>({
   ariaLabel,
   columns,
   rowActions,
+  actionsHeader,
   getRowId = (item) => item.id,
   isRowMuted,
   grid,
@@ -220,7 +226,9 @@ export function DataGrid<T extends { id: string }>({
     action: DataGridRowAction<T>;
     item: T;
   } | null>(null);
-  const columnCount = columns.length + (selection ? 1 : 0) + (rowActions ? 1 : 0);
+  const hasActionsColumn = rowActions !== undefined || actionsHeader !== undefined;
+  // Рахується з РЕАЛЬНО відрендерених колонок — colSpan empty-стану йде за схованими
+  const columnCount = columns.length + (selection ? 1 : 0) + (hasActionsColumn ? 1 : 0);
 
   if (isLoading) {
     return (
@@ -308,7 +316,14 @@ export function DataGrid<T extends { id: string }>({
                     </TableHead>
                   );
                 })}
-                {rowActions && <TableHead aria-label={t('actions.menu')} className="w-0" />}
+                {hasActionsColumn && (
+                  <TableHead
+                    aria-label={actionsHeader === undefined ? t('actions.menu') : undefined}
+                    className="w-0 text-end"
+                  >
+                    {actionsHeader}
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -363,7 +378,7 @@ export function DataGrid<T extends { id: string }>({
                           {column.cell(item)}
                         </TableCell>
                       ))}
-                      {rowActions && (
+                      {hasActionsColumn && (
                         <TableCell className="text-end">
                           {visibleActions && visibleActions.length > 0 && (
                             <DropdownMenu>

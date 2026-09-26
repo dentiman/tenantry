@@ -30,7 +30,8 @@ import { PhoneNumber } from '../components/phone-number';
 import type { UsersSearch } from '../router';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
-  DataGridColumn,
+  DataGridField,
+  DataGridFieldSet,
   DataGridFilterDef,
   DataGridRowAction,
 } from '@saas-skeleton/ui/components/data-grid';
@@ -99,7 +100,7 @@ export function UsersPage() {
     userStatusFilter(t),
   ];
 
-  const columns: DataGridColumn<UserListResponseDtoOutputItemsItem>[] = [
+  const fields: DataGridField<UserListResponseDtoOutputItemsItem>[] = [
     {
       // Одна колонка ідентичності замість трьох (аватар/email/ім'я): у гріді
       // це і є та сама сутність, а не три незалежні атрибути. Сортування —
@@ -107,6 +108,8 @@ export function UsersPage() {
       id: 'name',
       header: t('table.user'),
       isRowHeader: true,
+      // Вхід у картку юзера — рядок без нього нікуди не веде, тож не ховається
+      hideable: false,
       sortable: true,
       // max-w потрібен саме на клітинці: у table-layout:auto без нього колонка
       // розтягнеться під найдовший email і truncate ніколи не спрацює
@@ -185,6 +188,20 @@ export function UsersPage() {
       header: t('table.created'),
       sortable: true,
       cell: (u) => <DateTimeCell value={u.createdAt} />,
+    },
+  ];
+
+  // Main — повний огляд; Access — хто і з якою роллю має доступ і чи ним користується
+  const fieldSets: DataGridFieldSet[] = [
+    {
+      id: 'main',
+      label: t('fieldSets.main'),
+      fields: ['name', 'phone', 'role', 'isActive', 'lastSeen', 'createdAt'],
+    },
+    {
+      id: 'access',
+      label: t('fieldSets.access'),
+      fields: ['name', 'role', 'isActive', 'lastSeen'],
     },
   ];
 
@@ -277,6 +294,8 @@ export function UsersPage() {
     <Grid.Root
       useListQuery={(params, gridOptions) => useUsersFindAll(params, { query: gridOptions })}
       selection
+      gridId="tenant.users"
+      fields={fields}
     >
       {/* Ідентичність сторінки живе ТІЛЬКИ в хедері: заголовок і головна дія
           переїхали туди, а контент починається одразу з тулбара фільтрів —
@@ -314,10 +333,16 @@ export function UsersPage() {
         />
       </div>
 
+      {/* Таби наборів полів — ОСТАННІМИ перед таблицею, впритул до неї: вони
+          керують її полями, а не списком загалом (фільтри вище — ЩО в списку).
+          Смуга мінімальна по вертикалі, індикатор активного табу лягає на цю
+          ж лінію border-b — таб читається приклеєним до хедера таблиці */}
+      <Grid.FieldSets sets={fieldSets} className="border-b border-border px-6" />
+
       <Grid.Table
         ariaLabel={t('table.ariaLabel')}
-        columns={columns}
         rowActions={rowActions}
+        actionsHeader={<Grid.FieldSettings />}
         // Юзер без доступу лишається в списку (його треба бачити й повертати),
         // але не конкурує увагою з тими, хто працює
         isRowMuted={(u) => !u.isActive}

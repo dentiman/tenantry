@@ -22,6 +22,10 @@
     "actions": "Actions",
     "lastSeen": "Last seen"
   },
+  "fieldSets": {
+    "main": "Main",
+    "access": "Access"
+  },
   "status": {
     "active": "Active",
     "inactive": "Inactive",

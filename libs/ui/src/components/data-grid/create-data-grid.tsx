@@ -17,9 +17,14 @@ import { useDataGridFilters } from './use-data-grid-filters';
 import type { DataGridFiltersState } from './use-data-grid-filters';
 import { useDataGridSelection } from './use-data-grid-selection';
 import type { DataGridSelectionState } from './use-data-grid-selection';
+import { useDataGridFields } from './use-data-grid-fields';
+import type { DataGridFieldsModel } from './use-data-grid-fields';
+import { DataGridFieldSets, DataGridFieldSettings } from './field-settings';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import type {
   DataGridColumn,
+  DataGridField,
+  DataGridFieldSet,
   DataGridFiltersBase,
   DataGridMessages,
   DataGridRowAction,
@@ -43,6 +48,8 @@ interface DataGridContextValue<TFilters extends DataGridFiltersBase, TItem> {
   grid: DataGridFiltersState<TFilters>;
   list: DataGridQueryResult<TItem>;
   selection: DataGridSelectionState<TItem> | undefined;
+  /** null — сторінка не передала fields у Root: вибір полів вимкнений */
+  fieldsModel: DataGridFieldsModel<TItem> | null;
 }
 
 interface DataGridRootProps<TFilters extends DataGridFiltersBase, TItem> {
@@ -54,12 +61,24 @@ interface DataGridRootProps<TFilters extends DataGridFiltersBase, TItem> {
   syncToUrl?: boolean;
   initialValue?: TFilters;
   searchDebounceMs?: number;
+  /**
+   * Поля запису — схема, спільна для всіх частин гріда (як useListQuery — для
+   * даних): таблиця рендерить їх колонками, меню полів і таби наборів — керують
+   * їхньою видимістю з будь-якого місця в Root. Передані сюди (а не в Table)
+   * вмикають вибір полів. Набори полів (пресети) — НЕ тут, а в `Grid.FieldSets`.
+   */
+  fields?: DataGridField<TItem>[];
+  /** Ключ збереження вибору полів у браузері; без нього — лише в памʼяті */
+  gridId?: string;
   children: ReactNode;
 }
 
 interface DataGridTableProps<TItem> {
   ariaLabel: string;
-  columns: DataGridColumn<TItem>[];
+  /** Legacy-шлях без вибору полів; якщо поля передані в Root — не передавати */
+  columns?: DataGridColumn<TItem>[];
+  /** Вміст хедер-комірки колонки дій, напр. `<Grid.FieldSettings />` */
+  actionsHeader?: ReactNode;
   rowActions?: DataGridRowAction<TItem>[];
   getRowId?: (item: TItem) => string;
   /** Приглушити рядок «вимкненої» сутності — див. `DataGridProps.isRowMuted` */
@@ -89,6 +108,16 @@ interface DataGridToolbarSlotProps<TFilters extends DataGridFiltersBase, TItem> 
   className?: string;
 }
 
+interface DataGridFieldSettingsProps {
+  className?: string;
+}
+
+interface DataGridFieldSetsProps {
+  /** Пресети видимих полів; перший — дефолтний. Як `filters` у Toolbar — проп слота, не Root */
+  sets: DataGridFieldSet[];
+  className?: string;
+}
+
 interface DataGridSelectionSummaryProps<TItem> {
   /** Додаткові bulk-дії поруч зі зведенням — отримують стан вибору */
   children?: (selection: DataGridSelectionState<TItem>) => ReactNode;
@@ -107,6 +136,10 @@ export interface DataGridInstance<
   Toolbar: (props: DataGridToolbarSlotProps<TFilters, TItem>) => ReactNode;
   /** Таблиця з сортуванням/пагінацією/чекбоксами — дані з контексту */
   Table: (props: DataGridTableProps<TItem>) => ReactNode;
+  /** Шестерня з меню полів; ставиться будь-де всередині Root (див. Table.actionsHeader) */
+  FieldSettings: (props: DataGridFieldSettingsProps) => ReactNode;
+  /** Таби наборів полів + Custom; нічого не рендерить без Root.fields */
+  FieldSets: (props: DataGridFieldSetsProps) => ReactNode;
   /** «N обрано» + Clear; рендериться лише коли щось обрано */
   SelectionSummary: (props: DataGridSelectionSummaryProps<TItem>) => ReactNode;
   /** Фабрики вбудованих фільтрів, уже привʼязані до TFilters (див. defineFilters) */
@@ -141,6 +174,8 @@ export function createDataGrid<
     syncToUrl,
     initialValue,
     searchDebounceMs,
+    fields,
+    gridId,
     children,
   }: DataGridRootProps<TFilters, TItem>) {
     const grid = useDataGridFilters<TFilters>({ syncToUrl, initialValue, searchDebounceMs });
@@ -149,6 +184,8 @@ export function createDataGrid<
     const list = toGridQueryResult(
       useListQuery({ ...grid.filters, page: grid.page }, gridQueryOptions),
     );
+    // Rules of Hooks: модель полів створюється завжди; без fields — ігнорується
+    const fieldsModel = useDataGridFields<TItem>({ fields: fields ?? [], gridId });
     const selectionState =
       selection === true ? internalSelection : selection === false ? undefined : selection;
 
@@ -178,7 +215,14 @@ export function createDataGrid<
     }, [narrowingKey, clearSelection]);
 
     return (
-      <Context.Provider value={{ grid, list, selection: selectionState }}>
+      <Context.Provider
+        value={{
+          grid,
+          list,
+          selection: selectionState,
+          fieldsModel: fields !== undefined ? fieldsModel : null,
+        }}
+      >
         {children}
       </Context.Provider>
     );
@@ -227,9 +271,39 @@ export function createDataGrid<
     );
   }
 
-  function Table(props: DataGridTableProps<TItem>) {
-    const { grid, list, selection } = useGridContext();
-    return <DataGrid {...props} grid={grid} list={list} selection={selection} />;
+  function Table({ columns, ...props }: DataGridTableProps<TItem>) {
+    const { grid, list, selection, fieldsModel } = useGridContext();
+    const hasBoth = fieldsModel !== null && columns !== undefined;
+    useEffect(() => {
+      if (hasBoth) {
+        console.warn('DataGrid: Grid.Root fields and Grid.Table columns both passed; Root wins');
+      }
+    }, [hasBoth]);
+    return (
+      <DataGrid
+        {...props}
+        columns={fieldsModel?.visibleFields ?? columns ?? []}
+        grid={grid}
+        list={list}
+        selection={selection}
+      />
+    );
+  }
+
+  function FieldSettings({ className }: DataGridFieldSettingsProps) {
+    const { fieldsModel } = useGridContext();
+    if (!fieldsModel) {
+      return null;
+    }
+    return <DataGridFieldSettings model={fieldsModel} className={className} />;
+  }
+
+  function FieldSets({ sets, className }: DataGridFieldSetsProps) {
+    const { fieldsModel } = useGridContext();
+    if (!fieldsModel) {
+      return null;
+    }
+    return <DataGridFieldSets model={fieldsModel} sets={sets} className={className} />;
   }
 
   function SelectionSummary({ children, className }: DataGridSelectionSummaryProps<TItem>) {
@@ -251,5 +325,14 @@ export function createDataGrid<
     );
   }
 
-  return { Root, Filters, Toolbar, Table, SelectionSummary, filter: defineFilters<TFilters>() };
+  return {
+    Root,
+    Filters,
+    Toolbar,
+    Table,
+    FieldSettings,
+    FieldSets,
+    SelectionSummary,
+    filter: defineFilters<TFilters>(),
+  };
 }

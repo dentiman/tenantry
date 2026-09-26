@@ -46,14 +46,66 @@ export interface DataGridNavigation {
 }
 
 export interface DataGridColumn<T> {
-  /** Ідентифікатор колонки; для sortable-колонок = значення sortBy в API */
+  /**
+   * Ідентифікатор колонки; для sortable-колонок = значення sortBy в API.
+   * Також ключ збереженого вибору полів (localStorage) — перейменування id
+   * повертає цьому полю дефолтну видимість (не ламає, але «забуває»)
+   */
   id: string;
+  /** Підпис у хедері таблиці — і той самий підпис у меню полів */
   header: string;
   cell: (item: T) => ReactNode;
   sortable?: boolean;
   isRowHeader?: boolean;
   align?: 'start' | 'end';
   className?: string;
+  /** false — поле не можна сховати (завжди видиме, у меню полів його немає). Дефолт true */
+  hideable?: boolean;
+  /** Сховане, доки його не ввімкне набір полів або користувач */
+  defaultHidden?: boolean;
+}
+
+/**
+ * Поле запису — атрибут, який грід показує. Таблиця рендерить поле колонкою, майбутні
+ * картки — рядком картки; тому на рівні `Grid.Root` це `fields`, а не `columns`.
+ * Поки що форма та сама, що в колонки (табличні опції align/className/isRowHeader
+ * переїдуть у `table: {…}`, коли зʼявиться другий рендерер).
+ */
+export type DataGridField<T> = DataGridColumn<T>;
+
+/**
+ * Іменований набір видимих полів (пресет) — задається кодом сторінки, користувач його
+ * не змінює: ручна правка полів переводить грід у єдиний Custom-набір.
+ * Порядок `fields` не впливає на порядок рендера — він завжди як у декларації полів.
+ */
+export interface DataGridFieldSet {
+  id: string;
+  label: string;
+  fields: string[];
+}
+
+/** Зарезервований id Custom-набору; сторінка не може оголосити набір із ним */
+export const CUSTOM_FIELD_SET_ID = '__custom';
+
+/**
+ * Стан видимості полів у `Grid.Root`. Root НЕ знає пресетів: їх приносить
+ * `Grid.FieldSets` і записує сюди вже розвʼязаний список. Зберігаються лише
+ * `activeSetId` і `custom`: пресет щоразу застосовується з коду, тож зміна його
+ * складу в новому релізі не перекривається старим знімком.
+ */
+export interface DataGridFieldsState {
+  /** id пресета, CUSTOM_FIELD_SET_ID або null — нічого не обрано (дефолти полів) */
+  activeSetId: string | null;
+  /**
+   * Застосований пресет: id + видимі поля. НЕ зберігається. `id` дає FieldSets
+   * знати, що активний пресет уже застосований (інакше — застосувати з коду).
+   */
+  preset: { id: string; fields: string[] } | null;
+  /**
+   * МАПА видимості Custom, а не список видимих id: поле, додане в новому релізі,
+   * відсутнє в мапі й бере свій `defaultHidden`, а не зникає мовчки. null — Custom ще немає
+   */
+  custom: Record<string, boolean> | null;
 }
 
 /** Entity-специфічний текст; без нього DataGrid бере дефолт із common (loading/empty) */

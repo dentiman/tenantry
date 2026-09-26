@@ -80,5 +80,12 @@
   "messageScroller": {
     "scrollToEnd": "Scroll to end",
     "scrollToStart": "Scroll to start"
+  },
+  "fields": {
+    "settings": "Field settings",
+    "heading": "Fields",
+    "reset": "Reset to default",
+    "sets": "Field sets",
+    "customSet": "Custom"
   }
 }
