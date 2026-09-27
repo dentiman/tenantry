@@ -17,8 +17,10 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Role } from '@saas-skeleton/database';
 import { StorageService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UsersService, type UserWithAvatar } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -29,6 +31,13 @@ import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto';
 import { toUserResponseWithAvatar } from './users.mapper';
 import type { UserResponse, UserListResponse } from '@saas-skeleton/contracts';
 
+/**
+ * Керування обліковими записами тенанта. Читання (`GET`) відкрите всім юзерам тенанта —
+ * ним живляться пікери учасників календаря й власника кастомера. Кожна МУТАЦІЯ —
+ * лише для ADMIN (`@Roles` на хендлері, не на класі): без цього будь-який USER міг
+ * підняти собі роль через `PATCH /users/:id`, скинути чужий пароль чи видалити
+ * акаунт. Власний профіль, аватар і пароль юзер змінює через `/account/*`, не тут.
+ */
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
@@ -59,6 +68,7 @@ export class UsersController {
   }
 
   @Post()
+  @Roles(Role.ADMIN)
   @ApiCreatedResponse({ type: UserResponseDto.Output })
   async create(
     @Body() dto: CreateUserDto,
@@ -69,6 +79,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @Roles(Role.ADMIN)
   @ApiOkResponse({ type: UserResponseDto.Output })
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<UserResponse> {
     const user = await this.usersService.update(id, dto);
@@ -81,6 +92,7 @@ export class UsersController {
    * підтверджувати зміну пароля з відповіді)
    */
   @Post(':id/password')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   async setPassword(
@@ -93,6 +105,7 @@ export class UsersController {
 
   /** Повертає юзера — грід перемальовує рядок із відповіді, без зайвого GET */
   @Patch(':id/status')
+  @Roles(Role.ADMIN)
   @ApiOkResponse({ type: UserResponseDto.Output })
   async setStatus(
     @Param('id') id: string,
@@ -104,6 +117,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   async remove(@Param('id') id: string): Promise<void> {

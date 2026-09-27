@@ -30,12 +30,16 @@ describe('Users API (e2e)', () => {
     return data;
   };
 
+  // Актор керування юзерами — ADMIN: мутації `/users` закриті `@Roles(ADMIN)`.
+  // Звичайного USER-а для негативних перевірок дає окремий `createUserAuthHeaders`
   const createAuthUserPayload = (
     suffix: string,
-  ): { email: string; password: string; name: string } => ({
+    role: 'ADMIN' | 'USER' = 'ADMIN',
+  ): { email: string; password: string; name: string; role: 'ADMIN' | 'USER' } => ({
     email: `auth-${suffix}@example.com`,
     password: 'SecurePass123',
     name: `Auth ${suffix}`,
+    role,
   });
 
   beforeAll(async () => {
@@ -66,6 +70,11 @@ describe('Users API (e2e)', () => {
     return {
       Authorization: `Bearer ${tokens.accessToken}`,
     };
+  };
+
+  const createUserAuthHeaders = async (suffix: string): Promise<{ Authorization: string }> => {
+    const { tokens } = await createAndLoginTestUser(app, prisma, createAuthUserPayload(suffix, 'USER'));
+    return { Authorization: `Bearer ${tokens.accessToken}` };
   };
 
   it('creates a user', async () => {
@@ -705,6 +714,8 @@ describe('Users API (e2e)', () => {
       const actor = await createAndLoginTestUser(app, prisma, {
         email: `self-status-${String(Date.now())}@example.com`,
         password: 'SelfPass12345',
+        // Правило «не себе» стосується того, хто взагалі має право міняти статус — ADMIN
+        role: 'ADMIN',
       });
 
       const response = await request(app.getHttpServer())
@@ -719,6 +730,47 @@ describe('Users API (e2e)', () => {
       // Прапорець мусить лишитись недоторканим
       const unchanged = await prisma.user.findUnique({ where: { id: actor.user.id } });
       expect(unchanged?.isActive).toBe(true);
+    });
+  });
+  describe('role gate: mutations are ADMIN-only, reads stay open', () => {
+    it('lets a USER list and read users (user pickers depend on it)', async () => {
+      const headers = await createUserAuthHeaders(`${Date.now()}-reader`);
+      const target = await prisma.user.create({
+        data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-readable`) },
+      });
+
+      await request(app.getHttpServer()).get('/api/users').set(headers).expect(200);
+      await request(app.getHttpServer()).get(`/api/users/${target.id}`).set(headers).expect(200);
+    });
+
+    it('refuses a USER promoting anyone — including themselves — to ADMIN', async () => {
+      const self = await createAndLoginTestUser(app, prisma, createAuthUserPayload(`${Date.now()}-escalate`, 'USER'));
+      const headers = { Authorization: `Bearer ${self.tokens.accessToken}` };
+
+      await request(app.getHttpServer())
+        .patch(`/api/users/${self.user.id}`)
+        .set(headers)
+        .send({ role: 'ADMIN' })
+        .expect(403);
+
+      const unchanged = await prisma.user.findUnique({ where: { id: self.user.id } });
+      expect(unchanged?.role).toBe('USER');
+    });
+
+    it('refuses a USER every other mutation and leaves the target untouched', async () => {
+      const headers = await createUserAuthHeaders(`${Date.now()}-mutator`);
+      const target = await prisma.user.create({
+        data: { tenantId: DEFAULT_TENANT_ID, ...createDbUserData(`${Date.now()}-victim`) },
+      });
+      const server = app.getHttpServer();
+
+      await request(server).post('/api/users').set(headers).send(createUserPayload(`${Date.now()}-new`)).expect(403);
+      await request(server).post(`/api/users/${target.id}/password`).set(headers).send({ password: 'AnotherPass123' }).expect(403);
+      await request(server).patch(`/api/users/${target.id}/status`).set(headers).send({ isActive: false }).expect(403);
+      await request(server).delete(`/api/users/${target.id}`).set(headers).expect(403);
+
+      const still = await prisma.user.findUnique({ where: { id: target.id } });
+      expect(still?.isActive).toBe(true);
     });
   });
 });

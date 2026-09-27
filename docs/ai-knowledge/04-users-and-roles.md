@@ -15,22 +15,24 @@ this organization."
 | Role | Shown as | What it adds |
 | --- | --- | --- |
 | `USER` | "User" | The regular role. |
-| `ADMIN` | "Admin" | Opens the "Settings" area and can change organization settings (name, currency, calendar defaults, numbering). Can also see and manage calendar events whose organizer's account was deleted. |
+| `ADMIN` | "Admin" | Manages user accounts (add, change password, change avatar, disable/enable, delete). Opens the "Settings" area and can change organization settings (name, currency, calendar defaults, numbering). Can also see and manage calendar events whose organizer's account was deleted. |
 
 There are only these two roles; there are no custom roles or fine-grained permissions.
 Administrators do **not** get access to other people's private data: they cannot read someone
 else's calendar events, chat conversations, notifications or assistant conversations.
 
-Note: the Users page itself is not restricted by role in the current version — every
-signed-in user can open it and use its actions. Agree inside your organization who manages
-accounts.
+Everyone in the organization can open the Users page and see the list and each person's page.
+Only administrators see and can use the actions that change accounts: "Add user", changing a
+password or avatar, disabling or enabling access, and deleting. A regular user sees the list
+without these actions and cannot flip the "Active" switch.
 
 ## The user list
 
 - Search "Search by email or name…", filter "Status" ("All statuses", "Active", "Inactive").
 - Columns: "User", "Phone", "Role", "Active", "Last seen" ("Online", "Never signed in" or "Last
   seen …"), "Created".
-- The "Active" column is a switch: flip it to enable or disable access directly in the list.
+- The "Active" column is a switch: an administrator can flip it to enable or disable access
+  directly in the list.
 - Row checkboxes select users; the "Export selected" button that appears is a placeholder and
   is always disabled — bulk actions and export are not available.
 

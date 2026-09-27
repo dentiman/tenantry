@@ -111,6 +111,9 @@ export function UserDetailPage() {
   }
 
   const isSelf = user.id === currentUser?.id;
+  // Мутації `/users` — ADMIN-only на сервері; USER бачить картку, але не кнопки,
+  // які однаково повернули б 403
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   return (
     <div className="flex flex-col gap-6">
@@ -146,53 +149,55 @@ export function UserDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setIsPasswordOpen(true);
-            }}
-          >
-            {t('password.action')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setIsAvatarOpen(true);
-            }}
-          >
-            {t('avatar.action')}
-          </Button>
-          {user.isActive ? (
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
+              onClick={() => {
+                setIsPasswordOpen(true);
+              }}
+            >
+              {t('password.action')}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsAvatarOpen(true);
+              }}
+            >
+              {t('avatar.action')}
+            </Button>
+            {user.isActive ? (
+              <Button
+                variant="secondary"
+                disabled={isSelf}
+                onClick={() => {
+                  setConfirm('disable');
+                }}
+              >
+                {t('status.disableAction')}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setStatus.mutate({ id: user.id, data: { isActive: true } });
+                }}
+              >
+                {t('status.enableAction')}
+              </Button>
+            )}
+            <Button
+              variant="destructive"
               disabled={isSelf}
               onClick={() => {
-                setConfirm('disable');
+                setConfirm('delete');
               }}
             >
-              {t('status.disableAction')}
+              {t('delete.button')}
             </Button>
-          ) : (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setStatus.mutate({ id: user.id, data: { isActive: true } });
-              }}
-            >
-              {t('status.enableAction')}
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            disabled={isSelf}
-            onClick={() => {
-              setConfirm('delete');
-            }}
-          >
-            {t('delete.button')}
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Дві колонки: зліва дані, справа — постійна стрічка подій. Вкладок більше
@@ -263,15 +268,17 @@ export function UserDetailPage() {
               {!user.avatarUrl && (
                 <p className="text-sm text-muted-foreground">{t('detail.avatarCard.empty')}</p>
               )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setIsAvatarOpen(true);
-                }}
-              >
-                {t('avatar.action')}
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setIsAvatarOpen(true);
+                  }}
+                >
+                  {t('avatar.action')}
+                </Button>
+              )}
             </CardContent>
           </Card>
 

@@ -105,6 +105,8 @@ describe('Files API (e2e)', () => {
       email: `files-${suffix}@example.com`,
       password: 'SecurePass123',
       name: null,
+      // Демо-споживач аватара йде через адмінський `PATCH /users/:id` (ADMIN-only)
+      role: 'ADMIN',
     });
     return { Authorization: `Bearer ${tokens.accessToken}` };
   };

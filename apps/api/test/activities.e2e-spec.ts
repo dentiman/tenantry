@@ -42,6 +42,8 @@ describe('Activities API (e2e)', () => {
       email,
       password: 'SecurePass123',
       name: `Admin ${suffix}`,
+      // Створення юзера — ADMIN-only (`@Roles` на мутаціях `/users`)
+      role: 'ADMIN',
     });
     return { headers: { Authorization: `Bearer ${tokens.accessToken}` }, email };
   };

@@ -55,6 +55,9 @@ function userStatusFilter(t: TFunction<['users', 'common']>): DataGridFilterDef<
 export function UsersPage() {
   const { t } = useTranslation(['users', 'common']);
   const currentUser = useAuthStore((s) => s.user);
+  // Мутації `/users` на сервері — ADMIN-only (`@Roles`); тут лише ховаємо від USER-а
+  // дії, які однаково повернули б 403. Список і перегляд лишаються всім
+  const isAdmin = currentUser?.role === 'ADMIN';
   const queryClient = useQueryClient();
   // Presence — окремий запит: він НЕ залежить від пагінації користувачів і не
   // інвалідується разом із нею (склад сторінки змінюється частіше за присутність)
@@ -162,7 +165,7 @@ export function UsersPage() {
           checked={u.isActive}
           // Себе вимкнути не можна (сервер відхилив би так само — тут лише UX);
           // під час запиту блокуємо ТІЛЬКИ той рядок, який перемикають
-          disabled={u.id === currentUser?.id || isStatusPendingFor(u.id)}
+          disabled={!isAdmin || u.id === currentUser.id || isStatusPendingFor(u.id)}
           onCheckedChange={(isActive) => {
             setStatus.mutate({ id: u.id, data: { isActive } });
           }}
@@ -197,6 +200,7 @@ export function UsersPage() {
     {
       id: 'password',
       label: t('password.action'),
+      isVisible: () => isAdmin,
       onAction: (u) => {
         setPasswordUser(u);
       },
@@ -206,7 +210,7 @@ export function UsersPage() {
     {
       id: 'enable',
       label: t('status.enableAction'),
-      isVisible: (u) => !u.isActive,
+      isVisible: (u) => isAdmin && !u.isActive,
       isDisabled: (u) => u.id === currentUser?.id,
       onAction: (u) => {
         setStatus.mutate({ id: u.id, data: { isActive: true } });
@@ -215,7 +219,7 @@ export function UsersPage() {
     {
       id: 'disable',
       label: t('status.disableAction'),
-      isVisible: (u) => u.isActive,
+      isVisible: (u) => isAdmin && u.isActive,
       isDisabled: (u) => u.id === currentUser?.id,
       onAction: (u) => {
         setStatus.mutate({ id: u.id, data: { isActive: false } });
@@ -248,6 +252,7 @@ export function UsersPage() {
     {
       id: 'avatar',
       label: t('avatar.action'),
+      isVisible: () => isAdmin,
       onAction: (u) => {
         setAvatarUser(u);
       },
@@ -256,6 +261,7 @@ export function UsersPage() {
       id: 'delete',
       label: t('delete.button'),
       isDanger: true,
+      isVisible: () => isAdmin,
       // Себе видалити не можна: пункт видно, але він неактивний
       isDisabled: (u) => u.id === currentUser?.id,
       onAction: (u) => {
@@ -292,7 +298,7 @@ export function UsersPage() {
         label="UsersPage"
         breadcrumbs={[{ label: t('title') }]}
         subtitle={t('subtitle')}
-        actions={<CreateUserModal />}
+        actions={isAdmin ? <CreateUserModal /> : undefined}
       />
 
       {/* Смуга на всю ширину, без відступів і скруглень: у режимі `bleed`
