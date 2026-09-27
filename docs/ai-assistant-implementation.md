@@ -3,8 +3,8 @@
 Довідник поточного стану фічі. **Чому саме так** — у [ai-assistant.md](ai-assistant.md)
 (дослідження і фазовий план); формальні артефакти фаз —
 `openspec/changes/archive/2026-09-20-ai-assistant-pipeline-fake-provider/` (AI-0) і
-`openspec/changes/ai-0-1-hardening/` (AI-0.1), `openspec/changes/ai-1a-openai-compat-provider/`
-(AI-1a), `openspec/changes/ai-1b-knowledge-corpus/` (AI-1b), `openspec/changes/ai-1c-assistant-settings/`
+`openspec/changes/archive/2026-09-27-ai-0-1-hardening/` (AI-0.1), `openspec/changes/archive/2026-09-27-ai-1a-openai-compat-provider/`
+(AI-1a), `openspec/changes/archive/2026-09-27-ai-1b-knowledge-corpus/` (AI-1b), `openspec/changes/archive/2026-09-27-ai-1c-assistant-settings/`
 (AI-1c).
 
 **Статус: AI-0, AI-0.1, AI-1a, AI-1b і AI-1c зроблено — робоча версія + персона як дані.** Конвеєр працює наскрізь — від кнопки в хедері до
@@ -25,7 +25,7 @@
 попереднього видання цього доку (багатовкладковий стрімінг): виключна власність генерації
 (`attempt` + оренда), ретрай усередині доставки для тимчасових помилок, закриття покинутих
 відповідей, довговічний Stop, і сигнал `ai.conversation-changed.v1` для інших вкладок того
-самого юзера. Деталі рішень — `openspec/changes/ai-0-1-hardening/design.md` (D1–D8), не
+самого юзера. Деталі рішень — `openspec/changes/archive/2026-09-27-ai-0-1-hardening/design.md` (D1–D8), не
 дублюються тут, окрім підсумку нижче.
 
 ---
@@ -129,7 +129,7 @@ knowledgeVersion, startedAt, completedAt, createdAt)`.
   запис під час генерації фільтрується по `id AND attempt = <мій>`, нуль оновлених рядків —
   власність утрачено. Оренда встановлюється і на `PENDING` (при створенні, `pendingTimeoutMs`),
   і на `STREAMING` (при захопленні, `leaseMs`); `NULL`/минула оренда — відповідь «покинута»
-  (`ai-assistant.md` §6, `openspec/changes/ai-0-1-hardening/design.md` D1/D3).
+  (`ai-assistant.md` §6, `openspec/changes/archive/2026-09-27-ai-0-1-hardening/design.md` D1/D3).
 - **`chunkCount`** — скільки дельт-кадрів уже увійшло в `content` цієї спроби; разом з
   `attempt` дає клієнту точку продовження після одного перечитування (D6).
 - **`cancelRequestedAt`** — факт Stop у БД РАНІШЕ за pub/sub-сигнал (D4). `claim()` його НЕ

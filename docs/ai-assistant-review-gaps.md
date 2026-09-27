@@ -4,7 +4,7 @@
 Це результати статичного рев’ю та план робіт.
 
 **Статус: усі 6 пунктів ЗАКРИТО в AI-0.1 (2026-09-27),**
-`openspec/changes/ai-0-1-hardening/` (design.md D1–D8, tasks.md групи 1–7). Сценарії
+`openspec/changes/archive/2026-09-27-ai-0-1-hardening/` (design.md D1–D8, tasks.md групи 1–7). Сценарії
 підтверджені юніт- і e2e-тестами, перелік — [ai-assistant-implementation.md](ai-assistant-implementation.md)
 §12. Контекст: [поточна реалізація](ai-assistant-implementation.md).
 
