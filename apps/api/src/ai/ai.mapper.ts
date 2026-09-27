@@ -18,6 +18,8 @@ export function toAiMessageResponse(message: AiMessage): AiMessageResponse {
     status: message.status,
     content: message.content,
     errorCode: message.errorCode as AiMessageErrorCode | null,
+    attempt: message.attempt,
+    chunkCount: message.chunkCount,
     createdAt: message.createdAt.toISOString(),
     completedAt: message.completedAt?.toISOString() ?? null,
   };

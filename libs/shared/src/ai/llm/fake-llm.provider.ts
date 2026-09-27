@@ -33,12 +33,23 @@ Anything else I can help with?`;
 
 /** Директиви у тексті питання — єдиний спосіб дістатись важких гілок із тесту */
 const DIRECTIVES = {
-  /** Провайдер відмовляє → FAILED / PROVIDER_UNAVAILABLE */
+  /** Провайдер відмовляє РЕТРАЙ-ПРИДАТНОЮ помилкою на КОЖНІЙ спробі → вичерпання ретраїв,
+   *  FAILED / PROVIDER_UNAVAILABLE (design.md D2) */
   fail: '__fail__',
   /** Провайдер мовчить назавжди → спрацьовує таймаут або скасування */
   stall: '__stall__',
   /** Довга відповідь → зручно ловити скасування і перевіряти коалесування */
   long: '__long__',
+  /**
+   * Провайдер відмовляє РЕТРАЙ-ПРИДАТНОЮ помилкою РІВНО ОДИН РАЗ для цього запиту,
+   * потім відповідає нормально (AI-0.1, design.md D2). Стан — процес-локальний Set,
+   * ключований останнім user-повідомленням запиту, тому кожен тест з унікальним
+   * текстом питання отримує свій незалежний лічильник
+   */
+  failOnce: '__fail_once__',
+  /** Провайдер відмовляє помилкою, яку РЕТРАЇТИ НЕ МАЄ СЕНСУ (design.md D2) —
+   *  один виклик, і одразу FAILED */
+  reject: '__reject__',
 } as const;
 
 interface FakeLlmOptions {
@@ -52,6 +63,10 @@ interface FakeLlmOptions {
 export class FakeLlmProvider implements LlmProvider {
   private readonly chunkDelayMs: number;
   private readonly chunkChars: number;
+  // Ключ — весь запит, що ніс __fail_once__ (лишок питання): перший виклик кожного
+  // такого запиту падає, наступні — ні. Процес-локально, тому лише для тестів
+  // (design.md, Risks/Trade-offs)
+  private readonly failedOnce = new Set<string>();
 
   constructor(options: FakeLlmOptions = {}) {
     this.chunkDelayMs = options.chunkDelayMs ?? 20;
@@ -62,7 +77,24 @@ export class FakeLlmProvider implements LlmProvider {
     const question = lastUserMessage(request);
 
     if (question.includes(DIRECTIVES.fail)) {
-      throw new LlmProviderError('Fake provider was asked to fail');
+      throw new LlmProviderError('Fake provider was asked to fail', { retryable: true });
+    }
+
+    if (question.includes(DIRECTIVES.reject)) {
+      throw new LlmProviderError('Fake provider rejected the request (non-retryable)', {
+        retryable: false,
+      });
+    }
+
+    if (question.includes(DIRECTIVES.failOnce)) {
+      if (!this.failedOnce.has(question)) {
+        this.failedOnce.add(question);
+        throw new LlmProviderError('Fake provider failed once for this request', {
+          retryable: true,
+        });
+      }
+      // Друга (і кожна наступна) спроба того самого запиту — успіх, наче директиви
+      // не було; далі логіка та сама, що для звичайного питання
     }
 
     if (question.includes(DIRECTIVES.stall)) {

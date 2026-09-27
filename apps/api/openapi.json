@@ -6904,6 +6904,16 @@
                   ],
                   "nullable": true
                 },
+                "attempt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "chunkCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -6923,6 +6933,8 @@
                 "status",
                 "content",
                 "errorCode",
+                "attempt",
+                "chunkCount",
                 "createdAt",
                 "completedAt"
               ],
@@ -7002,6 +7014,16 @@
                 ],
                 "nullable": true
               },
+              "attempt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "chunkCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time",
@@ -7021,6 +7043,8 @@
               "status",
               "content",
               "errorCode",
+              "attempt",
+              "chunkCount",
               "createdAt",
               "completedAt"
             ],
@@ -7069,6 +7093,16 @@
                 ],
                 "nullable": true
               },
+              "attempt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "chunkCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time",
@@ -7088,6 +7122,8 @@
               "status",
               "content",
               "errorCode",
+              "attempt",
+              "chunkCount",
               "createdAt",
               "completedAt"
             ],

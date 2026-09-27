@@ -36,6 +36,49 @@ describe('FakeLlmProvider', () => {
       .rejects.toBeInstanceOf(LlmProviderError);
   });
 
+  it(`${FAKE_LLM_DIRECTIVES.fail} — помилка РЕТРАЙ-ПРИДАТНА (design.md D2)`, async () => {
+    try {
+      await collect(`please retry me ${FAKE_LLM_DIRECTIVES.fail}`, new AbortController().signal);
+      expect.unreachable('має кинути');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LlmProviderError);
+      expect((error as LlmProviderError).retryable).toBe(true);
+    }
+  });
+
+  it(`${FAKE_LLM_DIRECTIVES.reject} кидає НЕ-ретрай-придатну помилку одразу, без стріму`, async () => {
+    try {
+      await collect(`please ${FAKE_LLM_DIRECTIVES.reject}`, new AbortController().signal);
+      expect.unreachable('має кинути');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LlmProviderError);
+      expect((error as LlmProviderError).retryable).toBe(false);
+    }
+  });
+
+  it(`${FAKE_LLM_DIRECTIVES.failOnce} падає ПЕРШИЙ раз для запиту й успішно генерує ДРУГИЙ`, async () => {
+    const question = `unique question one ${FAKE_LLM_DIRECTIVES.failOnce}`;
+
+    await expect(collect(question, new AbortController().signal)).rejects.toBeInstanceOf(
+      LlmProviderError,
+    );
+    const answer = await collect(question, new AbortController().signal);
+    expect(answer).toContain('## ');
+  });
+
+  it(`${FAKE_LLM_DIRECTIVES.failOnce} лічильник незалежний для КОЖНОГО тексту питання`, async () => {
+    const questionA = `unique question two ${FAKE_LLM_DIRECTIVES.failOnce}`;
+    const questionB = `unique question three ${FAKE_LLM_DIRECTIVES.failOnce}`;
+
+    await expect(collect(questionA, new AbortController().signal)).rejects.toBeInstanceOf(
+      LlmProviderError,
+    );
+    // Інший текст питання — свій незалежний лічильник, теж падає перший раз
+    await expect(collect(questionB, new AbortController().signal)).rejects.toBeInstanceOf(
+      LlmProviderError,
+    );
+  });
+
   it(`${FAKE_LLM_DIRECTIVES.stall} не віддає жодного кадру, поки не abort`, async () => {
     const controller = new AbortController();
     const started = Date.now();

@@ -108,6 +108,32 @@ describe('AI assistant API (e2e)', () => {
 
       expect((second.body as AskBody).conversationId).toBe((first.body as AskBody).conversationId);
     });
+
+    it('concurrent first use (GET/ask/reset at once) never 5xx and yields exactly one active conversation', async () => {
+      const { user, tokens } = await createAndLoginTestUser(app, prisma, {
+        email: `ai-concurrent-first-${String(Date.now())}@example.com`,
+        password: 'SecurePass123',
+      });
+      const headers = { Authorization: `Bearer ${tokens.accessToken}` };
+
+      // Три різні шляхи, кожен з яких сам створює розмову на вимогу
+      // (design.md D5): жоден не має впасти на конфлікті часткового індексу
+      const [getResult, askResult, resetResult] = await Promise.all([
+        request(app.getHttpServer()).get('/api/ai/conversation').set(headers),
+        ask(headers, 'concurrent first question'),
+        request(app.getHttpServer()).post('/api/ai/conversation/reset').set(headers),
+      ]);
+
+      for (const response of [getResult, askResult, resetResult]) {
+        expect(response.status).toBeLessThan(500);
+      }
+
+      // Лише ОДНА активна розмова належить цьому юзеру, попри три конкурентні заявки
+      const active = await prisma.aiConversation.findMany({
+        where: { userId: user.id, status: 'ACTIVE' },
+      });
+      expect(active).toHaveLength(1);
+    });
   });
 
   describe('asking', () => {
@@ -163,6 +189,52 @@ describe('AI assistant API (e2e)', () => {
 
       // Перша відповідь не постраждала, і другої роботи в черзі не зʼявилось
       expect(sentJobs.forQueue('ai.generate-reply/ai-generator')).toHaveLength(1);
+    });
+
+    it('two concurrent asks in the same conversation: exactly one 202, one 409, one new pair', async () => {
+      const headers = await login(`${Date.now()}-concurrent-ask`);
+      // Перше питання встановлює розмову й не залишає її «зайнятою»
+      await ask(headers, 'seed question').expect(202);
+      await prisma.aiMessage.updateMany({ data: { status: 'COMPLETE' } });
+
+      const [first, second] = await Promise.all([
+        ask(headers, 'concurrent A'),
+        ask(headers, 'concurrent B'),
+      ]);
+      const statuses = [first.status, second.status].sort();
+      expect(statuses).toEqual([202, 409]);
+
+      const conversationId = (
+        (first.status === 202 ? first : second).body as AskBody
+      ).conversationId;
+      const pairs = await prisma.aiMessage.findMany({
+        where: { conversationId, content: { in: ['concurrent A', 'concurrent B'] } },
+      });
+      // Рівно ОДНА з двох конкурентних пар потрапила в стрічку, без дубля `seq`
+      expect(pairs).toHaveLength(1);
+    });
+
+    it('a reply with an expired lease is returned FAILED and a new ask is accepted', async () => {
+      const headers = await login(`${Date.now()}-abandoned`);
+      const asked = await ask(headers, 'stuck question').expect(202);
+      const replyId = (asked.body as AskBody).reply.id;
+
+      // Симулюємо покинуту відповідь: жоден воркер так і не забрав job
+      await prisma.aiMessage.update({
+        where: { id: replyId },
+        data: { leaseExpiresAt: new Date(Date.now() - 1_000) },
+      });
+
+      const conversation = await request(app.getHttpServer())
+        .get('/api/ai/conversation')
+        .set(headers)
+        .expect(200);
+      const reply = (conversation.body as ConversationBody).messages.find((m) => m.id === replyId);
+      expect(reply?.status).toBe('FAILED');
+      expect(reply?.errorCode).toBe('INTERNAL');
+
+      // Розмова більше не «зайнята» покинутою відповіддю
+      await ask(headers, 'a follow-up question').expect(202);
     });
 
     it('rejects an over-long question without enqueuing anything', async () => {
@@ -253,6 +325,24 @@ describe('AI assistant API (e2e)', () => {
         .post(`/api/ai/conversation/messages/${(asked.body as AskBody).reply.id}/cancel`)
         .set(headers)
         .expect(204);
+    });
+
+    it('Stop before generation started: the row is CANCELLED immediately, no attempt claims it later', async () => {
+      const headers = await login(`${Date.now()}-cancel-pending`);
+      const asked = await ask(headers, 'question never generated').expect(202);
+      const replyId = (asked.body as AskBody).reply.id;
+
+      await request(app.getHttpServer())
+        .post(`/api/ai/conversation/messages/${replyId}/cancel`)
+        .set(headers)
+        .expect(204);
+
+      // Durable СТОП: рядок термінальний одразу, без жодного worker-делівері
+      // (design.md D4) — claim() такий рядок більше ніколи не візьме
+      // (перевірено окремо в AiMessageStateService: термінальні статуси не захоплюються)
+      const row = await prisma.aiMessage.findUniqueOrThrow({ where: { id: replyId } });
+      expect(row.status).toBe('CANCELLED');
+      expect(row.errorCode).toBeNull();
     });
 
     it('accepts a cancel for a reply that already finished (no-op, not an error)', async () => {

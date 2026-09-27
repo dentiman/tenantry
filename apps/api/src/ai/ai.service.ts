@@ -10,11 +10,14 @@ import type { AiConversation, AiMessage, Prisma } from '@saas-skeleton/database'
 import {
   AI_CONFIG,
   AiCancelChannel,
+  AiMessageStateService,
   MessagePublisher,
   generateAiReplyCommand,
   type AiConfig,
 } from '@saas-skeleton/shared';
+import type { AiConversationChanged } from '@saas-skeleton/contracts';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+import { RealtimeEmitter } from '../realtime/realtime.emitter';
 
 /** Скільки останніх повідомлень віддавати панелі за один раз */
 const TRANSCRIPT_LIMIT = 100;
@@ -36,6 +39,8 @@ export class AiService {
     private readonly transactions: TenantTransactions,
     private readonly publisher: MessagePublisher,
     private readonly cancelChannel: AiCancelChannel,
+    private readonly state: AiMessageStateService,
+    private readonly realtime: RealtimeEmitter,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
   ) {}
 
@@ -49,19 +54,38 @@ export class AiService {
   /**
    * Активна розмова зі стрічкою; створюється на вимогу при першому зверненні.
    * Гонку двох вкладок вирішує не перевірка тут, а частковий унікальний індекс
-   * у БД: той, хто програв, ловить P2002 і просто перечитує наявну.
+   * у БД: той, хто програв, читає рядок переможця через `createMany`+`findActive`
+   * (design.md D5) — без ловлі винятку в перерваній транзакції.
+   *
+   * Перед читанням стрічки закриваються ПОКИНУТІ відповіді (design.md D3): інакше
+   * реплика, чию генерацію ніхто не довів до кінця, показувала б «у роботі» вічно.
    */
   async currentConversation(
     actor: JwtPayload,
   ): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
     const existing = await this.findActive(actor.sub);
     const conversation = existing ?? (await this.createActive(actor.sub));
+
+    await this.transactions.withTenantTx(async (tx) => {
+      const closed = await this.state.closeAbandoned(tx, conversation.id);
+      if (closed > 0) {
+        this.transactions.onCommit(tx, () => {
+          this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'reply-closed');
+        });
+      }
+    });
+
     return { conversation, messages: await this.transcript(conversation.id) };
   }
 
   /**
    * Питання. Усе — питання, порожня відповідь і публікація команди — в ОДНІЙ
    * транзакції: або факт і його робота зафіксувались разом, або не сталося нічого.
+   *
+   * Порядок кроків навмисний (design.md D3, D5):
+   *  1. UPDATE розмови (бере її рядковий лок — конкурентні `ask()` серіалізуються);
+   *  2. закрити покинуті відповіді — мертва відповідь не має тримати «зайнято» вічно;
+   *  3. лише ТЕПЕР перевірити «зайнято» і створити нове питання/відповідь.
    */
   async ask(
     actor: JwtPayload,
@@ -70,6 +94,16 @@ export class AiService {
     return this.transactions.withTenantTx(async (tx) => {
       const conversation =
         (await this.findActive(actor.sub, tx)) ?? (await this.createActive(actor.sub, tx));
+
+      // Крок 1: лок рядка розмови ПЕРШИМ — це і є арбітр гонки двох конкурентних
+      // ask() в тій самій розмові (замість перегонів до унікального індексу `seq`)
+      await tx.aiConversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: new Date() },
+      });
+
+      // Крок 2: покинута відповідь — не привід тримати розмову зайнятою
+      const closed = await this.state.closeAbandoned(tx, conversation.id);
 
       const last = await tx.aiMessage.findFirst({
         where: { conversationId: conversation.id },
@@ -101,11 +135,11 @@ export class AiService {
           role: 'ASSISTANT',
           status: 'PENDING',
           content: '',
+          // Оренда з моменту створення (design.md D3): якщо жодна доставка job-у
+          // так і не захопить рядок, він закриється сам на наступному читанні,
+          // а не триматиме розмову «зайнятою» вічно
+          leaseExpiresAt: new Date(Date.now() + this.config.pendingTimeoutMs),
         },
-      });
-      await tx.aiConversation.update({
-        where: { id: conversation.id },
-        data: { lastMessageAt: new Date() },
       });
 
       // `group` — це справедливість між тенантами: pg-boss не дасть одному
@@ -121,6 +155,18 @@ export class AiService {
           group: { id: actor.tenantId },
         },
       );
+
+      if (closed > 0) {
+        this.transactions.onCommit(tx, () => {
+          this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'reply-closed');
+        });
+      }
+      // Інші вкладки того самого юзера не бачать нового рядка інакше (design.md D7,
+      // фікс §6.3): дельта прийде лише туди, де відповідь уже в кеші, а перше
+      // питання ходу дельти не має взагалі
+      this.transactions.onCommit(tx, () => {
+        this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'turn-created');
+      });
 
       return { conversation, question, reply };
     });
@@ -139,7 +185,11 @@ export class AiService {
         where: { userId: actor.sub, status: 'ACTIVE' },
         data: { status: 'RETIRED' },
       });
-      return this.createActive(actor.sub, tx);
+      const created = await this.createActive(actor.sub, tx);
+      this.transactions.onCommit(tx, () => {
+        this.emitConversationChanged(created.tenantId, actor.sub, created.id, 'reset');
+      });
+      return created;
     });
     return { conversation, messages: [] };
   }
@@ -147,6 +197,11 @@ export class AiService {
   /**
    * Зупинити генерацію. Успіх і тоді, коли відповідь уже завершилась: скасувати
    * завершене — за специфікацією no-op, а не помилка.
+   *
+   * Stop — ФАКТ У БД РАНІШЕ за pub/sub-сигнал (design.md D4): для `PENDING` це
+   * фінальне й миттєве `CANCELLED` (claim() у воркері такий рядок більше не
+   * знайде), для `STREAMING` — маркер `cancelRequestedAt`, і сигнал швидкого
+   * шляху публікується лише тоді, коли маркер дійсно поставлено на живому рядку.
    */
   async cancel(actor: JwtPayload, messageId: string): Promise<void> {
     const message = await this.prisma.aiMessage.findUnique({
@@ -160,7 +215,32 @@ export class AiService {
     if (message.status !== 'PENDING' && message.status !== 'STREAMING') {
       return;
     }
-    await this.cancelChannel.requestCancel(messageId);
+
+    const cancelledPending = await this.transactions.withTenantTx(async (tx) => {
+      const cancelled = await this.state.cancelPending(tx, messageId);
+      if (cancelled) {
+        this.transactions.onCommit(tx, () => {
+          this.emitConversationChanged(
+            message.tenantId,
+            actor.sub,
+            message.conversationId,
+            'reply-closed',
+          );
+        });
+      }
+      return cancelled;
+    });
+    if (cancelledPending) {
+      return;
+    }
+
+    // Рядок уже STREAMING (не PENDING, інакше крок вище б спрацював): записуємо
+    // маркер і лише за успіху публікуємо швидкий сигнал — на термінальному рядку
+    // (worker встиг фіналізувати між нашими двома читаннями) публікувати нічого
+    const marked = await this.transactions.withTenantTx((tx) => this.state.requestCancel(tx, messageId));
+    if (marked) {
+      await this.cancelChannel.requestCancel(messageId);
+    }
   }
 
   private async findActive(
@@ -171,23 +251,28 @@ export class AiService {
     return client.aiConversation.findFirst({ where: { userId, status: 'ACTIVE' } });
   }
 
+  /**
+   * `createMany` + `skipDuplicates` — Postgres `INSERT ... ON CONFLICT DO NOTHING`
+   * (design.md D5). На відміну від `create()` + catch(P2002), тут НІЧОГО не кидає,
+   * тож транзакція не переривається: unique violation у Postgres обриває саму
+   * транзакцію, і читання одразу після неї без rollback/savepoint не відновило б
+   * її (docs/ai-assistant-review-gaps.md п.4).
+   */
   private async createActive(
     userId: string,
     tx?: Prisma.TransactionClient,
   ): Promise<AiConversation> {
     const client = tx ?? this.prisma;
-    try {
-      return await client.aiConversation.create({ data: { userId, status: 'ACTIVE' } });
-    } catch (error) {
-      // P2002 на частковому унікальному індексі = інша вкладка встигла першою
-      if (isUniqueViolation(error)) {
-        const existing = await this.findActive(userId, tx);
-        if (existing) {
-          return existing;
-        }
-      }
-      throw error;
+    await client.aiConversation.createMany({
+      data: [{ userId, status: 'ACTIVE' }],
+      skipDuplicates: true,
+    });
+    const conversation = await this.findActive(userId, tx);
+    if (!conversation) {
+      // Неможливо за конструкцією: або ми, або конкурент щойно вставили ACTIVE-рядок
+      throw new Error(`AiService.createActive: no active conversation for user ${userId} after insert`);
     }
+    return conversation;
   }
 
   private async transcript(conversationId: string): Promise<AiMessage[]> {
@@ -198,13 +283,17 @@ export class AiService {
     });
     return messages.reverse();
   }
-}
 
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'P2002'
-  );
+  private emitConversationChanged(
+    tenantId: string,
+    userId: string,
+    conversationId: string,
+    reason: AiConversationChanged['reason'],
+  ): void {
+    this.realtime.aiConversationChanged(tenantId, userId, {
+      conversationId,
+      reason,
+      occurredAt: new Date().toISOString(),
+    });
+  }
 }

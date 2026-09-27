@@ -1,15 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
+import { TenantTransactions } from '@saas-skeleton/database';
 import {
   AI_CONFIG,
   AiCancelChannel,
+  AiMessageStateService,
   LLM_PROVIDER,
   LlmProviderError,
   MessageSubscriber,
   buildPrompt,
   generateAiReplyCommand,
+  selectHistoryPairs,
   type AiConfig,
-  type AiHistoryTurn,
   type LlmProvider,
   type LlmRequest,
   type MessageData,
@@ -17,26 +18,38 @@ import {
 } from '@saas-skeleton/shared';
 import type { AiMessageErrorCode } from '@saas-skeleton/contracts';
 import { WorkerRealtimeEmitter } from '../realtime/worker-realtime.emitter';
+import { ChunkCoalescer, type CoalescedFrame } from '../ai/chunk-coalescer';
 
 type GenerateAiReply = MessageData<typeof generateAiReplyCommand>;
 
+/** Скільки ЗАЙВИХ ходів історії читати понад `historyTurns`, щоб провалені/зупинені
+ *  ходи (які selectHistoryPairs викидає) не крали місце у вікні непомітно */
+const HISTORY_SLACK_TURNS = 5;
+
+interface PreparedGeneration {
+  readonly tenantId: string;
+  readonly userId: string;
+  readonly attempt: number;
+  readonly prompt: LlmRequest;
+}
+
 /**
- * Генерація відповіді асистента (docs/ai-assistant-plan.md §4.5).
+ * Генерація відповіді асистента (docs/ai-assistant.md §6, AI-0.1 design.md).
  *
- * Три фази, і головне правило — ТРАНЗАКЦІЯ НЕ ТРИМАЄТЬСЯ ЧЕРЕЗ ВИКЛИК МОДЕЛІ:
+ * Координатор, а не виконавець усього: власність рядка, ретраї й накопичення
+ * дельт винесено в `AiMessageStateService` і `ChunkCoalescer` (design.md D8) —
+ * тут лишається послідовність кроків.
  *
- *   tx1  прочитати розмову й історію, поставити STREAMING
- *    —   без транзакції: стрім → коалесування → дельти, кожні ~2 с короткий UPDATE
- *   tx2  фінальний текст + статус + after-commit емісія completed
+ * ГОЛОВНЕ ПРАВИЛО не змінилось з AI-0: ТРАНЗАКЦІЯ НЕ ТРИМАЄТЬСЯ ЧЕРЕЗ ВИКЛИК МОДЕЛІ.
+ * `prepare()` — коротка транзакція (читання + `claim()`). Стрім, ретраї всередині
+ * доставки (design.md D2) і періодична перевірка Stop (D4) — поза транзакцією.
+ * `finalize()` — знову коротка транзакція, і саме вона виставляє фінальний стан
+ * та емітує `ai.message-completed.v1` ПІСЛЯ комміту.
  *
- * `withTenantTx` відкриває інтерактивну транзакцію Postgres. Протягнути крізь неї
- * десятки секунд генерації означало б тримати конекшн пулу і відкритий снапшот,
- * який блокує vacuum по ВСІЙ базі.
- *
- * Ідемпотентність — по СТАТУСУ РЯДКА, а не через `MessageInboxService.runOnce`:
- * runOnce ключується `messageId:consumerId` і назавжди зʼїв би легальний ретрай
- * після тимчасової відмови провайдера. Бізнес-факт тут — «відповідь вироблено»,
- * і він уже записаний у `ai_messages.status`.
+ * Власність генерації — це `attempt`, встановлений `claim()`: КОЖЕН запис
+ * (проміжний, рестарт, фінал) фенситься тим самим номером, і нуль оновлених
+ * рядків означає, що спробу випереджено. У такому разі координатор МОВЧКИ
+ * зупиняється — жодних дельт, жодної фіналізації (design.md D1).
  */
 @Injectable()
 @MessageSubscriber({ definition: generateAiReplyCommand, id: 'ai-generator' })
@@ -46,8 +59,8 @@ export class AiGenerateReplySubscriber
   private readonly logger = new Logger(AiGenerateReplySubscriber.name);
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly transactions: TenantTransactions,
+    private readonly state: AiMessageStateService,
     private readonly realtime: WorkerRealtimeEmitter,
     private readonly cancelChannel: AiCancelChannel,
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
@@ -60,62 +73,127 @@ export class AiGenerateReplySubscriber
       return;
     }
     const { tenantId, userId, prompt } = prepared;
+    let attempt = prepared.attempt;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort('timeout');
     }, this.config.requestTimeoutMs);
-    // Скасування користувачем приходить через Valkey: воркер усередині читання
-    // потоку не опитує БД (див. AiCancelChannel)
-    const unsubscribe = await this.cancelChannel.onCancel(data.messageId, () => {
+    // Швидкий шлях: Valkey pub/sub (докладніше — AiCancelChannel)
+    const unsubscribeCancel = await this.cancelChannel.onCancel(data.messageId, () => {
       controller.abort('cancelled');
     });
+    // Гонка «Stop до підписки» (design.md D4): маркер у БД міг зʼявитись до
+    // рядка вище — одна перевірка одразу після підписки її закриває
+    if (!controller.signal.aborted && (await this.checkCancelRequested(data.messageId))) {
+      controller.abort('cancelled');
+    }
+    // Незалежно від кадрів провайдера (D4): мовчазний провайдер (`__stall__`) теж
+    // мусить зупинитись, а не чекати, поки надійде кадр, аби перевірити abort
+    const cancelCheckTimer = setInterval(() => {
+      if (controller.signal.aborted) {
+        return;
+      }
+      this.checkCancelRequested(data.messageId)
+        .then((cancelled) => {
+          if (cancelled) {
+            controller.abort('cancelled');
+          }
+        })
+        .catch(() => undefined);
+    }, this.config.cancelCheckMs);
 
-    let text = '';
-    let chunkSeq = 0;
+    let coalescer = new ChunkCoalescer(this.config.streamFlushMs);
     let lastPersistedAt = Date.now();
     let failure: AiMessageErrorCode | null = null;
+    let lostOwnership = false;
+    let providerCalls = 0;
 
     try {
-      let pending = '';
-      let lastFlushAt = Date.now();
+      streamLoop: for (;;) {
+        providerCalls += 1;
+        try {
+          for await (const chunk of this.llm.generate(prompt, controller.signal)) {
+            const now = Date.now();
+            const frame = coalescer.push(chunk.text, now);
+            if (frame) {
+              this.emitDelta(tenantId, userId, data, attempt, frame);
+            }
 
-      for await (const chunk of this.llm.generate(prompt, controller.signal)) {
-        pending += chunk.text;
-        const now = Date.now();
+            if (now - lastPersistedAt >= this.config.partialPersistMs) {
+              const stillOwned = await this.persistPartial(
+                data.messageId,
+                attempt,
+                coalescer.accumulatedText,
+                coalescer.chunkCount,
+              );
+              lastPersistedAt = now;
+              if (!stillOwned) {
+                lostOwnership = true;
+                controller.abort('superseded');
+                break;
+              }
+            }
+          }
 
-        // Коалесування: кадр віддається або по таймеру, або на межі абзацу —
-        // інакше хвіст відповіді чекав би повний інтервал після останнього кадру
-        const dueByTime = now - lastFlushAt >= this.config.streamFlushMs;
-        const dueByParagraph = pending.endsWith('\n\n');
-        if (pending.length > 0 && (dueByTime || dueByParagraph)) {
-          text += pending;
-          this.emitDelta(tenantId, userId, data, chunkSeq, pending);
-          chunkSeq += 1;
-          pending = '';
-          lastFlushAt = now;
-        }
+          if (lostOwnership) {
+            break streamLoop;
+          }
 
-        if (now - lastPersistedAt >= this.config.partialPersistMs) {
-          await this.persistPartial(data.messageId, text);
-          lastPersistedAt = now;
+          const tail = coalescer.flush();
+          if (tail) {
+            this.emitDelta(tenantId, userId, data, attempt, tail);
+          }
+          break streamLoop; // успіх — вихід зі стрім-циклу
+        } catch (error) {
+          // Ретрай усередині ЦІЄЇ доставки (design.md D2) — НЕ через pg-boss:
+          // обробник не бачить `retryCount` черги, тож лише тут відомо, чи
+          // лишився бюджет. Черга ретраїть окремо, і лише падіння процесу
+          const retryable = error instanceof LlmProviderError && error.retryable;
+          const budgetLeft = providerCalls <= this.config.providerRetries;
+          const alreadyAborted = controller.signal.aborted;
+          if (retryable && budgetLeft && !alreadyAborted) {
+            await this.waitForRetry(controller.signal);
+            // TS-CFA хибно тягне «aborted було false до await» крізь сам await
+            // (не бачить, що `controller.abort()` викликається асинхронно, з
+            // колбеків onCancel/cancelCheckTimer) — тому й `no-unnecessary-condition`
+            // тут хибне спрацювання: чекання МОГЛО перерватись Stop-ом чи timeout-ом
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- див. коментар вище
+            if (controller.signal.aborted) {
+              // Stop або timeout сталися ПІД ЧАС паузи — постобробка нижче
+              // визначить статус за причиною abort, ретраю не буде
+              break streamLoop;
+            }
+            const restarted = await this.restart(data.messageId, attempt);
+            if (!restarted) {
+              lostOwnership = true;
+              break streamLoop;
+            }
+            attempt = restarted.attempt;
+            // Нова спроба — новий коалесер: попередній текст скинуто (АТОМАРНО,
+            // разом із рядком, у restart()), клієнт побачить chunkSeq 0 нового
+            // attempt і викине накопичене від попередньої (design.md D6)
+            coalescer = new ChunkCoalescer(this.config.streamFlushMs);
+            continue streamLoop;
+          }
+
+          failure = error instanceof LlmProviderError ? 'PROVIDER_UNAVAILABLE' : 'INTERNAL';
+          this.logger.error(
+            { err: error, messageId: data.messageId },
+            `AI generation failed: ${failure}`,
+          );
+          break streamLoop;
         }
       }
-
-      if (pending.length > 0) {
-        text += pending;
-        this.emitDelta(tenantId, userId, data, chunkSeq, pending);
-        chunkSeq += 1;
-      }
-    } catch (error) {
-      failure = error instanceof LlmProviderError ? 'PROVIDER_UNAVAILABLE' : 'INTERNAL';
-      this.logger.error(
-        { err: error, messageId: data.messageId },
-        `AI generation failed: ${failure}`,
-      );
     } finally {
       clearTimeout(timeout);
-      unsubscribe();
+      clearInterval(cancelCheckTimer);
+      unsubscribeCancel();
+    }
+
+    if (lostOwnership) {
+      // Мовчки: жодної дельти більше, жодної фіналізації (design.md D1)
+      return;
     }
 
     const aborted = controller.signal.aborted;
@@ -129,21 +207,22 @@ export class AiGenerateReplySubscriber
       conversationId: data.conversationId,
       tenantId,
       userId,
-      text,
+      attempt,
+      text: coalescer.accumulatedText,
+      chunkCount: coalescer.chunkCount,
       status: failure !== null ? 'FAILED' : cancelledByUser ? 'CANCELLED' : 'COMPLETE',
       errorCode: failure,
     });
   }
 
   /**
-   * Фаза 1. Повертає null, коли працювати нема над чим — і це НЕ помилка:
-   * повторна доставка вже завершеної відповіді має тихо вийти.
+   * Читання й перевірки, ЩО НЕ ЗАЛЕЖАТЬ від `attempt` (питання, історія, юзер),
+   * плюс саме захоплення власності `claim()` — останнім кроком тієї ж транзакції.
+   * Повертає `null`, коли працювати нема над чим: рядок зник, юзера чи питання
+   * не знайдено, або `claim()` каже, що рядок уже захоплено/термінальний — це
+   * НЕ помилка, повторна доставка вже обробленої відповіді тихо виходить.
    */
-  private async prepare(data: GenerateAiReply): Promise<{
-    tenantId: string;
-    userId: string;
-    prompt: LlmRequest;
-  } | null> {
+  private async prepare(data: GenerateAiReply): Promise<PreparedGeneration | null> {
     return this.transactions.withTenantTx(async (tx) => {
       const reply = await tx.aiMessage.findUnique({
         where: { id: data.messageId },
@@ -154,11 +233,6 @@ export class AiGenerateReplySubscriber
         this.logger.warn(`AI reply ${data.messageId} is gone — nothing to generate`);
         return null;
       }
-      // Якір ідемпотентності: працюємо лише над PENDING/STREAMING
-      if (reply.status !== 'PENDING' && reply.status !== 'STREAMING') {
-        this.logger.debug(`AI reply ${data.messageId} already ${reply.status} — skipping`);
-        return null;
-      }
 
       const user = await tx.user.findUnique({
         where: { id: reply.conversation.userId },
@@ -167,17 +241,6 @@ export class AiGenerateReplySubscriber
       if (!user) {
         return null;
       }
-
-      const history = await tx.aiMessage.findMany({
-        where: {
-          conversationId: data.conversationId,
-          seq: { lt: reply.seq },
-          status: 'COMPLETE',
-        },
-        orderBy: { seq: 'desc' },
-        take: this.config.historyTurns * 2,
-        select: { role: true, content: true },
-      });
 
       // Питання — це рядок РІВНО перед відповіддю: seq монотонний у межах розмови,
       // тому пара «питання/відповідь» це (seq-1, seq), без жодного пошуку
@@ -190,26 +253,44 @@ export class AiGenerateReplySubscriber
         return null;
       }
 
-      // Ретрай перестрімлює з нуля, тому накопичений текст скидається — інакше
-      // дві спроби склеїлись би в одну відповідь
-      await tx.aiMessage.update({
-        where: { id: reply.id },
-        data: {
-          status: 'STREAMING',
-          content: '',
-          errorCode: null,
-          startedAt: new Date(),
-          model: this.config.model,
-        },
+      // seq < reply.seq - 1 (НЕ reply.seq): рядок reply.seq - 1 — саме questionRow вище,
+      // і buildPrompt() додає його окремо як `question`. Включити його сюди теж означало б
+      // надіслати моделі те саме питання двічі (docs/ai-assistant-review-gaps.md п.2).
+      //
+      // Статус НЕ фільтрується тут: провалений/зупинений хід має піти з контексту ЦІЛОЮ
+      // парою, а не лишити своє питання без пари — цим займається selectHistoryPairs.
+      // Слек понад historyTurns*2 рядків — щоб такі невдалі ходи не крали місце в вікні
+      // в НЕПОМІЧЕНИЙ спосіб (design.md D8): вибірка каже, скільки рядків прочитано, а не
+      // скільки ЗАВЕРШЕНИХ пар серед них.
+      const historyRows = await tx.aiMessage.findMany({
+        where: { conversationId: data.conversationId, seq: { lt: reply.seq - 1 } },
+        orderBy: { seq: 'desc' },
+        take: (this.config.historyTurns + HISTORY_SLACK_TURNS) * 2,
+        select: { seq: true, role: true, status: true, content: true },
       });
+      const history = selectHistoryPairs(historyRows.reverse(), this.config.historyTurns);
+
+      // Захоплення власності — ОСТАННІМ кроком, коли вже відомо, що є з чим
+      // генерувати (design.md D1). Той самий якір ідемпотентності, що раніше
+      // тримав прямий статус-чек: PENDING/STREAMING-з-простроченою-орендою — так,
+      // усе інше — тихий вихід
+      const claimed = await this.state.claim(tx, data.messageId, data.conversationId, {
+        leaseMs: this.config.leaseMs,
+        model: this.config.model,
+      });
+      if (!claimed) {
+        this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
+        return null;
+      }
 
       return {
-        tenantId: reply.tenantId,
-        userId: reply.conversation.userId,
+        tenantId: claimed.tenantId,
+        userId: claimed.userId,
+        attempt: claimed.attempt,
         prompt: {
           messages: buildPrompt({
             question: questionRow.content,
-            history: toHistory(history.reverse()),
+            history,
             knowledge: [],
             user: { role: user.role, locale: user.locale },
           }),
@@ -221,41 +302,76 @@ export class AiGenerateReplySubscriber
   }
 
   /**
-   * Короткий самостійний UPDATE поза транзакцією. Це не підстраховка, а те, завдяки
-   * чому «частковий текст переживає обрив» і «reconnect посеред генерації» взагалі
-   * правдиві: перезавантажена сторінка читає стрічку і бачить згенероване досі.
+   * Короткий самостійний запис поза генераційним потоком — те, завдяки чому
+   * «частковий текст переживає обрив» і «reconnect посеред генерації» взагалі
+   * правдиві. `false` — власність утрачено, викликач має зупинити стрім МОВЧКИ.
+   * Помилка запису (не фенсингу) не має права звалити генерацію — лишається
+   * `true`, фінальний запис усе одно розставить крапки над «і».
    */
-  private async persistPartial(messageId: string, text: string): Promise<void> {
+  private async persistPartial(
+    messageId: string,
+    attempt: number,
+    text: string,
+    chunkCount: number,
+  ): Promise<boolean> {
     try {
-      await this.transactions.withTenantTx((tx) =>
-        tx.aiMessage.update({ where: { id: messageId }, data: { content: text } }),
+      return await this.transactions.withTenantTx((tx) =>
+        this.state.persistPartial(tx, messageId, attempt, text, chunkCount),
       );
     } catch (error) {
-      // Проміжний запис не має права валити генерацію — фінальний усе одно буде
       this.logger.warn(`Partial persist failed for ${messageId}: ${String(error)}`);
+      return true;
     }
   }
 
-  /** Фаза 3: фінальний стан + емісія ПІСЛЯ комміту */
+  /** Перезапуск усередині доставки після тимчасової відмови (design.md D2) */
+  private async restart(
+    messageId: string,
+    ownedAttempt: number,
+  ): Promise<{ attempt: number } | null> {
+    return this.transactions.withTenantTx((tx) =>
+      this.state.restart(tx, messageId, ownedAttempt, { leaseMs: this.config.leaseMs }),
+    );
+  }
+
+  /** Читання маркера Stop (design.md D4). Помилка читання — не привід зупиняти генерацію */
+  private async checkCancelRequested(messageId: string): Promise<boolean> {
+    try {
+      return await this.transactions.withTenantTx((tx) =>
+        this.state.isCancelRequested(tx, messageId),
+      );
+    } catch (error) {
+      this.logger.warn(`Cancel check failed for ${messageId}: ${String(error)}`);
+      return false;
+    }
+  }
+
+  /**
+   * Фінальний стан + емісія ПІСЛЯ комміту. `false` — власність утрачено між
+   * останнім записом і фіналізацією: викликач не робить нічого більше.
+   */
   private async finalize(input: {
     messageId: string;
     conversationId: string;
     tenantId: string;
     userId: string;
+    attempt: number;
     text: string;
+    chunkCount: number;
     status: 'COMPLETE' | 'FAILED' | 'CANCELLED';
     errorCode: AiMessageErrorCode | null;
-  }): Promise<void> {
-    await this.transactions.withTenantTx(async (tx) => {
-      await tx.aiMessage.update({
-        where: { id: input.messageId },
-        data: {
-          content: input.text,
-          status: input.status,
-          errorCode: input.errorCode,
-          completedAt: new Date(),
-        },
+  }): Promise<boolean> {
+    return this.transactions.withTenantTx(async (tx) => {
+      const finalized = await this.state.finalize(tx, input.messageId, input.attempt, {
+        status: input.status,
+        errorCode: input.errorCode,
+        text: input.text,
+        chunkCount: input.chunkCount,
       });
+      if (!finalized) {
+        return false;
+      }
+
       await tx.aiConversation.update({
         where: { id: input.conversationId },
         data: { lastMessageAt: new Date() },
@@ -272,6 +388,7 @@ export class AiGenerateReplySubscriber
           occurredAt: new Date().toISOString(),
         });
       });
+      return true;
     });
   }
 
@@ -279,21 +396,34 @@ export class AiGenerateReplySubscriber
     tenantId: string,
     userId: string,
     data: GenerateAiReply,
-    chunkSeq: number,
-    text: string,
+    attempt: number,
+    frame: CoalescedFrame,
   ): void {
     this.realtime.aiDelta(tenantId, userId, {
       conversationId: data.conversationId,
       messageId: data.messageId,
-      chunkSeq,
-      text,
+      attempt,
+      chunkSeq: frame.chunkSeq,
+      text: frame.text,
     });
   }
-}
 
-function toHistory(rows: { role: string; content: string }[]): AiHistoryTurn[] {
-  return rows.map((row) => ({
-    role: row.role === 'USER' ? 'user' : 'assistant',
-    content: row.content,
-  }));
+  /** Пауза перед ретраєм, яка миттєво завершується на abort (Stop або timeout) */
+  private waitForRetry(signal: AbortSignal): Promise<void> {
+    const ms = this.config.retryDelayMs;
+    if (ms <= 0 || signal.aborted) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      function onAbort(): void {
+        clearTimeout(timer);
+        resolve();
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+  }
 }

@@ -25,6 +25,15 @@ const intFromEnv = (fallback: number): z.ZodType<number, string | undefined> =>
     .transform((value) => (value === undefined || value === '' ? fallback : Number(value)))
     .pipe(z.number().int().positive());
 
+/** Як `intFromEnv`, але 0 — легальне значення (наприклад, "жодного ретраю") */
+const nonNegativeIntFromEnv = (fallback: number): z.ZodType<number, string | undefined> =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === undefined || value === '' ? fallback : Number(value)))
+    .pipe(z.number().int().nonnegative());
+
 /**
  * `fake` — ЄДИНЕ легальне значення у AI-0. Невідоме значення валить старт, а не
  * тихо відкочується на фейк: інсталяція, яка думає, що говорить із реальною
@@ -64,7 +73,34 @@ const AiEnvSchema = z.object({
     .trim()
     .optional()
     .transform((value) => (value === undefined || value === '' ? 'fake-1' : value)),
+  /**
+   * AI-0.1 (docs/ai-assistant-review-gaps.md п.3, design.md D2): скільки РАЗІВ
+   * перезапускати генерацію всередині ОДНІЄЇ доставки після тимчасової відмови
+   * провайдера, перш ніж визнати відповідь FAILED. 0 — жодного ретраю
+   */
+  AI_PROVIDER_RETRIES: nonNegativeIntFromEnv(1),
+  /** Пауза перед перезапуском (design.md D2). Скасовна: Stop/timeout перериває чекання */
+  AI_RETRY_DELAY_MS: intFromEnv(2_000),
+  /**
+   * Оренда для PENDING-рядка, виставлена одразу при створенні (design.md D3):
+   * якщо відповідь так і не була захоплена жодною доставкою до цього строку,
+   * вона вважається покинутою і закривається на наступному читанні розмови
+   */
+  AI_PENDING_TIMEOUT_MS: intFromEnv(300_000),
+  /**
+   * Період власної перевірки `cancelRequestedAt` під час стріму (design.md D4) —
+   * незалежно від кадрів провайдера, тому й мовчазний провайдер таки зупиняється
+   */
+  AI_CANCEL_CHECK_MS: intFromEnv(2_000),
 });
+
+/**
+ * Запас над `requestTimeoutMs` для оренди власності генерації (design.md D1).
+ * Heartbeat не потрібен: загальний таймаут (разом з ретраями всередині нього, D2)
+ * і так обмежує генерацію — живий власник ніколи не переживе власну оренду.
+ * Запас поглинає розбіжність годинників API/worker на одному ноді (Risks D1).
+ */
+export const AI_LEASE_GRACE_MS = 30_000;
 
 export interface AiConfig {
   enabled: boolean;
@@ -75,6 +111,12 @@ export interface AiConfig {
   streamFlushMs: number;
   partialPersistMs: number;
   model: string;
+  providerRetries: number;
+  retryDelayMs: number;
+  pendingTimeoutMs: number;
+  cancelCheckMs: number;
+  /** requestTimeoutMs + AI_LEASE_GRACE_MS — похідне, не власний env (design.md D1) */
+  leaseMs: number;
 }
 
 export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
@@ -95,6 +137,11 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     streamFlushMs: e.AI_STREAM_FLUSH_MS,
     partialPersistMs: e.AI_PARTIAL_PERSIST_MS,
     model: e.AI_MODEL,
+    providerRetries: e.AI_PROVIDER_RETRIES,
+    retryDelayMs: e.AI_RETRY_DELAY_MS,
+    pendingTimeoutMs: e.AI_PENDING_TIMEOUT_MS,
+    cancelCheckMs: e.AI_CANCEL_CHECK_MS,
+    leaseMs: e.AI_REQUEST_TIMEOUT_MS + AI_LEASE_GRACE_MS,
   };
 }
 

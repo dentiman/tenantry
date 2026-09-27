@@ -909,6 +909,23 @@ model AiMessage {
   promptTokens     Int?    @map("prompt_tokens")
   completionTokens Int?    @map("completion_tokens")
 
+  // ВЛАСНІСТЬ ГЕНЕРАЦІЇ (AI-0.1, design.md D1). Захоплюється умовним UPDATE, що
+  // збільшує `attempt` і виставляє оренду; кожен наступний запис — теж умовний
+  // UPDATE з `WHERE attempt = <моя спроба>`. Нуль оновлених рядків = спробу
+  // випереджено — генерація припиняється мовчки, нічого не фіналізується
+  attempt Int @default(0)
+  // Оренда власності: PENDING отримує її при створенні (design.md D3), STREAMING —
+  // при захопленні. NULL або минула — відповідь "покинута", закривається на
+  // наступному читанні розмови, а не сканером-кроном
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  // Стрічка знає позицію потоку: скільки кадрів дельт уже увійшло в `content`.
+  // Разом з `attempt` це дає клієнту точку, з якої продовжувати після одного
+  // перечитування, без вгадування по `chunkSeq === 0` (design.md D6)
+  chunkCount Int @default(0) @map("chunk_count")
+  // Факт Stop, записаний у БД РАНІШЕ за pub/sub-сигнал (design.md D4): доставляє
+  // скасування, навіть якщо сигнал загублено або надійшов до підписки воркера
+  cancelRequestedAt DateTime? @map("cancel_requested_at")
+
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
   createdAt   DateTime  @default(now()) @map("created_at")

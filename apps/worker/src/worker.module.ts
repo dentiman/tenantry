@@ -12,6 +12,7 @@ import {
 } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
+import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
@@ -46,6 +47,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
   ],
   providers: [
     WorkerRealtimeEmitter,
+    AiLeaseGuard,
     AiGenerateReplySubscriber,
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,

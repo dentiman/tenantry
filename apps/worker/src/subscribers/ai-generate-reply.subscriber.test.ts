@@ -1,13 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AiCancelChannel, FakeLlmProvider, FAKE_LLM_DIRECTIVES, type AiConfig } from '@saas-skeleton/shared';
+import {
+  AiCancelChannel,
+  AiMessageStateService,
+  FakeLlmProvider,
+  FAKE_LLM_DIRECTIVES,
+  type AiConfig,
+  type LlmProvider,
+  type LlmChunk,
+  type LlmRequest,
+} from '@saas-skeleton/shared';
 import type { AiMessageCompleted, AiMessageDelta } from '@saas-skeleton/contracts';
 import { AiGenerateReplySubscriber } from './ai-generate-reply.subscriber';
 
 /**
- * Життєвий цикл генерації відповіді — без БД, без брокера, без мережі.
- * Prisma і realtime підмінені, а ось провайдер тут СПРАВЖНІЙ `FakeLlmProvider`:
- * саме його директиви (`__fail__`, `__stall__`, `__long__`) і роблять важкі гілки
- * досяжними з тесту.
+ * Життєвий цикл генерації відповіді — без справжнього Postgres, без брокера, без
+ * мережі. Prisma підмінена мінімальним in-memory рушієм, що розуміє РІВНО ті
+ * `where`/`data` форми, які реально шле `AiMessageStateService` (сама вона тут
+ * СПРАВЖНЯ, не мокована — тестується фенсинг, а не його імітація). Провайдер —
+ * СПРАВЖНІЙ `FakeLlmProvider`: саме його директиви (`__fail__`, `__fail_once__`,
+ * `__reject__`, `__stall__`, `__long__`) роблять важкі гілки досяжними з тесту.
  */
 
 const TENANT = '7c9e6a54-2b3d-4f18-9a77-1e5c8d0b6a32';
@@ -35,9 +46,59 @@ interface MessageRow {
   status: Status;
   content: string;
   errorCode: string | null;
+  attempt: number;
+  leaseExpiresAt: Date | null;
+  chunkCount: number;
+  cancelRequestedAt: Date | null;
   startedAt: Date | null;
   completedAt: Date | null;
   model: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Мінімальний матчер `where`/`data`, достатній для форм запитів, які реально
+// будує AiMessageStateService (design.md D1/D2/D4): плоска рівність, `null`,
+// `{lt: Date}}`, `{in: [...]}}`, і рекурсивні `OR`/`AND`.
+// ---------------------------------------------------------------------------
+
+function matchesWhere(row: MessageRow, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, condition]) => {
+    if (key === 'OR') {
+      return (condition as Record<string, unknown>[]).some((c) => matchesWhere(row, c));
+    }
+    if (key === 'AND') {
+      return (condition as Record<string, unknown>[]).every((c) => matchesWhere(row, c));
+    }
+    const actual = (row as unknown as Record<string, unknown>)[key];
+    if (condition !== null && typeof condition === 'object' && !(condition instanceof Date)) {
+      const cond = condition as Record<string, unknown>;
+      if ('lt' in cond) {
+        return actual != null && (actual as Date).getTime() < (cond.lt as Date).getTime();
+      }
+      if ('in' in cond) {
+        return (cond.in as unknown[]).includes(actual);
+      }
+      throw new Error(`Unsupported where operator on '${key}': ${JSON.stringify(cond)}`);
+    }
+    return actual === condition;
+  });
+}
+
+function applyUpdateData(row: MessageRow, data: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(data)) {
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !(value instanceof Date) &&
+      'increment' in (value as Record<string, unknown>)
+    ) {
+      const current = (row as unknown as Record<string, number>)[key] ?? 0;
+      (row as unknown as Record<string, unknown>)[key] =
+        current + (value as { increment: number }).increment;
+    } else {
+      (row as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
 }
 
 interface World {
@@ -53,20 +114,50 @@ interface World {
   reply: () => MessageRow;
 }
 
+/** Попередній хід розмови, доданий ПЕРЕД поточним питанням/відповіддю */
+interface PriorTurn {
+  readonly questionContent: string;
+  readonly answerStatus: Status;
+  readonly answerContent: string;
+}
+
 function makeWorld(
   replyStatus: Status = 'PENDING',
   question = 'How do I rename the workspace?',
+  priorTurns: readonly PriorTurn[] = [],
+  replyOverrides: Partial<Pick<MessageRow, 'attempt' | 'leaseExpiresAt' | 'content'>> = {},
 ): World {
-  const messages: MessageRow[] = [
+  const prior: MessageRow[] = priorTurns.flatMap((turn, index) => [
     {
-      id: 'question-1', tenantId: TENANT, conversationId: CONVERSATION, seq: 0,
-      role: 'USER', status: 'COMPLETE', content: question,
-      errorCode: null, startedAt: null, completedAt: null, model: null,
+      id: `prior-question-${String(index)}`, tenantId: TENANT, conversationId: CONVERSATION, seq: index * 2,
+      role: 'USER' as const, status: 'COMPLETE' as const, content: turn.questionContent,
+      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
+      startedAt: null, completedAt: null, model: null,
     },
     {
-      id: REPLY, tenantId: TENANT, conversationId: CONVERSATION, seq: 1,
-      role: 'ASSISTANT', status: replyStatus, content: '',
-      errorCode: null, startedAt: null, completedAt: null, model: null,
+      id: `prior-answer-${String(index)}`, tenantId: TENANT, conversationId: CONVERSATION, seq: index * 2 + 1,
+      role: 'ASSISTANT' as const, status: turn.answerStatus, content: turn.answerContent,
+      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
+      startedAt: null, completedAt: null, model: null,
+    },
+  ]);
+  const currentSeq = prior.length;
+  const messages: MessageRow[] = [
+    ...prior,
+    {
+      id: 'question-1', tenantId: TENANT, conversationId: CONVERSATION, seq: currentSeq,
+      role: 'USER', status: 'COMPLETE', content: question,
+      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
+      startedAt: null, completedAt: null, model: null,
+    },
+    {
+      id: REPLY, tenantId: TENANT, conversationId: CONVERSATION, seq: currentSeq + 1,
+      role: 'ASSISTANT', status: replyStatus, content: replyOverrides.content ?? '',
+      errorCode: null,
+      attempt: replyOverrides.attempt ?? 0,
+      leaseExpiresAt: replyOverrides.leaseExpiresAt ?? null,
+      chunkCount: 0, cancelRequestedAt: null,
+      startedAt: null, completedAt: null, model: null,
     },
   ];
   const conversation = { id: CONVERSATION, tenantId: TENANT, userId: USER, lastMessageAt: null as Date | null };
@@ -77,18 +168,26 @@ function makeWorld(
         const row = messages.find((m) => m.id === where.id);
         return Promise.resolve(row ? { ...row, conversation } : null);
       },
+      findUniqueOrThrow: ({ where }: { where: { id: string } }): Promise<unknown> => {
+        const row = requireRow(messages, where.id);
+        return Promise.resolve({ ...row, conversation: { userId: conversation.userId } });
+      },
       findFirst: ({ where }: { where: { seq: number; role: string } }): Promise<unknown> =>
         Promise.resolve(messages.find((m) => m.seq === where.seq && m.role === where.role) ?? null),
-      findMany: ({ where }: { where: { seq: { lt: number }; status: string } }): Promise<unknown> =>
+      findMany: ({ where }: { where: { seq: { lt: number } } }): Promise<unknown> =>
         Promise.resolve(
           messages
-            .filter((m) => m.seq < where.seq.lt && m.status === where.status)
+            .filter((m) => m.seq < where.seq.lt)
             .sort((a, b) => b.seq - a.seq),
         ),
-      update: ({ where, data }: { where: { id: string }; data: Partial<MessageRow> }): Promise<unknown> => {
-        const row = requireRow(messages, where.id);
-        Object.assign(row, data);
-        return Promise.resolve(row);
+      updateMany: (
+        { where, data }: { where: Record<string, unknown>; data: Record<string, unknown> },
+      ): Promise<{ count: number }> => {
+        const matched = messages.filter((m) => matchesWhere(m, where));
+        for (const row of matched) {
+          applyUpdateData(row, data);
+        }
+        return Promise.resolve({ count: matched.length });
       },
     },
     aiConversation: {
@@ -134,14 +233,35 @@ function makeWorld(
   return { messages, conversation, transactions, realtime, deltas, completed, reply };
 }
 
+/** Обгортка над справжнім `FakeLlmProvider`, яка запам'ятовує кожен надісланий запит —
+ *  дає тестам порахувати виклики провайдера й заглянути в `LlmRequest` */
+function capturingProvider(delegate = new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 })): {
+  provider: LlmProvider;
+  requests: LlmRequest[];
+} {
+  const requests: LlmRequest[] = [];
+  return {
+    requests,
+    provider: {
+      generate(request: LlmRequest, signal: AbortSignal): AsyncIterable<LlmChunk> {
+        requests.push(request);
+        return delegate.generate(request, signal);
+      },
+    },
+  };
+}
+
 function makeSubscriber(
   world: World,
   overrides: Partial<AiConfig> = {},
   cancel: Partial<AiCancelChannel> = {},
+  provider: LlmProvider = new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 }),
 ): AiGenerateReplySubscriber {
   const config: AiConfig = {
     enabled: true, provider: 'fake', maxOutputTokens: 256, historyTurns: 10,
-    requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1', ...overrides,
+    requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1',
+    providerRetries: 1, retryDelayMs: 5, pendingTimeoutMs: 300_000, cancelCheckMs: 2_000,
+    leaseMs: 90_000, ...overrides,
   };
   const cancelChannel = {
     onCancel: () => Promise.resolve(() => undefined),
@@ -150,11 +270,11 @@ function makeSubscriber(
   } as unknown as AiCancelChannel;
 
   return new AiGenerateReplySubscriber(
-    {} as never,
     world.transactions as never,
+    new AiMessageStateService(),
     world.realtime as never,
     cancelChannel,
-    new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 }),
+    provider,
     config,
   );
 }
@@ -169,12 +289,16 @@ describe('AiGenerateReplySubscriber', () => {
     expect(world.reply().status).toBe('COMPLETE');
     expect(world.reply().content.length).toBeGreaterThan(0);
     expect(world.reply().model).toBe('fake-1');
+    expect(world.reply().attempt).toBe(1); // одна успішна спроба — claim() з 0 у 1
 
     // chunkSeq монотонний і починається з 0 — на цьому тримається детектор дірок
     expect(world.deltas.map((d) => d.chunkSeq)).toEqual(
       world.deltas.map((_, index) => index),
     );
+    // Усі дельти належать тій самій (єдиній) спробі
+    expect(world.deltas.every((d) => d.attempt === 1)).toBe(true);
     expect(world.deltas.map((d) => d.text).join('')).toBe(world.reply().content);
+    expect(world.reply().chunkCount).toBe(world.deltas.length);
   });
 
   it('коалесує: кадрів провайдера більше, ніж дельт у сокеті', async () => {
@@ -200,21 +324,27 @@ describe('AiGenerateReplySubscriber', () => {
     expect(contentWhenEmitted).toBe(world.reply().content);
   });
 
-  it(`${FAKE_LLM_DIRECTIVES.fail}: FAILED / PROVIDER_UNAVAILABLE, розмова лишається робочою`, async () => {
+  it(`${FAKE_LLM_DIRECTIVES.fail}: вичерпання ретраїв дає FAILED / PROVIDER_UNAVAILABLE, розмова лишається робочою`, async () => {
     const world = makeWorld('PENDING', `help ${FAKE_LLM_DIRECTIVES.fail}`);
-    await makeSubscriber(world).handle(job);
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, { providerRetries: 1 }, {}, provider).handle(job);
 
     expect(world.reply().status).toBe('FAILED');
     expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
     expect(world.completed[0]?.errorCode).toBe('PROVIDER_UNAVAILABLE');
+    // 1 початкова спроба + 1 ретрай = 2 звернення до провайдера (design.md D2)
+    expect(requests).toHaveLength(2);
+    expect(world.reply().attempt).toBe(2); // claim (0→1) + один restart (1→2)
   });
 
-  it(`${FAKE_LLM_DIRECTIVES.stall}: перевищення часу дає FAILED / TIMEOUT`, async () => {
+  it(`${FAKE_LLM_DIRECTIVES.stall}: перевищення часу дає FAILED / TIMEOUT, без ретраю`, async () => {
     const world = makeWorld('PENDING', `help ${FAKE_LLM_DIRECTIVES.stall}`);
     await makeSubscriber(world, { requestTimeoutMs: 30 }).handle(job);
 
     expect(world.reply().status).toBe('FAILED');
     expect(world.reply().errorCode).toBe('TIMEOUT');
+    expect(world.reply().attempt).toBe(1); // жодного ретраю на timeout
   });
 
   it('скасування користувачем: CANCELLED, частковий текст ЗБЕРІГАЄТЬСЯ, це не помилка', async () => {
@@ -263,7 +393,7 @@ describe('AiGenerateReplySubscriber', () => {
     expect(middle.length).toBeLessThan(world.reply().content.length);
   });
 
-  it('уже COMPLETE не перегенеровується (ідемпотентність по статусу рядка)', async () => {
+  it('уже COMPLETE не перегенеровується (claim() не знаходить термінальний рядок)', async () => {
     const world = makeWorld('COMPLETE');
     world.reply().content = 'already answered';
 
@@ -274,16 +404,151 @@ describe('AiGenerateReplySubscriber', () => {
     expect(world.completed).toHaveLength(0);
   });
 
-  it('ретрай скидає накопичений текст і шле chunkSeq 0 — дві спроби не склеюються', async () => {
-    const world = makeWorld('STREAMING');
-    // Слід попередньої, обірваної спроби
-    world.reply().content = 'LEFTOVER FROM THE FIRST ATTEMPT';
+  it('покинута STREAMING (прострочена/відсутня оренда) захоплюється заново — попередній текст скидається', async () => {
+    // Слід попередньої, обірваної спроби: лишок без оренди — «покинутий» (design.md D3)
+    const world = makeWorld('STREAMING', undefined, [], {
+      attempt: 5,
+      content: 'LEFTOVER FROM THE FIRST ATTEMPT',
+    });
 
     await makeSubscriber(world).handle(job);
 
     expect(world.reply().content).not.toContain('LEFTOVER');
+    expect(world.reply().attempt).toBe(6); // claim() бере наступний attempt
+    expect(world.deltas[0]?.chunkSeq).toBe(0);
+    expect(world.deltas.every((d) => d.attempt === 6)).toBe(true);
+    expect(world.deltas.map((d) => d.text).join('')).toBe(world.reply().content);
+  });
+
+  it('STREAMING з ЖИВОЮ орендою — не захоплюється, провайдер не викликається', async () => {
+    const world = makeWorld('STREAMING', undefined, [], {
+      attempt: 2,
+      leaseExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.reply().attempt).toBe(2); // не зачепили
+    expect(world.deltas).toHaveLength(0);
+    expect(world.completed).toHaveLength(0);
+  });
+
+  it('дві конкурентні доставки ОДНІЄЇ роботи: провайдер викликається РІВНО раз', async () => {
+    const world = makeWorld('PENDING');
+    const { provider, requests } = capturingProvider();
+    const subscriber = makeSubscriber(world, {}, {}, provider);
+
+    await Promise.all([subscriber.handle(job), subscriber.handle(job)]);
+
+    expect(requests).toHaveLength(1);
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.completed).toHaveLength(1);
+  });
+
+  it(`${FAKE_LLM_DIRECTIVES.failOnce}: один ретрай усередині доставки, друга спроба завершується COMPLETE`, async () => {
+    const world = makeWorld('PENDING', `please ${FAKE_LLM_DIRECTIVES.failOnce}`);
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, { providerRetries: 1 }, {}, provider).handle(job);
+
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(requests).toHaveLength(2); // 1 невдала + 1 успішна
+    expect(world.reply().attempt).toBe(2); // claim (0→1) + restart (1→2)
+    // Усі дельти належать ДРУГІЙ (успішній) спробі, з chunkSeq 0 — перша нічого не встигла надіслати
+    expect(world.deltas.every((d) => d.attempt === 2)).toBe(true);
     expect(world.deltas[0]?.chunkSeq).toBe(0);
     expect(world.deltas.map((d) => d.text).join('')).toBe(world.reply().content);
+  });
+
+  it(`${FAKE_LLM_DIRECTIVES.reject}: НЕ ретрай-придатна помилка — одразу FAILED, лише ОДИН виклик`, async () => {
+    const world = makeWorld('PENDING', `please ${FAKE_LLM_DIRECTIVES.reject}`);
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, { providerRetries: 3 }, {}, provider).handle(job);
+
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
+    expect(requests).toHaveLength(1); // бюджет був, але помилка non-retryable
+  });
+
+  it('Stop під час паузи перед ретраєм зупиняє генерацію: CANCELLED, без другої спроби', async () => {
+    const world = makeWorld('PENDING', `help ${FAKE_LLM_DIRECTIVES.fail}`);
+    const cancel: { fire?: () => void } = {};
+    const { provider, requests } = capturingProvider();
+    const subscriber = makeSubscriber(
+      world,
+      { providerRetries: 3, retryDelayMs: 200 },
+      {
+        onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+          cancel.fire = handler;
+          return Promise.resolve(() => undefined);
+        },
+      },
+      provider,
+    );
+
+    const running = subscriber.handle(job);
+    // Даємо першому виклику провайдера впасти і зайти в паузу перед ретраєм
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(cancel.fire).toBeDefined();
+    cancel.fire?.();
+    await running;
+
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(requests).toHaveLength(1); // ретраю не було — Stop важливіший
+  });
+
+  it('Stop через ТІЛЬКИ маркер у БД (pub/sub ніколи не спрацьовує): CANCELLED протягом cancelCheckMs', async () => {
+    const world = makeWorld('PENDING', `help ${FAKE_LLM_DIRECTIVES.stall}`);
+    const subscriber = makeSubscriber(world, { cancelCheckMs: 15, requestTimeoutMs: 5_000 });
+
+    const running = subscriber.handle(job);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    world.reply().cancelRequestedAt = new Date(); // сигнал ТІЛЬКИ в БД, onCancel не викликано
+
+    await running;
+
+    expect(world.reply().status).toBe('CANCELLED');
+  });
+
+  it('маркер Stop, виставлений ДО підписки воркера, ловиться одразу після неї', async () => {
+    const world = makeWorld('PENDING', `help ${FAKE_LLM_DIRECTIVES.stall}`);
+    // Оренда/маркер уже стоїть до виклику handle() — гонка «Stop до onCancel»
+    world.reply().cancelRequestedAt = new Date();
+    // Величезний cancelCheckMs доводить, що спрацював САМЕ пост-підписковий чек,
+    // а не періодичний таймер
+    const subscriber = makeSubscriber(world, { cancelCheckMs: 10_000, requestTimeoutMs: 5_000 });
+
+    const started = Date.now();
+    await subscriber.handle(job);
+
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(Date.now() - started).toBeLessThan(200);
+  });
+
+  it('втрата власності під час стріму: жодної фіналізації, дельти чужої спроби не дописуються', async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} keep going`);
+    let bumped = false;
+    const originalAiDelta = world.realtime.aiDelta;
+    world.realtime.aiDelta = (t, u, payload): void => {
+      originalAiDelta(t, u, payload);
+      if (!bumped) {
+        // Симулюємо, що ІНША спроба щойно перезахопила рядок конкурентно
+        bumped = true;
+        world.reply().attempt += 1;
+      }
+    };
+
+    // partialPersistMs: 0 — кожен наступний кадр одразу пробує проміжний запис
+    // і миттєво виявляє фенсинг-розбіжність
+    await makeSubscriber(world, { partialPersistMs: 0 }).handle(job);
+
+    expect(world.completed).toHaveLength(0); // МОВЧКИ, без completed
+    // Рядок лишився в стані, який поставила зовнішня "інша спроба" (STREAMING,
+    // не FAILED/COMPLETE/CANCELLED) — наша втрачена спроба його не термінувала
+    expect(world.reply().status).toBe('STREAMING');
   });
 
   it('зниклий рядок відповіді — тихий вихід, а не падіння', async () => {
@@ -295,5 +560,48 @@ describe('AiGenerateReplySubscriber', () => {
     await expect(subscriber.handle({ ...job, messageId: 'no-such-id' })).resolves.toBeUndefined();
     expect(world.deltas).toHaveLength(0);
     warn.mockRestore();
+  });
+
+  it('перше питання розмови надсилається моделі РІВНО РАЗ і без історії (review п.2)', async () => {
+    const world = makeWorld('PENDING', 'How do I rename the workspace?');
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(1);
+    const userMessages = requests[0]?.messages.filter((m) => m.role === 'user') ?? [];
+    expect(userMessages).toEqual([{ role: 'user', content: 'How do I rename the workspace?' }]);
+  });
+
+  it('провалений попередній хід не потрапляє в історію, поточне питання лишається останнім і єдиним', async () => {
+    const world = makeWorld('PENDING', 'And what about the logo?', [
+      { questionContent: 'How do I rename the workspace?', answerStatus: 'FAILED', answerContent: 'partial' },
+    ]);
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const userMessages = requests[0]?.messages.filter((m) => m.role === 'user') ?? [];
+    // Провалений хід відсутній ЦІЛКОМ — жодного сліду ні його питання, ні його "partial"
+    expect(userMessages).toEqual([{ role: 'user', content: 'And what about the logo?' }]);
+    expect(requests[0]?.messages.some((m) => m.content.includes('partial'))).toBe(false);
+  });
+
+  it('завершений попередній хід потрапляє в історію один раз, поточне питання — останнє й теж один раз', async () => {
+    const world = makeWorld('PENDING', 'And what about the logo?', [
+      { questionContent: 'How do I rename the workspace?', answerStatus: 'COMPLETE', answerContent: 'Use Settings.' },
+    ]);
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const relevant = requests[0]?.messages.filter(
+      (m) => m.role === 'user' || m.content === 'Use Settings.',
+    );
+    expect(relevant).toEqual([
+      { role: 'user', content: 'How do I rename the workspace?' },
+      { role: 'assistant', content: 'Use Settings.' },
+      { role: 'user', content: 'And what about the logo?' },
+    ]);
   });
 });

@@ -62,6 +62,7 @@ export const REALTIME_EVENTS = {
   calendarEventChanged: 'calendar.event-changed.v1',
   aiMessageDelta: 'ai.message-delta.v1',
   aiMessageCompleted: 'ai.message-completed.v1',
+  aiConversationChanged: 'ai.conversation-changed.v1',
 } as const;
 
 // ---------------------------------------------------------------- presence
@@ -187,6 +188,14 @@ export const CalendarEventChangedSchema = z.object({
 export const AiMessageDeltaSchema = z.object({
   conversationId: z.uuid(),
   messageId: z.uuid(),
+  /**
+   * Номер спроби генерації, якій належить ця дельта (AI-0.1, design.md D1/D6).
+   * Фенсинг-токен: дельта нижчої спроби за ту, що клієнт уже показує, — застаріла
+   * і відкидається; вища спроба означає перезапуск. Це замінює стару ознаку
+   * перезапуску `chunkSeq === 0` — вона сама по собі не відрізняла б перезапуск
+   * від дельти застарілої спроби з тим самим номером кадру.
+   */
+  attempt: z.number().int().nonnegative(),
   chunkSeq: z.number().int().nonnegative(),
   /** Приріст тексту, а не весь текст: чанки конкатенуються в порядку `chunkSeq` */
   text: z.string(),
@@ -202,6 +211,19 @@ export const AiMessageCompletedSchema = z.object({
   messageId: z.uuid(),
   status: z.enum(['COMPLETE', 'FAILED', 'CANCELLED']),
   errorCode: z.enum(['PROVIDER_UNAVAILABLE', 'TIMEOUT', 'INTERNAL']).nullable(),
+  occurredAt: z.iso.datetime(),
+});
+
+/**
+ * Сигнал «розмова змінилась», без даних (AI-0.1, design.md D7). Єдина причина
+ * її існування — інші вкладки того самого юзера: `ai.message-delta.v1` доходить
+ * лише туди, де повідомлення вже в кеші, а перше питання ходу та `reset()`
+ * жодної дельти не мають. Реакція клієнта — одне дедупліковане перечитування
+ * стрічки; сам факт лишається джерелом правди, як і решта realtime (docs/realtime.md).
+ */
+export const AiConversationChangedSchema = z.object({
+  conversationId: z.uuid(),
+  reason: z.enum(['turn-created', 'reply-closed', 'reset']),
   occurredAt: z.iso.datetime(),
 });
 

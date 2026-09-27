@@ -47,7 +47,9 @@ read the relevant doc before working in that area instead of expecting it here.
   (a disabled demo slot on `/users`); not a working feature.
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
   why, the research behind them (OpenAI-compat is lossy, provider strategies, tool-calling
-  mechanics, files), budget, privacy, and phases AI-0…AI-4. §0 keeps the decision sequence.
+  mechanics, files), budget, privacy, and phases AI-0…AI-4. §0 keeps the decision sequence;
+  §10.1 splits AI-1 into five changes `ai-1a`…`ai-1e` (only `OpenAiCompatProvider` — native
+  Anthropic is deferred, §5.3).
   Distinct from `docs/chat.md` (that's human/customer conversations);
   `docs/ai-assistant-implementation.md` — what AI-0 actually shipped, on `FakeLlmProvider` only
   (no key, no network, no cost): data model, the two access boundaries, the streaming protocol
@@ -300,9 +302,12 @@ flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without
     app than at the repo root.
 15. A socket event normally says "re-read" and never carries the payload itself
     (`docs/realtime.md`). The AI assistant's `ai.message-delta.v1` is the **one** exception,
-    and it is safe only because of two guards that must be copied together with the pattern:
-    a monotonic `chunkSeq` (a gap sends the client back to the REST transcript) and
-    `chunkSeq === 0` meaning "discard and restart". Postgres stays the source of truth.
+    and it is safe only because of guards that must be copied together with the pattern: a
+    monotonic `chunkSeq` within one generation attempt (a gap sends the client back to the
+    REST transcript), a higher `attempt` meaning "discard and restart" (AI-0.1 replaced the
+    earlier `chunkSeq === 0` rule — that guard also mistook a stale attempt's first frame for
+    a restart), and `chunkCount` on the transcript so a client resumes live deltas after one
+    re-read instead of re-reading again. Postgres stays the source of truth.
 16. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
     `runWith`/`withTenantTx` silently affects zero rows under RLS instead of erroring.
 16. Workspace ports are allocations, not a search hint. Slot 0 and its base ports always

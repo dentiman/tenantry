@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TenantContextService } from '@saas-skeleton/database';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type {
+  AiConversationChanged,
   CalendarEventChanged,
   NotificationChanged,
   NotificationCreated,
@@ -92,6 +93,17 @@ export class RealtimeEmitter implements NotificationDispatcher {
     for (const recipientId of recipientIds) {
       this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.calendarEventChanged, payload);
     }
+  }
+
+  // ---- AI-0.1: «розмова змінилась», в особистий room юзера (design.md D7) ----
+
+  /**
+   * Сигнал без даних: реакція клієнта — одне дедупліковане перечитування
+   * стрічки. Долітає в УСІ вкладки юзера, включно з тією, що ініціювала дію —
+   * виключати її окремим socket id дорожче, ніж зайве (дедупліковане) перечитування.
+   */
+  aiConversationChanged(tenantId: string, userId: string, payload: AiConversationChanged): void {
+    this.emit(userRoom(tenantId, userId), REALTIME_EVENTS.aiConversationChanged, payload);
   }
 
   // ---- AUTH-1: примусовий розрив зʼєднань відкликаної сесії ----

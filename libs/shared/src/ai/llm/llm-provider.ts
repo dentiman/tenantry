@@ -38,11 +38,20 @@ export interface LlmChunk {
  * Помилка провайдера, яку воркер перетворює на `errorCode: PROVIDER_UNAVAILABLE`.
  * Окремий клас, а не рядок: воркер мусить відрізняти «провайдер відмовив» від
  * власного багу, який має піти в лог як INTERNAL.
+ *
+ * `retryable` (AI-0.1, design.md D2) — чи є сенс перезапустити генерацію всередині
+ * тієї самої доставки. Дефолт `true`: мережева помилка, 5xx, 429 — типовий випадок
+ * тимчасової відмови. Провайдер AI-1 виставляє `false` для auth/валідаційних 4xx,
+ * де повтор гарантовано провалиться так само.
  */
 export class LlmProviderError extends Error {
-  constructor(message: string, readonly cause?: unknown) {
+  readonly retryable: boolean;
+
+  constructor(message: string, options: { readonly cause?: unknown; readonly retryable?: boolean } = {}) {
     super(message);
     this.name = 'LlmProviderError';
+    this.cause = options.cause;
+    this.retryable = options.retryable ?? true;
   }
 }
 

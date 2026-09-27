@@ -56,6 +56,19 @@ export const AiMessageResponseSchema = z.object({
   /** Для відповіді в роботі — те, що згенеровано на цей момент */
   content: z.string(),
   errorCode: AiMessageErrorCodeSchema.nullable(),
+  /**
+   * Номер спроби генерації (AI-0.1, design.md D1/D6). Зростає на кожен перезапуск
+   * (ретрай або повторне захоплення покинутої відповіді) — той самий фенсинг-токен,
+   * що й `ai.message-delta.v1.attempt`: клієнт звіряє їх, щоб знати, чи дельта
+   * належить чинній спробі, чи застарілій.
+   */
+  attempt: z.number().int().nonnegative(),
+  /**
+   * Скільки дельт-кадрів уже увійшло в `content` цієї спроби. Разом з `attempt` —
+   * точка, з якої клієнт продовжує застосовувати живі дельти після ОДНОГО
+   * перечитування стрічки, не перечитуючи вдруге (design.md D6).
+   */
+  chunkCount: z.number().int().nonnegative(),
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
 });
