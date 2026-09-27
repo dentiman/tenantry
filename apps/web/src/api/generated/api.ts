@@ -25,6 +25,8 @@ import type {
   ActivitiesFindAllParams,
   ActivityListResponseDtoOutput,
   AiConversationResponseDtoOutput,
+  AiSettingsDto,
+  AiSettingsDtoOutput,
   AskAiRequestDto,
   AskAiResponseDtoOutput,
   AuthResponseDtoOutput,
@@ -3131,6 +3133,176 @@ export const useSettingsUpdateCalendar = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getSettingsUpdateCalendarMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const settingsAi = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiSettingsDtoOutput>(
+    { url: `/api/settings/ai`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getSettingsAiQueryKey = () => {
+  return [`/api/settings/ai`] as const;
+};
+
+export const getSettingsAiQueryOptions = <
+  TData = Awaited<ReturnType<typeof settingsAi>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSettingsAiQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof settingsAi>>> = ({ signal }) =>
+    settingsAi(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof settingsAi>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SettingsAiQueryResult = NonNullable<Awaited<ReturnType<typeof settingsAi>>>;
+export type SettingsAiQueryError = unknown;
+
+export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof settingsAi>>,
+          TError,
+          Awaited<ReturnType<typeof settingsAi>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof settingsAi>>,
+          TError,
+          Awaited<ReturnType<typeof settingsAi>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSettingsAiQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const settingsUpdateAi = (
+  aiSettingsDto: AiSettingsDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<AiSettingsDtoOutput>(
+    {
+      url: `/api/settings/ai`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: aiSettingsDto,
+    },
+    options,
+  );
+};
+
+export const getSettingsUpdateAiMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof settingsUpdateAi>>,
+    TError,
+    { data: AiSettingsDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof settingsUpdateAi>>,
+  TError,
+  { data: AiSettingsDto },
+  TContext
+> => {
+  const mutationKey = ['settingsUpdateAi'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof settingsUpdateAi>>,
+    { data: AiSettingsDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return settingsUpdateAi(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SettingsUpdateAiMutationResult = NonNullable<
+  Awaited<ReturnType<typeof settingsUpdateAi>>
+>;
+export type SettingsUpdateAiMutationBody = AiSettingsDto;
+export type SettingsUpdateAiMutationError = unknown;
+
+export const useSettingsUpdateAi = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof settingsUpdateAi>>,
+      TError,
+      { data: AiSettingsDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof settingsUpdateAi>>,
+  TError,
+  { data: AiSettingsDto },
+  TContext
+> => {
+  const mutationOptions = getSettingsUpdateAiMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

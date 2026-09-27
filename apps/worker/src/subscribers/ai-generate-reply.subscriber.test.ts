@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AiCancelChannel,
   AiMessageStateService,
+  ASSISTANT_BOUNDARIES,
   FakeLlmProvider,
   FAKE_LLM_DIRECTIVES,
   LlmProviderError,
@@ -137,6 +138,8 @@ function makeWorld(
   priorTurns: readonly PriorTurn[] = [],
   replyOverrides: Partial<Pick<MessageRow, 'attempt' | 'leaseExpiresAt' | 'content'>> = {},
   userRole: 'ADMIN' | 'USER' = 'USER',
+  // ai-1c: вміст `tenants.settings` (JSON) — `{}` означає «тенант нічого не задавав»
+  tenantSettings: unknown = {},
 ): World {
   const prior: MessageRow[] = priorTurns.flatMap((turn, index) => [
     {
@@ -209,6 +212,11 @@ function makeWorld(
     },
     user: {
       findUnique: (): Promise<unknown> => Promise.resolve({ role: userRole, locale: 'en' }),
+    },
+    tenant: {
+      // Лише рядок СВОГО тенанта — так, як його бачить RLS у справжньому withTenantTx
+      findUnique: ({ where }: { where: { id: string } }): Promise<unknown> =>
+        Promise.resolve(where.id === TENANT ? { settings: tenantSettings } : null),
     },
   };
 
@@ -788,6 +796,60 @@ describe('AiGenerateReplySubscriber', () => {
     const world = makeWorld('PENDING', '__reject__');
     await makeSubscriber(world).handle(job);
     expect(world.reply().status).toBe('FAILED');
+  });
+
+  it('ai-1c: персона тенанта — окреме повідомлення 1 після меж; знання зсуваються на 2', async () => {
+    const world = makeWorld('PENDING', 'current question', [], {}, 'USER', {
+      calendar: { timeZone: 'UTC' },
+      ai: { persona: 'You are Ava, the Acme helpdesk assistant.', instructions: 'Mention the helpdesk.' },
+    });
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    expect(contents[0]).toBe(ASSISTANT_BOUNDARIES);
+    expect(contents[1]).toContain('You are Ava, the Acme helpdesk assistant.');
+    expect(contents[1]).toContain('Mention the helpdesk.');
+    expect(contents.findIndex((c) => c.startsWith('Product documentation:'))).toBe(2);
+    expect(contents.at(-1)).toBe('current question');
+    expect(world.reply().status).toBe('COMPLETE');
+  });
+
+  it('ai-1c: тенант без settings.ai — промпт без блоку організації (стан до ai-1c)', async () => {
+    const world = makeWorld('PENDING', 'current question', [], {}, 'USER', { calendar: {} });
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    expect(contents[0]).toBe(ASSISTANT_BOUNDARIES);
+    expect(contents.some((c) => c.includes('<organization_instructions>'))).toBe(false);
+    expect(contents.findIndex((c) => c.startsWith('Product documentation:'))).toBe(1);
+  });
+
+  it('ai-1c: зіпсована секція — відповідь усе одно COMPLETE, у промпті лише межі', async () => {
+    const world = makeWorld('PENDING', 'current question', [], {}, 'USER', {
+      ai: { persona: 42, instructions: 'x'.repeat(10_000) },
+    });
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    expect(contents[0]).toBe(ASSISTANT_BOUNDARIES);
+    expect(contents.some((c) => c.includes('<organization_instructions>'))).toBe(false);
+    expect(world.reply().status).toBe('COMPLETE');
+  });
+
+  it('ai-1c: ретрай усередині доставки (__fail_once__) шле ТОЙ САМИЙ блок організації', async () => {
+    const world = makeWorld('PENDING', FAKE_LLM_DIRECTIVES.failOnce, [], {}, 'USER', {
+      ai: { persona: 'Ava', instructions: '' },
+    });
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.messages[1]).toEqual(requests[0]?.messages[1]);
+    expect(requests[0]?.messages[1]?.content).toContain('Persona: Ava');
+    expect(world.reply().status).toBe('COMPLETE');
   });
 });
 

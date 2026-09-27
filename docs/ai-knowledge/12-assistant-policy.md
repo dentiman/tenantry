@@ -35,6 +35,11 @@ can be wrong. It has no access to your data."
 
 ## How it answers
 
+Your administrator can give the assistant a persona and extra instructions in Settings → "AI
+assistant" (for example a name, a tone, or what to emphasize). Those instructions never change
+the limits above: the assistant still cannot see your data, cannot act, does not guess, and
+answers in the language of the question.
+
 - In the language of the question.
 - Short and concrete, using the exact names of buttons and menus as they appear on screen,
   and Markdown lists for steps.

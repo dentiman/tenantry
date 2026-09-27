@@ -1,4 +1,8 @@
 import type { LlmMessage } from '../llm/llm-provider';
+import {
+  renderOrganizationInstructions,
+  type AiOrganizationInstructions,
+} from './organization-instructions';
 
 /**
  * Контекст користувача в промпті — ЗАКРИТИЙ allowlist, і він закритий ТИПОМ,
@@ -39,14 +43,24 @@ export interface BuildPromptInput {
   readonly history: readonly AiHistoryTurn[];
   readonly knowledge: readonly AiKnowledgeDocument[];
   readonly user: AiUserContext;
+  /**
+   * Персона/інструкції організації з `settings.ai` (AI-1c). Відсутні чи порожні —
+   * промпт рівно той, що до AI-1c. Не дані юзера, а конфігурація від адміна.
+   */
+  readonly organization?: AiOrganizationInstructions;
 }
 
 /**
- * Межі асистента живуть у промпті, бо інакше модель почне вигадувати відповіді
- * на «покажи моїх кастомерів». У AI-0 інструкція коротка навмисно: справжній
- * текст пишеться разом із корпусом знань у AI-1, коли буде на чому його перевіряти.
+ * НЕЗМІННІ МЕЖІ асистента — живуть у коді й ЗАВЖДИ йдуть першим повідомленням
+ * (AI-1c, docs/ai-assistant-implementation.md §15). Тенант може лише ДОДАТИ
+ * персону окремим повідомленням після них, але не прибрати чи замінити їх: жоден
+ * вхід `buildPrompt` не потрапляє в це повідомлення.
+ *
+ * Текст свідомо той самий, що в AI-0…AI-1b, байт у байт: тоді «тенант без
+ * налаштувань отримує попередній промпт» — тест, а не обіцянка. Не мінятись
+ * мимохідь — зміна тексту міняє кешований префікс УСІХ тенантів.
  */
-const SYSTEM_INSTRUCTION = [
+export const ASSISTANT_BOUNDARIES = [
   'You are the in-app help assistant for this workspace application.',
   'You answer questions about how to use the product: where a feature lives, what a setting does, how a workflow goes.',
   'You have NO access to the user\'s business data. You cannot read, create, or change records, and you cannot perform actions on their behalf.',
@@ -58,14 +72,21 @@ const SYSTEM_INSTRUCTION = [
 /**
  * ПОРЯДОК ТУТ — ЦЕ ПИТАННЯ ЦІНИ, а не смаку: prompt caching у всіх кандидатів
  * працює по ПРЕФІКСУ, тому від найстабільнішого до найзміннішого —
- * інструкція → знання → контекст юзера → історія → питання. Контекст юзера йде
+ * межі → інструкції організації → знання → контекст юзера → історія → питання.
+ * Інструкції організації — одразу після меж, яким вони підпорядковані: вони
+ * різняться за тенантом, але змінюються рідко (AI-1c). Контекст юзера йде
  * ПІСЛЯ корпусу: він різниться за роллю/мовою, а корпус — спільний префікс. Зворотний порядок означав би повну
  * ціну за весь корпус на кожному ході (§1.4 плану).
  */
 export function buildPrompt(input: BuildPromptInput): LlmMessage[] {
   const messages: LlmMessage[] = [
-    { role: 'system', content: SYSTEM_INSTRUCTION },
+    { role: 'system', content: ASSISTANT_BOUNDARIES },
   ];
+
+  const organization = renderOrganizationInstructions(input.organization);
+  if (organization !== null) {
+    messages.push({ role: 'system', content: organization });
+  }
 
   if (input.knowledge.length > 0) {
     messages.push({

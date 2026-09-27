@@ -213,4 +213,105 @@ describe('Organization settings API (e2e)', () => {
 
     await prisma.tenant.delete({ where: { id: other.id } });
   });
+
+  // ------------------------------------------------------------ ai (AI-1c)
+
+  interface AiBody {
+    persona: string;
+    instructions: string;
+  }
+  interface ErrorBody {
+    fieldErrors?: { field: string; message: string }[];
+  }
+
+  it('reads an empty AI section for an organization that never configured it', async () => {
+    const headers = await login(`${Date.now()}-ai-empty`, 'ADMIN');
+
+    const response = await request(app.getHttpServer())
+      .get('/api/settings/ai')
+      .set(headers)
+      .expect(200);
+    expect(response.body).toEqual({ persona: '', instructions: '' });
+  });
+
+  it('lets an admin replace the AI section, trims it, keeps other sections and journals without text', async () => {
+    const headers = await login(`${Date.now()}-ai-write`, 'ADMIN');
+    await prisma.tenant.update({
+      where: { id: DEFAULT_TENANT_ID },
+      data: { settings: { calendar: { timeZone: 'Europe/Kyiv' } } },
+    });
+
+    const saved = await request(app.getHttpServer())
+      .put('/api/settings/ai')
+      .set(headers)
+      .send({ persona: '  You are Ava.  ', instructions: 'Mention the helpdesk.\n' })
+      .expect(200);
+    expect(saved.body).toEqual({ persona: 'You are Ava.', instructions: 'Mention the helpdesk.' });
+
+    const read = await request(app.getHttpServer())
+      .get('/api/settings/ai')
+      .set(headers)
+      .expect(200);
+    expect(read.body as AiBody).toEqual({
+      persona: 'You are Ava.',
+      instructions: 'Mention the helpdesk.',
+    });
+
+    // Read-modify-write: сусідня секція JSON не затерта
+    const tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } });
+    expect(tenant?.settings).toEqual(
+      expect.objectContaining({ calendar: { timeZone: 'Europe/Kyiv' } }),
+    );
+
+    const feed = await request(app.getHttpServer())
+      .get('/api/settings/activity')
+      .set(headers)
+      .expect(200);
+    const items = (feed.body as { items: { type: string; payload: unknown }[] }).items;
+    expect(items[0]).toEqual(
+      expect.objectContaining({ type: 'settings.updated', payload: { section: 'ai' } }),
+    );
+    expect(JSON.stringify(items[0])).not.toContain('Ava');
+  });
+
+  it('refuses both reading and writing the AI section to a non-admin', async () => {
+    const headers = await login(`${Date.now()}-ai-member`, 'USER');
+
+    await request(app.getHttpServer()).get('/api/settings/ai').set(headers).expect(403);
+    await request(app.getHttpServer())
+      .put('/api/settings/ai')
+      .set(headers)
+      .send({ persona: 'Hijacked', instructions: '' })
+      .expect(403);
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } });
+    expect(tenant?.settings).toEqual({});
+  });
+
+  it.each([
+    ['persona', { persona: 'x'.repeat(501), instructions: '' }],
+    ['instructions', { persona: '', instructions: 'x'.repeat(4001) }],
+  ])('rejects %s over its limit with a field error and stores nothing', async (field, body) => {
+    const headers = await login(`${Date.now()}-ai-limit-${field}`, 'ADMIN');
+
+    const response = await request(app.getHttpServer())
+      .put('/api/settings/ai')
+      .set(headers)
+      .send(body)
+      .expect(400);
+    expect((response.body as ErrorBody).fieldErrors?.map((e) => e.field)).toEqual([field]);
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } });
+    expect(tenant?.settings).toEqual({});
+  });
+
+  it('accepts text exactly at the limits (trailing whitespace does not count)', async () => {
+    const headers = await login(`${Date.now()}-ai-edge`, 'ADMIN');
+
+    await request(app.getHttpServer())
+      .put('/api/settings/ai')
+      .set(headers)
+      .send({ persona: `${'p'.repeat(500)}   `, instructions: 'i'.repeat(4000) })
+      .expect(200);
+  });
 });

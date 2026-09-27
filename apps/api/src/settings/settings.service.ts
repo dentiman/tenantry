@@ -1,9 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Tenant } from '@saas-skeleton/database';
-import type { CalendarSettings, GeneralSettings } from '@saas-skeleton/contracts';
+import type { AiSettings, CalendarSettings, GeneralSettings } from '@saas-skeleton/contracts';
 import { CALENDAR_SETTINGS_DEFAULTS, CalendarSettingsSchema } from '@saas-skeleton/contracts';
-import { ActivityRecorder } from '@saas-skeleton/shared';
+import { ActivityRecorder, readAiSettings } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 
 /**
@@ -108,6 +108,58 @@ export class SettingsService {
     // він мусить намалюватись навіть із нечитабельним конфігом
     this.logger.warn('Calendar settings section is invalid — falling back to defaults');
     return CALENDAR_SETTINGS_DEFAULTS;
+  }
+
+  /**
+   * Секція `ai` (AI-1c) — персона й інструкції асистента. Той самий JSON-патерн,
+   * що `calendar`, але читач спільний із воркером (`readAiSettings` у libs/shared):
+   * саме воркер кладе цей текст у промпт, і «що збережено» має означати для обох
+   * одне й те саме.
+   */
+  async ai(): Promise<AiSettings> {
+    const organization = await this.current();
+    return this.parseAi(organization.settings);
+  }
+
+  async updateAi(data: AiSettings, actor: JwtPayload): Promise<AiSettings> {
+    const current = await this.current();
+
+    return this.tenantTx.withTenantTx(async (tx) => {
+      const fresh = await tx.tenant.findUniqueOrThrow({
+        where: { id: current.id },
+        select: { settings: true },
+      });
+      const settings = {
+        ...(typeof fresh.settings === 'object' && fresh.settings !== null && !Array.isArray(fresh.settings)
+          ? fresh.settings
+          : {}),
+        ai: data,
+      };
+      const updated = await tx.tenant.update({
+        where: { id: current.id },
+        data: { settings },
+      });
+
+      // Лише назва секції: сам текст — конфігурація, яку читає тільки ADMIN, і в
+      // стрічку активності (її бачать ширше) він не копіюється
+      await this.activities.record(tx, {
+        type: 'settings.updated',
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: { section: 'ai' },
+        links: [{ entityType: 'tenant', entityId: updated.id, role: 'subject' }],
+      });
+
+      this.logger.log(`AI assistant settings updated: ${updated.slug}`);
+      return this.parseAi(updated.settings);
+    });
+  }
+
+  private parseAi(settings: unknown): AiSettings {
+    const { settings: ai, valid } = readAiSettings(settings);
+    if (!valid) {
+      this.logger.warn('AI settings section is invalid — falling back to defaults');
+    }
+    return ai;
   }
 
   /**

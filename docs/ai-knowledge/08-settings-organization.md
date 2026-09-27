@@ -59,13 +59,35 @@ one series, "Customers", showing "Next number: …".
 
 Numbers never restart and are never reused, even after a customer is deleted.
 
+## AI assistant
+
+Settings → **"AI assistant"** — "The persona and instructions the AI assistant follows for
+everyone in the organization."
+
+- "Persona" — "Who the assistant is and how it sounds. Up to 500 characters."
+- "Instructions" — "What to emphasize, tone and level of detail. Up to 4000 characters."
+
+Both are optional; leave them empty to use the assistant as it is. Click "Save AI assistant
+settings" ("AI assistant settings saved"). The change applies to the next question anyone asks.
+
+"Sent to the AI provider" — the persona and instructions are sent to the external AI provider
+together with every question, so do not put passwords, keys or personal data there.
+
+"The assistant's built-in limits always apply and cannot be changed here": it has no access to
+your data, cannot perform actions, does not guess beyond the documentation, and answers in the
+language of the question. Instructions that ask for anything else are ignored.
+
+Only administrators can open this page or read what is saved on it.
+
 ## Activity
 
 Settings → **"Activity"** — "Who changed the organization settings, and when." A read-only list
-of changes to General, Calendar and Numbering.
+of changes to General, Calendar, Numbering and AI assistant (it shows that the AI assistant
+settings changed, not the text).
 
 ## Not available
 
 No branding (logo, colours), no email/SMTP settings, no per-organization feature switches, no
-custom roles or permissions, no billing or subscription settings, and no settings for the AI
-assistant yet.
+custom roles or permissions, no billing or subscription settings. For the AI assistant you can set
+only the persona and instructions — it cannot be switched off per organization, and there is no
+usage report.

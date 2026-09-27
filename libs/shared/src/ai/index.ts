@@ -6,6 +6,7 @@ export * from './llm/llm-provider';
 export * from './llm/fake-llm.provider';
 export * from './llm/openai-compat.provider';
 export * from './prompt/prompt-builder';
+export * from './prompt/organization-instructions';
 export * from './prompt/history';
 export * from './ai-message-state.service';
 export * from './knowledge/corpus-builder';

@@ -4,6 +4,7 @@
     "general": "General",
     "calendar": "Calendar",
     "numbering": "Numbering",
+    "ai": "AI assistant",
     "activity": "Activity"
   },
   "general": {
@@ -64,6 +65,22 @@
     "nextNumberHint": "Can only move forward — earlier numbers are already issued. Use it after importing records from another system.",
     "move": "Move counter",
     "moved": "Next number is now {{next}}"
+  },
+  "ai": {
+    "title": "AI assistant",
+    "description": "The persona and instructions the AI assistant follows for everyone in the organization.",
+    "loading": "Loading AI assistant settings",
+    "providerNoticeTitle": "Sent to the AI provider",
+    "providerNotice": "The persona and instructions are sent to the external AI provider together with every question anyone in the organization asks. Do not put passwords, keys or personal data here.",
+    "persona": "Persona",
+    "personaPlaceholder": "You are Ava, the helpdesk assistant of Acme.",
+    "personaHint": "Who the assistant is and how it sounds. Up to {{max}} characters.",
+    "instructions": "Instructions",
+    "instructionsPlaceholder": "Mention that urgent requests go to the helpdesk. Prefer step-by-step lists.",
+    "instructionsHint": "What to emphasize, tone and level of detail. Up to {{max}} characters.",
+    "boundaries": "The assistant's built-in limits always apply and cannot be changed here: it has no access to your data, cannot perform actions, does not guess beyond the documentation, and answers in the language of the question.",
+    "save": "Save AI assistant settings",
+    "saved": "AI assistant settings saved"
   },
   "activity": {
     "title": "Activity",

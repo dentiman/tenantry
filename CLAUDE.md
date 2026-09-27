@@ -51,14 +51,15 @@ read the relevant doc before working in that area instead of expecting it here.
   §10.1 splits AI-1 into five changes `ai-1a`…`ai-1e` (only `OpenAiCompatProvider` — native
   Anthropic is deferred, §5.3).
   Distinct from `docs/chat.md` (that's human/customer conversations);
-  `docs/ai-assistant-implementation.md` — what AI-0/0.1/1a/1b actually shipped: data model, the two
+  `docs/ai-assistant-implementation.md` — what AI-0/0.1/1a/1b/1c actually shipped: data model, the two
   access boundaries, the streaming protocol and why a socket event may carry payload here, queue
   options, config, and (§7.1) the one real provider `OpenAiCompatProvider` — worker-only key,
   error classification, `Retry-After`, token usage; (§14) the AI-1b knowledge corpus —
   `docs/ai-knowledge/` is **end-user product documentation**, not engineering docs: edit the
   Markdown, copy every quoted UI label from the English locale files, run `pnpm ai:knowledge`,
-  commit both. `FakeLlmProvider` stays the default and CI backbone (no key, no network, no
-  cost). Read the second before touching anything under `ai/`, the first before planning the
+  commit both; (§15) the AI-1c persona/instructions in `settings.ai` — boundaries stay in code as
+  message 0 (`ASSISTANT_BOUNDARIES`, byte-identical text), tenant text only after them, fenced.
+  `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost). Read the second before touching anything under `ai/`, the first before planning the
   next phase.
 
 ## Planning layers

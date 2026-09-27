@@ -1405,6 +1405,66 @@
         ]
       }
     },
+    "/api/settings/ai": {
+      "get": {
+        "operationId": "settingsAi",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "settingsUpdateAi",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
     "/api/settings/activity": {
       "get": {
         "operationId": "settingsActivity",
@@ -5222,6 +5282,41 @@
           "defaultEventDurationMinutes",
           "defaultReminderMinutes",
           "defaultAllDayReminderMinutes"
+        ]
+      },
+      "AiSettingsDto_Output": {
+        "type": "object",
+        "properties": {
+          "persona": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "persona",
+          "instructions"
+        ],
+        "additionalProperties": false
+      },
+      "AiSettingsDto": {
+        "type": "object",
+        "properties": {
+          "persona": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "persona",
+          "instructions"
         ]
       },
       "ActivityListResponseDto_Output": {

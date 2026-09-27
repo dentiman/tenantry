@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
+  AiSettings,
   CalendarSettings,
   SettingsBootstrap,
   GeneralSettingsResponse,
@@ -15,6 +16,7 @@ import { ActivitiesService } from '../activities/activities.service';
 import { toActivityResponse } from '../activities/activities.mapper';
 import { ActivityListResponseDto } from '../activities/dto/activity-response.dto';
 import {
+  AiSettingsDto,
   SettingsBootstrapDto,
   CalendarSettingsDto,
   GeneralSettingsDto,
@@ -99,6 +101,29 @@ export class SettingsController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<CalendarSettings> {
     return this.settings.updateCalendar(dto, actor);
+  }
+
+  /**
+   * Секція AI-асистента (AI-1c): персона й інструкції, які воркер додає до промпту
+   * ПІСЛЯ незмінних меж. На відміну від решти секцій, ADMIN-only і ЧИТАННЯ теж:
+   * жоден екран поза редактором її не потребує (воркер читає рядок тенанта сам),
+   * а адмін може писати туди внутрішні формулювання — найменші привілеї.
+   */
+  @Get('ai')
+  @Roles(Role.ADMIN)
+  @ApiOkResponse({ type: AiSettingsDto.Output })
+  async ai(): Promise<AiSettings> {
+    return this.settings.ai();
+  }
+
+  @Put('ai')
+  @Roles(Role.ADMIN)
+  @ApiOkResponse({ type: AiSettingsDto.Output })
+  async updateAi(
+    @Body() dto: AiSettingsDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<AiSettings> {
+    return this.settings.updateAi(dto, actor);
   }
 
   /**

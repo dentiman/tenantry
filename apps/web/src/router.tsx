@@ -46,6 +46,7 @@ import { SettingsGeneralPage } from './pages/settings/general';
 import { SettingsCalendarPage } from './pages/settings/calendar';
 import { SettingsNumberingPage } from './pages/settings/numbering';
 import { SettingsActivityPage } from './pages/settings/activity';
+import { SettingsAiPage } from './pages/settings/ai';
 
 /**
  * Шляхи, які до появи area-навігації лежали в корені, а тепер живуть під
@@ -365,6 +366,13 @@ const settingsNumberingRoute = createRoute({
   component: SettingsNumberingPage,
 });
 
+/** AI-1c: персона й інструкції асистента — ADMIN-only, як і вся area (requireAdmin вище) */
+const settingsAiRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'ai',
+  component: SettingsAiPage,
+});
+
 const settingsActivityRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'activity',
@@ -568,6 +576,7 @@ const routeTree = rootRoute.addChildren([
       settingsGeneralRoute,
       settingsCalendarRoute,
       settingsNumberingRoute,
+      settingsAiRoute,
       settingsActivityRoute,
     ]),
     userSettingsRoute.addChildren([

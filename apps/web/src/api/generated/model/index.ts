@@ -18,6 +18,8 @@ export * from './aiConversationResponseDtoOutputMessagesItem';
 export * from './aiConversationResponseDtoOutputMessagesItemErrorCode';
 export * from './aiConversationResponseDtoOutputMessagesItemRole';
 export * from './aiConversationResponseDtoOutputMessagesItemStatus';
+export * from './aiSettingsDto';
+export * from './aiSettingsDtoOutput';
 export * from './askAiRequestDto';
 export * from './askAiResponseDtoOutput';
 export * from './askAiResponseDtoOutputQuestion';

@@ -24,6 +24,7 @@ export type NavPath =
   | '/settings'
   | '/settings/calendar'
   | '/settings/numbering'
+  | '/settings/ai'
   | '/settings/activity'
   | '/playground'
   | '/playground/vertical-form'

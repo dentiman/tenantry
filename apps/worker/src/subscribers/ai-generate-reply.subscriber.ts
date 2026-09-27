@@ -10,6 +10,7 @@ import {
   MessageSubscriber,
   buildPrompt,
   generateAiReplyCommand,
+  readAiSettings,
   selectHistoryPairs,
   type AiConfig,
   type KnowledgeSource,
@@ -289,6 +290,20 @@ export class AiGenerateReplySubscriber
       });
       const history = selectHistoryPairs(historyRows.reverse(), this.config.historyTurns);
 
+      // Персона й інструкції організації (AI-1c) — у тій самій транзакції, під RLS.
+      // `reply.tenantId` — власна колонка рядка, не аргумент сервісу; RLS однаково
+      // не дасть прочитати чужий рядок. Читається раз на доставку: restart() усередині
+      // неї бере той самий промпт — так само, як зі знаннями
+      const tenant = await tx.tenant.findUnique({
+        where: { id: reply.tenantId },
+        select: { settings: true },
+      });
+      const aiSettings = readAiSettings(tenant?.settings);
+      if (!aiSettings.valid) {
+        // Без тексту: це конфігурація тенанта, у лог вона не йде
+        this.logger.warn(`AI settings of tenant ${reply.tenantId} are invalid — using boundaries only`);
+      }
+
       // Знання — ДО claim(): версія пишеться тим самим фенсингованим UPDATE, що
       // захоплює рядок (ai-1b, design.md D7). Фільтр `audience` — за роллю юзера
       // на момент генерації; у джерело йдуть лише роль і питання (§9.1)
@@ -321,6 +336,7 @@ export class AiGenerateReplySubscriber
             history,
             knowledge: knowledge.documents,
             user: { role: user.role, locale: user.locale },
+            organization: aiSettings.settings,
           }),
           model: this.config.model,
           maxOutputTokens: this.config.maxOutputTokens,
