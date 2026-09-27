@@ -26,7 +26,12 @@ export class AiMessageStateService {
     tx: Prisma.TransactionClient,
     messageId: string,
     conversationId: string,
-    options: { readonly leaseMs: number; readonly model: string },
+    options: {
+      readonly leaseMs: number;
+      readonly model: string;
+      /** Версія знань промпту цієї спроби (ai-1b, design.md D7) */
+      readonly knowledgeVersion: string;
+    },
   ): Promise<{
     readonly id: string;
     readonly tenantId: string;
@@ -57,6 +62,10 @@ export class AiMessageStateService {
         errorCode: null,
         startedAt: now,
         model: options.model,
+        // Версія знань належить РІВНО тій спробі, що володіє рядком, — як і `model`:
+        // перезахоплена покинута відповідь перепідготовлена з нуля і перезаписує її
+        // тим, що справді надіслала (ai-1b, design.md D7). restart() промпт не змінює
+        knowledgeVersion: options.knowledgeVersion,
         // Облік токенів — лише тієї спроби, що дала збережений текст (ai-1a, design.md D7):
         // перезахоплений рядок не має права зберегти числа попередньої
         promptTokens: null,

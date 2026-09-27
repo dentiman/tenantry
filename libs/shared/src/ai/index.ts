@@ -8,3 +8,7 @@ export * from './llm/openai-compat.provider';
 export * from './prompt/prompt-builder';
 export * from './prompt/history';
 export * from './ai-message-state.service';
+export * from './knowledge/corpus-builder';
+export * from './knowledge/knowledge-source';
+export * from './knowledge/static-knowledge-source';
+export * from './knowledge/ai-knowledge.module';

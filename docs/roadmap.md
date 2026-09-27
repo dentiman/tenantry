@@ -31,6 +31,7 @@
 | **AI-асистент AI-0** | 2026-09-20 | Бічна панель довідки в tenant-порталі на **фейковому провайдері**: `ai_conversations`/`ai_messages` під RLS + частковий унікальний індекс «одна активна розмова на юзера», команда `ai.generate-reply` у воркері (три фази, транзакція не тримається через виклик моделі), стрім чанками через наявний Socket.IO-міст із `chunkSeq` і REST-фолбеком, скасування через Valkey pub/sub, `AiPanel` як пʼята колонка шела з розкриттям «це AI». Заразом `ConsumerSpec` навчився опцій воркера (`localConcurrency`/`groupConcurrency`/`pollingIntervalSeconds`/`expireInSeconds`) — дефолтна одиниця означала б одну генерацію на всю інсталяцію | `ai-assistant-implementation.md` |
 | **AI-асистент AI-0.1** | 2026-09-27 | Закрито борг рев'ю AI-0: виключна власність генерації (`attempt` + оренда, фенсинг-переходи в `AiMessageStateService`), ретрай тимчасових відмов провайдера всередині доставки, закриття покинутих відповідей на читанні, довговічний Stop (маркер у БД раніше за pub/sub), історія без дублю питання, безпечне конкурентне створення розмови, сигнал `ai.conversation-changed.v1` для інших вкладок | `ai-assistant-implementation.md` |
 | **AI-асистент AI-1a** | 2026-09-27 | Перший реальний провайдер `OpenAiCompatProvider` (офіційний пакет `openai`, `baseURL`, `maxRetries: 0` — єдиний цикл ретраю воркерний): стрім з `include_usage`, Stop/таймаут рвуть HTTP-запит, класифікація помилок у `retryable` (мережа/408/409/429/5xx/обрив стріму — так; інші 4xx — ні), `Retry-After` у межах `AI_RETRY_DELAY_MS`; облік токенів відповіді в `ai_messages`; ключ лише у воркера (`AiLlmModule`); попередження на хост Anthropic; обовʼязкова стеля витрат у `.env.example`/`deploy-swarm.md`. Тести — проти локального HTTP-стаба, без мережі. Ручний прогін із живим ключем — ще ні | `ai-assistant-implementation.md` §7.1 |
+| **AI-асистент AI-1b** | 2026-09-27 | Корпус знань рівня 1: 13 документів для кінцевого юзера в `docs/ai-knowledge/` (front-matter `slug`/`title`/`audience`/`area`), генератор `pnpm ai:knowledge` → закомічений JSON-артефакт з версією-хешем, перевірка «не застарів + бюджет 100 000 символів» у `pnpm lint` і в новій CI-стадії `check`; шов `KnowledgeSource` + `StaticKnowledgeSource` (документи `admin` не йдуть у промпт не-ADMIN); `ai_messages.knowledge_version` пише `claim()` — промпт відтворюваний без зберігання | `ai-assistant-implementation.md` §14 |
 | **Чат CHAT-0.1**                | 2026-09-22    | Перший видимий зріз чату — повний екран на REST, **без realtime**: `conversations`/`conversation_participants`/`chat_messages` під RLS, серверний `seq` через інкремент-і-повернення (він же серіалізує вставки в межах розмови), keyset-курсор по `seq`, ідемпотентне надсилання по `client_message_id` на частковому унікальному індексі, курсор прочитаного + денормалізовані непрочитані, дефолтний канал «General» із трьома місцями провізіонінгу, системні записи в тій самій стрічці (`type` + params, рендер i18next), **одна** функція доступу (RLS — межа тенанта, участь — межа людини). UI: список розмов, тред на `message-scroller`, свій композер, оптимістичний рядок у власному сторі поза кешем запитів. Свіжість — перечитування на фокус і після надсилання; місця під `publish`/`onCommit` позначені й порожні | `chat.md` §7 |
 | **Account Settings V1**         | 2026-08-29    | Розділ `/settings` (Profile / Account / Security / Notifications / Appearance) на шаблоні `satnaing/shadcn-admin`; модуль `apps/api/src/account/` без id у шляхах; зміна власного пароля з доказом старого і поверненням свіжої пари токенів, «вийти звідусіль», справжній `POST /auth/logout` замість суто клієнтського виходу. Списку пристроїв немає свідомо — сесії як сутності в моделі auth не існує                                                              | `account-settings.md`                  |
 
@@ -178,7 +179,8 @@ Invite-флоу першого адміна тенанта (зараз паро�
 
 ### 2.10. AI-асистент: AI-1 і далі
 
-AI-0, AI-0.1 і **AI-1a** зроблено (див. таблицю §1): бічна панель довідки працює наскрізь;
+AI-0, AI-0.1, **AI-1a** і **AI-1b** зроблено (див. таблицю §1) — це **робоча версія**: бічна
+панель довідки працює наскрізь і відповідає по продукту з корпусу знань;
 дефолт і CI — **фейковий провайдер** (без ключа, мережі й витрат), а `AI_PROVIDER=openai-compat`
 підключає будь-який OpenAI-сумісний бекенд (рекомендовано OpenRouter + ZDR) з обліком токенів
 відповіді. Ручний прогін із живим ключем (латентність першого кадру, `cached_tokens`) ще не
@@ -188,10 +190,12 @@ AI-1 розбита на п'ять змін ([ai-assistant.md](ai-assistant.md) 
 
 1. ~~`ai-1a-openai-compat-provider`~~ — **зроблено 2026-09-27**: `OpenAiCompatProvider`
    (нативний Anthropic відкладено, §5.3) + облік токенів відповіді
-   ([ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1). **Наступне — `1b`.**
-2. `ai-1b-knowledge-corpus` — `docs/ai-knowledge/`, генератор, бюджет у CI (у символах),
-   `KnowledgeSource`. **Після `1a`+`1b` — робоча версія на справжній LLM**; вмикати на реальному
-   ключі лише з жорсткою стелею витрат у кабінеті провайдера, поки немає квот `1d`.
+   ([ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1).
+2. ~~`ai-1b-knowledge-corpus`~~ — **зроблено 2026-09-27**: `docs/ai-knowledge/`, генератор,
+   бюджет у CI (у символах), `KnowledgeSource`, `knowledge_version`
+   ([ai-assistant-implementation.md](ai-assistant-implementation.md) §14). **Робоча версія на
+   справжній LLM є**; вмикати на реальному ключі лише з жорсткою стелею витрат у кабінеті
+   провайдера, поки немає квот `1d`. Далі — `1c`/`1d`/`1e` у будь-якому порядку.
 3. `ai-1c-assistant-settings` — системний промпт/персона в `settings.ai`, екран `/settings/ai`.
 4. `ai-1d-usage-quotas` — `ai_usage_counters` і квоти.
 5. `ai-1e-retention` — очищення старих розмов і «видалити мої розмови» (незалежний, будь-коли).

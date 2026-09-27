@@ -909,6 +909,13 @@ model AiMessage {
   promptTokens     Int?    @map("prompt_tokens")
   completionTokens Int?    @map("completion_tokens")
 
+  // Версія корпусу знань, якою відповідали (ai-1b, design.md D7): хеш артефакту
+  // `pnpm ai:knowledge`. Повний промпт НЕ зберігається — він відтворюється з цієї
+  // версії (git), коду інструкції, збереженої історії й питання (ai-assistant.md
+  // §11.6). Пише `claim()` у тому ж фенсингованому UPDATE, що й `model`; NULL —
+  // питання юзера або відповідь, згенерована до ai-1b
+  knowledgeVersion String? @map("knowledge_version")
+
   // ВЛАСНІСТЬ ГЕНЕРАЦІЇ (AI-0.1, design.md D1). Захоплюється умовним UPDATE, що
   // збільшує `attempt` і виставляє оренду; кожен наступний запис — теж умовний
   // UPDATE з `WHERE attempt = <моя спроба>`. Нуль оновлених рядків = спробу

@@ -14,6 +14,7 @@
 - [База даних (Prisma + ролі)](#база-даних-prisma--ролі)
 - [Застосунки — розробка](#застосунки--розробка)
 - [Кодогенерація контрактів](#кодогенерація-контрактів)
+- [Корпус знань AI-асистента](#корпус-знань-ai-асистента)
 - [Якість коду](#якість-коду)
 - [Тести](#тести)
 - [Логи](#логи)
@@ -306,16 +307,39 @@ pnpm platform:web:codegen
 
 ---
 
+## Корпус знань AI-асистента
+
+Той самий патерн, що `openapi.json`/orval: джерело — Markdown у `docs/ai-knowledge/`,
+рантайм читає лише закомічений артефакт
+`libs/shared/src/ai/knowledge/generated/knowledge-corpus.json` (деталі —
+[ai-assistant-implementation.md](ai-assistant-implementation.md) §14).
+
+### `pnpm ai:knowledge` / `pnpm ai:knowledge:check`
+
+```bash
+pnpm ai:knowledge        # → docs/ai-knowledge/*.md → knowledge-corpus.json (+ версія-хеш)
+pnpm ai:knowledge:check  # → exit 1, якщо артефакт застарів, front-matter невалідний
+                         #   або корпус понад бюджет (100 000 символів)
+```
+
+Голий `node` (type stripping Node 24), без залежностей — тому ту саму перевірку ганяє CI
+(стадія `check` у `.gitlab-ci.yml`) і перший крок `pnpm lint`. Після будь-якої правки в
+`docs/ai-knowledge/` — `pnpm ai:knowledge` і закомітити артефакт разом із Markdown.
+
+---
+
 ## Якість коду
 
 ### `pnpm lint` / `pnpm lint:fix`
 
 ```bash
-pnpm lint       # → eslint . --max-warnings 0
+pnpm lint       # → ai:knowledge --check && eslint . --max-warnings 0
 pnpm lint:fix   # → eslint . --fix
 ```
 
-ESLint strict-type-checked, нуль попереджень допускається.
+ESLint strict-type-checked, нуль попереджень допускається. Першим кроком — перевірка корпусу
+знань AI (мілісекунди, без залежностей): забутий `pnpm ai:knowledge` ловиться локально, а не
+в CI.
 
 ### `pnpm format` / `pnpm format:check`
 

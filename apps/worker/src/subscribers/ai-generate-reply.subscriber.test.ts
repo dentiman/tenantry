@@ -5,7 +5,11 @@ import {
   FakeLlmProvider,
   FAKE_LLM_DIRECTIVES,
   LlmProviderError,
+  StaticKnowledgeSource,
+  buildKnowledgeCorpus,
+  serializeKnowledgeCorpus,
   type AiConfig,
+  type KnowledgeSource,
   type LlmProvider,
   type LlmChunk,
   type LlmRequest,
@@ -57,6 +61,8 @@ interface MessageRow {
   // ai-1a: у фікстурах не задаються — зʼявляються з першим записом state-сервісу
   promptTokens?: number | null;
   completionTokens?: number | null;
+  // ai-1b: так само зʼявляється з першим claim()
+  knowledgeVersion?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +136,7 @@ function makeWorld(
   question = 'How do I rename the workspace?',
   priorTurns: readonly PriorTurn[] = [],
   replyOverrides: Partial<Pick<MessageRow, 'attempt' | 'leaseExpiresAt' | 'content'>> = {},
+  userRole: 'ADMIN' | 'USER' = 'USER',
 ): World {
   const prior: MessageRow[] = priorTurns.flatMap((turn, index) => [
     {
@@ -201,7 +208,7 @@ function makeWorld(
       },
     },
     user: {
-      findUnique: (): Promise<unknown> => Promise.resolve({ role: 'USER', locale: 'en' }),
+      findUnique: (): Promise<unknown> => Promise.resolve({ role: userRole, locale: 'en' }),
     },
   };
 
@@ -255,11 +262,28 @@ function capturingProvider(delegate = new FakeLlmProvider({ chunkDelayMs: 1, chu
   };
 }
 
+/** Маленький корпус із документом адміна — щоб фільтр `audience` було видно в промпті (ai-1b) */
+const TEST_KNOWLEDGE = JSON.parse(
+  serializeKnowledgeCorpus(
+    buildKnowledgeCorpus([
+      {
+        name: '00-everyone.md',
+        text: '---\nslug: everyone\ntitle: Everyone doc\naudience: all\narea: general\n---\nPublic knowledge body\n',
+      },
+      {
+        name: '01-admins.md',
+        text: '---\nslug: admins\ntitle: Admin doc\naudience: admin\narea: settings\n---\nAdmin knowledge body\n',
+      },
+    ]),
+  ),
+) as { version: string };
+
 function makeSubscriber(
   world: World,
   overrides: Partial<AiConfig> = {},
   cancel: Partial<AiCancelChannel> = {},
   provider: LlmProvider = new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 }),
+  knowledgeSource: KnowledgeSource = new StaticKnowledgeSource(TEST_KNOWLEDGE),
 ): AiGenerateReplySubscriber {
   const config: AiConfig = {
     enabled: true, provider: 'fake', maxOutputTokens: 256, historyTurns: 10,
@@ -280,6 +304,7 @@ function makeSubscriber(
     world.realtime as never,
     cancelChannel,
     provider,
+    knowledgeSource,
     config,
   );
 }
@@ -700,6 +725,69 @@ describe('AiGenerateReplySubscriber', () => {
     expect(provider.calls()).toBe(1);
     expect(world.reply().status).toBe('FAILED');
     expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
+  });
+
+  // ---------------------------------------------------------------- ai-1b знання
+
+  function knowledgeMessage(request: LlmRequest | undefined): string {
+    const message = request?.messages.find((m) => m.content.startsWith('Product documentation:'));
+    return message?.content ?? '';
+  }
+
+  it('ai-1b: USER — у промпті корпус без документів адміна; у рядку версія знань', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const knowledge = knowledgeMessage(requests[0]);
+    expect(knowledge).toContain('Public knowledge body');
+    expect(knowledge).not.toContain('Admin knowledge body');
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().knowledgeVersion).toBe(TEST_KNOWLEDGE.version);
+  });
+
+  it('ai-1b: ADMIN — документи адміна теж у промпті, версія та сама', async () => {
+    const world = makeWorld('PENDING', 'How do I rename the workspace?', [], {}, 'ADMIN');
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(knowledgeMessage(requests[0])).toContain('Admin knowledge body');
+    expect(world.reply().knowledgeVersion).toBe(TEST_KNOWLEDGE.version);
+  });
+
+  it('ai-1b: знання стоять після інструкції й перед контекстом юзера, історією та питанням', async () => {
+    const world = makeWorld('PENDING', 'current question', [
+      { questionContent: 'earlier question', answerStatus: 'COMPLETE', answerContent: 'earlier answer' },
+    ]);
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    const knowledgeAt = contents.findIndex((c) => c.startsWith('Product documentation:'));
+    const userContextAt = contents.findIndex((c) => c.startsWith('User context:'));
+    const historyAt = contents.indexOf('earlier question');
+    expect(knowledgeAt).toBe(1);
+    expect(userContextAt).toBeGreaterThan(knowledgeAt);
+    expect(historyAt).toBeGreaterThan(userContextAt);
+    expect(contents.at(-1)).toBe('current question');
+  });
+
+  it('ai-1b: перезапуск усередині доставки (__fail_once__) зберігає версію знань і той самий корпус', async () => {
+    const world = makeWorld('PENDING', '__fail_once__ question');
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(2);
+    expect(knowledgeMessage(requests[1])).toBe(knowledgeMessage(requests[0]));
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().attempt).toBe(2);
+    expect(world.reply().knowledgeVersion).toBe(TEST_KNOWLEDGE.version);
+  });
+
+  it('ai-1b: фейк і далі читає лише останнє питання — директиви працюють і з непорожнім корпусом', async () => {
+    const world = makeWorld('PENDING', '__reject__');
+    await makeSubscriber(world).handle(job);
+    expect(world.reply().status).toBe('FAILED');
   });
 });
 

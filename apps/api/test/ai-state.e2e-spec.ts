@@ -90,7 +90,11 @@ describe('AiMessageStateService (e2e, real Postgres)', () => {
   ): ReturnType<AiMessageStateService['claim']> =>
     tenantContext.runWith(DEFAULT_TENANT_ID, () =>
       tenantTx.withTenantTx((tx) =>
-        state.claim(tx, messageId, conversationId, { leaseMs: 90_000, model: 'fake-1' }),
+        state.claim(tx, messageId, conversationId, {
+          leaseMs: 90_000,
+          model: 'fake-1',
+          knowledgeVersion: 'kv-test-0001',
+        }),
       ),
     );
 
@@ -109,6 +113,8 @@ describe('AiMessageStateService (e2e, real Postgres)', () => {
     const row = await prisma.aiMessage.findUniqueOrThrow({ where: { id: messageId } });
     expect(row.status).toBe('STREAMING');
     expect(row.attempt).toBe(1);
+    // ai-1b: версія знань пишеться тим самим фенсингованим UPDATE, що захоплює рядок
+    expect(row.knowledgeVersion).toBe('kv-test-0001');
   });
 
   it('запис із застарілим attempt торкається 0 рядків (фенсинг)', async () => {

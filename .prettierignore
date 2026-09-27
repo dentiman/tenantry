@@ -2,3 +2,10 @@
 # `pnpm format` переписав би їхні JSON/MD і розсинхронізував з апстрімом.
 .claude/skills/
 .agents/skills/
+
+# Згенерований артефакт знань AI (pnpm ai:knowledge) — перевірка ai:knowledge:check
+# порівнює його побайтово, тож форматувати його не можна
+libs/shared/src/ai/knowledge/generated/
+# Джерело корпусу знань AI: Prettier вирівнює таблиці пробілами (+~8% символів, які йдуть
+# у КОЖЕН промпт і в бюджет рівня 1) — таблиці там свідомо компактні
+docs/ai-knowledge/

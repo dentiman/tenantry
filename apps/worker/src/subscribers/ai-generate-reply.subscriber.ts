@@ -4,6 +4,7 @@ import {
   AI_CONFIG,
   AiCancelChannel,
   AiMessageStateService,
+  KNOWLEDGE_SOURCE,
   LLM_PROVIDER,
   LlmProviderError,
   MessageSubscriber,
@@ -11,6 +12,7 @@ import {
   generateAiReplyCommand,
   selectHistoryPairs,
   type AiConfig,
+  type KnowledgeSource,
   type LlmProvider,
   type LlmRequest,
   type LlmUsage,
@@ -65,6 +67,7 @@ export class AiGenerateReplySubscriber
     private readonly realtime: WorkerRealtimeEmitter,
     private readonly cancelChannel: AiCancelChannel,
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
+    @Inject(KNOWLEDGE_SOURCE) private readonly knowledgeSource: KnowledgeSource,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
   ) {}
 
@@ -286,6 +289,14 @@ export class AiGenerateReplySubscriber
       });
       const history = selectHistoryPairs(historyRows.reverse(), this.config.historyTurns);
 
+      // Знання — ДО claim(): версія пишеться тим самим фенсингованим UPDATE, що
+      // захоплює рядок (ai-1b, design.md D7). Фільтр `audience` — за роллю юзера
+      // на момент генерації; у джерело йдуть лише роль і питання (§9.1)
+      const knowledge = await this.knowledgeSource.select({
+        role: user.role,
+        question: questionRow.content,
+      });
+
       // Захоплення власності — ОСТАННІМ кроком, коли вже відомо, що є з чим
       // генерувати (design.md D1). Той самий якір ідемпотентності, що раніше
       // тримав прямий статус-чек: PENDING/STREAMING-з-простроченою-орендою — так,
@@ -293,6 +304,7 @@ export class AiGenerateReplySubscriber
       const claimed = await this.state.claim(tx, data.messageId, data.conversationId, {
         leaseMs: this.config.leaseMs,
         model: this.config.model,
+        knowledgeVersion: knowledge.version,
       });
       if (!claimed) {
         this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
@@ -307,7 +319,7 @@ export class AiGenerateReplySubscriber
           messages: buildPrompt({
             question: questionRow.content,
             history,
-            knowledge: [],
+            knowledge: knowledge.documents,
             user: { role: user.role, locale: user.locale },
           }),
           model: this.config.model,

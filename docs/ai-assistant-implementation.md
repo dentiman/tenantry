@@ -1,17 +1,20 @@
-# AI-асистент: що збудовано (AI-0, AI-0.1, AI-1a)
+# AI-асистент: що збудовано (AI-0, AI-0.1, AI-1a, AI-1b)
 
 Довідник поточного стану фічі. **Чому саме так** — у [ai-assistant.md](ai-assistant.md)
 (дослідження і фазовий план); формальні артефакти фаз —
 `openspec/changes/archive/2026-09-20-ai-assistant-pipeline-fake-provider/` (AI-0) і
 `openspec/changes/ai-0-1-hardening/` (AI-0.1), `openspec/changes/ai-1a-openai-compat-provider/`
-(AI-1a).
+(AI-1a), `openspec/changes/ai-1b-knowledge-corpus/` (AI-1b).
 
-**Статус: AI-0, AI-0.1 і AI-1a зроблено.** Конвеєр працює наскрізь — від кнопки в хедері до
+**Статус: AI-0, AI-0.1, AI-1a і AI-1b зроблено — робоча версія.** Конвеєр працює наскрізь — від кнопки в хедері до
 рядка в Postgres. Дефолт і основа CI — `FakeLlmProvider` (без ключа, без мережі, без витрат);
 **AI-1a** додала перший реальний провайдер, `OpenAiCompatProvider` (§7.1), що підставляється
 за тим самим інтерфейсом конфігом (`AI_PROVIDER=openai-compat`), і облік токенів відповіді в
 зарезервованих колонках `ai_messages`. Ручний прогін із живим ключем ще **не** виконано —
-ключа в середовищі розробки не було (§7.1, «Що ще не перевірено»).
+ключа в середовищі розробки не було (§7.1, «Що ще не перевірено»). **AI-1b** дала асистенту
+знання: корпус рівня 1 для кінцевого юзера (`docs/ai-knowledge/`, 13 документів), що через
+закомічений артефакт і шов `KnowledgeSource` потрапляє в промпт, відфільтрований за роллю, і
+версію знань на кожній відповіді (§14).
 
 **AI-0.1** закрила борг AI-0
 ([ai-assistant-review-gaps.md](ai-assistant-review-gaps.md), усі пункти закриті) і дефект §6.3
@@ -61,6 +64,14 @@ libs/shared/src/ai/
   prompt/prompt-builder.ts        (history, question, knowledge, user) → LlmMessage[]
   prompt/history.ts               AI-0.1: selectHistoryPairs — лише ЗАВЕРШЕНІ пари питання/
                                   відповідь, без дублювання поточного питання
+  knowledge/                      ai-1b (§14):
+    corpus-builder.ts             ЧИСТИЙ збирач: front-matter, валідація, версія-хеш, бюджет
+                                  символів; лише node:crypto — його запускає голий node
+    generated/knowledge-corpus.json  ЗГЕНЕРОВАНИЙ артефакт (`pnpm ai:knowledge`), комітиться
+    knowledge-source.ts           ІНТЕРФЕЙС KnowledgeSource.select({role, question}) +
+                                  токен KNOWLEDGE_SOURCE
+    static-knowledge-source.ts    артефакт, перевірений на старті; фільтр audience за роллю
+    ai-knowledge.module.ts        провайдер KNOWLEDGE_SOURCE — ЛИШЕ worker
 libs/shared/src/messaging/
   definitions/ai.messages.ts      ai.generate-reply (команда)
   topology.ts                     + рядок ai-generator з опціями воркера; retryLimit тепер
@@ -72,14 +83,18 @@ apps/worker/src/ai/
                                   ретраї, інакше воркер не піднімається
   chunk-coalescer.ts              AI-0.1: чистий клас, коалесування кадрів провайдера
 apps/worker/src/subscribers/
-  ai-generate-reply.subscriber.ts координатор життєвого циклу генерації
+  ai-generate-reply.subscriber.ts координатор життєвого циклу генерації; ai-1b: знання з
+                                  KnowledgeSource у prepare() ДО claim()
 apps/web/src/components/ai/       панель, тригер, Markdown, use-ai-enabled
 apps/web/src/realtime/ai-sync.ts  міст socket → TanStack Query; позиція читається з
                                   кешованого повідомлення (attempt/chunkCount), не з
                                   окремого модульного лічильника
 apps/web/src/stores/ai-panel.store.ts
 libs/database/prisma/             ai_conversations, ai_messages (+ RLS, частковий індекс,
-                                  attempt/lease_expires_at/chunk_count/cancel_requested_at)
+                                  attempt/lease_expires_at/chunk_count/cancel_requested_at;
+                                  ai-1b: knowledge_version)
+docs/ai-knowledge/                ai-1b: ДЖЕРЕЛО корпусу знань (Markdown для кінцевого юзера)
+scripts/ai-knowledge.ts           ai-1b: генератор і --check (голий node, без залежностей)
 ```
 
 ## 3. Модель даних
@@ -87,7 +102,7 @@ libs/database/prisma/             ai_conversations, ai_messages (+ RLS, част
 `AiConversation(id, tenantId, userId, status, createdAt, updatedAt, lastMessageAt)` +
 `AiMessage(id, tenantId, conversationId, seq, role, status, content, errorCode, attempt,
 leaseExpiresAt, chunkCount, cancelRequestedAt, model, promptTokens, completionTokens,
-startedAt, completedAt, createdAt)`.
+knowledgeVersion, startedAt, completedAt, createdAt)`.
 
 Рішення, які легко зламати заднім числом:
 
@@ -114,6 +129,10 @@ startedAt, completedAt, createdAt)`.
 - **Облік токенів** (`model`, `prompt_tokens`, `completion_tokens`) — колонки, зарезервовані
   в AI-0, пишуться з AI-1a у фінальній транзакції воркера (§7.1): жодної міграції не знадобилось.
   `NULL` = бекенд usage не повідомив (Stop, бекенд без `include_usage`), а не нуль.
+- **`knowledgeVersion`** (ai-1b) — версія корпусу знань, якою відповідали (§14). Пише
+  `claim()` у тому ж фенсингованому `updateMany`, що й `model`, тож вона належить рівно тій
+  спробі, що володіє рядком; `restart()` промпт не змінює і версію не чіпає. `NULL` — питання
+  юзера або відповідь до ai-1b. Повного промпту в БД немає — він відтворюється (§14).
 
 ## 4. Дві межі доступу, і вони різні
 
@@ -151,8 +170,8 @@ startedAt, completedAt, createdAt)`.
 
 ## 6. Приватність — властивість, а не обіцянка
 
-Назовні їде рівно три речі: системна інструкція, те, що юзер надрукував, і (з AI-1) корпус
-знань. Жоден рядок `customers`, `users` чи `calendar_events` шляху в промпт не має.
+Назовні їде рівно три речі: системна інструкція, те, що юзер надрукував, і (з AI-1b) корпус
+знань — статична документація продукту, однакова для всіх тенантів (§14). Жоден рядок `customers`, `users` чи `calendar_events` шляху в промпт не має.
 
 Тримає це **підпис функції**, а не дисципліна: `buildPrompt` приймає `user: AiUserContext`, де
 `AiUserContext = { role, locale }`. Ні `email`, ні `name`, ні назви тенанта туди не передати,
@@ -409,12 +428,13 @@ OpenAPI-документ одночасно, тож конфігурована �
 | --- | --- |
 | Юніт: фейк, промпт/історія, конфіг, вибір провайдера | `libs/shared/src/ai/**/*.test.ts` без провайдерного (44) — включно з синтетичним usage фейка, `requireProviderCredentials` (кожна відсутня змінна названа, ключ не в повідомленні), `createLlmProvider` |
 | Юніт: `OpenAiCompatProvider` проти локального HTTP-стаба | `libs/shared/src/ai/llm/openai-compat.provider.test.ts` (30) — `node:http` на `127.0.0.1:0` із записаними SSE у формі OpenRouter, **без мережі й ключа**: успіх + usage останнім кадром + форма запиту, без `finish_reason` але з usage → завершено, `length` → завершено, 429 + `Retry-After`, 401, таблиця 4xx/5xx, обрив сокета, стрім без обох маркерів кінця, кадр помилки в 200-стрімі, abort (стаб бачить закрите зʼєднання), abort до відповіді, connection refused, ключ не в лозі й не в помилці, попередження на хост Anthropic, парсинг `Retry-After` |
-| Юніт: координатор генерації | `apps/worker/src/subscribers/ai-generate-reply.subscriber.test.ts` (27) — happy path, ретраї (`__fail__`/`__fail_once__`/`__reject__`), таймаут, Stop (pub/sub, БД-маркер, до підписки), проміжний запис, конкурентні доставки, покинута/жива оренда, втрата власності мід-стріму, історія без дублю питання; AI-1a: usage записано, модель бекенду перекриває налаштовану, usage скидається на рестарті, Stop лишає usage порожнім, `Retry-After` у межах і понад бюджет |
+| Юніт: корпус знань (ai-1b) | `libs/shared/src/ai/knowledge/corpus-builder.test.ts` (20) — front-matter і кожне хибне поле з назвою файлу, дубль slug, детермінована версія, версія не залежить від порядку ключів front-matter і змінюється від тіла, бюджет; `static-knowledge-source.test.ts` (8) — фільтр `audience`, одна версія для обох ролей, зіпсований артефакт відкидається на старті, закомічений корпус у бюджеті, **точність повідомлень troubleshooting проти `libs/i18n` для кожного `ApiError.code`**; `prompt-builder.test.ts` — повний порядок промпту |
+| Юніт: координатор генерації | `apps/worker/src/subscribers/ai-generate-reply.subscriber.test.ts` (27 + 5 ai-1b: USER без документів адміна, ADMIN з ними, версія в рядку, позиція знань у промпті, рестарт зберігає версію й корпус) — happy path, ретраї (`__fail__`/`__fail_once__`/`__reject__`), таймаут, Stop (pub/sub, БД-маркер, до підписки), проміжний запис, конкурентні доставки, покинута/жива оренда, втрата власності мід-стріму, історія без дублю питання; AI-1a: usage записано, модель бекенду перекриває налаштовану, usage скидається на рестарті, Stop лишає usage порожнім, `Retry-After` у межах і понад бюджет |
 | Юніт: коалесування, boot-guard | `apps/worker/src/ai/chunk-coalescer.test.ts` (6), `ai-lease.guard.test.ts` (3) |
 | Юніт: клієнтський sync | `apps/web/src/realtime/ai-sync.test.ts` (13) — уся таблиця D6, включно з «перечитування відстає, буфер закриває розрив без другого перечитування» |
 | Юніт: межа XSS | `apps/web/src/components/ai/markdown.test.tsx` (5) |
 | E2E: контракт і доступ | `apps/api/test/ai.e2e-spec.ts`, `ai-disabled.e2e-spec.ts` (24) — включно з конкурентним першим використанням, конкурентними `ask()`, покинутою орендою, durable Stop |
-| E2E: власність генерації проти СПРАВЖНЬОГО Postgres | `apps/api/test/ai-state.e2e-spec.ts` (8) — конкурентний `claim`, фенсинг застарілого `attempt`, покинута/жива оренда, `cancelPending` проти `claim`, `cancelRequestedAt` переживає reclaim |
+| E2E: власність генерації проти СПРАВЖНЬОГО Postgres | `apps/api/test/ai-state.e2e-spec.ts` (8) — конкурентний `claim` (ai-1b: пише `knowledge_version`), фенсинг застарілого `attempt`, покинута/жива оренда, `cancelPending` проти `claim`, `cancelRequestedAt` переживає reclaim |
 | E2E: realtime | `apps/api/test/ai-realtime.e2e-spec.ts` (4) — справжній socket, `ai.conversation-changed.v1` в особистий room і його межі |
 | E2E: RLS | `apps/api/test/rls.e2e-spec.ts` — розмова тенанта A невидима під B |
 | E2E: ліміт частоти | `apps/api/test/rate-limit.e2e-spec.ts` |
@@ -438,7 +458,7 @@ AI-1 — п'ять окремих змін, кожна приєднується 
 | Крок | Шов у поточному коді |
 | --- | --- |
 | `ai-1a` `OpenAiCompatProvider` | **зроблено** (§7.1): нова реалізація `LlmProvider` + `openai-compat` в `AI_PROVIDER` + рядок у `LLM_FACTORIES` (тепер у воркерному `AiLlmModule`); `usage` пишеться в зарезервовані колонки у `finalize()`; класифікація помилок — на наявний `LlmProviderError.retryable` (+`retryAfterMs`). Відкрито: ручний прогін із живим ключем |
-| `ai-1b` корпус знань | аргумент `knowledge` у `buildPrompt` (існує, поки порожній) → `KnowledgeSource`; одна адитивна колонка `knowledgeVersion` |
+| `ai-1b` корпус знань | **зроблено** (§14): `KnowledgeSource` + `StaticKnowledgeSource` над закоміченим артефактом, фільтр `audience`; `knowledge_version` пише `claim()`; перевірка артефакту й бюджету в `pnpm lint` і CI |
 | `ai-1c` персона в налаштуваннях | `SYSTEM_INSTRUCTION` у `prompt-builder.ts` розпадається на незмінні межі (код) + інструкцію тенанта (`settings.ai`) |
 | `ai-1d` квоти | читання в `AiService.ask` перед `publish`; списання у фінальній транзакції субскрайбера (там, де `finalize()` уже пише usage); нова таблиця `ai_usage_counters`; `cachedPromptTokens` уже приходить у `LlmUsage` — лишилось зберегти |
 | `ai-1e` retention | нова cron-команда в `MESSAGE_TOPOLOGY` + підписник |
@@ -449,3 +469,90 @@ OpenAI-сумісний шар Anthropic не підтримує prompt caching,
 
 Жоден крок не чіпає протокол дельт, життєвий цикл власності генерації (AI-0.1) чи панель; зміни
 моделі даних — лише адитивні (нова колонка, нова таблиця).
+
+## 14. Знання рівня 1 (AI-1b)
+
+**Потік.** `docs/ai-knowledge/*.md` (джерело, PR-рев'ю) → `pnpm ai:knowledge` →
+`libs/shared/src/ai/knowledge/generated/knowledge-corpus.json` (комітиться) → бандл воркера →
+`StaticKnowledgeSource` → `buildPrompt({ knowledge })`. Рантайм `.md` з диска не читає:
+`Dockerfile.node` копіює лише `dist` (`ai-assistant.md` §7.2). Рівня 1 немає іншого входу,
+крім репозиторію — жодного екрана завантаження.
+
+**Артефакт** — `{ version, totalChars, documents[{slug, title, audience, area, body}] }`,
+документи в порядку імен файлів (`00-…` … `12-…`), без часу й абсолютних шляхів — чиста
+функція теки. Лежить під `generated/` (ESLint ігнорує) і в `.prettierignore`: перевірка
+порівнює його побайтово, і lint-staged не має права його переформатувати. Тека-джерело
+`docs/ai-knowledge/` теж у `.prettierignore`: Prettier вирівнює Markdown-таблиці пробілами
+(+~8 % символів у кожному промпті й у бюджеті), тому таблиці там свідомо компактні.
+
+**Версія** — перші 16 hex SHA-256 від канонічного списку **розібраних** документів, а не від
+сирих файлів: перестановка ключів front-matter версії не змінює, будь-який байт, що бачить
+модель, — змінює. Та сама версія для USER і ADMIN: вона ідентифікує корпус, а набір
+документів — функція версії й ролі.
+
+**Бюджет** — 100 000 символів (`AI_KNOWLEDGE_CHAR_BUDGET`), рахується `Σ(title + body)` —
+те, що справді доходить до промпту. Символи, а не токени — точний рахунок відкладено
+(`ai-assistant.md` §10.1); 100 000 символів англійського тексту ≈ 25 000 токенів §7.4 із
+запасом. Генератор відмовляється писати артефакт понад бюджет. Поточний розмір — у виводі
+`pnpm ai:knowledge:check` (на момент ai-1b: 13 документів, 43 899 символів, версія `47db9cfe7590febb`).
+
+**Перевірка** (`pnpm ai:knowledge:check`, перший крок `pnpm lint`, стадія `check` у
+`.gitlab-ci.yml` до `build`): артефакт побайтово збігається з тим, що дала б тека;
+front-matter валідний (`slug` = імʼя файлу без номера, `audience ∈ {all, admin}`, `area`
+kebab-case, непорожні `title` і тіло, унікальний `slug`); корпус у бюджеті. Скрипт — голий
+`node` (type stripping Node 24) над збирачем з лише вбудованими модулями, тож CI ганяє його в
+стоковому `node:24-bookworm-slim` з read-only bind-mount-ом, без `pnpm install` (раннер —
+shell-executor, `image:` там ігнорується).
+
+**Фільтр `audience`.** `StaticKnowledgeSource` перевіряє артефакт (форма, бюджет, версія =
+вміст) у конструкторі, тобто на старті воркера, а не на кожній відповіді. ADMIN отримує всі
+документи, будь-хто інший — лише `audience: all`. `admin` зараз: `04-users-and-roles`,
+`08-settings-organization`. У промпт іде лише `{slug, title, body}`.
+
+**Шов.** `KnowledgeSource.select({ role, question }) → { version, documents }` — асинхронний і
+з питанням, хоч статичному джерелу питання не потрібне: FTS (AI-4) без нього не обійдеться, а
+рівень 2 (AI-2) читатиме БД. Ні tenantId, ні ідентичності юзера в запиті немає — allowlist §6
+не розширився. Провайдер `KNOWLEDGE_SOURCE` — у `AiKnowledgeModule`, який імпортує лише
+`WorkerModule` (як `AiLlmModule`). Api промпт не збирає; артефакт лише потрапляє в його бандл
+через барел `@saas-skeleton/shared` (~45 КБ, не інстанціюється).
+
+**Порядок у промпті** (без змін від AI-0): інструкція → знання → контекст юзера → історія →
+питання. Контекст юзера — після корпусу, бо різниться за роллю/мовою, а корпус — спільний
+префікс для кешування. `FakeLlmProvider` читає лише останнє питання, тож директиви працюють і
+з непорожнім корпусом; його синтетичний usage росте разом із промптом — чесний сигнал.
+
+**Як відтворити промпт відповіді** (`ai-assistant.md` §11.6): `git log -S '"version":
+"<knowledge_version>"' -- libs/shared/src/ai/knowledge/generated/knowledge-corpus.json` дає
+коміт; інструкція — у `prompt-builder.ts` того ж коміту; історія й питання — рядки
+`ai_messages`. **Відоме обмеження:** роль і locale юзера на момент генерації в рядку не
+зберігаються — набір документів відтворюється за роллю, яка в нормальному випадку і є
+поточною. Якщо розбору інцидентів цього забракне — це друга адитивна колонка, не зміна
+версії.
+
+### 14.1. Як правити корпус
+
+1. Правити Markdown у `docs/ai-knowledge/`. Пишемо **для кінцевого юзера CRM**, другою
+   особою, від задачі («To add a contact…»), не для розробника: жодних RLS/Prisma/ендпоінтів.
+2. Кожен ярлик кнопки, пункту меню, заголовка чи повідомлення в лапках — **скопійований** з
+   англійських ресурсів (`apps/web/src/locales/en/*.json`, `libs/i18n/src/locales/en/*.json`)
+   або з компонента, що його рендерить, а не переказаний з памʼяті. Для кодів помилок це
+   тримає тест (`static-knowledge-source.test.ts`): таблиця в `10-troubleshooting.md` мусить
+   містити кожен `ApiError.code` контракту з точним повідомленням з
+   `libs/i18n/src/locales/en/errors.json`. Решту ярликів на ai-1b звірено вручну з
+   `apps/web/src/locales/en/{layout,auth,customers,users,calendar,chat,ai,settings,
+   user-settings,dashboard}.json`, `libs/i18n/src/locales/en/{common,errors,notifications}.json`
+   і компонентами `apps/web/src/app-shell/*`, `apps/web/src/pages/**`.
+3. Не описувати того, чого немає. Де юзер зазвичай очікує фічу, якої нема (2FA, імпорт/експорт,
+   повторювані події, email-сповіщення), — явний рядок «Not available», щоб модель казала «ні»,
+   а не вигадувала.
+4. Дія лише для адміна — або в документі `audience: admin`, або в загальному документі з
+   «ask your administrator», без покрокової інструкції.
+5. `pnpm ai:knowledge` і закомітити Markdown **разом** з артефактом; `pnpm lint` інакше впаде.
+6. Змінюючи фічу в коді — правити її документ у тому ж PR: перевірка гарантує лише артефакт ↔
+   джерело, не джерело ↔ продукт.
+
+**Що корпус чесно фіксує про поточний продукт** (виявлено при звірці, не виправлялось у
+ai-1b): сторінка Users і `/users/*` API не обмежені роллю — будь-який юзер може керувати
+акаунтами (документ `04` так і каже); у вебі немає форми зміни імені/ролі іншого юзера;
+Profile обіцяє аватар «up to 10 MB», а контракт дозволяє 25 MB (корпус радить < 10 MB).
+

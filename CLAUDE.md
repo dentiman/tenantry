@@ -51,12 +51,15 @@ read the relevant doc before working in that area instead of expecting it here.
   §10.1 splits AI-1 into five changes `ai-1a`…`ai-1e` (only `OpenAiCompatProvider` — native
   Anthropic is deferred, §5.3).
   Distinct from `docs/chat.md` (that's human/customer conversations);
-  `docs/ai-assistant-implementation.md` — what AI-0/0.1/1a actually shipped: data model, the two
+  `docs/ai-assistant-implementation.md` — what AI-0/0.1/1a/1b actually shipped: data model, the two
   access boundaries, the streaming protocol and why a socket event may carry payload here, queue
   options, config, and (§7.1) the one real provider `OpenAiCompatProvider` — worker-only key,
-  error classification, `Retry-After`, token usage. `FakeLlmProvider` stays the default and CI
-  backbone (no key, no network, no cost). Read the second before
-  touching anything under `ai/`, the first before planning the next phase.
+  error classification, `Retry-After`, token usage; (§14) the AI-1b knowledge corpus —
+  `docs/ai-knowledge/` is **end-user product documentation**, not engineering docs: edit the
+  Markdown, copy every quoted UI label from the English locale files, run `pnpm ai:knowledge`,
+  commit both. `FakeLlmProvider` stays the default and CI backbone (no key, no network, no
+  cost). Read the second before touching anything under `ai/`, the first before planning the
+  next phase.
 
 ## Planning layers
 
@@ -106,6 +109,8 @@ pnpm web:dev                        # tenant web   http://localhost:5173
 pnpm platform:web:dev               # platform web http://localhost:5174
 pnpm openapi:generate && pnpm web:codegen                   # after tenant contract/controller changes
 pnpm platform:openapi:generate && pnpm platform:web:codegen # after platform contract/controller changes
+pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact in libs/shared (after
+                           # any corpus edit; `pnpm lint` and CI run `ai:knowledge:check` first)
 pnpm lint && pnpm typecheck && pnpm build
 pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT run alongside a
                            # live dev stack (connection-pool exhaustion causes flaky neighbors)

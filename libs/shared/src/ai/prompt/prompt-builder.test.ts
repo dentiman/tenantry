@@ -33,6 +33,30 @@ describe('buildPrompt', () => {
     expect(knowledgeAt).toBeLessThan(historyAt);
   });
 
+  it('повний порядок: інструкція → знання → контекст юзера → історія → питання', () => {
+    const messages = buildPrompt({
+      ...base,
+      knowledge: [{ slug: 'customers', title: 'Customers', body: 'Click "Add customer".' }],
+      history: [
+        { role: 'user', content: 'earlier question' },
+        { role: 'assistant', content: 'earlier answer' },
+      ],
+    });
+
+    const at = (needle: string): number => messages.findIndex((m) => m.content.includes(needle));
+    const order = [
+      at('NO access'),
+      at('Click "Add customer".'),
+      at('User context:'),
+      at('earlier question'),
+      messages.length - 1,
+    ];
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(new Set(order).size).toBe(order.length);
+    expect(messages.at(-1)).toEqual({ role: 'user', content: base.question });
+  });
+
   it('питання йде ОСТАННІМ', () => {
     const messages = buildPrompt({
       ...base,

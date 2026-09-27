@@ -31,6 +31,7 @@
 # Для справжнього проду ці два файли винести в CI Variables і розігнорувати назад.
 
 stages:
+  - check
   - build
   - deploy_dev
   - deploy_prod
@@ -44,6 +45,23 @@ variables:
   WEB_IMAGE_BASE:          "$CI_REGISTRY_IMAGE/web"
   PLATFORM_WEB_IMAGE_BASE: "$CI_REGISTRY_IMAGE/platform-web"
   TOOLS_IMAGE_BASE:        "$CI_REGISTRY_IMAGE/tools"
+
+# ===========================================================================
+# CHECK — дешеві перевірки ДО збірки образів: провал зупиняє пайплайн раніше, ніж
+# будь-що збиралось чи деплоїлось.
+# ===========================================================================
+# Корпус знань AI (docs/ai-assistant.md §7.2, ai-1b design.md D5): закомічений артефакт
+# не розійшовся з docs/ai-knowledge, front-matter валідний, корпус у бюджеті символів.
+# shell-executor: `image:` ігнорується, Node на хості не гарантований — тому стоковий
+# node:24 (та сама база, що в Dockerfile.node) з read-only bind-mount-ом checkout-у.
+# Скрипт не має залежностей: жодного `pnpm install`.
+ai_knowledge_check:
+  stage: check
+  tags: [deploy_dev]
+  rules:
+    - if: $CI_COMMIT_BRANCH
+  script:
+    - docker run --rm -v "$CI_PROJECT_DIR:/repo:ro" -w /repo node:24-bookworm-slim node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check
 
 # ===========================================================================
 # BUILD — усі образи паралельно (dind + BuildKit). Тег = $CI_COMMIT_SHA (+latest на default).
