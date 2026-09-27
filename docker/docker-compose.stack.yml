@@ -78,18 +78,28 @@ x-realtime-env: &realtime-env
   REALTIME_LAST_SEEN_FLUSH_MS: ${REALTIME_LAST_SEEN_FLUSH_MS:-15000}
 
 x-ai-env: &ai-env
-  # AI-0: спільний блок для api і worker — api читає лише прапорець і межі, а
-  # генерує ВИКЛЮЧНО worker. Ключа провайдера тут немає й у AI-0 бути не може:
-  # єдиний легальний AI_PROVIDER — `fake`
+  # Спільний блок для api і worker — api читає лише прапорець і межі, а генерує
+  # ВИКЛЮЧНО worker. Ключа провайдера тут НЕМАЄ свідомо: він у x-ai-provider-env,
+  # який отримує лише worker (ai-1a, docs/ai-assistant-implementation.md)
   AI_ENABLED: ${AI_ENABLED:-false}
   AI_PROVIDER: ${AI_PROVIDER:-fake}
-  AI_MODEL: ${AI_MODEL:-fake-1}
+  AI_MODEL: ${AI_MODEL:-}
   AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-1024}
   AI_HISTORY_TURNS: ${AI_HISTORY_TURNS:-10}
   AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-60000}
   AI_STREAM_FLUSH_MS: ${AI_STREAM_FLUSH_MS:-120}
   AI_PARTIAL_PERSIST_MS: ${AI_PARTIAL_PERSIST_MS:-2000}
   AI_ASK_LIMIT_PER_MINUTE: ${AI_ASK_LIMIT_PER_MINUTE:-10}
+  AI_PROVIDER_RETRIES: ${AI_PROVIDER_RETRIES:-1}
+  AI_RETRY_DELAY_MS: ${AI_RETRY_DELAY_MS:-2000}
+
+# ai-1a: облік реального бекенду — ЛИШЕ worker. Порожні значення легальні, поки
+# AI_PROVIDER=fake; з openai-compat і AI_ENABLED=true worker без них не стартує.
+# ПЕРЕД тим як задати AI_API_KEY — жорстка місячна стеля витрат на ключі в кабінеті
+# провайдера (docs/deploy-swarm.md §7, обовʼязково, поки немає квот ai-1d)
+x-ai-provider-env: &ai-provider-env
+  AI_BASE_URL: ${AI_BASE_URL:-}
+  AI_API_KEY: ${AI_API_KEY:-}
 
 x-s3-env: &s3-env
   S3_ENDPOINT: ${S3_ENDPOINT}
@@ -246,7 +256,7 @@ services:
   worker:
     image: ${WORKER_IMAGE}
     environment:
-      <<: [*db-env, *s3-env, *realtime-broker-env, *ai-env]
+      <<: [*db-env, *s3-env, *realtime-broker-env, *ai-env, *ai-provider-env]
       NODE_ENV: production
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}

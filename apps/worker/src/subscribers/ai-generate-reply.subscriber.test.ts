@@ -4,6 +4,7 @@ import {
   AiMessageStateService,
   FakeLlmProvider,
   FAKE_LLM_DIRECTIVES,
+  LlmProviderError,
   type AiConfig,
   type LlmProvider,
   type LlmChunk,
@@ -53,6 +54,9 @@ interface MessageRow {
   startedAt: Date | null;
   completedAt: Date | null;
   model: string | null;
+  // ai-1a: у фікстурах не задаються — зʼявляються з першим записом state-сервісу
+  promptTokens?: number | null;
+  completionTokens?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +264,7 @@ function makeSubscriber(
   const config: AiConfig = {
     enabled: true, provider: 'fake', maxOutputTokens: 256, historyTurns: 10,
     requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1',
+    modelConfigured: false, baseUrl: null, apiKey: null,
     providerRetries: 1, retryDelayMs: 5, pendingTimeoutMs: 300_000, cancelCheckMs: 2_000,
     leaseMs: 90_000, ...overrides,
   };
@@ -604,4 +609,126 @@ describe('AiGenerateReplySubscriber', () => {
       { role: 'user', content: 'And what about the logo?' },
     ]);
   });
+
+  // ------------------------------------------------------------ ai-1a: облік токенів
+
+  it('ai-1a: фейкова відповідь зберігає ненульовий usage і налаштовану модель (design.md D7/D8)', async () => {
+    const world = makeWorld();
+    await makeSubscriber(world).handle(job);
+
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().promptTokens).toBeGreaterThan(0);
+    expect(world.reply().completionTokens).toBeGreaterThan(0);
+    expect(world.reply().model).toBe('fake-1');
+  });
+
+  it('ai-1a: модель, яку назвав бекенд, перезаписує налаштовану', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [{ text: 'Hello' }, { text: '', usage: { promptTokens: 12, completionTokens: 3, model: 'vendor/model-real' } }],
+    ]);
+    await makeSubscriber(world, { model: 'vendor/model' }, {}, provider.provider).handle(job);
+
+    expect(world.reply().content).toBe('Hello');
+    expect(world.reply().promptTokens).toBe(12);
+    expect(world.reply().completionTokens).toBe(3);
+    expect(world.reply().model).toBe('vendor/model-real');
+  });
+
+  it('ai-1a: після ретраю зберігається usage СПРОБИ, ЩО ЗАВЕРШИЛАСЬ, а не сума чи перша', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [
+        { text: 'partial ' },
+        { text: '', usage: { promptTokens: 999, completionTokens: 999 } },
+        new LlmProviderError('cut', { retryable: true }),
+      ],
+      [{ text: 'final' }, { text: '', usage: { promptTokens: 10, completionTokens: 5 } }],
+    ]);
+    await makeSubscriber(world, { providerRetries: 1 }, {}, provider.provider).handle(job);
+
+    expect(provider.calls()).toBe(2);
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().content).toBe('final');
+    expect(world.reply().promptTokens).toBe(10);
+    expect(world.reply().completionTokens).toBe(5);
+  });
+
+  it('ai-1a: зупинена відповідь без usage лишає токени порожніми, стан фіналізується як завжди', async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} tell me everything`);
+    const cancel: { fire?: () => void } = {};
+    const subscriber = makeSubscriber(world, {}, {
+      onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+        cancel.fire = handler;
+        return Promise.resolve(() => undefined);
+      },
+    });
+    const running = subscriber.handle(job);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    cancel.fire?.();
+    await running;
+
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(world.reply().promptTokens).toBeNull();
+    expect(world.reply().completionTokens).toBeNull();
+  });
+
+  // ------------------------------------------------------------ ai-1a: Retry-After
+
+  it('ai-1a: Retry-After у межах AI_RETRY_DELAY_MS — один ретрай, не раніше за попрошене, COMPLETE', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [new LlmProviderError('429', { retryable: true, retryAfterMs: 30 })],
+      [{ text: 'ok' }, { text: '', usage: { promptTokens: 1, completionTokens: 1 } }],
+    ]);
+    await makeSubscriber(world, { providerRetries: 1, retryDelayMs: 40 }, {}, provider.provider).handle(job);
+
+    expect(provider.calls()).toBe(2);
+    expect(world.reply().status).toBe('COMPLETE');
+    const [first, second] = provider.startedAt();
+    expect((second ?? 0) - (first ?? 0)).toBeGreaterThanOrEqual(30);
+  });
+
+  it('ai-1a: Retry-After ДОВШИЙ за AI_RETRY_DELAY_MS — без ретраю, одразу FAILED / PROVIDER_UNAVAILABLE', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [new LlmProviderError('429', { retryable: true, retryAfterMs: 60_000 })],
+      [{ text: 'never' }],
+    ]);
+    await makeSubscriber(world, { providerRetries: 3, retryDelayMs: 5 }, {}, provider.provider).handle(job);
+
+    expect(provider.calls()).toBe(1);
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
+  });
 });
+
+/**
+ * Провайдер за сценарієм: i-й виклик віддає i-й список кадрів; `Error` у списку
+ * кидається в тій позиції. Для гілок, яких фейк свідомо не вміє (usage посеред
+ * спроби, Retry-After) — тестові директиви заради семантики заголовків не варті того
+ */
+function scriptedProvider(script: readonly (readonly (LlmChunk | Error)[])[]): {
+  provider: LlmProvider;
+  calls: () => number;
+  startedAt: () => number[];
+} {
+  const started: number[] = [];
+  return {
+    calls: () => started.length,
+    startedAt: () => started,
+    provider: {
+      async *generate(): AsyncIterable<LlmChunk> {
+        const steps = script[started.length] ?? [];
+        started.push(Date.now());
+        for (const step of steps) {
+          await Promise.resolve();
+          if (step instanceof Error) {
+            throw step;
+          }
+          yield step;
+        }
+      },
+    },
+  };
+}

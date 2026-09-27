@@ -27,6 +27,7 @@
     "nestjs-cls": "^6.2.1",
     "nestjs-pino": "^4.5.0",
     "nodemailer": "^9.0.3",
+    "openai": "^7.23.0",
     "pg-boss": "^12.26.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",

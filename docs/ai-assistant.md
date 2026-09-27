@@ -653,7 +653,7 @@ LLM-провайдера.
 | --- | --- | --- |
 | **AI-0 — конвеєр на фейковому провайдері** | модель даних + RLS, контракти, чотири ендпоінти, команда `ai.generate-reply` + опції воркера, `LlmProvider` + `FakeLlmProvider`, протокол дельт, `AiPanel` із розкриттям, rate limit, e2e наскрізь без ключа | **зроблено 2026-09-20** |
 | **AI-0.1 — борг AI-0 і фікс §6.3** | виключна власність генерації (`attempt`+оренда), ретрай тимчасових помилок усередині доставки, закриття покинутих відповідей, довговічний Stop, `ai.conversation-changed.v1` для інших вкладок; лише `FakeLlmProvider` | **зроблено 2026-09-27** |
-| **AI-1 — справжній провайдер і знання рівня 1** | п'ять кроків `ai-1a`…`ai-1e` (§10.1): `OpenAiCompatProvider` + облік токенів; `docs/ai-knowledge/` + генератор + бюджет у CI + `KnowledgeSource`; системний промпт у `settings.ai`; `ai_usage_counters` + квоти; retention. Нативний `AnthropicProvider` — **відкладено** (§5.3) | наступна, починається з `ai-1a` |
+| **AI-1 — справжній провайдер і знання рівня 1** | п'ять кроків `ai-1a`…`ai-1e` (§10.1): `OpenAiCompatProvider` + облік токенів; `docs/ai-knowledge/` + генератор + бюджет у CI + `KnowledgeSource`; системний промпт у `settings.ai`; `ai_usage_counters` + квоти; retention. Нативний `AnthropicProvider` — **відкладено** (§5.3) | **`ai-1a` зроблено 2026-09-27** (ручний прогін із живим ключем ще відкритий); далі `ai-1b` |
 | **AI-2 — знання рівня 2** | таблиця за патерном довідників рівня 3; редактори для Tenant Admin і суперадміна; імпорт `.md`/`.txt`; бюджет на збереженні; `settings.ai.enabled` на тенанта; посилання на джерела у відповіді | відкрита |
 | **AI-3 — зрілість** | облік використання в `/settings/ai` і зведення в Operations; оцінка відповіді; експорт транскрипту; файли в розмові через Files v1 (§5.4); блокування вводу з очевидними секретами; видимість провалів у DLQ | відкрита, потребує **EDA-2** |
 | **AI-4 — retrieval** | чанкування по секціях + `tsvector`/GIN; `pgvector` — документований opt-in форку | відкрита |
@@ -679,7 +679,7 @@ LLM-провайдера.
 
 | Крок | Зміна (OpenSpec) | Capability | Що будує | Залежить від |
 | --- | --- | --- | --- | --- |
-| **AI-1a** | `ai-1a-openai-compat-provider` | `ai-assistant/generation-pipeline` | перший реальний провайдер + облік токенів відповіді | — |
+| **AI-1a** ✓ | `ai-1a-openai-compat-provider` | `ai-assistant/generation-pipeline` | перший реальний провайдер + облік токенів відповіді — **зроблено 2026-09-27** | — |
 | **AI-1b** | `ai-1b-knowledge-corpus` | `ai-assistant/knowledge` (нова) | корпус рівня 1, генератор, бюджет у CI, `KnowledgeSource`, `knowledgeVersion` | — (корисний і на `fake`) |
 | **AI-1c** | `ai-1c-assistant-settings` | `ai-assistant/settings` (нова) | системний промпт/персона як дані в `settings.ai`, екран `/settings/ai` | `ai-1b` (той самий збирач промпту) |
 | **AI-1d** | `ai-1d-usage-quotas` | `ai-assistant/usage-quotas` (нова) | `ai_usage_counters`, квоти на користувача й тенанта | `ai-1a` (джерело чисел `usage`) |
@@ -717,6 +717,12 @@ LLM-провайдера.
 #### AI-1a — `ai-1a-openai-compat-provider`
 
 Перший і в AI-1 єдиний реальний провайдер (§5.2, §5.3).
+
+**Стан: зроблено 2026-09-27**, крім ручного прогону з живим ключем (ключа в середовищі
+розробки не було). Що саме збудовано і рішення, ухвалені під час реалізації (`maxRetries: 0`,
+«завершено = `finish_reason` або usage-кадр», `Retry-After` понад `AI_RETRY_DELAY_MS` → одразу
+`FAILED`, ключ лише у воркера через `AiLlmModule`) —
+[ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1.
 
 - **`OpenAiCompatProvider`** на офіційному пакеті `openai` з `baseURL`: `stream: true` +
   `stream_options.include_usage`, `AbortSignal` прокидається в запит (Stop і таймаут рвуть

@@ -35,11 +35,23 @@ const nonNegativeIntFromEnv = (fallback: number): z.ZodType<number, string | und
     .pipe(z.number().int().nonnegative());
 
 /**
- * `fake` — ЄДИНЕ легальне значення у AI-0. Невідоме значення валить старт, а не
- * тихо відкочується на фейк: інсталяція, яка думає, що говорить із реальною
- * моделлю, і насправді віддає канований текст, — гірша за процес, що не піднявся.
+ * `fake` — дефолт і основа CI; `openai-compat` (ai-1a) — будь-який бекенд із рідною
+ * формою Chat Completions (OpenRouter, DeepSeek, Groq, xAI, MiniMax…). Невідоме
+ * значення валить старт, а не тихо відкочується на фейк: інсталяція, яка думає, що
+ * говорить із реальною моделлю, і насправді віддає канований текст, — гірша за процес,
+ * що не піднявся. `anthropic` відкладено (docs/ai-assistant.md §5.3).
  */
-const AiProviderSchema = z.enum(['fake']);
+const AiProviderSchema = z.enum(['fake', 'openai-compat']);
+
+const DEFAULT_FAKE_MODEL = 'fake-1';
+
+/** Порожній рядок у `.env` означає «не задано», як і в решті цього файлу */
+const optionalStringFromEnv = (): z.ZodType<string | null, string | undefined> =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === undefined || value === '' ? null : value));
 
 const AiEnvSchema = z.object({
   /** Дефолт `false`: скелетон без провайдера не має показувати напівробочого асистента */
@@ -67,12 +79,23 @@ const AiEnvSchema = z.object({
    * перезавантажена сторінка читає стрічку і бачить згенероване досі.
    */
   AI_PARTIAL_PERSIST_MS: intFromEnv(2_000),
-  /** Модель. У AI-0 їде лише в лог і в колонку `ai_messages.model` */
-  AI_MODEL: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value === undefined || value === '' ? 'fake-1' : value)),
+  /**
+   * Модель: ідентифікатор у бекенда (`openai/gpt-5.6-luna` для OpenRouter) і колонка
+   * `ai_messages.model`. Дефолт `fake-1` — лише для `fake`: реальному бекенду
+   * відправити його як назву моделі було б безглуздо, тому для `openai-compat` змінна
+   * обовʼязкова (`requireProviderCredentials`)
+   */
+  AI_MODEL: optionalStringFromEnv(),
+  /**
+   * OpenAI-сумісний ендпоінт (ai-1a), напр. `https://openrouter.ai/api/v1`. Без дефолту:
+   * мовчки слати промпти юзерів на хост, якого оператор не вибирав, — не варіант
+   */
+  AI_BASE_URL: optionalStringFromEnv().pipe(z.url({ protocol: /^https?$/ }).nullable()),
+  /**
+   * Ключ бекенду (ai-1a). Потрібен ЛИШЕ воркеру — api модель не викликає ніколи.
+   * Ніколи не логуються ні він, ні `AiConfig` цілком
+   */
+  AI_API_KEY: optionalStringFromEnv(),
   /**
    * AI-0.1 (docs/ai-assistant-review-gaps.md п.3, design.md D2): скільки РАЗІВ
    * перезапускати генерацію всередині ОДНІЄЇ доставки після тимчасової відмови
@@ -111,6 +134,12 @@ export interface AiConfig {
   streamFlushMs: number;
   partialPersistMs: number;
   model: string;
+  /** Чи задано `AI_MODEL` явно — `fake-1` за замовчуванням реальному бекенду не годиться */
+  modelConfigured: boolean;
+  /** OpenAI-сумісний ендпоінт; `null` — не задано (для `fake` і не треба) */
+  baseUrl: string | null;
+  /** Ключ бекенду. НІКОЛИ не логувати — ні сам, ні `AiConfig` цілком (design.md D5) */
+  apiKey: string | null;
   providerRetries: number;
   retryDelayMs: number;
   pendingTimeoutMs: number;
@@ -136,13 +165,59 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     requestTimeoutMs: e.AI_REQUEST_TIMEOUT_MS,
     streamFlushMs: e.AI_STREAM_FLUSH_MS,
     partialPersistMs: e.AI_PARTIAL_PERSIST_MS,
-    model: e.AI_MODEL,
+    model: e.AI_MODEL ?? DEFAULT_FAKE_MODEL,
+    modelConfigured: e.AI_MODEL !== null,
+    baseUrl: e.AI_BASE_URL,
+    apiKey: e.AI_API_KEY,
     providerRetries: e.AI_PROVIDER_RETRIES,
     retryDelayMs: e.AI_RETRY_DELAY_MS,
     pendingTimeoutMs: e.AI_PENDING_TIMEOUT_MS,
     cancelCheckMs: e.AI_CANCEL_CHECK_MS,
     leaseMs: e.AI_REQUEST_TIMEOUT_MS + AI_LEASE_GRACE_MS,
   };
+}
+
+export interface ProviderCredentials {
+  readonly baseUrl: string;
+  readonly apiKey: string;
+  readonly model: string;
+}
+
+/**
+ * Перевірка облікових даних зовнішнього бекенду (ai-1a, design.md D5). НЕ частина
+ * `loadAiConfig()`: той самий конфіг читає api (прапорець, межі), якому ключ не
+ * потрібен і не повинен бути виданий. Викликається там, де провайдер БУДУЄТЬСЯ,
+ * тобто лише у воркері, — і валить його старт з іменем змінної, як решта цього файлу.
+ *
+ * Повертає `null`, коли облікові дані не потрібні (`fake`) або асистент вимкнений і їх
+ * немає: вимкнений асистент питань не приймає, і відсутній ключ тоді не привід не
+ * піднятись.
+ */
+export function requireProviderCredentials(config: AiConfig): ProviderCredentials | null {
+  if (config.provider === 'fake') {
+    return null;
+  }
+  const missing: string[] = [];
+  if (config.baseUrl === null) {
+    missing.push('AI_BASE_URL');
+  }
+  if (config.apiKey === null) {
+    missing.push('AI_API_KEY');
+  }
+  if (!config.modelConfigured) {
+    missing.push('AI_MODEL');
+  }
+  if (config.baseUrl === null || config.apiKey === null || !config.modelConfigured) {
+    if (!config.enabled) {
+      return null;
+    }
+    throw new Error(
+      `Invalid AI configuration — ${missing
+        .map((name) => `${name}: required when AI_PROVIDER=${config.provider} and AI_ENABLED=true`)
+        .join('; ')}`,
+    );
+  }
+  return { baseUrl: config.baseUrl, apiKey: config.apiKey, model: config.model };
 }
 
 export const AI_CONFIG = Symbol('AI_CONFIG');

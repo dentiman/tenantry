@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule,
+  AiLlmModule,
   AiModule,
   CryptoModule,
   MessagingModule,
@@ -44,6 +45,8 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     ActivitiesModule,
     NotificationsModule,
     AiModule,
+    // ai-1a: провайдер LLM (і його ключ) — лише тут, api його не будує (design.md D5)
+    AiLlmModule,
   ],
   providers: [
     WorkerRealtimeEmitter,

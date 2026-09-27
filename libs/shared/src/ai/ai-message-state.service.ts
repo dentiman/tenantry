@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@saas-skeleton/database';
+import type { LlmUsage } from './llm/llm-provider';
 
 /**
  * Усі переходи статусу відповіді асистента, для ОБОХ процесів (AI-0.1, design.md D1,
@@ -56,6 +57,10 @@ export class AiMessageStateService {
         errorCode: null,
         startedAt: now,
         model: options.model,
+        // Облік токенів — лише тієї спроби, що дала збережений текст (ai-1a, design.md D7):
+        // перезахоплений рядок не має права зберегти числа попередньої
+        promptTokens: null,
+        completionTokens: null,
         // НАВМИСНО НЕ чіпаємо cancelRequestedAt: якщо Stop уже стояв на покинутій
         // (наприклад, впала попередня спроба) STREAMING-відповіді, нова спроба
         // мусить побачити його одразу на пост-підписковому чеку (design.md D4) —
@@ -102,6 +107,8 @@ export class AiMessageStateService {
         leaseExpiresAt: new Date(now.getTime() + options.leaseMs),
         content: '',
         chunkCount: 0,
+        promptTokens: null,
+        completionTokens: null,
       },
     });
     return count === 0 ? null : { attempt: ownedAttempt + 1 };
@@ -143,6 +150,10 @@ export class AiMessageStateService {
   /**
    * Фінальний стан. `false` — власність втрачено між останнім записом і
    * фіналізацією: викликач НЕ емітує `completed` (design.md D1, «мовчки зупинитись»).
+   *
+   * `usage` (ai-1a) пишеться в ТОМУ Ж умовному UPDATE, у зарезервовані колонки.
+   * Немає usage — колонки не чіпаються (лишаються NULL від `claim()`/`restart()`):
+   * порожньо, а не оцінка. `model` перезаписується, лише якщо бекенд його назвав.
    */
   async finalize(
     tx: Prisma.TransactionClient,
@@ -153,8 +164,10 @@ export class AiMessageStateService {
       readonly errorCode: string | null;
       readonly text: string;
       readonly chunkCount: number;
+      readonly usage?: LlmUsage | null;
     },
   ): Promise<boolean> {
+    const usage = input.usage;
     const { count } = await tx.aiMessage.updateMany({
       where: { id: messageId, attempt: ownedAttempt, status: 'STREAMING' },
       data: {
@@ -163,6 +176,13 @@ export class AiMessageStateService {
         content: input.text,
         chunkCount: input.chunkCount,
         completedAt: new Date(),
+        ...(usage
+          ? {
+              promptTokens: usage.promptTokens,
+              completionTokens: usage.completionTokens,
+              ...(usage.model ? { model: usage.model } : {}),
+            }
+          : {}),
       },
     });
     return count > 0;

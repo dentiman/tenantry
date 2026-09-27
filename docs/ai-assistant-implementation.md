@@ -1,15 +1,17 @@
-# AI-асистент: що збудовано (AI-0, AI-0.1)
+# AI-асистент: що збудовано (AI-0, AI-0.1, AI-1a)
 
 Довідник поточного стану фічі. **Чому саме так** — у [ai-assistant.md](ai-assistant.md)
 (дослідження і фазовий план); формальні артефакти фаз —
 `openspec/changes/archive/2026-09-20-ai-assistant-pipeline-fake-provider/` (AI-0) і
-`openspec/changes/ai-0-1-hardening/` (AI-0.1).
+`openspec/changes/ai-0-1-hardening/` (AI-0.1), `openspec/changes/ai-1a-openai-compat-provider/`
+(AI-1a).
 
-**Статус: AI-0 і AI-0.1 зроблено.** Конвеєр працює наскрізь — від кнопки в хедері до рядка в
-Postgres — **виключно на `FakeLlmProvider`**: без ключа, без мережі, без витрат. Реальний
-OpenAI-сумісний провайдер (`OpenAiCompatProvider`) приходить в AI-1 (крок `ai-1a`,
-[ai-assistant.md](ai-assistant.md) §10.1) і підставляється за тим самим інтерфейсом через
-конфіг, без зміни коду.
+**Статус: AI-0, AI-0.1 і AI-1a зроблено.** Конвеєр працює наскрізь — від кнопки в хедері до
+рядка в Postgres. Дефолт і основа CI — `FakeLlmProvider` (без ключа, без мережі, без витрат);
+**AI-1a** додала перший реальний провайдер, `OpenAiCompatProvider` (§7.1), що підставляється
+за тим самим інтерфейсом конфігом (`AI_PROVIDER=openai-compat`), і облік токенів відповіді в
+зарезервованих колонках `ai_messages`. Ручний прогін із живим ключем ще **не** виконано —
+ключа в середовищі розробки не було (§7.1, «Що ще не перевірено»).
 
 **AI-0.1** закрила борг AI-0
 ([ai-assistant-review-gaps.md](ai-assistant-review-gaps.md), усі пункти закриті) і дефект §6.3
@@ -40,16 +42,22 @@ libs/contracts/src/realtime/      + ai.message-delta.v1 (+attempt), ai.message-c
 libs/shared/src/ai/
   ai.config.ts                    AI_* env → AiConfig (Zod, fail-fast); +providerRetries,
                                   retryDelayMs, pendingTimeoutMs, cancelCheckMs, leaseMs
-                                  (похідне: requestTimeoutMs + AI_LEASE_GRACE_MS)
-  ai.module.ts                    @Global: конфіг + реєстр провайдерів + канал скасування +
-                                  AiMessageStateService
+                                  (похідне: requestTimeoutMs + AI_LEASE_GRACE_MS); ai-1a:
+                                  baseUrl/apiKey + requireProviderCredentials()
+  ai.module.ts                    @Global: конфіг + канал скасування + AiMessageStateService
+                                  (і api, і worker)
+  ai-llm.module.ts                ai-1a: реєстр LLM_FACTORIES + токен LLM_PROVIDER — ЛИШЕ
+                                  worker (api не будує провайдер і не тримає ключ)
   ai-cancel.channel.ts            Valkey pub/sub «зупинити генерацію» (швидкий шлях)
   ai-message-state.service.ts     AI-0.1: УСІ переходи статусу відповіді, для API й воркера
                                   разом — claim/restart/persistPartial/isCancelRequested/
                                   finalize (воркер) + cancelPending/requestCancel/
                                   closeAbandoned (API); кожен перехід — фенсинг-`updateMany`
-  llm/llm-provider.ts             ІНТЕРФЕЙС + LlmProviderError{retryable} + токен LLM_PROVIDER
-  llm/fake-llm.provider.ts        єдина реалізація, з директивами для важких гілок
+  llm/llm-provider.ts             ІНТЕРФЕЙС + LlmProviderError{retryable, retryAfterMs} +
+                                  LlmUsage{model?, cachedPromptTokens?} + токен LLM_PROVIDER
+  llm/fake-llm.provider.ts        дефолт: директиви для важких гілок + синтетичний usage
+  llm/openai-compat.provider.ts   ai-1a: пакет `openai` з baseURL; класифікація помилок,
+                                  Retry-After, usage, попередження про хост Anthropic
   prompt/prompt-builder.ts        (history, question, knowledge, user) → LlmMessage[]
   prompt/history.ts               AI-0.1: selectHistoryPairs — лише ЗАВЕРШЕНІ пари питання/
                                   відповідь, без дублювання поточного питання
@@ -103,8 +111,9 @@ startedAt, completedAt, createdAt)`.
   `attempt` дає клієнту точку продовження після одного перечитування (D6).
 - **`cancelRequestedAt`** — факт Stop у БД РАНІШЕ за pub/sub-сигнал (D4). `claim()` його НЕ
   чіпає: інакше Stop, поставлений на покинуту (впалу) спробу, губився б при reclaim.
-- **Колонки обліку токенів зарезервовані, але не пишуться.** Nullable-колонки зараз коштують
-  нічого і економлять AI-1 міграцію на таблиці, у якої на той час будуть рядки.
+- **Облік токенів** (`model`, `prompt_tokens`, `completion_tokens`) — колонки, зарезервовані
+  в AI-0, пишуться з AI-1a у фінальній транзакції воркера (§7.1): жодної міграції не знадобилось.
+  `NULL` = бекенд usage не повідомив (Stop, бекенд без `include_usage`), а не нуль.
 
 ## 4. Дві межі доступу, і вони різні
 
@@ -205,6 +214,86 @@ tx2  withTenantTx: фінальний вміст + статус, фенсинг�
 кадрів провайдера — інакше `__stall__`-подібний застряглий провайдер не зупинився б узагалі
 (review п.5, design.md D4).
 
+### 7.1. Реальний провайдер: `OpenAiCompatProvider` (AI-1a)
+
+Один клас на всі бекенди з **рідною** формою Chat Completions (OpenRouter, DeepSeek, Groq, xAI,
+MiniMax…) — [ai-assistant.md](ai-assistant.md) §5.2. Бекенд — це конфіг (`AI_BASE_URL`,
+`AI_API_KEY`, `AI_MODEL`), не код. Офіційний пакет `openai` (CommonJS — жодного ESM-обходу, як
+для `pg-boss`/`file-type`) з `baseURL`; запит — `stream: true`,
+`stream_options.include_usage`, `max_tokens` (а не `max_completion_tokens`: друге — лише
+first-party OpenAI).
+
+**У системі рівно один цикл ретраю — воркерний.** Клієнт створюється з `maxRetries: 0`. Власні
+ретраї SDK (за замовчуванням два, на 408/409/429/5xx) зробили б одну «спробу» воркера до трьох
+HTTP-запитів — поза бюджетом `AiLeaseGuard` і поза лічильником `attempt` протоколу дельт.
+
+**Stop і таймаут рвуть HTTP-зʼєднання.** `AbortSignal` воркера йде в запит, тож бекенд
+перестає генерувати (і рахувати) токени. На abort провайдер **тихо повертається**, а не кидає:
+`CANCELLED`/`TIMEOUT` воркер виводить із причини abort, а будь-яка кинута не-провайдерна
+помилка стала б `INTERNAL`.
+
+**Класифікація помилок** — на наявний `LlmProviderError.retryable` (AI-0.1). Кожна помилка
+назовні — `LlmProviderError` з діагностичним повідомленням без ключа й тіла запиту.
+
+| Що сталося | `retryable` |
+| --- | --- |
+| бекенд недосяжний: DNS, refused, TLS, таймаут зʼєднання | `true` |
+| HTTP 408, 409, 429, ≥ 500 | `true` |
+| HTTP 400, 401, 403, 404, 422 і будь-який інший 4xx | `false` |
+| обрив тіла посеред стріму (SDK віддає це як `TypeError: terminated`, не як `APIError`) | `true` |
+| кадр `{"error": …}` усередині 200-стріму (так OpenRouter повідомляє про збій апстріму) | `true` |
+| стрім закінчився без `finish_reason` **і** без usage-кадру | `true` («ended prematurely») |
+
+«Будь-який інший 4xx → `false`» — безпечний дефолт: хибний `false` коштує одну `FAILED`-відповідь,
+хибний `true` — гроші. **Що вважається завершеною відповіддю:** `finish_reason` на будь-якому
+кадрі **або** usage-кадр — деякі сумісні бекенди не шлють `finish_reason` на останньому кадрі, а
+usage приходить лише після генерації (ми завжди просимо `include_usage`). Перевірку довелося
+робити в провайдері: SDK, отримавши тіло без `[DONE]`, закінчує ітерацію «нормально», і без неї
+обрізана відповідь стала б `COMPLETE`. `finish_reason: "length"` (стеля `max_tokens`) — звичайна
+завершена відповідь, не помилка.
+
+**`Retry-After` — у межах наявного бюджету.** `retry-after-ms` (пріоритет) або `Retry-After`
+(секунди чи HTTP-дата) → `LlmProviderError.retryAfterMs`. Воркер: немає або `≤ AI_RETRY_DELAY_MS`
+— звичайна пауза `AI_RETRY_DELAY_MS` (тобто не раніше, ніж попросили); **більше** — ретраю
+немає, відповідь одразу `FAILED`/`PROVIDER_UNAVAILABLE`. Бюджет саме `AI_RETRY_DELAY_MS`, бо
+його враховує `AiLeaseGuard` (`leaseMs + retryDelayMs × providerRetries`): довша пауза дала б
+pg-boss редоставити job живого власника, а раніший повтор — гарантований другий 429. Хочеш
+чекати довше — піднімай `AI_RETRY_DELAY_MS` разом з `expireInSeconds` черги.
+
+**Облікові дані — лише воркера.** Реєстр провайдерів винесено з глобального `AiModule` в
+`AiLlmModule`, який імпортує тільки `WorkerModule`: api модель не викликає і ключа не отримує
+(у stack-файлі `AI_BASE_URL`/`AI_API_KEY` — окремий якір лише для worker-а,
+[deploy-swarm.md](deploy-swarm.md) §7). Перевірка — `requireProviderCredentials()` там, де
+провайдер будується, а не в `loadAiConfig()`, який читає й api: `AI_ENABLED=true` +
+`openai-compat` без `AI_BASE_URL`/`AI_API_KEY`/явного `AI_MODEL` валить старт воркера з іменем
+змінної (`fake-1` за замовчуванням реальному бекенду як назва моделі не годиться). Вимкнений
+асистент без облікових даних стартує з провайдером, що відмовляє non-retryable — випадковий
+job із черги провалює свою відповідь, а не валить воркер. Ключ передається лише в конструктор
+SDK; лог старту — провайдер, модель і **хост** `AI_BASE_URL`.
+
+**Страховка від §5.3.** Хост `anthropic.com` / `*.anthropic.com` у `AI_BASE_URL` → `warn` на
+старті: через OpenAI-сумісний шар Anthropic тихо зникає prompt caching (~×50 вартості без
+помилки). Попередження, а не заборона: нативний провайдер відкладено, а не заборонено.
+
+**Облік токенів.** Провайдер віддає usage останнім кадром (`{ text: '', usage }`) з моделлю,
+яку бекенд **справді** використав (роутер може підмінити), і `cachedPromptTokens` з
+`prompt_tokens_details.cached_tokens`. Воркер тримає usage поточної спроби і скидає його на
+`restart()`; `finalize()` пише `prompt_tokens`/`completion_tokens`/`model` у тому самому
+фенсингованому `updateMany`, а `claim()`/`restart()` обнуляють токени — у рядку завжди числа
+тієї спроби, що дала текст. Немає usage (Stop, бекенд без `include_usage`) — колонки `NULL`,
+а не оцінка. Після комміту — рядок логу `AI reply usage` (числа й модель, без тексту):
+саме звідти ручний прогін читає `cached_tokens`. Кешовані токени поки лише в лозі — окрема
+колонка це `ai-1d`. Відомий пропуск: токени **провалених** спроб (обрив посеред стріму) бекенд
+рахує, а ми — ні; обмежено `AI_PROVIDER_RETRIES`, вирішує `ai-1d`.
+
+`FakeLlmProvider` віддає синтетичний usage тим самим термінальним кадром:
+`ceil(символи / 4)` для промпту й відповіді, `model = request.model`; на abort — нічого. Цього
+досить, щоб квоти `ai-1d` тестувались без ключа.
+
+**Що ще не перевірено.** Ручний прогін із живим ключем (латентність першого кадру,
+`cached_tokens` на другому ході, [ai-assistant.md](ai-assistant.md) §10.1) — **не виконано**:
+ключа в середовищі розробки не було. Коли прогін відбудеться, результат записується сюди.
+
 ## 8. Протокол реального часу
 
 | Подія | Payload |
@@ -291,8 +380,10 @@ Valkey-адаптер, нового транспорту не зʼявилось
 | Змінна | Дефолт | Що робить |
 | --- | --- | --- |
 | `AI_ENABLED` | `false` | панель і роути `/api/ai/*`; дефолт вимкнено свідомо |
-| `AI_PROVIDER` | `fake` | поки **єдине** легальне значення; інше валить старт процесу. `ai-1a` додає `openai-compat`; `anthropic` відкладено (`ai-assistant.md` §5.3) |
-| `AI_MODEL` | `fake-1` | лише в лог і в `ai_messages.model` |
+| `AI_PROVIDER` | `fake` | `fake` або `openai-compat` (AI-1a, §7.1); інше валить старт процесу. `anthropic` відкладено (`ai-assistant.md` §5.3) |
+| `AI_MODEL` | `fake-1` для `fake` | ідентифікатор моделі в бекенда (`openai/gpt-5.6-luna` для OpenRouter) і `ai_messages.model`, поки бекенд не назве іншу; для `openai-compat` **обовʼязкова** |
+| `AI_BASE_URL` | — | AI-1a, лише worker: OpenAI-сумісний ендпоінт (http/https URL), рекомендовано `https://openrouter.ai/api/v1`; обовʼязкова для `openai-compat` при `AI_ENABLED=true`. Хост `*.anthropic.com` → попередження на старті |
+| `AI_API_KEY` | — | AI-1a, **лише worker**: ключ бекенду, ніколи не логується; обовʼязковий для `openai-compat` при `AI_ENABLED=true`. **Перед тим як його задати — жорстка місячна стеля витрат на ключі в кабінеті провайдера** (обовʼязково, поки немає квот `ai-1d`; [deploy-swarm.md](deploy-swarm.md) §7) |
 | `AI_MAX_OUTPUT_TOKENS` | `1024` | стеля вартості одного ходу |
 | `AI_HISTORY_TURNS` | `10` | скільки минулих ходів їде в промпт |
 | `AI_REQUEST_TIMEOUT_MS` | `60000` | понад — `FAILED`/`TIMEOUT` |
@@ -300,7 +391,7 @@ Valkey-адаптер, нового транспорту не зʼявилось
 | `AI_PARTIAL_PERSIST_MS` | `2000` | частота проміжного запису |
 | `AI_ASK_LIMIT_PER_MINUTE` | `10` | ліміт частоти на КОРИСТУВАЧА |
 | `AI_PROVIDER_RETRIES` | `1` | AI-0.1: скільки РАЗІВ перезапускати генерацію всередині ОДНІЄЇ доставки після тимчасової відмови провайдера; `0` — легально (жодного ретраю) |
-| `AI_RETRY_DELAY_MS` | `2000` | AI-0.1: пауза перед перезапуском; скасовна Stop-ом чи таймаутом |
+| `AI_RETRY_DELAY_MS` | `2000` | AI-0.1: пауза перед перезапуском; скасовна Stop-ом чи таймаутом. AI-1a: це ж — стеля для `Retry-After` бекенду; довший `Retry-After` → без ретраю, одразу `FAILED` (§7.1) |
 | `AI_PENDING_TIMEOUT_MS` | `300000` | AI-0.1: оренда `PENDING`-рядка з моменту створення — після цього відповідь «покинута» |
 | `AI_CANCEL_CHECK_MS` | `2000` | AI-0.1: період власної перевірки маркера Stop, незалежно від кадрів провайдера |
 
@@ -316,8 +407,9 @@ OpenAPI-документ одночасно, тож конфігурована �
 
 | Рівень | Де |
 | --- | --- |
-| Юніт: провайдер, промпт/історія, конфіг | `libs/shared/src/ai/**/*.test.ts` (22) |
-| Юніт: координатор генерації | `apps/worker/src/subscribers/ai-generate-reply.subscriber.test.ts` (21) — happy path, ретраї (`__fail__`/`__fail_once__`/`__reject__`), таймаут, Stop (pub/sub, БД-маркер, до підписки), проміжний запис, конкурентні доставки, покинута/жива оренда, втрата власності мід-стріму, історія без дублю питання |
+| Юніт: фейк, промпт/історія, конфіг, вибір провайдера | `libs/shared/src/ai/**/*.test.ts` без провайдерного (44) — включно з синтетичним usage фейка, `requireProviderCredentials` (кожна відсутня змінна названа, ключ не в повідомленні), `createLlmProvider` |
+| Юніт: `OpenAiCompatProvider` проти локального HTTP-стаба | `libs/shared/src/ai/llm/openai-compat.provider.test.ts` (30) — `node:http` на `127.0.0.1:0` із записаними SSE у формі OpenRouter, **без мережі й ключа**: успіх + usage останнім кадром + форма запиту, без `finish_reason` але з usage → завершено, `length` → завершено, 429 + `Retry-After`, 401, таблиця 4xx/5xx, обрив сокета, стрім без обох маркерів кінця, кадр помилки в 200-стрімі, abort (стаб бачить закрите зʼєднання), abort до відповіді, connection refused, ключ не в лозі й не в помилці, попередження на хост Anthropic, парсинг `Retry-After` |
+| Юніт: координатор генерації | `apps/worker/src/subscribers/ai-generate-reply.subscriber.test.ts` (27) — happy path, ретраї (`__fail__`/`__fail_once__`/`__reject__`), таймаут, Stop (pub/sub, БД-маркер, до підписки), проміжний запис, конкурентні доставки, покинута/жива оренда, втрата власності мід-стріму, історія без дублю питання; AI-1a: usage записано, модель бекенду перекриває налаштовану, usage скидається на рестарті, Stop лишає usage порожнім, `Retry-After` у межах і понад бюджет |
 | Юніт: коалесування, boot-guard | `apps/worker/src/ai/chunk-coalescer.test.ts` (6), `ai-lease.guard.test.ts` (3) |
 | Юніт: клієнтський sync | `apps/web/src/realtime/ai-sync.test.ts` (13) — уся таблиця D6, включно з «перечитування відстає, буфер закриває розрив без другого перечитування» |
 | Юніт: межа XSS | `apps/web/src/components/ai/markdown.test.tsx` (5) |
@@ -345,10 +437,10 @@ AI-1 — п'ять окремих змін, кожна приєднується 
 
 | Крок | Шов у поточному коді |
 | --- | --- |
-| `ai-1a` `OpenAiCompatProvider` | нова реалізація `LlmProvider` + значення `openai-compat` в `AI_PROVIDER` + рядок у `LLM_FACTORIES`; `usage` пишеться в уже зарезервовані колонки у `finalize()`; класифікація помилок лягає на наявний `LlmProviderError.retryable` |
+| `ai-1a` `OpenAiCompatProvider` | **зроблено** (§7.1): нова реалізація `LlmProvider` + `openai-compat` в `AI_PROVIDER` + рядок у `LLM_FACTORIES` (тепер у воркерному `AiLlmModule`); `usage` пишеться в зарезервовані колонки у `finalize()`; класифікація помилок — на наявний `LlmProviderError.retryable` (+`retryAfterMs`). Відкрито: ручний прогін із живим ключем |
 | `ai-1b` корпус знань | аргумент `knowledge` у `buildPrompt` (існує, поки порожній) → `KnowledgeSource`; одна адитивна колонка `knowledgeVersion` |
 | `ai-1c` персона в налаштуваннях | `SYSTEM_INSTRUCTION` у `prompt-builder.ts` розпадається на незмінні межі (код) + інструкцію тенанта (`settings.ai`) |
-| `ai-1d` квоти | читання в `AiService.ask` перед `publish`; списання у фінальній транзакції субскрайбера; нова таблиця `ai_usage_counters` |
+| `ai-1d` квоти | читання в `AiService.ask` перед `publish`; списання у фінальній транзакції субскрайбера (там, де `finalize()` уже пише usage); нова таблиця `ai_usage_counters`; `cachedPromptTokens` уже приходить у `LlmUsage` — лишилось зберегти |
 | `ai-1e` retention | нова cron-команда в `MESSAGE_TOPOLOGY` + підписник |
 
 **Нативний `AnthropicProvider` у AI-1 не входить** — відкладено (`ai-assistant.md` §5.3): через

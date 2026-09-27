@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FakeLlmProvider, FAKE_LLM_DIRECTIVES } from './fake-llm.provider';
-import { LlmProviderError, type LlmRequest } from './llm-provider';
+import { LlmProviderError, type LlmRequest, type LlmUsage } from './llm-provider';
 
 const provider = new FakeLlmProvider({ chunkDelayMs: 0, chunkChars: 16 });
 
@@ -116,5 +116,47 @@ describe('FakeLlmProvider', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(collect('anything', controller.signal)).resolves.toBe('');
+  });
+
+  it('віддає синтетичний usage РІВНО ОДНИМ термінальним кадром (ai-1a, design.md D8)', async () => {
+    const chunks = [];
+    for await (const chunk of provider.generate(requestFor('usage please'), new AbortController().signal)) {
+      chunks.push(chunk);
+    }
+    const withUsage = chunks.filter((chunk) => chunk.usage !== undefined);
+    expect(withUsage).toHaveLength(1);
+    const last = chunks.at(-1);
+    expect(last?.text).toBe('');
+    expect(last?.usage?.model).toBe('fake-1');
+    expect(last?.usage?.promptTokens).toBeGreaterThan(0);
+    expect(last?.usage?.completionTokens).toBeGreaterThan(0);
+  });
+
+  it('usage детермінований і росте з довжиною вводу та відповіді', async () => {
+    async function usageFor(question: string): Promise<LlmUsage | undefined> {
+      let usage: LlmUsage | undefined;
+      for await (const chunk of provider.generate(requestFor(question), new AbortController().signal)) {
+        usage = chunk.usage ?? usage;
+      }
+      return usage;
+    }
+    const short = await usageFor('short');
+    expect(await usageFor('short')).toEqual(short);
+    const longer = await usageFor(`${'much longer question '.repeat(20)} ${FAKE_LLM_DIRECTIVES.long}`);
+    expect(longer?.promptTokens).toBeGreaterThan(short?.promptTokens ?? 0);
+    expect(longer?.completionTokens).toBeGreaterThan(short?.completionTokens ?? 0);
+  });
+
+  it('на abort usage не віддається, як і в реального бекенду', async () => {
+    const controller = new AbortController();
+    const slow = new FakeLlmProvider({ chunkDelayMs: 5, chunkChars: 4 });
+    const chunks = [];
+    for await (const chunk of slow.generate(requestFor('stop me midway'), controller.signal)) {
+      chunks.push(chunk);
+      if (chunks.length === 2) {
+        controller.abort();
+      }
+    }
+    expect(chunks.some((chunk) => chunk.usage !== undefined)).toBe(false);
   });
 });

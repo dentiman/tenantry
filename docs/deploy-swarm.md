@@ -197,6 +197,31 @@ stack-файлу тихо повертає сервіс на попередні�
 > **Для СПРАВЖНЬОГО проду:** обидва файли винести в CI Variables (Protected+Masked) і
 > розігнорувати назад у `.gitignore`.
 
+**AI-асистент (ai-1a, [ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1):**
+на стеку за замовчуванням `AI_ENABLED=false`, `AI_PROVIDER=fake`. Реальний бекенд — будь-який
+з рідним OpenAI Chat Completions API; рекомендований дефолт — **OpenRouter** з увімкненим
+Zero Data Retention у кабінеті і дешевою моделлю з [ai-assistant.md](ai-assistant.md) §5.5
+(`openai/gpt-5.6-luna`). Порядок вмикання — саме такий:
+
+1. **Жорстка місячна стеля витрат на ключі провайдера** (OpenRouter: Keys → ключ → credit
+   limit). **Обовʼязково**, поки немає квот `ai-1d`: це останній і поки єдиний рубіж проти
+   рахунку від бага чи циклу. Без стелі ключ не вмикати.
+2. `docker/deploy.env`: `AI_PROVIDER=openai-compat`, `AI_BASE_URL=https://openrouter.ai/api/v1`,
+   `AI_MODEL=<модель>`.
+3. **`AI_API_KEY` — лише CI Variable (Protected + Masked)**, ніколи не в комітнутому
+   `deploy.env`. Deploy-job і так експортує CI Variables в оточення, з якого інтерполюється stack.
+   У stack-файлі `AI_BASE_URL`/`AI_API_KEY` сидять в окремому якорі `x-ai-provider-env`, який
+   отримує **лише `worker`**: api модель не викликає, і ключ йому не видається.
+4. `AI_ENABLED=true` (читають і api, і worker).
+
+Без `AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` при `AI_ENABLED=true` worker не стартує й називає
+змінну; у worker-а `update_config` з `order: start-first` + `failure_action: rollback`, тож
+задача, що падає на старті, відкочується на попередню, а не лишає стек без worker-а. Ключ у лог не пишеться; на старті
+worker логує лише провайдера, модель і хост, а на хост `*.anthropic.com` — попередження (через
+OpenAI-сумісний шар Anthropic тихо зникає prompt caching, ~×50 вартості). DeepSeek напряму не
+підключати — лише через OpenRouter із ZDR. Відкат: `AI_ENABLED=false` (або `AI_PROVIDER=fake`) і
+redeploy.
+
 > **SSH не налаштовуємо** — раннер↔manager уже пов'язані (ключ/known_hosts на рівні раннера).
 > У CI лише `docker context create host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT`.
 > **ТИМЧАСОВО всі job-и (включно з prod) під тегом `deploy_dev`** — ці раннери мають потрібний

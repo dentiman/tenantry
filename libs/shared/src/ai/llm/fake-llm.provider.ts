@@ -118,7 +118,25 @@ export class FakeLlmProvider implements LlmProvider {
       }
       yield { text: answer.slice(i, i + this.chunkChars) };
     }
+
+    // Синтетичний usage термінальним кадром (ai-1a, design.md D8) — та сама форма, що
+    // в реального бекенду. Детермінований, ненульовий і пропорційний вводу: цього
+    // досить, щоб облік і квоти (ai-1d) тестувались без ключа. На abort — не віддається,
+    // як і в реального бекенду (вихід вище через `return`)
+    yield {
+      text: '',
+      usage: {
+        promptTokens: estimateTokens(request.messages.reduce((n, m) => n + m.content.length, 0)),
+        completionTokens: estimateTokens(answer.length),
+        model: request.model,
+      },
+    };
   }
+}
+
+/** ~4 символи на токен — груба, але стабільна оцінка для синтетичного usage */
+function estimateTokens(chars: number): number {
+  return Math.max(1, Math.ceil(chars / 4));
 }
 
 function lastUserMessage(request: LlmRequest): string {

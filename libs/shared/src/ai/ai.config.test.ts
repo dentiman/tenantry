@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadAiConfig } from './ai.config';
+import { loadAiConfig, requireProviderCredentials } from './ai.config';
 
 describe('loadAiConfig', () => {
   it('без жодної змінної дає вимкнений асистент на фейковому провайдері', () => {
@@ -57,5 +57,63 @@ describe('loadAiConfig', () => {
   it('AI_PROVIDER_RETRIES: 0 — легальне значення (жодного ретраю), на відміну від решти лічильників', () => {
     const config = loadAiConfig({ AI_PROVIDER_RETRIES: '0' });
     expect(config.providerRetries).toBe(0);
+  });
+
+  it('без AI_BASE_URL/AI_API_KEY облікові дані — null, а модель — дефолтна fake-1', () => {
+    const config = loadAiConfig({});
+    expect(config.baseUrl).toBeNull();
+    expect(config.apiKey).toBeNull();
+    expect(config.model).toBe('fake-1');
+    expect(config.modelConfigured).toBe(false);
+  });
+
+  it('AI_BASE_URL, що не є http(s)-URL, валить старт з іменем змінної', () => {
+    expect(() => loadAiConfig({ AI_BASE_URL: 'openrouter.ai' })).toThrow(/AI_BASE_URL/);
+    expect(() => loadAiConfig({ AI_BASE_URL: 'ftp://openrouter.ai/api/v1' })).toThrow(/AI_BASE_URL/);
+  });
+});
+
+describe('requireProviderCredentials (ai-1a, design.md D5)', () => {
+  const FULL = {
+    AI_ENABLED: 'true',
+    AI_PROVIDER: 'openai-compat',
+    AI_BASE_URL: 'https://openrouter.ai/api/v1',
+    AI_API_KEY: 'sk-or-test-key',
+    AI_MODEL: 'openai/gpt-5.6-luna',
+  };
+
+  it('fake облікових даних не потребує', () => {
+    expect(requireProviderCredentials(loadAiConfig({ AI_ENABLED: 'true' }))).toBeNull();
+  });
+
+  it('openai-compat з усіма змінними повертає облікові дані', () => {
+    expect(requireProviderCredentials(loadAiConfig(FULL))).toEqual({
+      baseUrl: 'https://openrouter.ai/api/v1',
+      apiKey: 'sk-or-test-key',
+      model: 'openai/gpt-5.6-luna',
+    });
+  });
+
+  it.each(['AI_BASE_URL', 'AI_API_KEY', 'AI_MODEL'])(
+    'увімкнений openai-compat без %s валить старт і називає змінну',
+    (name) => {
+      const config = loadAiConfig({ ...FULL, [name]: '' });
+      expect(() => requireProviderCredentials(config)).toThrow(new RegExp(`${name}: required`));
+    },
+  );
+
+  it('повідомлення про помилку не містить ключа', () => {
+    const config = loadAiConfig({ ...FULL, AI_MODEL: '' });
+    expect(() => requireProviderCredentials(config)).toThrow(/AI_MODEL/);
+    try {
+      requireProviderCredentials(config);
+    } catch (error) {
+      expect(String(error)).not.toContain('sk-or-test-key');
+    }
+  });
+
+  it('вимкнений асистент піднімається без ключа', () => {
+    const config = loadAiConfig({ AI_PROVIDER: 'openai-compat' });
+    expect(requireProviderCredentials(config)).toBeNull();
   });
 });

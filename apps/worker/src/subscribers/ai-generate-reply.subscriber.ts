@@ -13,6 +13,7 @@ import {
   type AiConfig,
   type LlmProvider,
   type LlmRequest,
+  type LlmUsage,
   type MessageData,
   type MessageSubscriberContract,
 } from '@saas-skeleton/shared';
@@ -108,12 +109,18 @@ export class AiGenerateReplySubscriber
     let failure: AiMessageErrorCode | null = null;
     let lostOwnership = false;
     let providerCalls = 0;
+    // Облік токенів ПОТОЧНОЇ спроби (ai-1a, design.md D7): скидається разом із
+    // коалесером на restart(), тож у рядок потрапляє usage спроби, що дала текст
+    let usage: LlmUsage | null = null;
 
     try {
       streamLoop: for (;;) {
         providerCalls += 1;
         try {
           for await (const chunk of this.llm.generate(prompt, controller.signal)) {
+            if (chunk.usage) {
+              usage = chunk.usage;
+            }
             const now = Date.now();
             const frame = coalescer.push(chunk.text, now);
             if (frame) {
@@ -152,7 +159,14 @@ export class AiGenerateReplySubscriber
           const retryable = error instanceof LlmProviderError && error.retryable;
           const budgetLeft = providerCalls <= this.config.providerRetries;
           const alreadyAborted = controller.signal.aborted;
-          if (retryable && budgetLeft && !alreadyAborted) {
+          // Retry-After (ai-1a, design.md D4): не раніше, ніж попросив бекенд; а якщо
+          // він просить більше за AI_RETRY_DELAY_MS — не ретраїти взагалі: довшої паузи
+          // бюджет оренди (AiLeaseGuard) не покриває, а раніший повтор — гарантований 429
+          const waitFitsBudget =
+            !(error instanceof LlmProviderError) ||
+            error.retryAfterMs === undefined ||
+            error.retryAfterMs <= this.config.retryDelayMs;
+          if (retryable && budgetLeft && !alreadyAborted && waitFitsBudget) {
             await this.waitForRetry(controller.signal);
             // TS-CFA хибно тягне «aborted було false до await» крізь сам await
             // (не бачить, що `controller.abort()` викликається асинхронно, з
@@ -174,6 +188,7 @@ export class AiGenerateReplySubscriber
             // разом із рядком, у restart()), клієнт побачить chunkSeq 0 нового
             // attempt і викине накопичене від попередньої (design.md D6)
             coalescer = new ChunkCoalescer(this.config.streamFlushMs);
+            usage = null;
             continue streamLoop;
           }
 
@@ -212,6 +227,7 @@ export class AiGenerateReplySubscriber
       chunkCount: coalescer.chunkCount,
       status: failure !== null ? 'FAILED' : cancelledByUser ? 'CANCELLED' : 'COMPLETE',
       errorCode: failure,
+      usage,
     });
   }
 
@@ -360,6 +376,7 @@ export class AiGenerateReplySubscriber
     chunkCount: number;
     status: 'COMPLETE' | 'FAILED' | 'CANCELLED';
     errorCode: AiMessageErrorCode | null;
+    usage: LlmUsage | null;
   }): Promise<boolean> {
     return this.transactions.withTenantTx(async (tx) => {
       const finalized = await this.state.finalize(tx, input.messageId, input.attempt, {
@@ -367,6 +384,7 @@ export class AiGenerateReplySubscriber
         errorCode: input.errorCode,
         text: input.text,
         chunkCount: input.chunkCount,
+        usage: input.usage,
       });
       if (!finalized) {
         return false;
@@ -380,6 +398,7 @@ export class AiGenerateReplySubscriber
       // Після комміту: клієнт, який у відповідь перечитає стрічку, гарантовано
       // побачить фінальний текст, а не той, що був до запису
       this.transactions.onCommit(tx, () => {
+        this.logUsage(input.messageId, input.status, input.usage);
         this.realtime.aiCompleted(input.tenantId, input.userId, {
           conversationId: input.conversationId,
           messageId: input.messageId,
@@ -390,6 +409,28 @@ export class AiGenerateReplySubscriber
       });
       return true;
     });
+  }
+
+  /**
+   * Один рядок на відповідь — саме звідси ручний прогін із живим ключем читає
+   * `cached_tokens` другого ходу (docs/ai-assistant.md §5.3). Лише числа й модель:
+   * ні тексту, ні промпту (приватність, docs/ai-assistant-implementation.md §6)
+   */
+  private logUsage(messageId: string, status: string, usage: LlmUsage | null): void {
+    if (!usage) {
+      return;
+    }
+    this.logger.log(
+      {
+        messageId,
+        status,
+        model: usage.model,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        cachedPromptTokens: usage.cachedPromptTokens,
+      },
+      'AI reply usage',
+    );
   }
 
   private emitDelta(
@@ -408,7 +449,11 @@ export class AiGenerateReplySubscriber
     });
   }
 
-  /** Пауза перед ретраєм, яка миттєво завершується на abort (Stop або timeout) */
+  /**
+   * Пауза перед ретраєм, яка миттєво завершується на abort (Stop або timeout).
+   * Завжди `AI_RETRY_DELAY_MS`: `Retry-After`, що в нього вміщується, цим уже
+   * задоволений, а той, що не вміщується, до паузи не доходить (design.md D4)
+   */
   private waitForRetry(signal: AbortSignal): Promise<void> {
     const ms = this.config.retryDelayMs;
     if (ms <= 0 || signal.aborted) {

@@ -1,9 +1,8 @@
 /**
  * Шов провайдера LLM (docs/ai-assistant-plan.md §9, фаза AI-0).
  *
- * Це ЄДИНЕ, що фаза AI-1 замінює: `OpenAiCompatProvider` стає другою реалізацією
- * цього ж інтерфейсу, а життєвий цикл воркера, протокол дельт і модель даних
- * лишаються недоторканими.
+ * Реалізації: `FakeLlmProvider` (дефолт, CI) і `OpenAiCompatProvider` (ai-1a). Життєвий
+ * цикл воркера, протокол дельт і модель даних від вибору реалізації не залежать.
  */
 
 /** Одне повідомлення у форматі, спільному для всіх OpenAI-сумісних API */
@@ -19,12 +18,20 @@ export interface LlmRequest {
 }
 
 /**
- * Облік токенів. У AI-0 не заповнюється — резерв, щоб AI-1 міг віддати сюди
- * дані з usage-кадру провайдера, не чіпаючи ні інтерфейс, ні воркер.
+ * Облік токенів відповіді (ai-1a, design.md D7). Віддається ОСТАННІМ кадром стріму;
+ * воркер пише його у фінальній транзакції в `ai_messages.prompt_tokens`/
+ * `completion_tokens`/`model`.
  */
 export interface LlmUsage {
   readonly promptTokens: number;
   readonly completionTokens: number;
+  /** Модель, яку бекенд НАСПРАВДІ використав — роутер може підмінити налаштовану */
+  readonly model?: string;
+  /**
+   * Скільки токенів промпту прочитано з кешу провайдера. Лише в лог — саме так ручний
+   * прогін із живим ключем бачить, чи працює кеш; зберігати окремо — це `ai-1d`
+   */
+  readonly cachedPromptTokens?: number;
 }
 
 export interface LlmChunk {
@@ -41,17 +48,30 @@ export interface LlmChunk {
  *
  * `retryable` (AI-0.1, design.md D2) — чи є сенс перезапустити генерацію всередині
  * тієї самої доставки. Дефолт `true`: мережева помилка, 5xx, 429 — типовий випадок
- * тимчасової відмови. Провайдер AI-1 виставляє `false` для auth/валідаційних 4xx,
- * де повтор гарантовано провалиться так само.
+ * тимчасової відмови. `OpenAiCompatProvider` виставляє `false` для auth/валідаційних
+ * 4xx, де повтор гарантовано провалиться так само.
+ *
+ * `retryAfterMs` (ai-1a, design.md D4) — скільки бекенд попросив чекати (`Retry-After`).
+ * Воркер не ретраїть раніше, а якщо чекати треба довше за `AI_RETRY_DELAY_MS` — не
+ * ретраїть узагалі: бюджет оренди (AiLeaseGuard) довшої паузи не покриває.
  */
 export class LlmProviderError extends Error {
   readonly retryable: boolean;
+  readonly retryAfterMs: number | undefined;
 
-  constructor(message: string, options: { readonly cause?: unknown; readonly retryable?: boolean } = {}) {
+  constructor(
+    message: string,
+    options: {
+      readonly cause?: unknown;
+      readonly retryable?: boolean;
+      readonly retryAfterMs?: number;
+    } = {},
+  ) {
     super(message);
     this.name = 'LlmProviderError';
     this.cause = options.cause;
     this.retryable = options.retryable ?? true;
+    this.retryAfterMs = options.retryAfterMs;
   }
 }
 
