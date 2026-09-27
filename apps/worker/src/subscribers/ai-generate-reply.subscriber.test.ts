@@ -798,7 +798,7 @@ describe('AiGenerateReplySubscriber', () => {
     expect(world.reply().status).toBe('FAILED');
   });
 
-  it('ai-1c: персона тенанта — окреме повідомлення 1 після меж; знання зсуваються на 2', async () => {
+  it('ai-1c: знання — одразу за межами (спільний префікс), персона тенанта — окреме повідомлення 2', async () => {
     const world = makeWorld('PENDING', 'current question', [], {}, 'USER', {
       calendar: { timeZone: 'UTC' },
       ai: { persona: 'You are Ava, the Acme helpdesk assistant.', instructions: 'Mention the helpdesk.' },
@@ -808,9 +808,9 @@ describe('AiGenerateReplySubscriber', () => {
 
     const contents = (requests[0]?.messages ?? []).map((m) => m.content);
     expect(contents[0]).toBe(ASSISTANT_BOUNDARIES);
-    expect(contents[1]).toContain('You are Ava, the Acme helpdesk assistant.');
-    expect(contents[1]).toContain('Mention the helpdesk.');
-    expect(contents.findIndex((c) => c.startsWith('Product documentation:'))).toBe(2);
+    expect(contents.findIndex((c) => c.startsWith('Product documentation:'))).toBe(1);
+    expect(contents[2]).toContain('You are Ava, the Acme helpdesk assistant.');
+    expect(contents[2]).toContain('Mention the helpdesk.');
     expect(contents.at(-1)).toBe('current question');
     expect(world.reply().status).toBe('COMPLETE');
   });
@@ -847,8 +847,8 @@ describe('AiGenerateReplySubscriber', () => {
     await makeSubscriber(world, {}, {}, provider).handle(job);
 
     expect(requests).toHaveLength(2);
-    expect(requests[1]?.messages[1]).toEqual(requests[0]?.messages[1]);
-    expect(requests[0]?.messages[1]?.content).toContain('Persona: Ava');
+    expect(requests[1]?.messages[2]).toEqual(requests[0]?.messages[2]);
+    expect(requests[0]?.messages[2]?.content).toContain('Persona: Ava');
     expect(world.reply().status).toBe('COMPLETE');
   });
 });

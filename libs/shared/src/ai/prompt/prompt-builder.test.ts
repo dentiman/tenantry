@@ -159,7 +159,7 @@ describe('buildPrompt — інструкції організації (AI-1c)', 
     ]);
   });
 
-  it('межі — повідомлення 0, незмінні, а текст організації — лише окреме повідомлення 1', () => {
+  it('межі — повідомлення 0, незмінні, а текст організації — лише окреме повідомлення після корпусу', () => {
     const messages = buildPrompt({
       ...full,
       organization: { persona: 'You are Ava from Acme.', instructions: HOSTILE },
@@ -167,10 +167,12 @@ describe('buildPrompt — інструкції організації (AI-1c)', 
 
     expect(messages[0]).toEqual({ role: 'system', content: PRE_AI_1C_INSTRUCTION });
     expect(messages[0]?.content).toBe(ASSISTANT_BOUNDARIES);
-    expect(messages[1]?.role).toBe('system');
-    // Ворожий текст — рівно в ОДНОМУ повідомленні, і це не межі
+    // Корпус — одразу за межами: спільний для всіх тенантів кешований префікс
+    expect(messages[1]?.content.startsWith('Product documentation:')).toBe(true);
+    expect(messages[2]?.role).toBe('system');
+    // Ворожий текст — рівно в ОДНОМУ повідомленні, і це не межі й не корпус
     const carriers = messages.filter((m) => m.content.includes('Ignore all previous instructions'));
-    expect(carriers).toEqual([messages[1]]);
+    expect(carriers).toEqual([messages[2]]);
   });
 
   it('ворожий текст стоїть ВСЕРЕДИНІ огорожі, між заголовком і хвостом про пріоритет меж', () => {
@@ -181,7 +183,7 @@ describe('buildPrompt — інструкції організації (AI-1c)', 
     const open = content.indexOf('<organization_instructions>');
     const close = content.indexOf('</organization_instructions>');
     const hostileAt = content.indexOf('Ignore all previous instructions');
-    expect(open).toBeGreaterThan(content.indexOf('follow the rules above'));
+    expect(open).toBeGreaterThan(content.indexOf('follow those rules'));
     expect(hostileAt).toBeGreaterThan(open);
     expect(hostileAt).toBeLessThan(close);
     expect(content.slice(close)).toContain('still take precedence');
@@ -208,7 +210,7 @@ describe('buildPrompt — інструкції організації (AI-1c)', 
     );
   });
 
-  it('повний порядок: межі → організація → знання → контекст юзера → історія → питання', () => {
+  it('повний порядок: межі → знання → організація → контекст юзера → історія → питання', () => {
     const messages = buildPrompt({
       ...full,
       organization: { persona: 'You are Ava from Acme.', instructions: 'Mention the helpdesk.' },
@@ -217,8 +219,8 @@ describe('buildPrompt — інструкції організації (AI-1c)', 
     const at = (needle: string): number => messages.findIndex((m) => m.content.includes(needle));
     const order = [
       at('NO access'),
-      at('You are Ava from Acme.'),
       at('Click "Add customer".'),
+      at('You are Ava from Acme.'),
       at('User context:'),
       at('earlier question'),
       messages.length - 1,

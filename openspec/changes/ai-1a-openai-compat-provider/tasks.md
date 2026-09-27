@@ -98,7 +98,9 @@ Tenant e2e: `pnpm api:test:e2e` (this workspace slot's Postgres + Valkey, via `p
 - [x] 7.2 `pnpm --filter @saas-skeleton/shared test`, `pnpm --filter @saas-skeleton/worker test`,
       `pnpm web:test` green.
 - [x] 7.3 `pnpm api:test:e2e` green on this workspace's own slot (`pnpm ws:init`).
-- [ ] 7.4 Manual smoke test with a live key on the chosen backend: first-frame latency and
+- [x] 7.4 Manual smoke test with a live key on the chosen backend: first-frame latency and
       `cached_tokens` on the second turn recorded in `docs/ai-assistant-implementation.md`.
-      **Requires a real provider key — not available in this environment; left unchecked
-      deliberately (not run, not faked).**
+      **Done 2026-09-27 on slot 0 with a real OpenRouter key** (`openai/gpt-5.6-luna`), results in
+      `docs/ai-assistant-implementation.md` §7.1 "Живий прогін": cache confirmed from the second
+      turn (~98% of the ~11k-token prompt). First-frame latency is not persisted anywhere, so the
+      total generation time (2.8–4.1 s) was recorded instead; a first-frame metric is left to AI-3.

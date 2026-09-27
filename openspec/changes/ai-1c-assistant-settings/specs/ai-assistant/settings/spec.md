@@ -67,15 +67,17 @@ organization text can replace, precede or remove them.
 
 ### Requirement: Organization instructions reach every reply in a stable position
 When an organization has a non-empty persona or instructions, the system SHALL include them in
-the prompt of every assistant reply for that organization, after the fixed boundaries and before
-the product documentation, the user context, the conversation history and the question. The
+the prompt of every assistant reply for that organization, after the fixed boundaries and the
+product documentation, and before the user context, the conversation history and the question,
+so that the boundaries and documentation form a prefix shared by all organizations. The
 settings in effect when the reply is generated SHALL be used. When both are empty, the prompt
 SHALL be exactly what it is without this feature.
 
 #### Scenario: Reply is generated with organization instructions
 - **WHEN** a user of an organization with a saved persona asks a question
-- **THEN** the backend receives the fixed boundaries first, then the organization's persona and
-  instructions, then the documentation, the user context, the history, and the question last
+- **THEN** the backend receives the fixed boundaries first, then the documentation, then the
+  organization's persona and instructions, then the user context, the history, and the question
+  last
 
 #### Scenario: Organization has no assistant settings
 - **WHEN** a user of an organization without persona or instructions asks a question

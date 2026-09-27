@@ -114,7 +114,19 @@ Alternatives rejected: appending tenant text to message 0 (one string, so positi
 separation and a tenant could fake "end of rules"); putting it after the knowledge (see D4);
 sending it as a `user` message (weaker than `system` and would count as conversation turn).
 
-### D4. Order: boundaries → organization → knowledge → user context → history → question
+### D4. Order: boundaries → knowledge → organization → user context → history → question
+
+**Revised 2026-09-27 after the live-key run.** The order originally implemented was
+boundaries → organization → knowledge (kept below as the original rationale). The first question
+after an organization persona was saved went out with `cachedPromptTokens: 0` while the turns
+before it read ~11k of ~11.3k prompt tokens from cache: the organization block sat in front of the
+~11k-token corpus, so every persona edit invalidated the whole corpus cache, and every tenant with
+a persona would get its own cold prefix. Since one installation uses one provider key, boundaries +
+corpus are a prefix shared by ALL tenants only if tenant-specific text comes after the corpus.
+Precedence of the boundaries does not depend on the block's position: it is carried by the fence
+and by the block's own wording ("the rules at the start of this conversation take precedence").
+
+Original rationale (superseded):
 
 Prefix caching works on the longest common prefix. Boundaries are global; the organization
 text is per-tenant but stable for months; knowledge is shared across tenants but varies by

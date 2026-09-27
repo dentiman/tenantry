@@ -53,7 +53,7 @@ export interface BuildPromptInput {
 /**
  * НЕЗМІННІ МЕЖІ асистента — живуть у коді й ЗАВЖДИ йдуть першим повідомленням
  * (AI-1c, docs/ai-assistant-implementation.md §15). Тенант може лише ДОДАТИ
- * персону окремим повідомленням після них, але не прибрати чи замінити їх: жоден
+ * персону окремим повідомленням (після корпусу знань), але не прибрати чи замінити їх: жоден
  * вхід `buildPrompt` не потрапляє в це повідомлення.
  *
  * Текст свідомо той самий, що в AI-0…AI-1b, байт у байт: тоді «тенант без
@@ -72,21 +72,21 @@ export const ASSISTANT_BOUNDARIES = [
 /**
  * ПОРЯДОК ТУТ — ЦЕ ПИТАННЯ ЦІНИ, а не смаку: prompt caching у всіх кандидатів
  * працює по ПРЕФІКСУ, тому від найстабільнішого до найзміннішого —
- * межі → інструкції організації → знання → контекст юзера → історія → питання.
- * Інструкції організації — одразу після меж, яким вони підпорядковані: вони
- * різняться за тенантом, але змінюються рідко (AI-1c). Контекст юзера йде
- * ПІСЛЯ корпусу: він різниться за роллю/мовою, а корпус — спільний префікс. Зворотний порядок означав би повну
- * ціну за весь корпус на кожному ході (§1.4 плану).
+ * межі → знання → інструкції організації → контекст юзера → історія → питання.
+ *
+ * Межі й корпус однакові для ВСІХ тенантів інсталяції (корпус різниться лише
+ * за роллю), а ключ провайдера один на інсталяцію — тож цей ~11k-токенний
+ * префікс кешується спільно на всю інсталяцію. Інструкції організації
+ * різняться за тенантом, тому йдуть ПІСЛЯ корпусу: інакше кожен тенант із
+ * персоною мав би власний префікс (холодний хід ×N тенантів), а кожна правка
+ * персони скидала б кеш усього корпусу — саме це показав живий прогін
+ * 2026-09-27 (docs/ai-assistant-implementation.md §15). Підпорядкованість меж
+ * тримає не позиція, а огорожа й формулювання самого блоку організації.
  */
 export function buildPrompt(input: BuildPromptInput): LlmMessage[] {
   const messages: LlmMessage[] = [
     { role: 'system', content: ASSISTANT_BOUNDARIES },
   ];
-
-  const organization = renderOrganizationInstructions(input.organization);
-  if (organization !== null) {
-    messages.push({ role: 'system', content: organization });
-  }
 
   if (input.knowledge.length > 0) {
     messages.push({
@@ -96,6 +96,11 @@ export function buildPrompt(input: BuildPromptInput): LlmMessage[] {
         ...input.knowledge.map((doc) => `\n## ${doc.title} (${doc.slug})\n${doc.body}`),
       ].join('\n'),
     });
+  }
+
+  const organization = renderOrganizationInstructions(input.organization);
+  if (organization !== null) {
+    messages.push({ role: 'system', content: organization });
   }
 
   messages.push({

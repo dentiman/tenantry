@@ -22,8 +22,8 @@ no tenant can remove them.
   actions, do not invent, answer in the user's language) stay in code as the first system
   message, byte-for-byte what AI-0…AI-1b send today. The tenant's persona/instructions, when
   present, follow as a separate, delimited system message that declares itself subordinate
-  to those boundaries. Order: boundaries → tenant instructions → knowledge → user context →
-  history → question.
+  to those boundaries. Order: boundaries → knowledge → tenant instructions → user context →
+  history → question (revised after the live-key run, see design.md D4).
 - **The worker reads `settings.ai`** in `prepare()`, inside the existing tenant transaction
   (RLS), and passes it to the prompt builder. Absent, empty or unreadable settings produce
   exactly today's prompt.
