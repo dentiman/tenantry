@@ -185,7 +185,9 @@ AI-0 і AI-0.1 зроблено (див. таблицю §1): бічна пан�
 
 1. `ai-1a-openai-compat-provider` — перший реальний провайдер (лише OpenAI-сумісний; нативний
    Anthropic відкладено, §5.3) + облік токенів відповіді. **Починати з нього.**
-2. `ai-1b-knowledge-corpus` — `docs/ai-knowledge/`, генератор, бюджет у CI, `KnowledgeSource`.
+2. `ai-1b-knowledge-corpus` — `docs/ai-knowledge/`, генератор, бюджет у CI (у символах),
+   `KnowledgeSource`. **Після `1a`+`1b` — робоча версія на справжній LLM**; вмикати на реальному
+   ключі лише з жорсткою стелею витрат у кабінеті провайдера, поки немає квот `1d`.
 3. `ai-1c-assistant-settings` — системний промпт/персона в `settings.ai`, екран `/settings/ai`.
 4. `ai-1d-usage-quotas` — `ai_usage_counters` і квоти.
 5. `ai-1e-retention` — очищення старих розмов і «видалити мої розмови» (незалежний, будь-коли).
