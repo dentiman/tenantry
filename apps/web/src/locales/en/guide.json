@@ -272,8 +272,6 @@
     "description": "How the product is built, verified and shipped — tools for the development team."
   },
   "architecture": {
-    "description": "A map of the system: what it consists of and how requests, background jobs and live updates travel between its parts. Hover a node to highlight its connections.",
-    "openFull": "Open separately",
     "frameTitle": "SaaS Skeleton architecture diagram"
   },
   "subsystems": {

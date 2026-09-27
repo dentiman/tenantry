@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, ExternalLink } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
-import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Card,
   CardAction,
@@ -60,6 +59,15 @@ const DIAGRAM_SRC = '/diagrams/architecture.html';
  * лише заважають. Лишається SVG і рантайм Archify, тож підсвітка вузлів і
  * зв'язків при наведенні працює як в оригіналі.
  *
+ * Фон теж знято: і сторінка схеми, і її власна сітка (`<rect fill="url(#grid)">`
+ * першим шаром SVG) — схема лежить прямо на фоні путівника. Кольори вузлів і
+ * ліній Archify перемикає сам від `data-theme`, який ставить `ArchitectureDiagram`.
+ *
+ * `color-scheme` від того ж `data-theme` — обовʼязковий, а не косметика: коли
+ * схема документа в iframe (без неї — світла) не збігається зі схемою сторінки,
+ * браузер малює під iframe НЕПРОЗОРУ підкладку, і `background: transparent`
+ * її не прибирає. У темній темі схема стояла на білому прямокутнику.
+ *
  * Селектори — внутрішня розмітка Archify 2.x. Після перегенерації схеми
  * перевірити, що вони досі збігаються (інакше панелі просто повернуться).
  */
@@ -75,6 +83,9 @@ html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow
   border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
   background: transparent !important; }
 .diagram-container > svg { width: 100% !important; height: 100% !important; max-width: none !important; }
+.diagram-container > svg > rect[fill="url(#grid)"] { display: none !important; }
+:root[data-theme='dark'] { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }
 `;
 
 /**
@@ -150,16 +161,7 @@ export function GuidePage() {
       </section>
 
       <section id="architecture" className="flex scroll-mt-6 flex-col gap-6">
-        <SectionHeading section="architecture" description={t('architecture.description')}>
-          <Button
-            variant="outline"
-            size="sm"
-            render={<a href={DIAGRAM_SRC} target="_blank" rel="noreferrer" />}
-          >
-            <ExternalLink data-icon="inline-start" />
-            {t('architecture.openFull')}
-          </Button>
-        </SectionHeading>
+        <SectionHeading section="architecture" />
         <ArchitectureDiagram />
       </section>
 
@@ -381,7 +383,7 @@ function SectionHeading({
   children,
 }: {
   section: GuideSectionId;
-  description: string;
+  description?: string;
   children?: ReactNode;
 }) {
   const { t } = useTranslation('guide');
@@ -391,7 +393,7 @@ function SectionHeading({
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
           {t(`sections.${section}`)}
         </h2>
-        <p className="text-base leading-7 text-muted-foreground">{description}</p>
+        {description && <p className="text-base leading-7 text-muted-foreground">{description}</p>}
       </div>
       {children}
     </div>
@@ -406,7 +408,8 @@ function SectionHeading({
  *
  * До ін'єкції iframe прозорий: інакше на мить блимнули б тулбар і картки.
  * Висота — від пропорцій SVG (viewBox 1352×496), щоб схема заповнювала картку
- * без порожніх смуг.
+ * без порожніх смуг. Пропорції тримає внутрішній блок, а не сама картка: поле
+ * `p-6` навколо — щоб крайні вузли не прилипали до контуру.
  */
 function ArchitectureDiagram() {
   const { t } = useTranslation('guide');
@@ -421,25 +424,29 @@ function ArchitectureDiagram() {
   }, [isReady, archifyTheme]);
 
   return (
-    <Card className="aspect-[1352/496] min-h-72 py-0">
-      <iframe
-        ref={frameRef}
-        src={DIAGRAM_SRC}
-        title={t('architecture.frameTitle')}
-        onLoad={() => {
-          const doc = frameRef.current?.contentDocument;
-          if (!doc) return;
-          const style = doc.createElement('style');
-          style.textContent = ARCHIFY_EMBED_CSS;
-          doc.head.appendChild(style);
-          doc.documentElement.dataset.theme = archifyTheme;
-          setIsReady(true);
-        }}
-        className={cn(
-          'h-full w-full border-0 transition-opacity',
-          isReady ? 'opacity-100' : 'opacity-0',
-        )}
-      />
+    // Картка напівпрозора, як «заплановані» модулі: схема майже на брендовому
+    // фоні, а легка заливка й блюр гасять точки візерунка під її лініями
+    <Card className="bg-card/50 p-6">
+      <div className="aspect-[1352/496] min-h-60">
+        <iframe
+          ref={frameRef}
+          src={DIAGRAM_SRC}
+          title={t('architecture.frameTitle')}
+          onLoad={() => {
+            const doc = frameRef.current?.contentDocument;
+            if (!doc) return;
+            const style = doc.createElement('style');
+            style.textContent = ARCHIFY_EMBED_CSS;
+            doc.head.appendChild(style);
+            doc.documentElement.dataset.theme = archifyTheme;
+            setIsReady(true);
+          }}
+          className={cn(
+            'h-full w-full border-0 transition-opacity',
+            isReady ? 'opacity-100' : 'opacity-0',
+          )}
+        />
+      </div>
     </Card>
   );
 }
