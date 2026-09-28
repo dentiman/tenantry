@@ -70,6 +70,7 @@ export class AiMessageStateService {
         // перезахоплений рядок не має права зберегти числа попередньої
         promptTokens: null,
         completionTokens: null,
+        cachedPromptTokens: null,
         // НАВМИСНО НЕ чіпаємо cancelRequestedAt: якщо Stop уже стояв на покинутій
         // (наприклад, впала попередня спроба) STREAMING-відповіді, нова спроба
         // мусить побачити його одразу на пост-підписковому чеку (design.md D4) —
@@ -118,6 +119,7 @@ export class AiMessageStateService {
         chunkCount: 0,
         promptTokens: null,
         completionTokens: null,
+        cachedPromptTokens: null,
       },
     });
     return count === 0 ? null : { attempt: ownedAttempt + 1 };
@@ -189,6 +191,11 @@ export class AiMessageStateService {
           ? {
               promptTokens: usage.promptTokens,
               completionTokens: usage.completionTokens,
+              // Підмножина promptTokens, не додається зверху (ai-1d, design.md D5).
+              // Не кожен бекенд репортує розбивку кешу — лишається NULL, а не оцінка
+              ...(usage.cachedPromptTokens !== undefined
+                ? { cachedPromptTokens: usage.cachedPromptTokens }
+                : {}),
               ...(usage.model ? { model: usage.model } : {}),
             }
           : {}),

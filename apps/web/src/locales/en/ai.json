@@ -22,5 +22,8 @@
     "PROVIDER_UNAVAILABLE": "The assistant is unavailable right now. Try again in a moment.",
     "TIMEOUT": "The assistant took too long to answer. Try again.",
     "INTERNAL": "Something went wrong while answering. Try again."
+  },
+  "quota": {
+    "exceeded": "You've reached the usage limit for the assistant for now. Try again later."
   }
 }

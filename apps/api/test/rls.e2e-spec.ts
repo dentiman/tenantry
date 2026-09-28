@@ -15,6 +15,7 @@ const TENANT_TABLES = [
   'attachments',
   'ai_conversations',
   'ai_messages',
+  'ai_usage_counters',
 ];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
@@ -124,6 +125,63 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
       await db.query('BEGIN');
       await db.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantA]);
       await db.query(`DELETE FROM ai_conversations WHERE id = $1`, [conversationId]);
+      await db.query(`DELETE FROM users WHERE id = $1`, [userId]);
+      await db.query('COMMIT');
+    }
+  });
+
+  /**
+   * ai-1d: лічильники квот — та сама межа тенанта, що й розмови асистента вище.
+   * Юзера сьют створює й прибирає сам (той самий прийом, що для ai_conversations):
+   * спиратись на сід означало б залежність від порядку сьютів.
+   */
+  it('лічильник квоти, написаний під tenant A, невидимий і недоступний для запису під tenant B', async () => {
+    const tenantA = '00000000-0000-4000-8000-000000000001';
+    const tenantB = '00000000-0000-4000-8000-0000000000ff';
+    const userId = 'rls-quota-smoke-user';
+    const counterId = 'rls-quota-smoke-counter';
+
+    try {
+      await db.query('BEGIN');
+      await db.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantA]);
+      await db.query(
+        `INSERT INTO users (id, tenant_id, email, updated_at)
+         VALUES ($1, $2, $3, now())`,
+        [userId, tenantA, 'rls-quota-smoke@example.test'],
+      );
+      await db.query(
+        `INSERT INTO ai_usage_counters (id, tenant_id, user_id, period_start, updated_at)
+         VALUES ($1, $2, $3, date_trunc('day', now()), now())`,
+        [counterId, tenantA, userId],
+      );
+      const ownTenant = await db.query<{ count: string }>(
+        `SELECT count(*) FROM ai_usage_counters WHERE id = $1`,
+        [counterId],
+      );
+      expect(ownTenant.rows[0]?.count).toBe('1');
+      await db.query('COMMIT');
+
+      // Читання під іншим тенантом на ТОМУ САМОМУ конекшні: рядок не існує
+      await db.query('BEGIN');
+      await db.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantB]);
+      const otherTenantRead = await db.query<{ count: string }>(
+        `SELECT count(*) FROM ai_usage_counters WHERE id = $1`,
+        [counterId],
+      );
+      expect(otherTenantRead.rows[0]?.count).toBe('0');
+
+      // Запис під іншим тенантом на чужий id: WITH CHECK відхиляє UPDATE (0 рядків, не помилка)
+      const otherTenantWrite = await db.query(
+        `UPDATE ai_usage_counters SET prompt_tokens = prompt_tokens + 1 WHERE id = $1`,
+        [counterId],
+      );
+      expect(otherTenantWrite.rowCount).toBe(0);
+      await db.query('COMMIT');
+    } finally {
+      await db.query('ROLLBACK').catch(() => undefined);
+      await db.query('BEGIN');
+      await db.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantA]);
+      await db.query(`DELETE FROM ai_usage_counters WHERE id = $1`, [counterId]);
       await db.query(`DELETE FROM users WHERE id = $1`, [userId]);
       await db.query('COMMIT');
     }

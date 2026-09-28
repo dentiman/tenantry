@@ -115,6 +115,17 @@ const AiEnvSchema = z.object({
    * незалежно від кадрів провайдера, тому й мовчазний провайдер таки зупиняється
    */
   AI_CANCEL_CHECK_MS: intFromEnv(2_000),
+  /**
+   * Квота токенів на КОРИСТУВАЧА за добу UTC (ai-1d, design.md D2/D7). Дефолт від
+   * орієнтирів живого прогону (docs/ai-assistant-implementation.md §7.1): ≈11k
+   * промпту + ~100 відповіді на хід → ~90 найгірших (холодних) ходів/добу
+   */
+  AI_QUOTA_USER_DAILY_TOKENS: intFromEnv(1_000_000),
+  /**
+   * Квота токенів на ТЕНАНТА за ту саму добу (ai-1d, design.md D7) — 10× користувацької,
+   * щоб обмежити сумарний розгін багатьма юзерами, кожен у межах власної квоти
+   */
+  AI_QUOTA_TENANT_DAILY_TOKENS: intFromEnv(10_000_000),
 });
 
 /**
@@ -146,6 +157,10 @@ export interface AiConfig {
   cancelCheckMs: number;
   /** requestTimeoutMs + AI_LEASE_GRACE_MS — похідне, не власний env (design.md D1) */
   leaseMs: number;
+  /** Квота токенів на користувача за добу UTC (ai-1d, design.md D2/D7) */
+  quotaUserDailyTokens: number;
+  /** Квота токенів на тенанта за ту саму добу (ai-1d, design.md D7) */
+  quotaTenantDailyTokens: number;
 }
 
 export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
@@ -174,6 +189,8 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     pendingTimeoutMs: e.AI_PENDING_TIMEOUT_MS,
     cancelCheckMs: e.AI_CANCEL_CHECK_MS,
     leaseMs: e.AI_REQUEST_TIMEOUT_MS + AI_LEASE_GRACE_MS,
+    quotaUserDailyTokens: e.AI_QUOTA_USER_DAILY_TOKENS,
+    quotaTenantDailyTokens: e.AI_QUOTA_TENANT_DAILY_TOKENS,
   };
 }
 

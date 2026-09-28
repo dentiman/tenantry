@@ -9,6 +9,7 @@ export * from './prompt/prompt-builder';
 export * from './prompt/organization-instructions';
 export * from './prompt/history';
 export * from './ai-message-state.service';
+export * from './ai-usage-quota.service';
 export * from './knowledge/corpus-builder';
 export * from './knowledge/knowledge-source';
 export * from './knowledge/static-knowledge-source';

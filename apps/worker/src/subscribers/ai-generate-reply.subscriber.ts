@@ -4,6 +4,7 @@ import {
   AI_CONFIG,
   AiCancelChannel,
   AiMessageStateService,
+  AiUsageQuotaService,
   KNOWLEDGE_SOURCE,
   LLM_PROVIDER,
   LlmProviderError,
@@ -70,6 +71,7 @@ export class AiGenerateReplySubscriber
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
     @Inject(KNOWLEDGE_SOURCE) private readonly knowledgeSource: KnowledgeSource,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
+    private readonly usageQuota: AiUsageQuotaService,
   ) {}
 
   async handle(data: GenerateAiReply): Promise<void> {
@@ -416,6 +418,17 @@ export class AiGenerateReplySubscriber
       });
       if (!finalized) {
         return false;
+      }
+
+      // Списання квоти (ai-1d, design.md D4) — ПІСЛЯ generation, у ТІЙ САМІЙ транзакції,
+      // що й фіналізація рядка. Лише коли `usage` справді є: немає usage — немає що
+      // списувати (design.md D6, провалена/зупинена спроба нічого не додає лічильнику)
+      if (input.usage) {
+        await this.usageQuota.deduct(tx, input.tenantId, input.userId, new Date(), {
+          promptTokens: input.usage.promptTokens,
+          cachedPromptTokens: input.usage.cachedPromptTokens ?? 0,
+          completionTokens: input.usage.completionTokens,
+        });
       }
 
       await tx.aiConversation.update({

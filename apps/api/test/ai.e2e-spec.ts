@@ -6,7 +6,9 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { SystemPrismaService } from '@saas-skeleton/database';
-import { createAndLoginTestUser } from './test-users';
+import { startOfUtcDay } from '@saas-skeleton/shared';
+import { AI_QUOTA_EXCEEDED_CODE } from '@saas-skeleton/contracts';
+import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
 import { sentJobs } from './__mocks__/pg-boss';
 
 interface MessageBody {
@@ -51,6 +53,7 @@ describe('AI assistant API (e2e)', () => {
   beforeEach(async () => {
     await prisma.aiMessage.deleteMany();
     await prisma.aiConversation.deleteMany();
+    await prisma.aiUsageCounter.deleteMany();
     await prisma.authSession.deleteMany();
     await prisma.user.deleteMany();
     sentJobs.reset();
@@ -254,6 +257,80 @@ describe('AI assistant API (e2e)', () => {
 
       await ask(headers, '   ').expect(400);
       expect(sentJobs.all()).toHaveLength(0);
+    });
+  });
+
+  // ai-1d: квоти токенів (design.md D3/D4). Генерація тут не відбувається (pg-boss
+  // замокано), тож перевіряємо рівно рубіж checkQuota() — рахунок деталі АТОМАРНОГО
+  // списання перевіряє окремий сьют, ai-usage-quota.e2e-spec.ts, справжнім Postgres.
+  describe('usage quotas', () => {
+    // Ті самі дефолти, що AiConfig підхоплює без AI_QUOTA_* в env (design.md D7)
+    const USER_LIMIT = 1_000_000;
+    const TENANT_LIMIT = 10_000_000;
+    const periodStart = startOfUtcDay(new Date());
+
+    it('rejects a question when the user has already reached their own quota', async () => {
+      const headers = await login(`${Date.now()}-quota-user`);
+      const conversation = await request(app.getHttpServer())
+        .get('/api/ai/conversation')
+        .set(headers)
+        .expect(200);
+      const userId = (
+        await prisma.aiConversation.findFirstOrThrow({
+          where: { id: (conversation.body as ConversationBody).id },
+          select: { userId: true },
+        })
+      ).userId;
+      await prisma.aiUsageCounter.create({
+        data: { tenantId: DEFAULT_TENANT_ID, userId, periodStart, promptTokens: USER_LIMIT, completionTokens: 0 },
+      });
+
+      const response = await ask(headers, 'one more question').expect(400);
+
+      expect(
+        (response.body as { fieldErrors: { field: string; code: string }[] }).fieldErrors[0],
+      ).toMatchObject({ field: 'text', code: AI_QUOTA_EXCEEDED_CODE });
+      // Ні питання, ні відповіді не зʼявилось, і job у черзі немає (проповідь до publish)
+      expect(await prisma.aiMessage.count()).toBe(0);
+      expect(sentJobs.all()).toHaveLength(0);
+    });
+
+    it('rejects a question when the tenant aggregate is at its quota, even under the user’s own limit', async () => {
+      const headers = await login(`${Date.now()}-quota-tenant`);
+      // Кілька ІНШИХ юзерів того самого тенанта, кожен під власним лімітом, що
+      // разом перевищують тенантний — саме сценарій, який агрегат мусить зловити
+      const others = await Promise.all(
+        [0, 1, 2].map((i) =>
+          createTestUser(prisma, { email: `quota-tenant-other-${String(i)}-${String(Date.now())}@example.com` }),
+        ),
+      );
+      await prisma.aiUsageCounter.createMany({
+        data: others.map((u) => ({
+          tenantId: DEFAULT_TENANT_ID,
+          userId: u.id,
+          periodStart,
+          promptTokens: Math.ceil(TENANT_LIMIT / others.length),
+          completionTokens: 0,
+        })),
+      });
+
+      const response = await ask(headers, 'one more question').expect(400);
+
+      expect(
+        (response.body as { fieldErrors: { field: string; code: string }[] }).fieldErrors[0],
+      ).toMatchObject({ field: 'text', code: AI_QUOTA_EXCEEDED_CODE });
+      expect(await prisma.aiMessage.count()).toBe(0);
+      expect(sentJobs.all()).toHaveLength(0);
+    });
+
+    it('accepts a question when both limits are under quota, behaving exactly as without quotas', async () => {
+      const headers = await login(`${Date.now()}-quota-ok`);
+
+      const response = await ask(headers, 'well under any quota').expect(202);
+
+      const body = response.body as AskBody;
+      expect(body.reply).toMatchObject({ role: 'ASSISTANT', status: 'PENDING' });
+      expect(sentJobs.forQueue('ai.generate-reply/ai-generator')).toHaveLength(1);
     });
   });
 

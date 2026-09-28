@@ -2,6 +2,7 @@ import { Global, Module, type Provider } from '@nestjs/common';
 import { AI_CONFIG, loadAiConfig, type AiConfig } from './ai.config';
 import { AiCancelChannel } from './ai-cancel.channel';
 import { AiMessageStateService } from './ai-message-state.service';
+import { AiUsageQuotaService } from './ai-usage-quota.service';
 
 const aiConfigProvider: Provider = {
   provide: AI_CONFIG,
@@ -14,7 +15,7 @@ const aiConfigProvider: Provider = {
  */
 @Global()
 @Module({
-  providers: [aiConfigProvider, AiCancelChannel, AiMessageStateService],
-  exports: [AI_CONFIG, AiCancelChannel, AiMessageStateService],
+  providers: [aiConfigProvider, AiCancelChannel, AiMessageStateService, AiUsageQuotaService],
+  exports: [AI_CONFIG, AiCancelChannel, AiMessageStateService, AiUsageQuotaService],
 })
 export class AiModule {}

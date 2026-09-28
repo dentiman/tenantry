@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BotIcon, RotateCcwIcon, SendIcon, SquareIcon, XIcon } from 'lucide-react';
 import type { AiMessageResponse } from '@saas-skeleton/contracts';
-import { AI_MAX_INPUT_CHARS } from '@saas-skeleton/contracts';
+import { AI_MAX_INPUT_CHARS, AI_QUOTA_EXCEEDED_CODE } from '@saas-skeleton/contracts';
+import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
@@ -43,6 +44,9 @@ export function AiPanel() {
   const cancel = useAiCancel();
 
   const [draft, setDraft] = useState('');
+  // ai-1d, design.md D9: стан «квота вичерпана» — окремий від generic toast-шляху,
+  // бо 400 не потрапляє в isGlobalApiError() і панель має показати це явно
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const messages = conversation?.messages ?? [];
@@ -63,9 +67,16 @@ export function AiPanel() {
       return;
     }
     setDraft('');
+    setQuotaExceeded(false);
     ask.mutate(
       { data: { text } },
       {
+        onError: (error) => {
+          const parsed = parseApiError(error);
+          if (parsed.fieldErrors.some((fieldError) => fieldError.code === AI_QUOTA_EXCEEDED_CODE)) {
+            setQuotaExceeded(true);
+          }
+        },
         onSettled: () => {
           void queryClient.invalidateQueries({ queryKey: getAiConversationQueryKey() });
         },
@@ -148,12 +159,18 @@ export function AiPanel() {
       </ScrollArea>
 
       <form onSubmit={submit} className="shrink-0 border-t border-border p-3">
+        {quotaExceeded && (
+          <p className="mb-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+            {t('quota.exceeded')}
+          </p>
+        )}
         <Textarea
           value={draft}
           maxLength={AI_MAX_INPUT_CHARS}
           rows={2}
           placeholder={t('composer.placeholder')}
           className="resize-none"
+          disabled={quotaExceeded}
           onChange={(event) => {
             setDraft(event.target.value);
           }}
@@ -179,7 +196,11 @@ export function AiPanel() {
               {t('composer.stop')}
             </Button>
           ) : (
-            <Button type="submit" size="sm" disabled={draft.trim().length === 0 || ask.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={draft.trim().length === 0 || ask.isPending || quotaExceeded}
+            >
               <SendIcon />
               {t('composer.send')}
             </Button>
