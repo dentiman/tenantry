@@ -19,6 +19,7 @@ const BASE_CONFIG: AiConfig = {
   pendingTimeoutMs: 300_000,
   cancelCheckMs: 2_000,
   leaseMs: 90_000, // 60_000 + AI_LEASE_GRACE_MS
+  retentionDays: 90,
 };
 
 describe('AiLeaseGuard', () => {

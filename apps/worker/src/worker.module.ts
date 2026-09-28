@@ -16,6 +16,7 @@ import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
+import { AiPurgeConversationsSubscriber } from './subscribers/ai-purge-conversations.subscriber';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
 import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-jobs.subscriber';
@@ -55,6 +56,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     WorkerRealtimeEmitter,
     AiLeaseGuard,
     AiGenerateReplySubscriber,
+    AiPurgeConversationsSubscriber,
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,
     CleanupProcessedJobsSubscriber,

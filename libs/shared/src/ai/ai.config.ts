@@ -115,6 +115,12 @@ const AiEnvSchema = z.object({
    * незалежно від кадрів провайдера, тому й мовчазний провайдер таки зупиняється
    */
   AI_CANCEL_CHECK_MS: intFromEnv(2_000),
+  /**
+   * Скільки днів тримати розмову й повідомлення (ai-1e, docs/ai-assistant.md §9.2):
+   * нічний cron `ai.purge-conversations` жорстко видаляє те, що старіше. Читає лише
+   * воркер, але живе тут разом з рештою AI-конфігу, а не окремим об'єктом на одне поле
+   */
+  AI_RETENTION_DAYS: intFromEnv(90),
 });
 
 /**
@@ -146,6 +152,8 @@ export interface AiConfig {
   cancelCheckMs: number;
   /** requestTimeoutMs + AI_LEASE_GRACE_MS — похідне, не власний env (design.md D1) */
   leaseMs: number;
+  /** ai-1e: скільки днів тримати розмову/повідомлення, перш ніж нічний cron їх видалить */
+  retentionDays: number;
 }
 
 export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
@@ -174,6 +182,7 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     pendingTimeoutMs: e.AI_PENDING_TIMEOUT_MS,
     cancelCheckMs: e.AI_CANCEL_CHECK_MS,
     leaseMs: e.AI_REQUEST_TIMEOUT_MS + AI_LEASE_GRACE_MS,
+    retentionDays: e.AI_RETENTION_DAYS,
   };
 }
 

@@ -114,7 +114,13 @@ function applyUpdateData(row: MessageRow, data: Record<string, unknown>): void {
 
 interface World {
   messages: MessageRow[];
-  conversation: { id: string; tenantId: string; userId: string; lastMessageAt: Date | null };
+  conversation: {
+    id: string;
+    tenantId: string;
+    userId: string;
+    lastMessageAt: Date | null;
+    status: 'ACTIVE' | 'RETIRED';
+  };
   transactions: { withTenantTx: <T>(fn: (t: unknown) => Promise<T>) => Promise<T>; onCommit: (t: unknown, hook: () => void) => void };
   realtime: {
     aiDelta: (tenantId: string, userId: string, payload: AiMessageDelta) => void;
@@ -140,6 +146,8 @@ function makeWorld(
   userRole: 'ADMIN' | 'USER' = 'USER',
   // ai-1c: вміст `tenants.settings` (JSON) — `{}` означає «тенант нічого не задавав»
   tenantSettings: unknown = {},
+  // ai-1e: RETIRED — розмову вже закрили («нова розмова») до генерації цієї відповіді
+  conversationStatus: 'ACTIVE' | 'RETIRED' = 'ACTIVE',
 ): World {
   const prior: MessageRow[] = priorTurns.flatMap((turn, index) => [
     {
@@ -174,7 +182,13 @@ function makeWorld(
       startedAt: null, completedAt: null, model: null,
     },
   ];
-  const conversation = { id: CONVERSATION, tenantId: TENANT, userId: USER, lastMessageAt: null as Date | null };
+  const conversation = {
+    id: CONVERSATION,
+    tenantId: TENANT,
+    userId: USER,
+    lastMessageAt: null as Date | null,
+    status: conversationStatus,
+  };
 
   const tx = {
     aiMessage: {
@@ -298,7 +312,7 @@ function makeSubscriber(
     requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1',
     modelConfigured: false, baseUrl: null, apiKey: null,
     providerRetries: 1, retryDelayMs: 5, pendingTimeoutMs: 300_000, cancelCheckMs: 2_000,
-    leaseMs: 90_000, ...overrides,
+    leaseMs: 90_000, retentionDays: 90, ...overrides,
   };
   const cancelChannel = {
     onCancel: () => Promise.resolve(() => undefined),
@@ -471,6 +485,57 @@ describe('AiGenerateReplySubscriber', () => {
     expect(world.reply().attempt).toBe(2); // не зачепили
     expect(world.deltas).toHaveLength(0);
     expect(world.completed).toHaveLength(0);
+  });
+
+  it('ai-1e: PENDING-відповідь RETIRED-розмови — CANCELLED, модель не викликається взагалі', async () => {
+    const world = makeWorld('PENDING', undefined, [], {}, 'USER', {}, 'RETIRED');
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(0); // claim() і buildPrompt() взагалі не дійшли до виклику
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(world.reply().attempt).toBe(0); // жодної спроби не заклеймлено
+    expect(world.deltas).toHaveLength(0);
+    expect(world.completed).toHaveLength(0);
+  });
+
+  it('ai-1e: покинута STREAMING (прострочена оренда) RETIRED-розмови — теж CANCELLED без моделі', async () => {
+    const world = makeWorld(
+      'STREAMING',
+      undefined,
+      [],
+      { attempt: 3, leaseExpiresAt: new Date(Date.now() - 1_000) },
+      'USER',
+      {},
+      'RETIRED',
+    );
+    const { provider, requests } = capturingProvider();
+
+    await makeSubscriber(world, {}, {}, provider).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(world.reply().attempt).toBe(3); // не переклеймлено — cancelRetired() attempt не чіпає
+  });
+
+  it('ai-1e: STREAMING з ЖИВОЮ орендою RETIRED-розмови лишається недоторканою (є, чим володіти)', async () => {
+    // design.md D1, Risks: живу спробу тут навмисно не форсують у CANCELLED — RETIRED
+    // це стан в один бік, перегонів «встигне заклеймити раніше» немає
+    const world = makeWorld(
+      'STREAMING',
+      undefined,
+      [],
+      { attempt: 2, leaseExpiresAt: new Date(Date.now() + 60_000) },
+      'USER',
+      {},
+      'RETIRED',
+    );
+
+    await makeSubscriber(world).handle(job);
+
+    expect(world.reply().status).toBe('STREAMING');
+    expect(world.reply().attempt).toBe(2);
   });
 
   it('дві конкурентні доставки ОДНІЄЇ роботи: провайдер викликається РІВНО раз', async () => {

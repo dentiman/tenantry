@@ -226,6 +226,33 @@ export class AiMessageStateService {
   }
 
   /**
+   * Питання поставлене до RETIRED-розмови (ai-1e, живий прогін implementation §7.1):
+   * `claim()` захопив би рівно той самий набір рядків (`PENDING`, або `STREAMING` з
+   * простроченою/відсутньою орендою) — тут його НЕ захоплюють, а одразу закривають
+   * `CANCELLED`, бо розмову вже ніхто не побачить. Живий `STREAMING` з чинною орендою
+   * НАВМИСНО не чіпається: RETIRED — стан в один бік (`reset()` ніколи не вертає назад),
+   * тож перегонів «встигне заклеймити раніше» тут немає, а форсоване скасування лише
+   * побилось би з фенсингом власного `finalize()` того, хто рядок тримає.
+   */
+  async cancelRetired(tx: Prisma.TransactionClient, messageId: string): Promise<boolean> {
+    const now = new Date();
+    const { count } = await tx.aiMessage.updateMany({
+      where: {
+        id: messageId,
+        OR: [
+          { status: 'PENDING' },
+          {
+            status: 'STREAMING',
+            OR: [{ leaseExpiresAt: null }, { leaseExpiresAt: { lt: now } }],
+          },
+        ],
+      },
+      data: { status: 'CANCELLED', completedAt: now },
+    });
+    return count > 0;
+  }
+
+  /**
    * Закриває ПОКИНУТІ відповіді розмови (design.md D3): `PENDING`/`STREAMING` з
    * простроченою чи відсутньою орендою → `FAILED`, частковий текст лишається.
    * Повертає кількість закритих рядків — 0 означає «нічого змінилось», і

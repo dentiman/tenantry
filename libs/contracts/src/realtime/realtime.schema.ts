@@ -222,8 +222,10 @@ export const AiMessageCompletedSchema = z.object({
  * стрічки; сам факт лишається джерелом правди, як і решта realtime (docs/realtime.md).
  */
 export const AiConversationChangedSchema = z.object({
-  conversationId: z.uuid(),
-  reason: z.enum(['turn-created', 'reply-closed', 'reset']),
+  // ai-1e: null для 'deleted' — «видалити мої розмови» прибирає ВСІ розмови юзера
+  // одразу, тож жодна конкретна не є «тією, що змінилась»
+  conversationId: z.uuid().nullable(),
+  reason: z.enum(['turn-created', 'reply-closed', 'reset', 'deleted']),
   occurredAt: z.iso.datetime(),
 });
 

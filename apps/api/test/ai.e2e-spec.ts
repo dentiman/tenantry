@@ -361,6 +361,78 @@ describe('AI assistant API (e2e)', () => {
     });
   });
 
+  describe('delete all conversations (ai-1e)', () => {
+    it('removes the caller\'s conversations and messages', async () => {
+      const headers = await login(`${Date.now()}-delete-mine`);
+      const asked = await ask(headers, 'a question worth forgetting').expect(202);
+      const conversationId = (asked.body as AskBody).conversationId;
+
+      await request(app.getHttpServer())
+        .delete('/api/ai/conversations')
+        .set(headers)
+        .expect(204);
+
+      expect(await prisma.aiConversation.findUnique({ where: { id: conversationId } })).toBeNull();
+      expect(await prisma.aiMessage.count({ where: { conversationId } })).toBe(0);
+
+      // Наступне читання лінькво заводить нову — так само, як юзеру, що ще не питав
+      const after = await request(app.getHttpServer())
+        .get('/api/ai/conversation')
+        .set(headers)
+        .expect(200);
+      expect((after.body as ConversationBody).id).not.toBe(conversationId);
+      expect((after.body as ConversationBody).messages).toEqual([]);
+    });
+
+    it('is a harmless no-op when the caller has nothing to delete', async () => {
+      const headers = await login(`${Date.now()}-delete-empty`);
+
+      await request(app.getHttpServer())
+        .delete('/api/ai/conversations')
+        .set(headers)
+        .expect(204);
+    });
+
+    it('deleting does not touch another user\'s conversations in the same tenant', async () => {
+      const alice = await login(`${Date.now()}-delete-alice`);
+      const bob = await login(`${Date.now()}-delete-bob`);
+      const bobAsked = await ask(bob, 'bob\'s private question').expect(202);
+      const bobConversationId = (bobAsked.body as AskBody).conversationId;
+
+      await request(app.getHttpServer())
+        .delete('/api/ai/conversations')
+        .set(alice)
+        .expect(204);
+
+      expect(
+        await prisma.aiConversation.findUnique({ where: { id: bobConversationId } }),
+      ).not.toBeNull();
+    });
+
+    it('deleting does not touch another tenant\'s conversations', async () => {
+      const headers = await login(`${Date.now()}-delete-tenant`);
+
+      const otherTenant = await prisma.tenant.create({
+        data: { slug: `ai-delete-${String(Date.now())}`, name: 'Other tenant' },
+      });
+      const otherUser = await prisma.user.create({
+        data: { tenantId: otherTenant.id, email: `ai-delete-other-${String(Date.now())}@example.com`, role: 'USER' },
+      });
+      const otherConversation = await prisma.aiConversation.create({
+        data: { tenantId: otherTenant.id, userId: otherUser.id, status: 'ACTIVE' },
+      });
+
+      await request(app.getHttpServer())
+        .delete('/api/ai/conversations')
+        .set(headers)
+        .expect(204);
+
+      expect(
+        await prisma.aiConversation.findUnique({ where: { id: otherConversation.id } }),
+      ).not.toBeNull();
+    });
+  });
+
   describe('bootstrap flag', () => {
     it('reports features.ai = true while the assistant is enabled', async () => {
       const headers = await login(`${Date.now()}-flag`);

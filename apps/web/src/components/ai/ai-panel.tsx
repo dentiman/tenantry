@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BotIcon, RotateCcwIcon, SendIcon, SquareIcon, XIcon } from 'lucide-react';
+import { BotIcon, RotateCcwIcon, SendIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react';
 import type { AiMessageResponse } from '@saas-skeleton/contracts';
 import { AI_MAX_INPUT_CHARS } from '@saas-skeleton/contracts';
 import { cn } from '@saas-skeleton/ui/lib/utils';
@@ -9,9 +9,19 @@ import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@saas-skeleton/ui/components/ui/alert-dialog';
+import {
   useAiAsk,
   useAiCancel,
   useAiConversation,
+  useAiDeleteAllConversations,
   useAiReset,
   getAiConversationQueryKey,
 } from '../../api/generated/api';
@@ -41,8 +51,10 @@ export function AiPanel() {
   const ask = useAiAsk();
   const reset = useAiReset();
   const cancel = useAiCancel();
+  const deleteAll = useAiDeleteAllConversations();
 
   const [draft, setDraft] = useState('');
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const messages = conversation?.messages ?? [];
@@ -55,6 +67,12 @@ export function AiPanel() {
   useEffect(() => {
     viewportRef.current?.scrollTo({ top: viewportRef.current.scrollHeight });
   }, [messages]);
+
+  const onDeleteAll = async (): Promise<void> => {
+    await deleteAll.mutateAsync();
+    setIsDeleteAllOpen(false);
+    await queryClient.invalidateQueries({ queryKey: getAiConversationQueryKey() });
+  };
 
   const submit = (event: SyntheticEvent): void => {
     event.preventDefault();
@@ -113,6 +131,19 @@ export function AiPanel() {
           }}
         >
           <RotateCcwIcon />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t('deleteAll.trigger')}
+          title={t('deleteAll.trigger')}
+          disabled={deleteAll.isPending}
+          onClick={() => {
+            setIsDeleteAllOpen(true);
+          }}
+        >
+          <Trash2Icon />
         </Button>
         <Button
           type="button"
@@ -186,6 +217,25 @@ export function AiPanel() {
           )}
         </div>
       </form>
+
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteAll.confirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('deleteAll.confirmBody')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <AlertDialogCancel>{t('deleteAll.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void onDeleteAll();
+              }}
+            >
+              {t('deleteAll.confirm')}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

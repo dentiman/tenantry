@@ -243,6 +243,22 @@ export class AiService {
     }
   }
 
+  /**
+   * «Видалити мої розмови» (ai-1e, docs/ai-assistant.md §9.2): негайний, жорсткий DELETE
+   * усіх розмов юзера, без черги. Межа тенанта — RLS (tenantTx), межа людини — явний
+   * `userId`, як і скрізь у цьому сервісі (клас-коментар); `AiMessage` каскадиться разом
+   * з розмовою. Нову активну розмову тут НЕ створюємо — наступний `ask()`/читання
+   * лінькво заведе її так само, як для юзера, що ще ніколи не питав (design.md D5)
+   */
+  async deleteAllConversations(actor: JwtPayload): Promise<void> {
+    await this.transactions.withTenantTx(async (tx) => {
+      await tx.aiConversation.deleteMany({ where: { userId: actor.sub } });
+      this.transactions.onCommit(tx, () => {
+        this.emitConversationChanged(actor.tenantId, actor.sub, null, 'deleted');
+      });
+    });
+  }
+
   private async findActive(
     userId: string,
     tx?: Prisma.TransactionClient,
@@ -287,7 +303,7 @@ export class AiService {
   private emitConversationChanged(
     tenantId: string,
     userId: string,
-    conversationId: string,
+    conversationId: string | null,
     reason: AiConversationChanged['reason'],
   ): void {
     this.realtime.aiConversationChanged(tenantId, userId, {

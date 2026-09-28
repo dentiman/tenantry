@@ -2591,6 +2591,25 @@
         ]
       }
     },
+    "/api/ai/conversations": {
+      "delete": {
+        "operationId": "aiDeleteAllConversations",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/api/files": {
       "post": {
         "operationId": "filesCreate",

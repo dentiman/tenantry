@@ -5651,6 +5651,72 @@ export const useAiCancel = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
+export const aiDeleteAllConversations = (options?: SecondParameter<typeof customInstance>) => {
+  return customInstance<void>({ url: `/api/ai/conversations`, method: 'DELETE' }, options);
+};
+
+export const getAiDeleteAllConversationsMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiDeleteAllConversations>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiDeleteAllConversations>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['aiDeleteAllConversations'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiDeleteAllConversations>>,
+    void
+  > = () => {
+    return aiDeleteAllConversations(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiDeleteAllConversationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiDeleteAllConversations>>
+>;
+
+export type AiDeleteAllConversationsMutationError = unknown;
+
+export const useAiDeleteAllConversations = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiDeleteAllConversations>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof aiDeleteAllConversations>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions = getAiDeleteAllConversationsMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
 export const filesCreate = (
   createFileUploadDto: CreateFileUploadDto,
   options?: SecondParameter<typeof customInstance>,

@@ -22,3 +22,14 @@ export const generateAiReplyCommand = defineCommand(
     messageId: z.uuid(),
   }),
 );
+
+/**
+ * Нічна чистка розмов старших за `AI_RETENTION_DAYS` (ai-1e, docs/ai-assistant.md §9.2).
+ * System-scope — крос-tenant, БД через SystemPrismaService (BYPASSRLS), той самий патерн,
+ * що `files.cleanup-orphans`. Жорстке видалення: `AiMessage` каскадиться з `AiConversation`.
+ */
+export const purgeAiConversationsCommand = defineCommand(
+  'ai.purge-conversations',
+  z.object({}),
+  { scope: 'system' },
+);

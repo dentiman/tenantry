@@ -254,6 +254,17 @@ export class AiGenerateReplySubscriber
         return null;
       }
 
+      // Розмову вже закрили («нова розмова») до того, як цю відповідь узяли в роботу
+      // (ai-1e, живий прогін implementation §7.1): ніхто її не побачить, тож закриваємо
+      // CANCELLED, не заклеймивши і не звернувшись до моделі — раніше за claim() навмисно
+      if (reply.conversation.status === 'RETIRED') {
+        await this.state.cancelRetired(tx, data.messageId);
+        this.logger.log(
+          `AI reply ${data.messageId} cancelled — conversation ${data.conversationId} is retired`,
+        );
+        return null;
+      }
+
       const user = await tx.user.findUnique({
         where: { id: reply.conversation.userId },
         select: { role: true, locale: true },

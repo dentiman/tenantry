@@ -1,5 +1,5 @@
 import type { MessageDefinition } from './message-definition';
-import { generateAiReplyCommand } from './definitions/ai.messages';
+import { generateAiReplyCommand, purgeAiConversationsCommand } from './definitions/ai.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
@@ -125,6 +125,13 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     definition: cleanupProcessedJobsCommand,
     consumers: [{ id: 'inbox-cleaner', retryLimit: 1 }],
     cron: '15 3 * * *',
+  },
+  {
+    // ai-1e, docs/ai-assistant.md §9.2: жорстке видалення розмов/повідомлень старших за
+    // AI_RETENTION_DAYS. `:45` — одразу за трійкою нічних чисток вище (:00/:15/:30)
+    definition: purgeAiConversationsCommand,
+    consumers: [{ id: 'ai-conversation-purger', retryLimit: 1 }],
+    cron: '45 3 * * *',
   },
   {
     // Перший споживач, якому дефолти pg-boss не підходять (docs/ai-assistant-plan.md §3.4).

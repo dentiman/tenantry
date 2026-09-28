@@ -20,6 +20,8 @@ describe('loadAiConfig', () => {
     expect(config.cancelCheckMs).toBe(2_000);
     // leaseMs — ПОХІДНЕ від requestTimeoutMs, не власна змінна оточення (design.md D1)
     expect(config.leaseMs).toBe(60_000 + 30_000);
+    // ai-1e: дефолт 90 днів (docs/ai-assistant.md §9.2)
+    expect(config.retentionDays).toBe(90);
   });
 
   it('читає задані значення', () => {
@@ -32,6 +34,7 @@ describe('loadAiConfig', () => {
       AI_PENDING_TIMEOUT_MS: '60000',
       AI_CANCEL_CHECK_MS: '1000',
       AI_REQUEST_TIMEOUT_MS: '45000',
+      AI_RETENTION_DAYS: '30',
     });
 
     expect(config.enabled).toBe(true);
@@ -43,6 +46,7 @@ describe('loadAiConfig', () => {
     expect(config.cancelCheckMs).toBe(1_000);
     // leaseMs перераховується від заданого requestTimeoutMs, а не лишається дефолтним
     expect(config.leaseMs).toBe(45_000 + 30_000);
+    expect(config.retentionDays).toBe(30);
   });
 
   it('невідомий провайдер валить старт і називає змінну, а не відкочується на fake', () => {

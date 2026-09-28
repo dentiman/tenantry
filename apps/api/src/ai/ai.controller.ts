@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBearerAuth,
@@ -74,5 +74,18 @@ export class AiController {
   async cancel(@Param('id') id: string, @CurrentUser() actor: JwtPayload): Promise<void> {
     this.ai.assertEnabled();
     await this.ai.cancel(actor, id);
+  }
+
+  /**
+   * «Видалити мої розмови» (ai-1e): негайний, синхронний DELETE усіх розмов юзера — не
+   * лише активної. Множина, на відміну від `conversation` вище: та адресує ЄДИНУ поточну
+   * розмову, ця — всю колекцію, так само без id (суб'єкт з токена)
+   */
+  @Delete('conversations')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  async deleteAllConversations(@CurrentUser() actor: JwtPayload): Promise<void> {
+    this.ai.assertEnabled();
+    await this.ai.deleteAllConversations(actor);
   }
 }

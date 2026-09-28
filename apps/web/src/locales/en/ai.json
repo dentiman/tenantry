@@ -3,6 +3,13 @@
   "toggle": "Toggle assistant",
   "close": "Close assistant",
   "newConversation": "New conversation",
+  "deleteAll": {
+    "trigger": "Delete my conversations",
+    "confirmTitle": "Delete all your conversations?",
+    "confirmBody": "This permanently deletes every conversation you have with the assistant, including past ones. This cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete all"
+  },
   "disclosure": "AI assistant — answers can be wrong. It has no access to your data.",
   "empty": {
     "title": "Ask about the product",
