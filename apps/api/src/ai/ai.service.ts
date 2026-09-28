@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -11,11 +12,12 @@ import {
   AI_CONFIG,
   AiCancelChannel,
   AiMessageStateService,
+  AiUsageQuotaService,
   MessagePublisher,
   generateAiReplyCommand,
   type AiConfig,
 } from '@saas-skeleton/shared';
-import type { AiConversationChanged } from '@saas-skeleton/contracts';
+import { AI_QUOTA_EXCEEDED_CODE, type AiConversationChanged } from '@saas-skeleton/contracts';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
 
@@ -41,6 +43,7 @@ export class AiService {
     private readonly cancelChannel: AiCancelChannel,
     private readonly state: AiMessageStateService,
     private readonly realtime: RealtimeEmitter,
+    private readonly usageQuota: AiUsageQuotaService,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
   ) {}
 
@@ -82,7 +85,9 @@ export class AiService {
    * Питання. Усе — питання, порожня відповідь і публікація команди — в ОДНІЙ
    * транзакції: або факт і його робота зафіксувались разом, або не сталося нічого.
    *
-   * Порядок кроків навмисний (design.md D3, D5):
+   * Порядок кроків навмисний (ai-1d design.md D3/D4, і design.md D3/D5 попередніх фаз):
+   *  0. перевірка квоти ПЕРШОЮ — до того, як з'явиться хоч один рядок питання/відповіді
+   *     чи job у черзі (ai-1d);
    *  1. UPDATE розмови (бере її рядковий лок — конкурентні `ask()` серіалізуються);
    *  2. закрити покинуті відповіді — мертва відповідь не має тримати «зайнято» вічно;
    *  3. лише ТЕПЕР перевірити «зайнято» і створити нове питання/відповідь.
@@ -92,6 +97,18 @@ export class AiService {
     text: string,
   ): Promise<{ conversation: AiConversation; question: AiMessage; reply: AiMessage }> {
     return this.transactions.withTenantTx(async (tx) => {
+      // Крок 0 (ai-1d, design.md D3/D4): оптимістична перевірка — перевищити можна
+      // рівно на один хід, що вже минув цю перевірку. Рядка ще немає жодного —
+      // відмова тут означає, що job ніколи не потрапить у чергу
+      const exceeded = await this.usageQuota.checkQuota(tx, actor.tenantId, actor.sub, new Date());
+      if (exceeded) {
+        const message = 'AI usage quota exceeded for the current period';
+        throw new BadRequestException({
+          message,
+          fieldErrors: [{ field: 'text', message, code: AI_QUOTA_EXCEEDED_CODE }],
+        });
+      }
+
       const conversation =
         (await this.findActive(actor.sub, tx)) ?? (await this.createActive(actor.sub, tx));
 

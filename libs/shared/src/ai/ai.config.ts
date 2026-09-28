@@ -121,6 +121,17 @@ const AiEnvSchema = z.object({
    * воркер, але живе тут разом з рештою AI-конфігу, а не окремим об'єктом на одне поле
    */
   AI_RETENTION_DAYS: intFromEnv(90),
+  /**
+   * Квота токенів на КОРИСТУВАЧА за добу UTC (ai-1d, design.md D2/D7). Дефолт від
+   * орієнтирів живого прогону (docs/ai-assistant-implementation.md §7.1): ≈11k
+   * промпту + ~100 відповіді на хід → ~90 найгірших (холодних) ходів/добу
+   */
+  AI_QUOTA_USER_DAILY_TOKENS: intFromEnv(1_000_000),
+  /**
+   * Квота токенів на ТЕНАНТА за ту саму добу (ai-1d, design.md D7) — 10× користувацької,
+   * щоб обмежити сумарний розгін багатьма юзерами, кожен у межах власної квоти
+   */
+  AI_QUOTA_TENANT_DAILY_TOKENS: intFromEnv(10_000_000),
 });
 
 /**
@@ -154,6 +165,10 @@ export interface AiConfig {
   leaseMs: number;
   /** ai-1e: скільки днів тримати розмову/повідомлення, перш ніж нічний cron їх видалить */
   retentionDays: number;
+  /** Квота токенів на користувача за добу UTC (ai-1d, design.md D2/D7) */
+  quotaUserDailyTokens: number;
+  /** Квота токенів на тенанта за ту саму добу (ai-1d, design.md D7) */
+  quotaTenantDailyTokens: number;
 }
 
 export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
@@ -183,6 +198,8 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     cancelCheckMs: e.AI_CANCEL_CHECK_MS,
     leaseMs: e.AI_REQUEST_TIMEOUT_MS + AI_LEASE_GRACE_MS,
     retentionDays: e.AI_RETENTION_DAYS,
+    quotaUserDailyTokens: e.AI_QUOTA_USER_DAILY_TOKENS,
+    quotaTenantDailyTokens: e.AI_QUOTA_TENANT_DAILY_TOKENS,
   };
 }
 

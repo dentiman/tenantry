@@ -49,6 +49,7 @@ model Tenant {
   scheduledNotifications   ScheduledNotification[]
   aiConversations          AiConversation[]
   aiMessages               AiMessage[]
+  aiUsageCounters          AiUsageCounter[]
   conversations            Conversation[]
   conversationParticipants ConversationParticipant[]
   chatMessages             ChatMessage[]
@@ -106,6 +107,7 @@ model User {
   calendarReminders       CalendarReminder[]
   scheduledNotifications  ScheduledNotification[]   @relation("ScheduledNotificationRecipient")
   aiConversations         AiConversation[]          @relation("AiConversationOwner")
+  aiUsageCounters         AiUsageCounter[]          @relation("AiUsageCounterOwner")
   conversationMemberships ConversationParticipant[]
   chatMessages            ChatMessage[]             @relation("ChatMessageSender")
 
@@ -908,6 +910,10 @@ model AiMessage {
   model            String?
   promptTokens     Int?    @map("prompt_tokens")
   completionTokens Int?    @map("completion_tokens")
+  // Підмножина promptTokens (не додається зверху) — скільки токенів промпту прочитано
+  // з кешу провайдера. Раніше лише в лозі воркера (ai-1a); ai-1d зберігає окремою
+  // колонкою й рахує в ai_usage_counters — єдиний спосіб побачити, чи працює кеш
+  cachedPromptTokens Int? @map("cached_prompt_tokens")
 
   // Версія корпусу знань, якою відповідали (ai-1b, design.md D7): хеш артефакту
   // `pnpm ai:knowledge`. Повний промпт НЕ зберігається — він відтворюється з цієї
@@ -948,6 +954,40 @@ model AiMessage {
 enum AiMessageRole {
   USER
   ASSISTANT
+}
+
+// ============================================================================
+// Квоти токенів асистента (ai-1d, docs/ai-assistant.md §8, design.md D1/D2).
+//
+// Рівно один рядок на (tenant, user, period) — période = початок доби UTC.
+// Тенантний підсумок НЕ окремий рядок: рахується агрегатом SUM по рядках
+// тенанта за період у момент перевірки — другий писаний рядок означав би
+// другий шлях запису, який мусив би довіку не розійтись із першим (design.md D1).
+// ============================================================================
+
+model AiUsageCounter {
+  id          String   @id @default(uuid())
+  tenantId    String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId      String   @map("user_id")
+  // Початок доби UTC, якій належить рядок (design.md D2)
+  periodStart DateTime @map("period_start")
+
+  promptTokens Int @default(0) @map("prompt_tokens")
+  // Підмножина promptTokens, НЕ додається зверху (design.md D5) — лише видимість кеша
+  cachedPromptTokens Int @default(0) @map("cached_prompt_tokens")
+  completionTokens   Int @default(0) @map("completion_tokens")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("AiUsageCounterOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  // Арбітр атомарного інкременту (upsert ... ON CONFLICT) і водночас індекс під
+  // перевірку/агрегат тенанта за період (design.md D4)
+  @@unique([tenantId, userId, periodStart])
+  @@index([tenantId, periodStart])
+  @@map("ai_usage_counters")
 }
 
 enum AiMessageStatus {

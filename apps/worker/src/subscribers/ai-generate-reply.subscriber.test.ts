@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AiCancelChannel,
   AiMessageStateService,
+  AiUsageQuotaService,
   ASSISTANT_BOUNDARIES,
   FakeLlmProvider,
   FAKE_LLM_DIRECTIVES,
@@ -62,6 +63,8 @@ interface MessageRow {
   // ai-1a: у фікстурах не задаються — зʼявляються з першим записом state-сервісу
   promptTokens?: number | null;
   completionTokens?: number | null;
+  // ai-1d: так само
+  cachedPromptTokens?: number | null;
   // ai-1b: так само зʼявляється з першим claim()
   knowledgeVersion?: string | null;
 }
@@ -112,6 +115,15 @@ function applyUpdateData(row: MessageRow, data: Record<string, unknown>): void {
   }
 }
 
+interface UsageCounterRow {
+  tenantId: string;
+  userId: string;
+  periodStart: Date;
+  promptTokens: number;
+  cachedPromptTokens: number;
+  completionTokens: number;
+}
+
 interface World {
   messages: MessageRow[];
   conversation: {
@@ -129,6 +141,8 @@ interface World {
   deltas: AiMessageDelta[];
   completed: AiMessageCompleted[];
   reply: () => MessageRow;
+  /** ai-1d: рядки ai_usage_counters, які реально написав deduct() (design.md D4) */
+  usageCounters: UsageCounterRow[];
 }
 
 /** Попередній хід розмови, доданий ПЕРЕД поточним питанням/відповіддю */
@@ -189,8 +203,36 @@ function makeWorld(
     lastMessageAt: null as Date | null,
     status: conversationStatus,
   };
+  const usageCounters: UsageCounterRow[] = [];
 
   const tx = {
+    // AiUsageQuotaService.deduct() (ai-1d, design.md D4) — єдиний $executeRaw цього
+    // шляху, точнісінько ті самі позиційні значення, що й реальний INSERT ... ON
+    // CONFLICT: id, tenantId, userId, periodStart, promptTokens, cachedPromptTokens,
+    // completionTokens
+    $executeRaw: (
+      _strings: TemplateStringsArray,
+      _id: string,
+      tenantId: string,
+      userId: string,
+      periodStart: Date,
+      promptTokens: number,
+      cachedPromptTokens: number,
+      completionTokens: number,
+    ): Promise<number> => {
+      const existing = usageCounters.find(
+        (c) =>
+          c.tenantId === tenantId && c.userId === userId && c.periodStart.getTime() === periodStart.getTime(),
+      );
+      if (existing) {
+        existing.promptTokens += promptTokens;
+        existing.cachedPromptTokens += cachedPromptTokens;
+        existing.completionTokens += completionTokens;
+      } else {
+        usageCounters.push({ tenantId, userId, periodStart, promptTokens, cachedPromptTokens, completionTokens });
+      }
+      return Promise.resolve(1);
+    },
     aiMessage: {
       findUnique: ({ where }: { where: { id: string } }): Promise<unknown> => {
         const row = messages.find((m) => m.id === where.id);
@@ -263,7 +305,7 @@ function makeWorld(
   };
 
   const reply = (): MessageRow => requireRow(messages, REPLY);
-  return { messages, conversation, transactions, realtime, deltas, completed, reply };
+  return { messages, conversation, transactions, realtime, deltas, completed, reply, usageCounters };
 }
 
 /** Обгортка над справжнім `FakeLlmProvider`, яка запам'ятовує кожен надісланий запит —
@@ -312,7 +354,9 @@ function makeSubscriber(
     requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1',
     modelConfigured: false, baseUrl: null, apiKey: null,
     providerRetries: 1, retryDelayMs: 5, pendingTimeoutMs: 300_000, cancelCheckMs: 2_000,
-    leaseMs: 90_000, retentionDays: 90, ...overrides,
+    leaseMs: 90_000, retentionDays: 90,
+    quotaUserDailyTokens: 1_000_000, quotaTenantDailyTokens: 10_000_000,
+    ...overrides,
   };
   const cancelChannel = {
     onCancel: () => Promise.resolve(() => undefined),
@@ -328,6 +372,7 @@ function makeSubscriber(
     provider,
     knowledgeSource,
     config,
+    new AiUsageQuotaService(config),
   );
 }
 
@@ -915,6 +960,99 @@ describe('AiGenerateReplySubscriber', () => {
     expect(requests[1]?.messages[2]).toEqual(requests[0]?.messages[2]);
     expect(requests[0]?.messages[2]?.content).toContain('Persona: Ava');
     expect(world.reply().status).toBe('COMPLETE');
+  });
+
+  // ------------------------------------------------------------ ai-1d: квоти токенів
+
+  it('ai-1d: cachedPromptTokens зберігається окремою колонкою (design.md D5)', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } }],
+    ]);
+    await makeSubscriber(world, {}, {}, provider.provider).handle(job);
+
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().promptTokens).toBe(100);
+    expect(world.reply().completionTokens).toBe(10);
+    expect(world.reply().cachedPromptTokens).toBe(90);
+  });
+
+  it('ai-1d: бекенд без розбивки кешу лишає cachedPromptTokens NULL, а не оцінкою', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10 } }],
+    ]);
+    await makeSubscriber(world, {}, {}, provider.provider).handle(job);
+
+    expect(world.reply().cachedPromptTokens).toBeNull();
+  });
+
+  it('ai-1d: завершений хід списує лічильник як promptTokens+completionTokens, cached НЕ додається зверху (design.md D5)', async () => {
+    const world = makeWorld();
+    const provider = scriptedProvider([
+      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } }],
+    ]);
+    await makeSubscriber(world, {}, {}, provider.provider).handle(job);
+
+    expect(world.usageCounters).toHaveLength(1);
+    const counter = world.usageCounters[0];
+    expect(counter?.tenantId).toBe(TENANT);
+    expect(counter?.userId).toBe(USER);
+    expect(counter?.promptTokens).toBe(100);
+    expect(counter?.completionTokens).toBe(10);
+    expect(counter?.cachedPromptTokens).toBe(90);
+  });
+
+  it('ai-1d: два завершені ходи того самого юзера/періоду сумують, не перезаписують (design.md D4)', async () => {
+    const world = makeWorld();
+    const provider1 = scriptedProvider([
+      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10 } }],
+    ]);
+    await makeSubscriber(world, {}, {}, provider1.provider).handle(job);
+
+    // Другий хід тієї самої відповіді неможливий (COMPLETE не перегенеровується) —
+    // тому перевіряємо накопичення інкрементом напряму через ще один claim/finalize
+    // цикл на тому самому рядку, скинутому назад у PENDING (імітує другу відповідь
+    // того самого юзера в тому самому періоді)
+    const reply = world.reply();
+    reply.status = 'PENDING';
+    reply.attempt = 0;
+    reply.content = '';
+    const provider2 = scriptedProvider([
+      [{ text: 'ok2' }, { text: '', usage: { promptTokens: 50, completionTokens: 5 } }],
+    ]);
+    await makeSubscriber(world, {}, {}, provider2.provider).handle(job);
+
+    expect(world.usageCounters).toHaveLength(1);
+    const counter = world.usageCounters[0];
+    expect(counter?.promptTokens).toBe(150);
+    expect(counter?.completionTokens).toBe(15);
+  });
+
+  it('ai-1d: FAILED після вичерпання ретраїв (без usage-кадру) не списує лічильник (design.md D6)', async () => {
+    const world = makeWorld('PENDING', FAKE_LLM_DIRECTIVES.fail);
+    await makeSubscriber(world, { providerRetries: 1, retryDelayMs: 1 }).handle(job);
+
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.usageCounters).toHaveLength(0);
+  });
+
+  it('ai-1d: CANCELLED без usage не списує лічильник', async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} tell me everything`);
+    const cancel: { fire?: () => void } = {};
+    const subscriber = makeSubscriber(world, {}, {
+      onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+        cancel.fire = handler;
+        return Promise.resolve(() => undefined);
+      },
+    });
+    const running = subscriber.handle(job);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    cancel.fire?.();
+    await running;
+
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(world.usageCounters).toHaveLength(0);
   });
 });
 

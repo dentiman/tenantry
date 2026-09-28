@@ -20,6 +20,8 @@ const BASE_CONFIG: AiConfig = {
   cancelCheckMs: 2_000,
   leaseMs: 90_000, // 60_000 + AI_LEASE_GRACE_MS
   retentionDays: 90,
+  quotaUserDailyTokens: 1_000_000,
+  quotaTenantDailyTokens: 10_000_000,
 };
 
 describe('AiLeaseGuard', () => {

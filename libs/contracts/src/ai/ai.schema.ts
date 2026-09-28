@@ -90,6 +90,16 @@ export const AskAiRequestSchema = z.object({
 });
 
 /**
+ * Бізнес-код `FieldError.code` для квоти токенів (ai-1d, design.md D3). НЕ
+ * `ApiErrorCode` — той лишається закритим HTTP-рівневим набором (див. коментар
+ * до `AiMessageErrorCodeSchema` вище); це той самий ідіом, що `already_exists`/
+ * `self_status_change` в users.service.ts: `400 BAD_REQUEST` +
+ * `fieldErrors: [{ field: 'text', code: AI_QUOTA_EXCEEDED_CODE }]`. Єдина
+ * константа — щоб бекенд і фронт не тримали рядок-літерал у двох місцях.
+ */
+export const AI_QUOTA_EXCEEDED_CODE = 'ai_quota_exceeded';
+
+/**
  * Відповідь на питання — 202: питання і ПОРОЖНЯ відповідь у статусі `PENDING`.
  * Обидва рядки повертаються одразу, щоб панель намалювала хід ще до того, як
  * воркер узяв job із черги.

@@ -22,6 +22,9 @@ describe('loadAiConfig', () => {
     expect(config.leaseMs).toBe(60_000 + 30_000);
     // ai-1e: дефолт 90 днів (docs/ai-assistant.md §9.2)
     expect(config.retentionDays).toBe(90);
+    // ai-1d: дефолти квот (design.md D7)
+    expect(config.quotaUserDailyTokens).toBe(1_000_000);
+    expect(config.quotaTenantDailyTokens).toBe(10_000_000);
   });
 
   it('читає задані значення', () => {
@@ -35,6 +38,8 @@ describe('loadAiConfig', () => {
       AI_CANCEL_CHECK_MS: '1000',
       AI_REQUEST_TIMEOUT_MS: '45000',
       AI_RETENTION_DAYS: '30',
+      AI_QUOTA_USER_DAILY_TOKENS: '2000',
+      AI_QUOTA_TENANT_DAILY_TOKENS: '9000',
     });
 
     expect(config.enabled).toBe(true);
@@ -47,6 +52,8 @@ describe('loadAiConfig', () => {
     // leaseMs перераховується від заданого requestTimeoutMs, а не лишається дефолтним
     expect(config.leaseMs).toBe(45_000 + 30_000);
     expect(config.retentionDays).toBe(30);
+    expect(config.quotaUserDailyTokens).toBe(2_000);
+    expect(config.quotaTenantDailyTokens).toBe(9_000);
   });
 
   it('невідомий провайдер валить старт і називає змінну, а не відкочується на fake', () => {
