@@ -291,12 +291,14 @@ does not prevent other tenants from receiving replies.
   is still picked up without waiting for that backlog to drain
 
 ### Requirement: The token usage of each reply is recorded
-The system SHALL record, with each reply, the model that produced it and the number of input
-and output tokens the backend reported for it, in the same write that stores the reply's final
-state. Usage SHALL be taken from the attempt that produced the stored content only. A reply
-for which the backend reported no usage SHALL be stored with the usage left empty rather than
-estimated. The built-in test backend SHALL report usage too, so that anything built on
-recorded usage can be exercised without credentials or network access.
+The system SHALL record, with each reply, the model that produced it and the number of input,
+cached-input and output tokens the backend reported for it, in the same write that stores the
+reply's final state. Usage SHALL be taken from the attempt that produced the stored content
+only. A reply for which the backend reported no usage SHALL be stored with the usage left
+empty rather than estimated; the same applies to any usage figure the backend did not report
+for an otherwise-usaged reply, including the cached-input count. The built-in test backend
+SHALL report usage too, so that anything built on recorded usage can be exercised without
+credentials or network access.
 
 #### Scenario: A reply completes on an external backend
 - **WHEN** an external backend finishes a reply and reports its token usage in the final part
@@ -319,3 +321,29 @@ recorded usage can be exercised without credentials or network access.
   was stopped by the user
 - **THEN** the reply's token counts are left empty and the reply's final state is stored as
   usual
+
+#### Scenario: A reply is served partly from the backend's cache
+- **WHEN** an external backend reports that some of a reply's input tokens were served from
+  its prompt cache
+- **THEN** the stored reply carries that cached-input count alongside its input and output
+  counts
+
+#### Scenario: The backend does not report a cache breakdown
+- **WHEN** a backend reports input and output tokens for a reply but not how many of the
+  input tokens came from its cache
+- **THEN** the reply's cached-input count is left empty, and its input and output counts are
+  still stored as reported
+
+### Requirement: A reply for a retired conversation is never generated
+The system SHALL, before generating a reply, check whether the conversation that reply belongs
+to has already been retired. If it has, the system SHALL mark that reply as cancelled and SHALL
+NOT build a prompt for it or consult the model backend.
+
+#### Scenario: A conversation is retired while its reply is still queued
+- **WHEN** a user starts a new conversation (retiring the previous one) while a reply in the
+  previous conversation is still pending generation
+- **THEN** that reply is marked cancelled without the model backend ever being consulted for it
+
+#### Scenario: A reply for the active conversation is unaffected
+- **WHEN** generation begins for a reply whose conversation is still active
+- **THEN** generation proceeds normally and the model backend is consulted
