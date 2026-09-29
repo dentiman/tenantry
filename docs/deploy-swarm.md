@@ -204,8 +204,10 @@ Zero Data Retention у кабінеті і дешевою моделлю з [ai-
 (`openai/gpt-5.6-luna`). Порядок вмикання — саме такий:
 
 1. **Жорстка місячна стеля витрат на ключі провайдера** (OpenRouter: Keys → ключ → credit
-   limit). **Обовʼязково**, поки немає квот `ai-1d`: це останній і поки єдиний рубіж проти
-   рахунку від бага чи циклу. Без стелі ключ не вмикати.
+   limit). **Обовʼязково** й після `ai-1d` (квоти токенів на юзера/тенанта за добу,
+   `AI_QUOTA_USER_DAILY_TOKENS`/`AI_QUOTA_TENANT_DAILY_TOKENS`, [ai-assistant.md](ai-assistant.md)
+   §8) — квоти обмежують інсталяцію структурно, стеля лишається останнім рубежем проти багу в
+   самих квотах чи в підрахунку провайдера. Без стелі ключ не вмикати.
 2. `docker/deploy.env`: `AI_PROVIDER=openai-compat`, `AI_BASE_URL=https://openrouter.ai/api/v1`,
    `AI_MODEL=<модель>`.
 3. **`AI_API_KEY` — лише CI Variable (Protected + Masked)**, ніколи не в комітнутому
