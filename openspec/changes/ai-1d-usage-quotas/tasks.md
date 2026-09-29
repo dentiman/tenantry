@@ -95,18 +95,15 @@
       checks for `fieldErrors` carrying `AI_QUOTA_EXCEEDED_CODE`, and sets local state the panel
       renders as its own inline notice (composer disabled, distinct copy) instead of falling
       through to the global toast. Add the copy to `libs/i18n`'s `ai` namespace.
-- [ ] 5.2 **Not done — left for the coordinator/reviewer.** Attempted a live browser check via
-      the workspace slot's dev stack; blocked by a missing root `.env` (`ENCRYPTION_KEY` and
-      other required vars are absent — only `.env.local` exists, which `ws:init` generates for
-      ports/slot secrets, not the base `.env.example`-derived file). This gap predates this
-      change and is environment setup, not something ai-1d should fix as a side effect. No
-      React Testing Library / component-test infra exists in `apps/web` yet (`pnpm web:test` is
-      Vitest-only, currently calendar logic) — adding one from scratch for a single check was
-      judged out of proportion for this task. The wiring itself (`onError` → `parseApiError` →
-      match `AI_QUOTA_EXCEEDED_CODE` in `fieldErrors` → `quotaExceeded` state → banner + disabled
-      composer) type-checks cleanly and directly mirrors the exact envelope shape the backend
-      e2e tests (`ai.e2e-spec.ts` "usage quotas") prove the server sends, but it has not been
-      visually confirmed in a browser. Flagging rather than claiming success per CLAUDE.md.
+- [x] 5.2 **Done by the coordinator, 2026-09-29**, on the main checkout's slot-0 dev stack
+      (`localhost:5173`, real `.env` present there — the worker's blocker was slot-specific, not
+      a code gap). Applied the pending migration, started `api`/`worker`/`web`, inserted a row
+      into `ai_usage_counters` for the seeded admin's UTC-day period with `prompt_tokens =
+      1_000_000` (== `AI_QUOTA_USER_DAILY_TOKENS` default) via direct SQL, then asked one
+      question in `AiPanel`. Confirmed visually (and by the user, in their own browser): the
+      inline quota banner renders and the composer disables, exactly as `onError` →
+      `parseApiError` → `AI_QUOTA_EXCEEDED_CODE` match was designed to do. Test row deleted
+      afterward.
 
 ## 6. OpenSpec + docs
 
