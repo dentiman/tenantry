@@ -4,8 +4,8 @@ import type { AiKnowledgeDocument, AiUserContext } from '../prompt/prompt-builde
  * Що потрібно джерелу, щоб вибрати знання для відповіді (ai-1b design.md D6).
  *
  * Лише роль і питання — ні tenantId, ні ідентичності юзера: allowlist §9.1 не
- * розширюється. Питання статичному джерелу не потрібне, але FTS (AI-4) без нього не
- * обійдеться; рівень 2 (AI-2) читатиме тенанта з CLS/RLS, як будь-який доменний код.
+ * розширюється. Питання статичному джерелу не потрібне, але PostgreSQL retrieval
+ * (AI-2a) використовуватиме його для embedding/FTS. Тенант приходить із CLS/RLS.
  */
 export interface KnowledgeQuery {
   readonly role: AiUserContext['role'];
@@ -21,7 +21,7 @@ export interface KnowledgeSelection {
 
 /**
  * Шов між конвеєром і джерелом знань (docs/ai-assistant.md §7.4). Повний корпус →
- * FTS → рівень 2 — це нові реалізації цього інтерфейсу, а не правка субскрайбера.
+ * pgvector/FTS — це нові реалізації цього інтерфейсу, а не правка субскрайбера.
  * Асинхронний, бо наступні реалізації читатимуть БД.
  */
 export interface KnowledgeSource {

@@ -24,29 +24,35 @@
 
 ## Docker (інфраструктура)
 
-Піднімає Postgres 17, Mailpit (SMTP-заглушка для email у dev), Valkey (брокер Socket.IO
+Піднімає Postgres 17 із pgvector 0.8.6, Mailpit (SMTP-заглушка для email у dev), Valkey (брокер Socket.IO
 і сховище presence-leases) і SeaweedFS (S3-сумісне
 сховище файлів). Конфігурація — [docker/docker-compose.yml](../docker/docker-compose.yml).
+
+Для поточної локальної БД обрано видалення старого Alpine-volume та seed без backup/restore;
+[операційний порядок](ai-assistant-implementation-plan.md#4-bootstrap-міграції-й-наявні-інсталяції).
 
 ### `pnpm docker:up`
 
 ```bash
 pnpm docker:up
-# без .env.local → docker compose -f docker/docker-compose.yml up -d
+# з .env, без .env.local → docker compose --env-file .env -f docker/docker-compose.yml up -d
 # з .env.local (workspace slot) → docker compose --env-file .env.local -f docker/docker-compose.yml up -d
 ```
 
 Піднімає всі чотири контейнери у фоні (`-d`). Свіжий Postgres-volume сам створює ролі БД
-через `docker/postgres/init/01-roles.sql` — окремий крок `db:roles` після цього
+через `docker/postgres/init/01-roles.sql`, а `02-vector.sql` встановлює pgvector
+у цільову БД та `template1` — окремий крок `db:roles` після цього
 **не потрібен** (детальніше — розділ [«pnpm db:roles»](#pnpm-dbroles) нижче). Якщо в
 checkout є `.env.local` (створений `pnpm ws:init`, див. [Workspace slots](#workspace-slots)),
 команда автоматично б'є в потрібний слот, а не в базовий стек.
+Без `.env.local` явно читається кореневий `.env` (зокрема `REDIS_PORT`);
+помилка запуску слота не спричиняє fallback на базовий стек.
 
 ### `pnpm docker:down`
 
 ```bash
 pnpm docker:down
-# без .env.local → docker compose -f docker/docker-compose.yml down
+# з .env, без .env.local → docker compose --env-file .env -f docker/docker-compose.yml down
 # з .env.local (workspace slot) → docker compose --env-file .env.local -f docker/docker-compose.yml down
 ```
 
@@ -327,6 +333,23 @@ pnpm ai:knowledge:check  # → exit 1, якщо артефакт застарі�
 `docs/ai-knowledge/` — `pnpm ai:knowledge` і закомітити артефакт разом із Markdown.
 
 ---
+
+### `pnpm ai:docs:preview`
+
+Offline-перевірка FMS Markdown: admission, чанки, хеші й токени без БД та API.
+[Manifest, команда та виміряний результат](ai-sources/README.md).
+
+### `pnpm ai:docs:ingest` / `pnpm ai:docs:search`
+
+```bash
+pnpm ai:docs:ingest --source fms --root <checkout> --manifest docs/ai-sources/fms-pilot.json --tenant default
+pnpm ai:docs:search --product fms --tenant default --role ADMIN --query "..." [--limit 5]
+```
+
+Операторські CLI (AI-2a.2): ingest пише embeddings у `ai_knowledge_*` обраного tenant-а й
+атомарно публікує ревізію (повтор без змін — нуль викликів API); search — питання → top-K
+опублікованих чанків. Потребують міграцій, `DATABASE_URL` під `saas_app` і ключа embeddings
+(`AI_EMBEDDING_*` або `AI_BASE_URL`/`AI_API_KEY`). [Деталі й змінні](ai-sources/README.md).
 
 ## Якість коду
 

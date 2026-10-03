@@ -4,8 +4,8 @@
   "private": true,
   "description": "SaaS Skeleton — multitenant CRM/ERP foundation (NestJS + React)",
   "scripts": {
-    "docker:up": "sh -c '[ -f .env.local ] && docker compose --env-file .env.local -f docker/docker-compose.yml up -d || docker compose -f docker/docker-compose.yml up -d'",
-    "docker:down": "sh -c '[ -f .env.local ] && docker compose --env-file .env.local -f docker/docker-compose.yml down || docker compose -f docker/docker-compose.yml down'",
+    "docker:up": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml up -d; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml up -d; else docker compose -f docker/docker-compose.yml up -d; fi'",
+    "docker:down": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml down; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml down; else docker compose -f docker/docker-compose.yml down; fi'",
     "docker:prod:up": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production up -d",
     "docker:prod:down": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production down",
     "db:generate": "pnpm --filter @saas-skeleton/database db:generate",
@@ -48,7 +48,10 @@
     "build": "turbo run build",
     "logs:tail": "tail -f apps/api/logs/api-pretty.log",
     "logs:clean": "rm -rf apps/api/logs/*.log*",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ai:docs:preview": "tsx scripts/ai-docs-preview.ts",
+    "ai:docs:ingest": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-ingest.ts",
+    "ai:docs:search": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-search.ts"
   },
   "keywords": [
     "saas",

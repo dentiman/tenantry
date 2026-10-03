@@ -14,3 +14,5 @@ export * from './knowledge/corpus-builder';
 export * from './knowledge/knowledge-source';
 export * from './knowledge/static-knowledge-source';
 export * from './knowledge/ai-knowledge.module';
+export * from './knowledge/embedding-provider';
+export * from './knowledge/postgres-knowledge-store';

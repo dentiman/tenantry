@@ -8,6 +8,17 @@
 Джерело: [libs/database/prisma/seed.ts](../libs/database/prisma/seed.ts),
 [libs/database/scripts/reset-db.ts](../libs/database/scripts/reset-db.ts).
 
+## pgvector bootstrap (AI-2a)
+
+`db:roles` тепер також встановлює `vector` 0.8.6 під адміністратором у цільову
+БД та `template1` (для автоматичної Prisma shadow DB). `db:reset` і e2e вже
+викликають `db:roles`, тому окремий ручний крок для них не потрібен.
+`saas_migrator` не отримує superuser; SQL-міграція перевіряє готовність extension.
+Для нового dev-volume те саме робить `docker/postgres/init/02-vector.sql`.
+
+Для поточного локального переходу Alpine → pgvector/Debian старий PG-volume
+видалено, схему й тестові дані відтворено без backup/restore; [порядок і обмеження](ai-assistant-implementation-plan.md#4-bootstrap-міграції-й-наявні-інсталяції).
+
 ## Стандартні ідентичності
 
 Свіжий дев-інстанс (після `pnpm db:seed` або повного `pnpm db:reset`) завжди піднімається

@@ -5,6 +5,12 @@
 > Патерни взяті з обкатаного `accounting-multi-tenant`, адаптовані під специфіку
 > saas-skeleton (2 API + worker + S3 + трирольова модель БД з RLS, Node 24).
 
+**Оновлення AI-2a (2026-10-03):** Postgres-образ тепер містить pgvector й базується
+на Debian. Локальний disposable-стек переведено через видалення PG-volume й seed.
+Для інсталяцій, дані яких потрібно зберегти, потрібні backup/restore і bootstrap
+extension **до** міграцій API. Це окремий крок оновлення інсталяції, не звичайний
+rolling deploy; [детальний порядок](ai-assistant-implementation-plan.md#4-bootstrap-міграції-й-наявні-інсталяції).
+
 ## 1. Огляд
 
 5 застосунків монорепо + інфраструктура їдуть одним `docker stack deploy` на одну

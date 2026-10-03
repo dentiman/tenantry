@@ -50,6 +50,9 @@ model Tenant {
   aiConversations          AiConversation[]
   aiMessages               AiMessage[]
   aiUsageCounters          AiUsageCounter[]
+  aiKnowledgeSources       AiKnowledgeSource[]
+  aiKnowledgeDocuments     AiKnowledgeDocument[]
+  aiKnowledgeChunks        AiKnowledgeChunk[]
   conversations            Conversation[]
   conversationParticipants ConversationParticipant[]
   chatMessages             ChatMessage[]
@@ -1175,4 +1178,75 @@ enum MessageStatus {
   DELIVERED
   READ
   FAILED
+}
+
+// AI-2a foundation: tenant-owned retrieval index. Global publishing is a later
+// control-plane step; tenant_id stays required, with the standard RLS boundary.
+model AiKnowledgeSource {
+  id             String   @id @default(uuid())
+  tenantId       String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  key            String
+  product        String
+  isEnabled      Boolean  @default(false) @map("is_enabled")
+  // Ingest stages a complete revision, then atomically switches this pointer.
+  // Null means unpublished. No automatic publication on document/chunk insert.
+  activeRevision String?  @map("active_revision")
+  ingestRunId String? @map("ingest_run_id")
+  ingestStatus String @default("idle") @map("ingest_status")
+  ingestStartedAt DateTime? @map("ingest_started_at")
+  manifestHash String? @map("manifest_hash") @db.Char(64)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents AiKnowledgeDocument[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, product, key])
+  @@map("ai_knowledge_sources")
+}
+
+model AiKnowledgeDocument {
+  id          String   @id @default(uuid())
+  tenantId    String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  sourceId    String   @map("source_id")
+  revision    String
+  canonicalId String   @map("canonical_id")
+  path        String
+  title       String
+  language    String
+  // Application roles after source-specific audience mapping; empty denies all.
+  audience    Role[]   @default([])
+  contentHash String   @map("content_hash") @db.Char(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source AiKnowledgeSource  @relation(fields: [tenantId, sourceId], references: [tenantId, id], onDelete: Cascade)
+  chunks AiKnowledgeChunk[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, sourceId, revision, canonicalId, language], map: "ai_knowledge_documents_identity_key")
+  @@map("ai_knowledge_documents")
+}
+
+model AiKnowledgeChunk {
+  id             String                      @id @default(uuid())
+  tenantId       String                      @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  documentId     String                      @map("document_id")
+  ordinal        Int
+  heading        String
+  content        String
+  contentHash    String                      @map("content_hash") @db.Char(64)
+  tokenCount     Int                         @map("token_count")
+  // v1 profile is fixed in SQL too. Changing models requires a new index version.
+  embeddingModel String                      @default("text-embedding-3-small") @map("embedding_model")
+  embedding      Unsupported("vector(1536)")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document AiKnowledgeDocument @relation(fields: [tenantId, documentId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, documentId, ordinal])
+  @@index([tenantId, contentHash, embeddingModel], map: "ai_knowledge_chunks_tenant_hash_idx")
+  @@map("ai_knowledge_chunks")
 }

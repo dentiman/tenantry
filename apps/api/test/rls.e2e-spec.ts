@@ -16,6 +16,9 @@ const TENANT_TABLES = [
   'ai_conversations',
   'ai_messages',
   'ai_usage_counters',
+  'ai_knowledge_sources',
+  'ai_knowledge_documents',
+  'ai_knowledge_chunks',
 ];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {

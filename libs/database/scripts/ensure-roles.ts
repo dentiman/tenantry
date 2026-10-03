@@ -36,6 +36,28 @@ function adminUrlFor(dbName: string): string {
   return url.toString();
 }
 
+/** pgvector is untrusted: bootstrap as admin, never elevate saas_migrator.
+ * template1 also supplies the extension to Prisma's automatically created shadow DB.
+ */
+async function ensureVector(dbName: string): Promise<void> {
+  const client = new Client({ connectionString: adminUrlFor(dbName) });
+  await client.connect();
+  try {
+    await client.query("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.6'");
+    const result = await client.query<{ supported: boolean }>(
+      `SELECT string_to_array(extversion, '.')::int[] >= ARRAY[0, 8, 6] AS supported
+       FROM pg_extension WHERE extname = 'vector'`,
+    );
+    if (!result.rows[0]?.supported) {
+      throw new Error(
+        `Database ${dbName} requires pgvector >= 0.8.6; upgrade the extension as admin.`,
+      );
+    }
+  } finally {
+    await client.end();
+  }
+}
+
 /** Кластерний рівень: ролі (спільні для всіх БД інстанса) */
 async function ensureRoles(): Promise<void> {
   const client = new Client({ connectionString: adminUrlFor('postgres') });
@@ -110,6 +132,8 @@ async function ensureDbGrants(dbName: string): Promise<void> {
 async function main(): Promise<void> {
   const dbName = targetDbName();
   await ensureRoles();
+  await ensureVector('template1');
+  await ensureVector(dbName);
   await ensureDbGrants(dbName);
   console.log(`Roles and grants ensured for database: ${dbName}`);
 }
