@@ -51,14 +51,24 @@ read the relevant doc before working in that area instead of expecting it here.
   §10.1 splits AI-1 into five changes `ai-1a`…`ai-1e` (only `OpenAiCompatProvider` — native
   Anthropic is deferred, §5.3).
   Distinct from `docs/chat.md` (that's human/customer conversations);
-  `docs/ai-assistant-implementation.md` — what AI-0/0.1/1a/1b/1c actually shipped: data model, the two
+  `docs/ai-assistant-implementation.md` — what AI-0…AI-1e and AI-2a actually shipped: data model, the two
   access boundaries, the streaming protocol and why a socket event may carry payload here, queue
   options, config, and (§7.1) the one real provider `OpenAiCompatProvider` — worker-only key,
   error classification, `Retry-After`, token usage; (§14) the AI-1b knowledge corpus —
   `docs/ai-knowledge/` is **end-user product documentation**, not engineering docs: edit the
   Markdown, copy every quoted UI label from the English locale files, run `pnpm ai:knowledge`,
   commit both; (§15) the AI-1c persona/instructions in `settings.ai` — boundaries stay in code as
-  message 0 (`ASSISTANT_BOUNDARIES`, byte-identical text), tenant text only after them, fenced.
+  message 0 (`ASSISTANT_BOUNDARIES`, byte-identical text), tenant text only after them, fenced;
+  (§16/§17) AI-1d quotas and AI-1e retention; (§18) AI-2a.3 retrieval-grounded answers —
+  `AI_KNOWLEDGE_BACKEND=static|postgres`, embedding outside any transaction, server-verified
+  citations re-authorized on every open; (§19) AI-2a.4 hybrid search (FTS + vector, RRF) and the
+  distance threshold chosen by eval.
+- `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table) and
+  `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured results) — the
+  PostgreSQL + pgvector retrieval track. `docs/ai-sources/README.md` — operator guide for an
+  external documentation source (FMS): manifest admission, `ai:docs:preview/ingest/search/eval`,
+  atomic revision publication, embedding config, and the eval table behind the search defaults;
+  `docs/ai-sources/fms-eval.json` is a **draft** question set pending product-owner review.
   `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost). Read the second before touching anything under `ai/`, the first before planning the
   next phase.
 
@@ -112,6 +122,11 @@ pnpm openapi:generate && pnpm web:codegen                   # after tenant contr
 pnpm platform:openapi:generate && pnpm platform:web:codegen # after platform contract/controller changes
 pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact in libs/shared (after
                            # any corpus edit; `pnpm lint` and CI run `ai:knowledge:check` first)
+pnpm ai:docs:preview       # external Markdown docs → admission + chunks + tokens; offline, no DB/keys
+pnpm ai:docs:ingest        # → embeddings into a tenant's pgvector index, atomic revision publication
+pnpm ai:docs:search        # question → top-K published chunks (operator check, no LLM)
+pnpm ai:docs:eval          # retrieval-only comparison of search modes/thresholds on a question set
+                           # (all four: docs/ai-sources/README.md; ingest/search/eval need DB + key)
 pnpm lint && pnpm typecheck && pnpm build
 pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT run alongside a
                            # live dev stack (connection-pool exhaustion causes flaky neighbors)
@@ -140,8 +155,8 @@ a contract or controller changes — see `docs/commands.md` for the full list in
 apps/api            Tenant NestJS API. Modules: auth, account (self-service profile/password/
                      sessions — no id in any path, subject is always the JWT), customers,
                      settings (org-level), files, activities, notifications, realtime
-                     (Socket.IO gateway), calendar, ai (assistant conversation; no id in any
-                     path either), chat (CHAT-0.1: internal conversations, server-assigned
+                     (Socket.IO gateway), calendar, ai (assistant conversation + citation
+                     read; no id in any path but the reply id), chat (CHAT-0.1: internal conversations, server-assigned
                      `seq`, one access service, no queue/socket seams yet). Pino logging,
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
@@ -150,7 +165,9 @@ apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separ
 apps/worker         NestJS application context, no HTTP. Message subscribers
                      (`src/subscribers/`) + cron via pg-boss, MailerService → Mailpit,
                      local i18next for email content. AI reply generation lives here
-                     (`ai-generate-reply.subscriber.ts`) — the API never calls a model.
+                     (`ai-generate-reply.subscriber.ts`) — the API never calls a model or an
+                     embedding API. Knowledge comes from `AI_KNOWLEDGE_BACKEND`: the committed
+                     static corpus (default) or hybrid retrieval from the pgvector index.
 apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zustand,
                      Tailwind 4, react-hook-form, shadcn/ui on Base UI, react-i18next.
                      Two-level nav shell (`AppRail` + `AreaSidebar`, docs/frontend/app-shell.md):
@@ -176,7 +193,10 @@ libs/ui              Shared UI layer for both frontends: theme (`styles.css`), v
                      `components/ui/`. See docs/frontend/ui-stack.md.
 libs/shared          Messaging (`messaging/`: defineEvent/defineCommand, MESSAGE_TOPOLOGY,
                      MessagePublisher, inbox idempotency, DLQ), notifications recorder,
-                     scheduled-notification service, numbering service, S3 storage service.
+                     scheduled-notification service, numbering service, S3 storage service,
+                     AI pipeline (`ai/`: providers, prompt, state machine; `ai/knowledge/`:
+                     static corpus, embedding provider, Postgres store/retrieval, CLI-only ingest
+                     kept out of the runtime barrel because its Markdown parser is ESM-only).
 docker/              Compose for local Postgres/Mailpit/Valkey/SeaweedFS and the self-hosted
                      production compose file (docker/docker-compose.prod.yml).
 ```
@@ -318,7 +338,17 @@ flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without
     re-read instead of re-reading again. Postgres stays the source of truth.
 16. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
     `runWith`/`withTenantTx` silently affects zero rows under RLS instead of erroring.
-16. Workspace ports are allocations, not a search hint. Slot 0 and its base ports always
+17. Every Postgres image is `pgvector/pgvector:0.8.6-pg17-bookworm` (pinned digest) — dev, CI,
+    prod, Swarm. The extension is installed by an administrator (`db:roles`, docker init) into
+    the target DB **and** `template1` (Prisma's shadow DB); the migration only checks for it and
+    `saas_migrator` is never elevated. Migrations cannot `UPDATE` tenant rows (FORCE RLS applies
+    to the owner too) — backfill through `ADD COLUMN … DEFAULT` or a STORED generated column,
+    and mirror a generated expression in `schema.prisma` as `@default(dbgenerated(...))`, or
+    `migrate diff` proposes dropping it.
+18. Embedding calls follow the model rule: never inside a DB transaction. The worker's
+    `prepare()` is read → knowledge selection → `claim()`, three separate steps (§18 of
+    `docs/ai-assistant-implementation.md`).
+19. Workspace ports are allocations, not a search hint. Slot 0 and its base ports always
     belong to the main checkout; `ws:init` also reserves non-zero slots found in other git
     worktrees even if their processes are stopped. Never work around a conflict by choosing
     the next port or by setting `PORT` manually. See `docs/workspace-slots.md`.
@@ -341,6 +371,7 @@ Do not revisit without an explicit user request.
 | Files | S3 API as the storage abstraction (SeaweedFS for dev; MinIO ruled out — archived; Garage ruled out — AGPL). Presigned two-phase upload, never a proxy-through-API upload. Access only via short-lived presigned GET after authz |
 | Deploy | Docker Swarm single-node + GitLab CI via docker-context over SSH (no files copied to the server). Kubernetes/Helm out of scope |
 | Realtime | Socket.IO 4 + Valkey (Redis Streams adapter), websocket-only transport (Docker VIP balances by TCP connection, sticky sessions not needed). Presence is ephemeral leases in Valkey, not a table; `users.last_seen_at` is the durable counterpart in Postgres. Realtime is deliberately **not** a messaging subscriber — notification emission happens after-commit in the process that wrote the row |
+| AI knowledge retrieval | PostgreSQL 17 + pgvector in the same database (no separate vector store), tenant-scoped `ai_knowledge_*` tables under the standard RLS, one fixed embedding profile (`text-embedding-3-small`, 1536, cosine — changing it means a new index version). Hybrid vector + Postgres FTS merged by RRF; mode and distance threshold are chosen by `pnpm ai:docs:eval`, not by taste. Rerank, query rewrite and HNSW stay off until a measured need |
 | Settings vs account | Two distinct subjects, not one section: org-level `/settings` (+ API `/settings/*`, ADMIN-only writes) vs personal `/user-settings` (+ API `/account/*`). Test: "if the user left the company, would the setting leave with them?" Neither has an id in its API path — the subject comes from the token |
 | Customers | `Customer` (not `Account` — taken by the self-service module; not a party model yet — no second contact type exists to justify the indirection) + `kind` discriminator + nested `CustomerContact`. Human-readable sequence numbers come from a counter table per tenant (never `SEQUENCE` — outside RLS, gapful; never `MAX+1` — reusable after a delete). No soft delete — archival is a `status` transition |
 | Calendar | `CalendarEvent` (qualified name — `Event` is taken by messaging/sockets/the activity log) with attendees + RSVP + personal reminders. Half-open interval `[starts_at, ends_at)`, UTC instant + separate IANA zone. Access is by participation, not role — even ADMIN doesn't see other people's private events. Reminders go through the shared `scheduled_notifications` + cron-claim table, not `pg-boss startAfter` (`pgboss.*` sits outside RLS) |
@@ -363,5 +394,9 @@ than repeated here:
 - **Chat**: `CHAT-0.1` shipped (REST-only internal chat). `0.2` (realtime, notifications),
   `0.3` (participant management, mentions, attachments) and `CHAT-1…4` are designed and not
   built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
+- **AI assistant**: AI-2a done (FMS documentation in the chat with verified citations, hybrid
+  search). Next is **AI-2b** — managed sources (upload, publish, delete through the UI, worker
+  ingest, global vs tenant scope); then AI-3 (maturity, needs EDA-2) and AI-4 (read-only domain
+  tools behind a separate gate) — `docs/ai-assistant.md` §10.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.
