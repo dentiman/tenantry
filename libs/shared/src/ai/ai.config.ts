@@ -53,6 +53,17 @@ const DEFAULT_FAKE_MODEL = 'fake-1';
  */
 const AiKnowledgeBackendSchema = z.enum(['static', 'postgres']);
 
+/**
+ * Режим retrieval і поріг distance (AI-2a.4, design.md D3/D4). Дефолти обрано за
+ * `pnpm ai:docs:eval` на FMS (docs/ai-sources/README.md): hybrid дав найвищий Recall@5 і
+ * переживає недоступність embeddings; поріг 0.8 не втратив жодної правильної сторінки
+ * (найдальша — 0.769), але відсіяв частину питань без відповіді. Поріг прив'язаний до
+ * моделі embeddings — зміна моделі вимагає нового виміру.
+ */
+const AiDocsSearchModeSchema = z.enum(['vector', 'fts', 'hybrid']);
+const DEFAULT_DOCS_SEARCH_MODE = 'hybrid';
+const DEFAULT_DOCS_MAX_DISTANCE = 0.8;
+
 /** Порожній рядок у `.env` означає «не задано», як і в решті цього файлу */
 const optionalStringFromEnv = (): z.ZodType<string | null, string | undefined> =>
   z
@@ -154,6 +165,27 @@ const AiEnvSchema = z.object({
   AI_DOCS_FINAL_CHUNKS: intFromEnv(5).pipe(z.number().max(20)),
   /** Стеля токенів фрагментів разом із мітками — головна стеля витрат на знання */
   AI_DOCS_MAX_CONTEXT_TOKENS: intFromEnv(2_500).pipe(z.number().max(20_000)),
+  AI_DOCS_SEARCH_MODE: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === undefined || value === '' ? DEFAULT_DOCS_SEARCH_MODE : value))
+    .pipe(AiDocsSearchModeSchema),
+  /** Скільки кандидатів віддає FTS-гілка до злиття */
+  AI_DOCS_FTS_CANDIDATES: intFromEnv(12).pipe(z.number().max(50)),
+  /** Поріг cosine distance vector-гілки (0 < d ≤ 2); `none` — без порогу (design.md D4) */
+  AI_DOCS_MAX_DISTANCE: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) =>
+      value === undefined || value === ''
+        ? DEFAULT_DOCS_MAX_DISTANCE
+        : value === 'none'
+          ? null
+          : Number(value),
+    )
+    .pipe(z.number().gt(0).max(2).nullable()),
 });
 
 /**
@@ -198,6 +230,9 @@ export interface AiConfig {
     vectorCandidates: number;
     finalChunks: number;
     maxContextTokens: number;
+    mode: z.infer<typeof AiDocsSearchModeSchema>;
+    textCandidates: number;
+    maxDistance: number | null;
   };
 }
 
@@ -236,6 +271,9 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
       vectorCandidates: e.AI_DOCS_VECTOR_CANDIDATES,
       finalChunks: Math.min(e.AI_DOCS_FINAL_CHUNKS, e.AI_DOCS_VECTOR_CANDIDATES),
       maxContextTokens: e.AI_DOCS_MAX_CONTEXT_TOKENS,
+      mode: e.AI_DOCS_SEARCH_MODE,
+      textCandidates: e.AI_DOCS_FTS_CANDIDATES,
+      maxDistance: e.AI_DOCS_MAX_DISTANCE,
     },
   };
 }

@@ -443,6 +443,9 @@ function makeSubscriber(
       vectorCandidates: 12,
       finalChunks: 5,
       maxContextTokens: 2_500,
+      mode: 'vector',
+      textCandidates: 12,
+      maxDistance: null,
     },
     ...overrides,
   };

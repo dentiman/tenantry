@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Prisma, TenantTransactions } from '@saas-skeleton/database';
 import { KNOWLEDGE_EMBEDDING_MODEL } from '../embedding-provider';
+import { ftsConfigFor, type FtsConfig } from '../fts';
 import type { SourcePreview } from './preview';
 import type { PreviewChunk } from './chunker';
 
@@ -11,6 +12,8 @@ export interface IngestRun {
 }
 export interface StagedChunk {
   documentId: string;
+  /** За мовою документа (AI-2a.4): від неї залежить стемінг `search_vector` */
+  ftsConfig: FtsConfig;
   chunk: PreviewChunk;
 }
 
@@ -83,7 +86,13 @@ export class PostgresIngestStore {
           contentHash: doc.contentHash,
         })),
       });
-      return docs.flatMap(({ id, doc }) => doc.chunks.map((chunk) => ({ documentId: id, chunk })));
+      return docs.flatMap(({ id, doc }) =>
+        doc.chunks.map((chunk) => ({
+          documentId: id,
+          ftsConfig: ftsConfigFor(doc.language),
+          chunk,
+        })),
+      );
     });
   }
 
@@ -94,14 +103,15 @@ export class PostgresIngestStore {
   ): Promise<void> {
     await this.transactions.withTenantTx(async (tx) => {
       await this.own(tx, run);
-      for (const { documentId, chunk } of rows) {
+      for (const { documentId, ftsConfig, chunk } of rows) {
         const vector = vectors.get(chunk.contentHash);
         if (!vector) throw new Error('Missing embedding for staged chunk');
         await tx.$executeRaw`
           INSERT INTO ai_knowledge_chunks
-            (id, document_id, ordinal, heading, content, content_hash, token_count, embedding_model, embedding)
+            (id, document_id, ordinal, heading, content, content_hash, token_count, embedding_model, embedding, fts_config)
           VALUES (${randomUUID()}, ${documentId}, ${chunk.ordinal}, ${chunk.heading}, ${chunk.content},
-            ${chunk.contentHash}, ${chunk.tokenCount}, ${KNOWLEDGE_EMBEDDING_MODEL}, ${vector}::vector(1536))`;
+            ${chunk.contentHash}, ${chunk.tokenCount}, ${KNOWLEDGE_EMBEDDING_MODEL}, ${vector}::vector(1536),
+            ${ftsConfig}::regconfig)`;
       }
     });
   }

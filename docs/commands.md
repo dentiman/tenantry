@@ -348,7 +348,8 @@ pnpm ai:docs:search --product fms --tenant default --role ADMIN --query "..." [-
 
 Операторські CLI (AI-2a.2): ingest пише embeddings у `ai_knowledge_*` обраного tenant-а й
 атомарно публікує ревізію (повтор без змін — нуль викликів API); search — питання → top-K
-опублікованих чанків. Потребують міграцій, `DATABASE_URL` під `saas_app` і ключа embeddings
+опублікованих чанків. `pnpm ai:docs:eval --tenant default` порівнює режими пошуку й пороги
+на `docs/ai-sources/fms-eval.json` (AI-2a.4). Потребують міграцій, `DATABASE_URL` під `saas_app` і ключа embeddings
 (`AI_EMBEDDING_*` або `AI_BASE_URL`/`AI_API_KEY`). [Деталі й змінні](ai-sources/README.md).
 
 ## Якість коду

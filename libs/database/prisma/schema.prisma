@@ -1245,6 +1245,11 @@ model AiKnowledgeChunk {
   // v1 profile is fixed in SQL too. Changing models requires a new index version.
   embeddingModel String                      @default("text-embedding-3-small") @map("embedding_model")
   embedding      Unsupported("vector(1536)")
+  // AI-2a.4: FTS. Конфігурацію ставить ingest за мовою документа; `search_vector` —
+  // STORED generated `to_tsvector(fts_config, heading || ' ' || content)` (міграція
+  // ai_knowledge_fts), Prisma його не пише і не читає
+  ftsConfig      Unsupported("regconfig")    @default(dbgenerated("'simple'::regconfig")) @map("fts_config")
+  searchVector   Unsupported("tsvector")?    @default(dbgenerated("to_tsvector(fts_config, ((heading || ' '::text) || content))")) @map("search_vector")
   createdAt      DateTime                    @default(now()) @map("created_at")
 
   tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1252,5 +1257,6 @@ model AiKnowledgeChunk {
 
   @@unique([tenantId, documentId, ordinal])
   @@index([tenantId, contentHash, embeddingModel], map: "ai_knowledge_chunks_tenant_hash_idx")
+  @@index([searchVector], map: "ai_knowledge_chunks_search_vector_idx", type: Gin)
   @@map("ai_knowledge_chunks")
 }

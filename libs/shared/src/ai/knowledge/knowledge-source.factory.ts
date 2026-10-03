@@ -33,8 +33,11 @@ export function createKnowledgeSource(
   }
   return new PostgresKnowledgeSource(new PostgresKnowledgeStore(transactions), embeddings, {
     product: config.knowledge.product,
+    mode: config.knowledge.mode,
     vectorCandidates: config.knowledge.vectorCandidates,
+    textCandidates: config.knowledge.textCandidates,
     finalChunks: config.knowledge.finalChunks,
     maxContextTokens: config.knowledge.maxContextTokens,
+    maxDistance: config.knowledge.maxDistance,
   });
 }

@@ -312,4 +312,82 @@ describe('Postgres knowledge foundation (real pgvector + tenant transactions)', 
       ).toThrow();
     }
   });
+
+  describe('full-text search (AI-2a.4)', () => {
+    const textChunk = async (
+      tenant: string,
+      content: string,
+      options: {
+        config?: 'english' | 'simple';
+        audience?: Role[];
+        revision?: string;
+        product?: string;
+      } = {},
+    ) =>
+      inTenant(tenant, async (tx) => {
+        const source = await tx.aiKnowledgeSource.create({
+          data: {
+            key: randomUUID(),
+            product: options.product ?? 'fms',
+            isEnabled: true,
+            activeRevision: 'v1',
+          },
+        });
+        const document = await tx.aiKnowledgeDocument.create({
+          data: {
+            sourceId: source.id,
+            revision: options.revision ?? 'v1',
+            canonicalId: randomUUID(),
+            path: `${content.slice(0, 12)}.md`,
+            title: 'Doc',
+            language: 'en',
+            audience: options.audience ?? ['USER', 'ADMIN'],
+            contentHash: 'a'.repeat(64),
+          },
+        });
+        const id = randomUUID();
+        await tx.$executeRaw`
+          INSERT INTO ai_knowledge_chunks
+            (id, document_id, ordinal, heading, content, content_hash, token_count, embedding, fts_config)
+          VALUES (${id}, ${document.id}, 0, 'Section', ${content}, ${'c'.repeat(64)}, 5,
+                  ${JSON.stringify(vector())}::vector, ${options.config ?? 'english'}::regconfig)`;
+        return id;
+      });
+
+    const searchText = (text: string, tenant = tenantA, role: Role = 'USER', product = 'fms') =>
+      context.runWith(tenant, () => store.searchText({ product, role, text, limit: 10 }));
+
+    it('matches stemmed English terms with OR semantics, ranking fuller coverage first', async () => {
+      const both = await textChunk(tenantA, 'Invoices are billed monthly for every conversation.');
+      const one = await textChunk(tenantA, 'Each conversation window opens for 24 hours.');
+      await textChunk(tenantA, 'Routers are assigned from the warehouse.');
+      const matches = await searchText('How are WhatsApp conversations billed?');
+      expect(matches.map((m) => m.chunkId)).toEqual([both, one]);
+      expect(matches[0]?.textRank).toBeGreaterThan(matches[1]?.textRank ?? 0);
+    });
+
+    it("uses each chunk's own configuration: simple keeps Ukrainian words unstemmed", async () => {
+      const uk = await textChunk(tenantA, 'Гаманець клієнта поповнюється вручну.', {
+        config: 'simple',
+      });
+      expect((await searchText('гаманець')).map((m) => m.chunkId)).toEqual([uk]);
+      expect(await searchText('гаманця')).toEqual([]); // no Ukrainian stemmer: exact word forms only
+    });
+
+    it('applies tenant, product, publication and audience filters like vector search', async () => {
+      await textChunk(tenantB, 'billing rules for tenant B');
+      await textChunk(tenantA, 'billing rules for another product', { product: 'other' });
+      await textChunk(tenantA, 'billing rules staged, not published', { revision: 'v2' });
+      await textChunk(tenantA, 'billing rules for admins only', { audience: ['ADMIN'] });
+      expect(await searchText('billing rules')).toEqual([]);
+      expect(await searchText('billing rules', tenantA, 'ADMIN')).toHaveLength(1);
+      expect(await searchText('billing rules', tenantB)).toHaveLength(1);
+    });
+
+    it('a question of only stop words or unknown terms finds nothing instead of failing', async () => {
+      await textChunk(tenantA, 'Invoices are billed monthly.');
+      expect(await searchText('how is it the')).toEqual([]);
+      expect(await searchText('napoleon cake recipe')).toEqual([]);
+    });
+  });
 });

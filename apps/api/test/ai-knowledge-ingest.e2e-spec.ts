@@ -278,6 +278,24 @@ describe('Knowledge ingest (real Postgres, tenant RLS, fake embeddings)', () => 
     expect(await find(tenantB, 'secret b only', 'ADMIN', 'other')).toHaveLength(1);
   });
 
+  it('sets the full-text configuration from the document language', async () => {
+    const snapshot = preview('r1', [
+      { id: 'en-doc', chunks: ['billing invoices'] },
+      { id: 'uk-doc', chunks: ['гаманець клієнта'] },
+    ]);
+    const ukDoc = snapshot.documents[1];
+    if (ukDoc) ukDoc.language = 'uk';
+    await ingest(tenantA, snapshot, new FakeProvider());
+    const rows = await system.$queryRaw<{ language: string; config: string; indexed: boolean }[]>`
+      SELECT d.language, c.fts_config::text AS config, c.search_vector IS NOT NULL AS indexed
+      FROM ai_knowledge_chunks c JOIN ai_knowledge_documents d ON d.id = c.document_id
+      WHERE c.tenant_id = ${tenantA} ORDER BY d.language`;
+    expect(rows).toEqual([
+      { language: 'en', config: 'english', indexed: true },
+      { language: 'uk', config: 'simple', indexed: true },
+    ]);
+  });
+
   it('rejects an invalid or empty snapshot before touching the database', async () => {
     const provider = new FakeProvider();
     await expect(ingest(tenantA, preview('r1', []), provider)).rejects.toThrow('Invalid or empty');

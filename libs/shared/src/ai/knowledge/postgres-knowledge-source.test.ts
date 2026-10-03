@@ -11,10 +11,18 @@ import type { EmbeddingProvider } from './embedding-provider';
 import {
   EXCERPT_LABEL_TOKENS,
   PostgresKnowledgeSource,
+  RRF_K,
   knowledgeVersion,
+  rankCandidates,
   selectExcerpts,
+  type PostgresKnowledgeOptions,
 } from './postgres-knowledge-source';
-import type { KnowledgeChunkMatch, KnowledgeVectorQuery } from './postgres-knowledge-store';
+import type {
+  KnowledgeChunkMatch,
+  KnowledgeTextMatch,
+  KnowledgeTextQuery,
+  KnowledgeVectorQuery,
+} from './postgres-knowledge-store';
 import { StaticKnowledgeSource } from './static-knowledge-source';
 
 const vector = [1, ...Array<number>(1535).fill(0)];
@@ -84,46 +92,140 @@ describe('knowledgeVersion', () => {
   });
 });
 
+const OPTIONS: PostgresKnowledgeOptions = {
+  product: 'fms',
+  mode: 'vector',
+  vectorCandidates: 12,
+  textCandidates: 12,
+  finalChunks: 5,
+  maxContextTokens: 2500,
+  maxDistance: null,
+};
+
+const textMatch = (id: string, textRank = 0.5): KnowledgeTextMatch => {
+  const { distance: _distance, ...candidate } = match(id);
+  return { ...candidate, textRank };
+};
+
+/** Сховище й провайдер, що записують виклики */
+function harness(
+  options: Partial<PostgresKnowledgeOptions>,
+  lists: { vector?: KnowledgeChunkMatch[]; text?: KnowledgeTextMatch[] } = {},
+  embed: EmbeddingProvider['embed'] = () =>
+    Promise.resolve({ model: 'text-embedding-3-small', vectors: [vector], inputTokens: 5 }),
+): {
+  source: PostgresKnowledgeSource;
+  calls: { embedded: string[][]; vector: KnowledgeVectorQuery[]; text: KnowledgeTextQuery[] };
+} {
+  const calls = {
+    embedded: [] as string[][],
+    vector: [] as KnowledgeVectorQuery[],
+    text: [] as KnowledgeTextQuery[],
+  };
+  const source = new PostgresKnowledgeSource(
+    {
+      search: (query): Promise<KnowledgeChunkMatch[]> => {
+        calls.vector.push(query);
+        return Promise.resolve(lists.vector ?? []);
+      },
+      searchText: (query): Promise<KnowledgeTextMatch[]> => {
+        calls.text.push(query);
+        return Promise.resolve(lists.text ?? []);
+      },
+    },
+    {
+      embed: (texts, signal): ReturnType<EmbeddingProvider['embed']> => {
+        calls.embedded.push([...texts]);
+        return embed(texts, signal);
+      },
+    },
+    { ...OPTIONS, ...options },
+  );
+  return { source, calls };
+}
+
 describe('PostgresKnowledgeSource', () => {
-  it('embeds the question, searches the configured product for the role, drops token counts', async () => {
-    const searches: KnowledgeVectorQuery[] = [];
-    const embedded: string[][] = [];
-    const embeddings: EmbeddingProvider = {
-      embed: (texts) => {
-        embedded.push([...texts]);
-        return Promise.resolve({
-          model: 'text-embedding-3-small',
-          vectors: [vector],
-          inputTokens: 5,
-        });
-      },
-    };
-    const source = new PostgresKnowledgeSource(
-      {
-        search: (query): Promise<KnowledgeChunkMatch[]> => {
-          searches.push(query);
-          return Promise.resolve([match('a'), match('b')]);
-        },
-      },
-      embeddings,
-      { product: 'fms', vectorCandidates: 12, finalChunks: 1, maxContextTokens: 2500 },
-    );
+  it('vector: embeds the question, searches the product for the role, drops token counts', async () => {
+    const { source, calls } = harness({ finalChunks: 1 }, { vector: [match('a'), match('b')] });
     const selection = await source.select({ role: 'USER', question: 'How is billing done?' });
-    expect(embedded).toEqual([['How is billing done?']]);
-    expect(searches[0]).toMatchObject({ product: 'fms', role: 'USER', limit: 12 });
+    expect(calls.embedded).toEqual([['How is billing done?']]);
+    expect(calls.vector[0]).toMatchObject({ product: 'fms', role: 'USER', limit: 12 });
+    expect(calls.text).toEqual([]);
     expect(selection.documents).toEqual([]);
     expect(selection.version).toBe('postgres:fms:fms@r1');
     expect(selection.excerpts).toHaveLength(1);
     expect(selection.excerpts?.[0]).not.toHaveProperty('tokenCount');
   });
 
-  it('propagates an embedding failure instead of answering without sources', async () => {
-    const source = new PostgresKnowledgeSource(
-      { search: (): Promise<KnowledgeChunkMatch[]> => Promise.resolve([]) },
-      { embed: (): Promise<never> => Promise.reject(new Error('down')) },
-      { product: 'fms', vectorCandidates: 12, finalChunks: 5, maxContextTokens: 2500 },
-    );
+  it('vector: an embedding failure propagates instead of answering without sources', async () => {
+    const { source } = harness({}, {}, () => Promise.reject(new Error('down')));
     await expect(source.select({ role: 'ADMIN', question: 'q' })).rejects.toThrow('down');
+  });
+
+  it('fts: never calls the embedding API', async () => {
+    const { source, calls } = harness({ mode: 'fts' }, { text: [textMatch('t')] });
+    const result = await source.retrieve({ role: 'ADMIN', question: 'billing' });
+    expect(calls.embedded).toEqual([]);
+    expect(calls.text[0]).toMatchObject({
+      product: 'fms',
+      role: 'ADMIN',
+      text: 'billing',
+      limit: 12,
+    });
+    expect(result.excerpts.map((e) => e.chunkId)).toEqual(['t']);
+  });
+
+  it('hybrid: degrades to full-text search when embeddings fail', async () => {
+    const { source } = harness({ mode: 'hybrid' }, { text: [textMatch('t')] }, () =>
+      Promise.reject(new Error('down')),
+    );
+    const result = await source.retrieve({ role: 'ADMIN', question: 'billing' });
+    expect(result.degraded).toBe(true);
+    expect(result.excerpts.map((e) => e.chunkId)).toEqual(['t']);
+  });
+
+  it('hybrid: fuses both lists by rank', async () => {
+    const { source } = harness(
+      { mode: 'hybrid' },
+      { vector: [match('a'), match('b')], text: [textMatch('b'), textMatch('c')] },
+    );
+    const result = await source.retrieve({ role: 'ADMIN', question: 'q' });
+    expect(result.degraded).toBe(false);
+    expect(result.excerpts.map((e) => e.chunkId)).toEqual(['b', 'a', 'c']);
+  });
+});
+
+describe('rankCandidates', () => {
+  const vectorList = [match('a', { distance: 0.3 }), match('b', { distance: 0.6 })];
+
+  it('vector threshold drops distant candidates; null keeps everything', () => {
+    expect(rankCandidates('vector', vectorList, [], 0.5).map((c) => c.chunkId)).toEqual(['a']);
+    expect(rankCandidates('vector', vectorList, [], null).map((c) => c.chunkId)).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  it('a chunk found by both branches outranks one found by a single branch', () => {
+    const text = [textMatch('c'), textMatch('b')];
+    expect(rankCandidates('hybrid', vectorList, text, null).map((c) => c.chunkId)).toEqual([
+      'b',
+      'a',
+      'c',
+    ]);
+  });
+
+  it('the threshold applies before fusion; text hits survive it', () => {
+    expect(
+      rankCandidates('hybrid', vectorList, [textMatch('c')], 0.5).map((c) => c.chunkId),
+    ).toEqual(['a', 'c']);
+    expect(rankCandidates('hybrid', vectorList, [], 0.1)).toEqual([]);
+  });
+
+  it('equal fused scores are ordered deterministically by chunk id', () => {
+    const fused = rankCandidates('hybrid', [match('z')], [textMatch('y')], null);
+    expect(fused.map((c) => c.chunkId)).toEqual(['y', 'z']);
+    expect(1 / (RRF_K + 1)).toBeCloseTo(0.0164, 4);
   });
 });
 
@@ -183,5 +285,19 @@ describe('createKnowledgeSource', () => {
       vectorCandidates: 3,
       finalChunks: 3,
     });
+  });
+
+  it('search mode and threshold: eval-chosen defaults, explicit none, validation', () => {
+    expect(loadAiConfig({}).knowledge).toMatchObject({
+      mode: 'hybrid',
+      textCandidates: 12,
+      maxDistance: 0.8,
+    });
+    expect(loadAiConfig({ AI_DOCS_MAX_DISTANCE: 'none' }).knowledge.maxDistance).toBeNull();
+    expect(
+      loadAiConfig({ AI_DOCS_SEARCH_MODE: 'fts', AI_DOCS_MAX_DISTANCE: '0.6' }).knowledge,
+    ).toMatchObject({ mode: 'fts', maxDistance: 0.6 });
+    expect(() => loadAiConfig({ AI_DOCS_SEARCH_MODE: 'bm25' })).toThrow(/AI_DOCS_SEARCH_MODE/);
+    expect(() => loadAiConfig({ AI_DOCS_MAX_DISTANCE: '3' })).toThrow(/AI_DOCS_MAX_DISTANCE/);
   });
 });

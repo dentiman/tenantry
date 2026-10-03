@@ -18,9 +18,9 @@ const knowledgeSourceFactory: Provider = {
       const { version, documents } = await source.select({ role: 'ADMIN', question: '' });
       logger.log(`AI knowledge: static, version ${version}, ${String(documents.length)} documents`);
     } else {
-      const { product, finalChunks, maxContextTokens } = config.knowledge;
+      const { product, mode, maxDistance, finalChunks, maxContextTokens } = config.knowledge;
       logger.log(
-        `AI knowledge: postgres, product ${String(product)}, ≤${String(finalChunks)} excerpts / ${String(maxContextTokens)} tokens`,
+        `AI knowledge: postgres, product ${String(product)}, mode ${mode}, max distance ${maxDistance === null ? 'none' : String(maxDistance)}, ≤${String(finalChunks)} excerpts / ${String(maxContextTokens)} tokens`,
       );
     }
     return source;
