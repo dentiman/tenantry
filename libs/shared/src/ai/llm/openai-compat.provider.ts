@@ -132,10 +132,7 @@ export class OpenAiCompatProvider implements LlmProvider {
   }
 }
 
-function toUsage(
-  usage: OpenAI.Completions.CompletionUsage,
-  model: string | undefined,
-): LlmUsage {
+function toUsage(usage: OpenAI.Completions.CompletionUsage, model: string | undefined): LlmUsage {
   const cached = usage.prompt_tokens_details?.cached_tokens;
   return {
     promptTokens: usage.prompt_tokens,

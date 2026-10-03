@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  LlmProviderError,
-  type LlmChunk,
-  type LlmProvider,
-  type LlmRequest,
-} from './llm-provider';
+import { LlmProviderError, type LlmChunk, type LlmProvider, type LlmRequest } from './llm-provider';
 
 /**
  * Провайдер AI-0. Ключа не потребує, у мережу не ходить, поводиться детерміновано.
@@ -172,7 +167,13 @@ function waitForAbort(signal: AbortSignal): Promise<void> {
     return Promise.resolve();
   }
   return new Promise<void>((resolve) => {
-    signal.addEventListener('abort', () => { resolve(); }, { once: true });
+    signal.addEventListener(
+      'abort',
+      () => {
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 

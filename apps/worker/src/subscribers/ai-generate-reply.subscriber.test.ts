@@ -8,9 +8,13 @@ import {
   FAKE_LLM_DIRECTIVES,
   LlmProviderError,
   StaticKnowledgeSource,
+  EmbeddingRequestError,
   buildKnowledgeCorpus,
   serializeKnowledgeCorpus,
   type AiConfig,
+  type KnowledgeExcerpt,
+  type KnowledgeQuery,
+  type KnowledgeSelection,
   type KnowledgeSource,
   type LlmProvider,
   type LlmChunk,
@@ -67,6 +71,8 @@ interface MessageRow {
   cachedPromptTokens?: number | null;
   // ai-1b: так само зʼявляється з першим claim()
   knowledgeVersion?: string | null;
+  // AI-2a.3: так само — Prisma.DbNull для статичного корпусу, масив метаданих для retrieval
+  knowledgeChunks?: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +139,10 @@ interface World {
     lastMessageAt: Date | null;
     status: 'ACTIVE' | 'RETIRED';
   };
-  transactions: { withTenantTx: <T>(fn: (t: unknown) => Promise<T>) => Promise<T>; onCommit: (t: unknown, hook: () => void) => void };
+  transactions: {
+    withTenantTx: <T>(fn: (t: unknown) => Promise<T>) => Promise<T>;
+    onCommit: (t: unknown, hook: () => void) => void;
+  };
   realtime: {
     aiDelta: (tenantId: string, userId: string, payload: AiMessageDelta) => void;
     aiCompleted: (tenantId: string, userId: string, payload: AiMessageCompleted) => void;
@@ -165,35 +174,76 @@ function makeWorld(
 ): World {
   const prior: MessageRow[] = priorTurns.flatMap((turn, index) => [
     {
-      id: `prior-question-${String(index)}`, tenantId: TENANT, conversationId: CONVERSATION, seq: index * 2,
-      role: 'USER' as const, status: 'COMPLETE' as const, content: turn.questionContent,
-      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
-      startedAt: null, completedAt: null, model: null,
+      id: `prior-question-${String(index)}`,
+      tenantId: TENANT,
+      conversationId: CONVERSATION,
+      seq: index * 2,
+      role: 'USER' as const,
+      status: 'COMPLETE' as const,
+      content: turn.questionContent,
+      errorCode: null,
+      attempt: 0,
+      leaseExpiresAt: null,
+      chunkCount: 0,
+      cancelRequestedAt: null,
+      startedAt: null,
+      completedAt: null,
+      model: null,
     },
     {
-      id: `prior-answer-${String(index)}`, tenantId: TENANT, conversationId: CONVERSATION, seq: index * 2 + 1,
-      role: 'ASSISTANT' as const, status: turn.answerStatus, content: turn.answerContent,
-      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
-      startedAt: null, completedAt: null, model: null,
+      id: `prior-answer-${String(index)}`,
+      tenantId: TENANT,
+      conversationId: CONVERSATION,
+      seq: index * 2 + 1,
+      role: 'ASSISTANT' as const,
+      status: turn.answerStatus,
+      content: turn.answerContent,
+      errorCode: null,
+      attempt: 0,
+      leaseExpiresAt: null,
+      chunkCount: 0,
+      cancelRequestedAt: null,
+      startedAt: null,
+      completedAt: null,
+      model: null,
     },
   ]);
   const currentSeq = prior.length;
   const messages: MessageRow[] = [
     ...prior,
     {
-      id: 'question-1', tenantId: TENANT, conversationId: CONVERSATION, seq: currentSeq,
-      role: 'USER', status: 'COMPLETE', content: question,
-      errorCode: null, attempt: 0, leaseExpiresAt: null, chunkCount: 0, cancelRequestedAt: null,
-      startedAt: null, completedAt: null, model: null,
+      id: 'question-1',
+      tenantId: TENANT,
+      conversationId: CONVERSATION,
+      seq: currentSeq,
+      role: 'USER',
+      status: 'COMPLETE',
+      content: question,
+      errorCode: null,
+      attempt: 0,
+      leaseExpiresAt: null,
+      chunkCount: 0,
+      cancelRequestedAt: null,
+      startedAt: null,
+      completedAt: null,
+      model: null,
     },
     {
-      id: REPLY, tenantId: TENANT, conversationId: CONVERSATION, seq: currentSeq + 1,
-      role: 'ASSISTANT', status: replyStatus, content: replyOverrides.content ?? '',
+      id: REPLY,
+      tenantId: TENANT,
+      conversationId: CONVERSATION,
+      seq: currentSeq + 1,
+      role: 'ASSISTANT',
+      status: replyStatus,
+      content: replyOverrides.content ?? '',
       errorCode: null,
       attempt: replyOverrides.attempt ?? 0,
       leaseExpiresAt: replyOverrides.leaseExpiresAt ?? null,
-      chunkCount: 0, cancelRequestedAt: null,
-      startedAt: null, completedAt: null, model: null,
+      chunkCount: 0,
+      cancelRequestedAt: null,
+      startedAt: null,
+      completedAt: null,
+      model: null,
     },
   ];
   const conversation = {
@@ -222,14 +272,23 @@ function makeWorld(
     ): Promise<number> => {
       const existing = usageCounters.find(
         (c) =>
-          c.tenantId === tenantId && c.userId === userId && c.periodStart.getTime() === periodStart.getTime(),
+          c.tenantId === tenantId &&
+          c.userId === userId &&
+          c.periodStart.getTime() === periodStart.getTime(),
       );
       if (existing) {
         existing.promptTokens += promptTokens;
         existing.cachedPromptTokens += cachedPromptTokens;
         existing.completionTokens += completionTokens;
       } else {
-        usageCounters.push({ tenantId, userId, periodStart, promptTokens, cachedPromptTokens, completionTokens });
+        usageCounters.push({
+          tenantId,
+          userId,
+          periodStart,
+          promptTokens,
+          cachedPromptTokens,
+          completionTokens,
+        });
       }
       return Promise.resolve(1);
     },
@@ -245,14 +304,14 @@ function makeWorld(
       findFirst: ({ where }: { where: { seq: number; role: string } }): Promise<unknown> =>
         Promise.resolve(messages.find((m) => m.seq === where.seq && m.role === where.role) ?? null),
       findMany: ({ where }: { where: { seq: { lt: number } } }): Promise<unknown> =>
-        Promise.resolve(
-          messages
-            .filter((m) => m.seq < where.seq.lt)
-            .sort((a, b) => b.seq - a.seq),
-        ),
-      updateMany: (
-        { where, data }: { where: Record<string, unknown>; data: Record<string, unknown> },
-      ): Promise<{ count: number }> => {
+        Promise.resolve(messages.filter((m) => m.seq < where.seq.lt).sort((a, b) => b.seq - a.seq)),
+      updateMany: ({
+        where,
+        data,
+      }: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }): Promise<{ count: number }> => {
         const matched = messages.filter((m) => matchesWhere(m, where));
         for (const row of matched) {
           applyUpdateData(row, data);
@@ -278,7 +337,7 @@ function makeWorld(
 
   let hooks: (() => void | Promise<void>)[] = [];
   const transactions = {
-    withTenantTx: async <T,>(fn: (t: unknown) => Promise<T>): Promise<T> => {
+    withTenantTx: async <T>(fn: (t: unknown) => Promise<T>): Promise<T> => {
       const own: (() => void | Promise<void>)[] = [];
       hooks = own;
       const result = await fn(tx);
@@ -305,7 +364,16 @@ function makeWorld(
   };
 
   const reply = (): MessageRow => requireRow(messages, REPLY);
-  return { messages, conversation, transactions, realtime, deltas, completed, reply, usageCounters };
+  return {
+    messages,
+    conversation,
+    transactions,
+    realtime,
+    deltas,
+    completed,
+    reply,
+    usageCounters,
+  };
 }
 
 /** Обгортка над справжнім `FakeLlmProvider`, яка запам'ятовує кожен надісланий запит —
@@ -350,12 +418,32 @@ function makeSubscriber(
   knowledgeSource: KnowledgeSource = new StaticKnowledgeSource(TEST_KNOWLEDGE),
 ): AiGenerateReplySubscriber {
   const config: AiConfig = {
-    enabled: true, provider: 'fake', maxOutputTokens: 256, historyTurns: 10,
-    requestTimeoutMs: 60_000, streamFlushMs: 10, partialPersistMs: 2_000, model: 'fake-1',
-    modelConfigured: false, baseUrl: null, apiKey: null,
-    providerRetries: 1, retryDelayMs: 5, pendingTimeoutMs: 300_000, cancelCheckMs: 2_000,
-    leaseMs: 90_000, retentionDays: 90,
-    quotaUserDailyTokens: 1_000_000, quotaTenantDailyTokens: 10_000_000,
+    enabled: true,
+    provider: 'fake',
+    maxOutputTokens: 256,
+    historyTurns: 10,
+    requestTimeoutMs: 60_000,
+    streamFlushMs: 10,
+    partialPersistMs: 2_000,
+    model: 'fake-1',
+    modelConfigured: false,
+    baseUrl: null,
+    apiKey: null,
+    providerRetries: 1,
+    retryDelayMs: 5,
+    pendingTimeoutMs: 300_000,
+    cancelCheckMs: 2_000,
+    leaseMs: 90_000,
+    retentionDays: 90,
+    quotaUserDailyTokens: 1_000_000,
+    quotaTenantDailyTokens: 10_000_000,
+    knowledge: {
+      backend: 'static',
+      product: null,
+      vectorCandidates: 12,
+      finalChunks: 5,
+      maxContextTokens: 2_500,
+    },
     ...overrides,
   };
   const cancelChannel = {
@@ -389,9 +477,7 @@ describe('AiGenerateReplySubscriber', () => {
     expect(world.reply().attempt).toBe(1); // одна успішна спроба — claim() з 0 у 1
 
     // chunkSeq монотонний і починається з 0 — на цьому тримається детектор дірок
-    expect(world.deltas.map((d) => d.chunkSeq)).toEqual(
-      world.deltas.map((_, index) => index),
-    );
+    expect(world.deltas.map((d) => d.chunkSeq)).toEqual(world.deltas.map((_, index) => index));
     // Усі дельти належать тій самій (єдиній) спробі
     expect(world.deltas.every((d) => d.attempt === 1)).toBe(true);
     expect(world.deltas.map((d) => d.text).join('')).toBe(world.reply().content);
@@ -449,12 +535,16 @@ describe('AiGenerateReplySubscriber', () => {
     // Обʼєкт-тримач, а не `let`: присвоєння відбувається всередині колбека, і TS
     // цього не бачить — змінну він і далі вважав би `null`
     const cancel: { fire?: () => void } = {};
-    const subscriber = makeSubscriber(world, {}, {
-      onCancel: (_id: string, handler: () => void): Promise<() => void> => {
-        cancel.fire = handler;
-        return Promise.resolve(() => undefined);
+    const subscriber = makeSubscriber(
+      world,
+      {},
+      {
+        onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+          cancel.fire = handler;
+          return Promise.resolve(() => undefined);
+        },
       },
-    });
+    );
 
     const running = subscriber.handle(job);
     // Даємо стріму почати, потім тиснемо Stop
@@ -474,7 +564,7 @@ describe('AiGenerateReplySubscriber', () => {
     // Знімки вмісту в момент кожного проміжного запису
     const snapshots: string[] = [];
     const original = world.transactions.withTenantTx;
-    world.transactions.withTenantTx = async <T,>(fn: (t: unknown) => Promise<T>): Promise<T> => {
+    world.transactions.withTenantTx = async <T>(fn: (t: unknown) => Promise<T>): Promise<T> => {
       const result = await original(fn);
       snapshots.push(world.reply().content);
       return result;
@@ -723,7 +813,11 @@ describe('AiGenerateReplySubscriber', () => {
 
   it('провалений попередній хід не потрапляє в історію, поточне питання лишається останнім і єдиним', async () => {
     const world = makeWorld('PENDING', 'And what about the logo?', [
-      { questionContent: 'How do I rename the workspace?', answerStatus: 'FAILED', answerContent: 'partial' },
+      {
+        questionContent: 'How do I rename the workspace?',
+        answerStatus: 'FAILED',
+        answerContent: 'partial',
+      },
     ]);
     const { provider, requests } = capturingProvider();
 
@@ -737,7 +831,11 @@ describe('AiGenerateReplySubscriber', () => {
 
   it('завершений попередній хід потрапляє в історію один раз, поточне питання — останнє й теж один раз', async () => {
     const world = makeWorld('PENDING', 'And what about the logo?', [
-      { questionContent: 'How do I rename the workspace?', answerStatus: 'COMPLETE', answerContent: 'Use Settings.' },
+      {
+        questionContent: 'How do I rename the workspace?',
+        answerStatus: 'COMPLETE',
+        answerContent: 'Use Settings.',
+      },
     ]);
     const { provider, requests } = capturingProvider();
 
@@ -768,7 +866,10 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1a: модель, яку назвав бекенд, перезаписує налаштовану', async () => {
     const world = makeWorld();
     const provider = scriptedProvider([
-      [{ text: 'Hello' }, { text: '', usage: { promptTokens: 12, completionTokens: 3, model: 'vendor/model-real' } }],
+      [
+        { text: 'Hello' },
+        { text: '', usage: { promptTokens: 12, completionTokens: 3, model: 'vendor/model-real' } },
+      ],
     ]);
     await makeSubscriber(world, { model: 'vendor/model' }, {}, provider.provider).handle(job);
 
@@ -800,12 +901,16 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1a: зупинена відповідь без usage лишає токени порожніми, стан фіналізується як завжди', async () => {
     const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} tell me everything`);
     const cancel: { fire?: () => void } = {};
-    const subscriber = makeSubscriber(world, {}, {
-      onCancel: (_id: string, handler: () => void): Promise<() => void> => {
-        cancel.fire = handler;
-        return Promise.resolve(() => undefined);
+    const subscriber = makeSubscriber(
+      world,
+      {},
+      {
+        onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+          cancel.fire = handler;
+          return Promise.resolve(() => undefined);
+        },
       },
-    });
+    );
     const running = subscriber.handle(job);
     await new Promise((resolve) => setTimeout(resolve, 40));
     cancel.fire?.();
@@ -824,7 +929,12 @@ describe('AiGenerateReplySubscriber', () => {
       [new LlmProviderError('429', { retryable: true, retryAfterMs: 30 })],
       [{ text: 'ok' }, { text: '', usage: { promptTokens: 1, completionTokens: 1 } }],
     ]);
-    await makeSubscriber(world, { providerRetries: 1, retryDelayMs: 40 }, {}, provider.provider).handle(job);
+    await makeSubscriber(
+      world,
+      { providerRetries: 1, retryDelayMs: 40 },
+      {},
+      provider.provider,
+    ).handle(job);
 
     expect(provider.calls()).toBe(2);
     expect(world.reply().status).toBe('COMPLETE');
@@ -838,7 +948,12 @@ describe('AiGenerateReplySubscriber', () => {
       [new LlmProviderError('429', { retryable: true, retryAfterMs: 60_000 })],
       [{ text: 'never' }],
     ]);
-    await makeSubscriber(world, { providerRetries: 3, retryDelayMs: 5 }, {}, provider.provider).handle(job);
+    await makeSubscriber(
+      world,
+      { providerRetries: 3, retryDelayMs: 5 },
+      {},
+      provider.provider,
+    ).handle(job);
 
     expect(provider.calls()).toBe(1);
     expect(world.reply().status).toBe('FAILED');
@@ -875,7 +990,11 @@ describe('AiGenerateReplySubscriber', () => {
 
   it('ai-1b: знання стоять після інструкції й перед контекстом юзера, історією та питанням', async () => {
     const world = makeWorld('PENDING', 'current question', [
-      { questionContent: 'earlier question', answerStatus: 'COMPLETE', answerContent: 'earlier answer' },
+      {
+        questionContent: 'earlier question',
+        answerStatus: 'COMPLETE',
+        answerContent: 'earlier answer',
+      },
     ]);
     const { provider, requests } = capturingProvider();
     await makeSubscriber(world, {}, {}, provider).handle(job);
@@ -911,7 +1030,10 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1c: знання — одразу за межами (спільний префікс), персона тенанта — окреме повідомлення 2', async () => {
     const world = makeWorld('PENDING', 'current question', [], {}, 'USER', {
       calendar: { timeZone: 'UTC' },
-      ai: { persona: 'You are Ava, the Acme helpdesk assistant.', instructions: 'Mention the helpdesk.' },
+      ai: {
+        persona: 'You are Ava, the Acme helpdesk assistant.',
+        instructions: 'Mention the helpdesk.',
+      },
     });
     const { provider, requests } = capturingProvider();
     await makeSubscriber(world, {}, {}, provider).handle(job);
@@ -967,7 +1089,10 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1d: cachedPromptTokens зберігається окремою колонкою (design.md D5)', async () => {
     const world = makeWorld();
     const provider = scriptedProvider([
-      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } }],
+      [
+        { text: 'ok' },
+        { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } },
+      ],
     ]);
     await makeSubscriber(world, {}, {}, provider.provider).handle(job);
 
@@ -990,7 +1115,10 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1d: завершений хід списує лічильник як promptTokens+completionTokens, cached НЕ додається зверху (design.md D5)', async () => {
     const world = makeWorld();
     const provider = scriptedProvider([
-      [{ text: 'ok' }, { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } }],
+      [
+        { text: 'ok' },
+        { text: '', usage: { promptTokens: 100, completionTokens: 10, cachedPromptTokens: 90 } },
+      ],
     ]);
     await makeSubscriber(world, {}, {}, provider.provider).handle(job);
 
@@ -1040,12 +1168,16 @@ describe('AiGenerateReplySubscriber', () => {
   it('ai-1d: CANCELLED без usage не списує лічильник', async () => {
     const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} tell me everything`);
     const cancel: { fire?: () => void } = {};
-    const subscriber = makeSubscriber(world, {}, {
-      onCancel: (_id: string, handler: () => void): Promise<() => void> => {
-        cancel.fire = handler;
-        return Promise.resolve(() => undefined);
+    const subscriber = makeSubscriber(
+      world,
+      {},
+      {
+        onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+          cancel.fire = handler;
+          return Promise.resolve(() => undefined);
+        },
       },
-    });
+    );
     const running = subscriber.handle(job);
     await new Promise((resolve) => setTimeout(resolve, 40));
     cancel.fire?.();
@@ -1085,3 +1217,136 @@ function scriptedProvider(script: readonly (readonly (LlmChunk | Error)[])[]): {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// AI-2a.3: retrieval-джерело (design.md D3–D6). Справжній PostgresKnowledgeSource
+// покрито окремо; тут — як координатор поводиться з його результатом і помилкою.
+// ---------------------------------------------------------------------------
+
+const EXCERPT: KnowledgeExcerpt = {
+  n: 1,
+  chunkId: 'chunk-1',
+  documentId: 'doc-1',
+  sourceKey: 'fms',
+  revision: 'rev-1',
+  title: 'WhatsApp pricing',
+  path: '010_saas/whatsapp.md',
+  heading: 'Pricing > Meta fees',
+  contentHash: 'a'.repeat(64),
+  content: 'Meta charges per conversation window.',
+};
+
+function retrievalSource(result: { excerpts: KnowledgeExcerpt[] } | Error): {
+  source: KnowledgeSource;
+  queries: KnowledgeQuery[];
+} {
+  const queries: KnowledgeQuery[] = [];
+  return {
+    queries,
+    source: {
+      select: (query): Promise<KnowledgeSelection> => {
+        queries.push(query);
+        return result instanceof Error
+          ? Promise.reject(result)
+          : Promise.resolve({
+              version: 'postgres:fms:fms@rev-1',
+              documents: [],
+              excerpts: result.excerpts,
+            });
+      },
+    },
+  };
+}
+
+describe('AiGenerateReplySubscriber — AI-2a.3 retrieval', () => {
+  it('фрагменти йдуть у промпт після організації й перед контекстом юзера; метадані — в рядок', async () => {
+    const world = makeWorld('PENDING', 'How is WhatsApp billed?', [], {}, 'USER', {
+      ai: { persona: 'You are Ava.', instructions: '' },
+    });
+    const { provider, requests } = capturingProvider();
+    const { source, queries } = retrievalSource({ excerpts: [EXCERPT] });
+    await makeSubscriber(world, {}, {}, provider, source).handle(job);
+
+    expect(queries).toEqual([{ role: 'USER', question: 'How is WhatsApp billed?' }]);
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    expect(contents[0]).toBe(ASSISTANT_BOUNDARIES);
+    expect(contents[1]).toContain('You are Ava.');
+    expect(contents[2]).toContain('<excerpt n="1" title="WhatsApp pricing"');
+    expect(contents[2]).toContain('Meta charges per conversation window.');
+    expect(contents[3]).toMatch(/^User context:/);
+    expect(contents.some((c) => c.startsWith('Product documentation:'))).toBe(false);
+    expect(world.reply().status).toBe('COMPLETE');
+    expect(world.reply().knowledgeVersion).toBe('postgres:fms:fms@rev-1');
+    expect(world.reply().knowledgeChunks).toEqual([
+      {
+        n: 1,
+        chunkId: 'chunk-1',
+        documentId: 'doc-1',
+        sourceKey: 'fms',
+        revision: 'rev-1',
+        title: 'WhatsApp pricing',
+        path: '010_saas/whatsapp.md',
+        heading: 'Pricing > Meta fees',
+        contentHash: 'a'.repeat(64),
+      },
+    ]);
+  });
+
+  it('порожній пошук — явний блок «нічого не знайдено», а не відповідь без джерел', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider, retrievalSource({ excerpts: [] }).source).handle(
+      job,
+    );
+
+    const contents = (requests[0]?.messages ?? []).map((m) => m.content);
+    expect(contents.some((c) => c.includes('found no excerpts'))).toBe(true);
+    expect(world.reply().knowledgeChunks).toEqual([]);
+  });
+
+  it('збій embedding: FAILED / PROVIDER_UNAVAILABLE, модель не викликається, completed емітиться', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    const { source } = retrievalSource(new EmbeddingRequestError('embedding-http-503'));
+    await makeSubscriber(world, {}, {}, provider, source).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
+    expect(world.reply().knowledgeVersion).toBe('unavailable');
+    expect(world.completed).toHaveLength(1);
+  });
+
+  it('інша помилка вибору знань — FAILED / INTERNAL', async () => {
+    const world = makeWorld();
+    await makeSubscriber(
+      world,
+      {},
+      {},
+      undefined,
+      retrievalSource(new Error('db down')).source,
+    ).handle(job);
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.reply().errorCode).toBe('INTERNAL');
+  });
+
+  it('завершена або жива відповідь не витрачає embedding-виклик', async () => {
+    for (const world of [
+      makeWorld('COMPLETE'),
+      makeWorld('STREAMING', undefined, [], {
+        attempt: 1,
+        leaseExpiresAt: new Date(Date.now() + 60_000),
+      }),
+    ]) {
+      const { source, queries } = retrievalSource({ excerpts: [EXCERPT] });
+      await makeSubscriber(world, {}, {}, undefined, source).handle(job);
+      expect(queries).toHaveLength(0);
+    }
+  });
+
+  it('статичний корпус не пише фрагментів', async () => {
+    const world = makeWorld();
+    await makeSubscriber(world).handle(job);
+    expect(world.reply().knowledgeChunks).not.toBeInstanceOf(Array);
+  });
+});

@@ -16,3 +16,6 @@ export * from './knowledge/static-knowledge-source';
 export * from './knowledge/ai-knowledge.module';
 export * from './knowledge/embedding-provider';
 export * from './knowledge/postgres-knowledge-store';
+export * from './knowledge/postgres-knowledge-source';
+export * from './knowledge/citations';
+export * from './knowledge/openai-embedding-provider';

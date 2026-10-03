@@ -37,9 +37,9 @@ const DEFAULT_GRACE_MINUTES = 10;
   definition: dispatchScheduledNotificationsCommand,
   id: 'scheduled-dispatcher',
 })
-export class DispatchScheduledNotificationsSubscriber
-  implements MessageSubscriberContract<typeof dispatchScheduledNotificationsCommand.schema>
-{
+export class DispatchScheduledNotificationsSubscriber implements MessageSubscriberContract<
+  typeof dispatchScheduledNotificationsCommand.schema
+> {
   private readonly logger = new Logger(DispatchScheduledNotificationsSubscriber.name);
   private readonly graceMs: number;
 
@@ -50,10 +50,7 @@ export class DispatchScheduledNotificationsSubscriber
     private readonly scheduled: ScheduledNotificationService,
     private readonly notifications: NotificationRecorder,
   ) {
-    const configured = Number.parseInt(
-      process.env.SCHEDULED_NOTIFICATIONS_GRACE_MINUTES ?? '',
-      10,
-    );
+    const configured = Number.parseInt(process.env.SCHEDULED_NOTIFICATIONS_GRACE_MINUTES ?? '', 10);
     this.graceMs =
       (Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_GRACE_MINUTES) * 60_000;
   }

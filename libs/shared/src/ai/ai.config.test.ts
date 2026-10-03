@@ -80,7 +80,9 @@ describe('loadAiConfig', () => {
 
   it('AI_BASE_URL, що не є http(s)-URL, валить старт з іменем змінної', () => {
     expect(() => loadAiConfig({ AI_BASE_URL: 'openrouter.ai' })).toThrow(/AI_BASE_URL/);
-    expect(() => loadAiConfig({ AI_BASE_URL: 'ftp://openrouter.ai/api/v1' })).toThrow(/AI_BASE_URL/);
+    expect(() => loadAiConfig({ AI_BASE_URL: 'ftp://openrouter.ai/api/v1' })).toThrow(
+      /AI_BASE_URL/,
+    );
   });
 });
 

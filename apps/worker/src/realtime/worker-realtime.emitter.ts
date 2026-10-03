@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  type OnApplicationShutdown,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { Server, type Namespace } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-streams-adapter';
@@ -21,10 +16,7 @@ import {
   type NotificationCreated,
   type ServerToClientEvents,
 } from '@saas-skeleton/contracts';
-import {
-  NotificationDispatcherRegistry,
-  type NotificationDispatcher,
-} from '@saas-skeleton/shared';
+import { NotificationDispatcherRegistry, type NotificationDispatcher } from '@saas-skeleton/shared';
 
 const DEFAULT_REDIS_URL = 'redis://:saas-realtime@localhost:6379';
 

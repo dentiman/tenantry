@@ -1,26 +1,18 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ClsService, type ClsStore } from 'nestjs-cls';
 import { PrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
-import { OpenAiEmbeddingProvider } from './openai-embedding-provider';
+import {
+  embeddingProviderFromEnv,
+  type OpenAiEmbeddingProvider,
+} from './openai-embedding-provider';
 
-export function embeddingProviderFromEnv(): OpenAiEmbeddingProvider {
-  // A separately configured endpoint must also provide its own credential.
-  // An empty value counts as unset, hence `some(Boolean)` rather than `??`.
-  const dedicated = [process.env.AI_EMBEDDING_BASE_URL, process.env.AI_EMBEDDING_API_KEY].some(
-    Boolean,
-  );
-  const baseUrl = dedicated ? process.env.AI_EMBEDDING_BASE_URL : process.env.AI_BASE_URL;
-  const apiKey = dedicated ? process.env.AI_EMBEDDING_API_KEY : process.env.AI_API_KEY;
-  if (!baseUrl || !apiKey)
+export function requireEmbeddingProvider(): OpenAiEmbeddingProvider {
+  const provider = embeddingProviderFromEnv();
+  if (!provider)
     throw new Error(
       'Configure AI_EMBEDDING_BASE_URL and AI_EMBEDDING_API_KEY (or AI_BASE_URL and AI_API_KEY)',
     );
-  return new OpenAiEmbeddingProvider({
-    baseUrl,
-    apiKey,
-    timeoutMs: Number(process.env.AI_EMBEDDING_TIMEOUT_MS ?? 45000),
-    retries: Number(process.env.AI_EMBEDDING_RETRIES ?? 2),
-  });
+  return provider;
 }
 
 /** Trusted operator CLI only. Domain services receive no tenant argument. */

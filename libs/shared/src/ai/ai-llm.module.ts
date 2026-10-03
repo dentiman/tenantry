@@ -1,7 +1,12 @@
 import { Logger, Module, type Provider } from '@nestjs/common';
 import { AI_CONFIG, requireProviderCredentials, type AiConfig } from './ai.config';
 import { FakeLlmProvider } from './llm/fake-llm.provider';
-import { LLM_PROVIDER, LlmProviderError, type LlmChunk, type LlmProvider } from './llm/llm-provider';
+import {
+  LLM_PROVIDER,
+  LlmProviderError,
+  type LlmChunk,
+  type LlmProvider,
+} from './llm/llm-provider';
 import { OpenAiCompatProvider } from './llm/openai-compat.provider';
 
 /**

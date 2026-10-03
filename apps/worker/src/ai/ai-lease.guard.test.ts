@@ -22,23 +22,36 @@ const BASE_CONFIG: AiConfig = {
   retentionDays: 90,
   quotaUserDailyTokens: 1_000_000,
   quotaTenantDailyTokens: 10_000_000,
+  knowledge: {
+    backend: 'static',
+    product: null,
+    vectorCandidates: 12,
+    finalChunks: 5,
+    maxContextTokens: 2_500,
+  },
 };
 
 describe('AiLeaseGuard', () => {
   it('дефолтний конфіг проходить: expireInSeconds (120s) перевищує lease + ретраї (92s)', () => {
     const guard = new AiLeaseGuard(BASE_CONFIG);
-    expect(() => { guard.onApplicationBootstrap(); }).not.toThrow();
+    expect(() => {
+      guard.onApplicationBootstrap();
+    }).not.toThrow();
   });
 
   it('валить старт, коли expireInSeconds не перевищує lease + ретраї', () => {
     // leaseMs 90s + 1 ретрай × 30s = 120s ЦІЛОЮ секунда-в-секунду з дефолтним
     // expireInSeconds 120s у топології — межова умова мусить впасти (СУВОРА нерівність)
     const guard = new AiLeaseGuard({ ...BASE_CONFIG, retryDelayMs: 30_000 });
-    expect(() => { guard.onApplicationBootstrap(); }).toThrow(/expireInSeconds/);
+    expect(() => {
+      guard.onApplicationBootstrap();
+    }).toThrow(/expireInSeconds/);
   });
 
   it('повідомлення про помилку називає обидва значення в мілісекундах', () => {
     const guard = new AiLeaseGuard({ ...BASE_CONFIG, leaseMs: 200_000 });
-    expect(() => { guard.onApplicationBootstrap(); }).toThrow(/120000ms.*202000ms/);
+    expect(() => {
+      guard.onApplicationBootstrap();
+    }).toThrow(/120000ms.*202000ms/);
   });
 });

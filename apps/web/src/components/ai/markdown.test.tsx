@@ -17,9 +17,7 @@ describe('Markdown', () => {
   });
 
   it('не пропускає інлайновий обробник події', () => {
-    const html = renderToStaticMarkup(
-      <Markdown>{'<img src="x" onerror="alert(1)">'}</Markdown>,
-    );
+    const html = renderToStaticMarkup(<Markdown>{'<img src="x" onerror="alert(1)">'}</Markdown>);
 
     // Перевіряємо СУТЬ, а не підрядок: живого тега немає, усе поїхало текстом.
     // (`onerror=` як підрядок у виводі Є — але всередині `onerror=&quot;`, тобто
@@ -30,9 +28,7 @@ describe('Markdown', () => {
   });
 
   it('відкидає javascript: у посиланні, лишаючи текст', () => {
-    const html = renderToStaticMarkup(
-      <Markdown>{'[click me](javascript:alert(1))'}</Markdown>,
-    );
+    const html = renderToStaticMarkup(<Markdown>{'[click me](javascript:alert(1))'}</Markdown>);
 
     expect(html).not.toContain('javascript:');
     expect(html).toContain('click me');

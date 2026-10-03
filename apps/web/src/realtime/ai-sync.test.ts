@@ -16,7 +16,11 @@ const CONVERSATION = 'conv-1';
 const MESSAGE = 'msg-1';
 
 /** Мінімальний фейковий сокет: зберігає обробники по імені події й дає їх викликати */
-function createFakeSocket(): { socket: AppSocket; fire: (event: string, payload?: unknown) => void; setRecovered: (v: boolean) => void } {
+function createFakeSocket(): {
+  socket: AppSocket;
+  fire: (event: string, payload?: unknown) => void;
+  setRecovered: (v: boolean) => void;
+} {
   const handlers = new Map<string, ((payload: unknown) => void)[]>();
   const socket = {
     on: (event: string, handler: (payload: unknown) => void): AppSocket => {
@@ -50,6 +54,7 @@ function makeMessage(overrides: Partial<AiConversationResponse['messages'][numbe
     errorCode: null,
     attempt: 1,
     chunkCount: 0,
+    citations: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     completedAt: null,
     ...overrides,
@@ -81,9 +86,9 @@ describe('initAiSync', () => {
   });
 
   function getMessage(): AiConversationResponse['messages'][number] | undefined {
-    return queryClient.getQueryData<AiConversationResponse>(queryKey)?.messages.find(
-      (m) => m.id === MESSAGE,
-    );
+    return queryClient
+      .getQueryData<AiConversationResponse>(queryKey)
+      ?.messages.find((m) => m.id === MESSAGE);
   }
 
   it('повідомлення відсутнє в кеші: дельта буферизується (не падає), запитується перечитування', () => {
@@ -92,14 +97,20 @@ describe('initAiSync', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
 
-    fire(REALTIME_EVENTS.aiMessageDelta, delta({ attempt: 1, chunkSeq: 0, text: 'first ever chunk' }));
+    fire(
+      REALTIME_EVENTS.aiMessageDelta,
+      delta({ attempt: 1, chunkSeq: 0, text: 'first ever chunk' }),
+    );
 
     expect(invalidateSpy).toHaveBeenCalledTimes(1);
     expect(getMessage()).toBeUndefined(); // патчити нічого — кеш ще порожній
   });
 
   it('нижчий attempt відкидається мовчки — без перечитування, кеш не змінюється', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 2, content: 'kept' })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 2, content: 'kept' })]),
+    );
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -113,7 +124,9 @@ describe('initAiSync', () => {
   it('вищий attempt, chunkSeq === 0: контент заміняється, attempt і chunkCount приймаються', () => {
     queryClient.setQueryData(
       queryKey,
-      makeConversation([makeMessage({ attempt: 1, content: 'OLD ATTEMPT LEFTOVER', chunkCount: 9 })]),
+      makeConversation([
+        makeMessage({ attempt: 1, content: 'OLD ATTEMPT LEFTOVER', chunkCount: 9 }),
+      ]),
     );
     const { socket, fire } = createFakeSocket();
     vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
@@ -129,7 +142,10 @@ describe('initAiSync', () => {
   });
 
   it('вищий attempt, chunkSeq > 0: буферизується, запитується перечитування, кеш поки не зачіпається', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: 'old' })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: 'old' })]),
+    );
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -156,7 +172,10 @@ describe('initAiSync', () => {
   });
 
   it('той самий attempt, chunkSeq === chunkCount: дописується без перечитування', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: 'AB', chunkCount: 2 })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: 'AB', chunkCount: 2 })]),
+    );
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -169,7 +188,10 @@ describe('initAiSync', () => {
   });
 
   it('той самий attempt, chunkSeq > chunkCount (дірка): буферизується, запитується перечитування', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]),
+    );
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -181,7 +203,10 @@ describe('initAiSync', () => {
   });
 
   it('буферизовані суміжні кадри застосовуються одразу після того, як дірку закрито живою дельтою', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]),
+    );
     const { socket, fire } = createFakeSocket();
     vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -203,14 +228,22 @@ describe('initAiSync', () => {
   });
 
   it('перечитування, що відстає від живих кадрів: буферизовані кадри закривають розрив БЕЗ другого перечитування', async () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: 'A', chunkCount: 1 })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: 'A', chunkCount: 1 })]),
+    );
     const { socket, fire } = createFakeSocket();
     // Симулюємо СЕРВЕР, що відстає: снапшот повертає той самий chunkCount=1,
     // хоча клієнт уже отримав живий кадр 2 (design.md D6 — партіал-персист лагає)
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(async () => {
-      queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: 'A', chunkCount: 1 })]));
-      return Promise.resolve();
-    });
+    const invalidateSpy = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockImplementation(async () => {
+        queryClient.setQueryData(
+          queryKey,
+          makeConversation([makeMessage({ attempt: 1, content: 'A', chunkCount: 1 })]),
+        );
+        return Promise.resolve();
+      });
     initAiSync(queryClient, socket);
 
     // Дірка: бракує кадру 1, кадр 2 буферизується й запускає (лагаюче) перечитування
@@ -231,7 +264,10 @@ describe('initAiSync', () => {
   });
 
   it('ai.message-completed.v1: чистить буфер конкретного повідомлення й перечитує', () => {
-    queryClient.setQueryData(queryKey, makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]));
+    queryClient.setQueryData(
+      queryKey,
+      makeConversation([makeMessage({ attempt: 1, content: '', chunkCount: 0 })]),
+    );
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);

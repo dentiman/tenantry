@@ -5,6 +5,7 @@ import {
   AiCancelChannel,
   AiMessageStateService,
   AiUsageQuotaService,
+  EmbeddingRequestError,
   KNOWLEDGE_SOURCE,
   LLM_PROVIDER,
   LlmProviderError,
@@ -13,7 +14,11 @@ import {
   generateAiReplyCommand,
   readAiSettings,
   selectHistoryPairs,
+  toKnowledgeChunkRefs,
   type AiConfig,
+  type AiHistoryTurn,
+  type AiOrganizationInstructions,
+  type KnowledgeSelection,
   type KnowledgeSource,
   type LlmProvider,
   type LlmRequest,
@@ -30,6 +35,17 @@ type GenerateAiReply = MessageData<typeof generateAiReplyCommand>;
 /** Скільки ЗАЙВИХ ходів історії читати понад `historyTurns`, щоб провалені/зупинені
  *  ходи (які selectHistoryPairs викидає) не крали місце у вікні непомітно */
 const HISTORY_SLACK_TURNS = 5;
+
+/** `knowledge_version` спроби, для якої знання так і не вдалося вибрати (AI-2a.3) */
+const KNOWLEDGE_UNAVAILABLE = 'unavailable';
+
+/** Усе, що читається до вибору знань — першою короткою транзакцією `prepare()` */
+interface GenerationContext {
+  readonly question: string;
+  readonly history: readonly AiHistoryTurn[];
+  readonly user: { readonly role: 'ADMIN' | 'USER'; readonly locale: string };
+  readonly organization: AiOrganizationInstructions;
+}
 
 interface PreparedGeneration {
   readonly tenantId: string;
@@ -58,9 +74,9 @@ interface PreparedGeneration {
  */
 @Injectable()
 @MessageSubscriber({ definition: generateAiReplyCommand, id: 'ai-generator' })
-export class AiGenerateReplySubscriber
-  implements MessageSubscriberContract<typeof generateAiReplyCommand.schema>
-{
+export class AiGenerateReplySubscriber implements MessageSubscriberContract<
+  typeof generateAiReplyCommand.schema
+> {
   private readonly logger = new Logger(AiGenerateReplySubscriber.name);
 
   constructor(
@@ -238,13 +254,98 @@ export class AiGenerateReplySubscriber
   }
 
   /**
-   * Читання й перевірки, ЩО НЕ ЗАЛЕЖАТЬ від `attempt` (питання, історія, юзер),
-   * плюс саме захоплення власності `claim()` — останнім кроком тієї ж транзакції.
-   * Повертає `null`, коли працювати нема над чим: рядок зник, юзера чи питання
-   * не знайдено, або `claim()` каже, що рядок уже захоплено/термінальний — це
-   * НЕ помилка, повторна доставка вже обробленої відповіді тихо виходить.
+   * Три фази (AI-2a.3, design.md D3), бо вибір знань тепер може бути HTTP-викликом
+   * (embedding питання), а ТРАНЗАКЦІЯ НЕ ТРИМАЄТЬСЯ ЧЕРЕЗ ВИКЛИК МОДЕЛІ — і
+   * embedding-моделі теж:
+   *
+   * 1. `readContext()` — коротка транзакція: рядок, питання, історія, налаштування;
+   * 2. `knowledgeSource.select()` — поза транзакцією (пошук відкриває власну);
+   * 3. `claim()` — коротка транзакція, ОСТАННІЙ крок, як і раніше (design.md D1).
+   *
+   * Між фазами рядок може змінитись — це безпечно: `claim()` лишається єдиним
+   * арбітром власності й тихо програє, якщо рядок уже захоплено чи закрито.
+   * Повертає `null`, коли працювати нема над чим (це НЕ помилка).
    */
   private async prepare(data: GenerateAiReply): Promise<PreparedGeneration | null> {
+    const context = await this.readContext(data);
+    if (!context) {
+      return null;
+    }
+
+    // Фільтр `audience` — за роллю юзера на момент генерації; у джерело йдуть лише
+    // роль і питання (§9.1). Помилка embedding — не привід відповідати без джерел
+    // (design.md D4): відповідь буде явно FAILED, але лише після claim()
+    let knowledge: KnowledgeSelection | null = null;
+    let knowledgeFailure: AiMessageErrorCode = 'INTERNAL';
+    try {
+      knowledge = await this.knowledgeSource.select({
+        role: context.user.role,
+        question: context.question,
+      });
+    } catch (error) {
+      knowledgeFailure =
+        error instanceof EmbeddingRequestError ? 'PROVIDER_UNAVAILABLE' : 'INTERNAL';
+      this.logger.error(
+        { err: error, messageId: data.messageId },
+        `AI knowledge selection failed: ${knowledgeFailure}`,
+      );
+    }
+
+    // Версія знань і фрагменти пишуться тим самим фенсингованим UPDATE, що
+    // захоплює рядок (ai-1b, design.md D7; AI-2a.3, design.md D6)
+    const claimed = await this.transactions.withTenantTx((tx) =>
+      this.state.claim(tx, data.messageId, data.conversationId, {
+        leaseMs: this.config.leaseMs,
+        model: this.config.model,
+        knowledgeVersion: knowledge?.version ?? KNOWLEDGE_UNAVAILABLE,
+        knowledgeChunks: knowledge?.excerpts ? toKnowledgeChunkRefs(knowledge.excerpts) : null,
+      }),
+    );
+    if (!claimed) {
+      this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
+      return null;
+    }
+
+    if (knowledge === null) {
+      await this.finalize({
+        messageId: data.messageId,
+        conversationId: data.conversationId,
+        tenantId: claimed.tenantId,
+        userId: claimed.userId,
+        attempt: claimed.attempt,
+        text: '',
+        chunkCount: 0,
+        status: 'FAILED',
+        errorCode: knowledgeFailure,
+        usage: null,
+      });
+      return null;
+    }
+
+    return {
+      tenantId: claimed.tenantId,
+      userId: claimed.userId,
+      attempt: claimed.attempt,
+      prompt: {
+        messages: buildPrompt({
+          question: context.question,
+          history: context.history,
+          knowledge: knowledge.documents,
+          excerpts: knowledge.excerpts,
+          user: context.user,
+          organization: context.organization,
+        }),
+        model: this.config.model,
+        maxOutputTokens: this.config.maxOutputTokens,
+      },
+    };
+  }
+
+  /**
+   * Перша фаза `prepare()`: читання й перевірки, ЩО НЕ ЗАЛЕЖАТЬ від `attempt`
+   * (питання, історія, юзер, налаштування). Без claim() — він у третій фазі.
+   */
+  private async readContext(data: GenerateAiReply): Promise<GenerationContext | null> {
     return this.transactions.withTenantTx(async (tx) => {
       const reply = await tx.aiMessage.findUnique({
         where: { id: data.messageId },
@@ -267,6 +368,15 @@ export class AiGenerateReplySubscriber
         return null;
       }
 
+      // Повторна доставка вже обробленої чи живої відповіді виходить ДО embedding-виклику
+      // (AI-2a.3): та сама умова, що в claim(), але claim() лишається арбітром — це лише
+      // економія виклику, а не перевірка власності
+      const leaseLive = reply.leaseExpiresAt !== null && reply.leaseExpiresAt > new Date();
+      if (reply.status !== 'PENDING' && !(reply.status === 'STREAMING' && !leaseLive)) {
+        this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
+        return null;
+      }
+
       const user = await tx.user.findUnique({
         where: { id: reply.conversation.userId },
         select: { role: true, locale: true },
@@ -282,7 +392,9 @@ export class AiGenerateReplySubscriber
         select: { content: true },
       });
       if (!questionRow) {
-        this.logger.warn(`AI reply ${data.messageId} has no question at seq ${String(reply.seq - 1)}`);
+        this.logger.warn(
+          `AI reply ${data.messageId} has no question at seq ${String(reply.seq - 1)}`,
+        );
         return null;
       }
 
@@ -314,46 +426,16 @@ export class AiGenerateReplySubscriber
       const aiSettings = readAiSettings(tenant?.settings);
       if (!aiSettings.valid) {
         // Без тексту: це конфігурація тенанта, у лог вона не йде
-        this.logger.warn(`AI settings of tenant ${reply.tenantId} are invalid — using boundaries only`);
-      }
-
-      // Знання — ДО claim(): версія пишеться тим самим фенсингованим UPDATE, що
-      // захоплює рядок (ai-1b, design.md D7). Фільтр `audience` — за роллю юзера
-      // на момент генерації; у джерело йдуть лише роль і питання (§9.1)
-      const knowledge = await this.knowledgeSource.select({
-        role: user.role,
-        question: questionRow.content,
-      });
-
-      // Захоплення власності — ОСТАННІМ кроком, коли вже відомо, що є з чим
-      // генерувати (design.md D1). Той самий якір ідемпотентності, що раніше
-      // тримав прямий статус-чек: PENDING/STREAMING-з-простроченою-орендою — так,
-      // усе інше — тихий вихід
-      const claimed = await this.state.claim(tx, data.messageId, data.conversationId, {
-        leaseMs: this.config.leaseMs,
-        model: this.config.model,
-        knowledgeVersion: knowledge.version,
-      });
-      if (!claimed) {
-        this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
-        return null;
+        this.logger.warn(
+          `AI settings of tenant ${reply.tenantId} are invalid — using boundaries only`,
+        );
       }
 
       return {
-        tenantId: claimed.tenantId,
-        userId: claimed.userId,
-        attempt: claimed.attempt,
-        prompt: {
-          messages: buildPrompt({
-            question: questionRow.content,
-            history,
-            knowledge: knowledge.documents,
-            user: { role: user.role, locale: user.locale },
-            organization: aiSettings.settings,
-          }),
-          model: this.config.model,
-          maxOutputTokens: this.config.maxOutputTokens,
-        },
+        question: questionRow.content,
+        history,
+        user: { role: user.role, locale: user.locale },
+        organization: aiSettings.settings,
       };
     });
   }

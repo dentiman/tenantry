@@ -6,7 +6,7 @@ import { KnowledgeIngestor } from '../libs/shared/src/ai/knowledge/ingest/knowle
 import { PostgresIngestStore } from '../libs/shared/src/ai/knowledge/ingest/postgres-ingest-store';
 import {
   cliCancellation,
-  embeddingProviderFromEnv,
+  requireEmbeddingProvider,
   withKnowledgeTenant,
 } from '../libs/shared/src/ai/knowledge/cli-runtime';
 import { EmbeddingRequestError } from '../libs/shared/src/ai/knowledge/openai-embedding-provider';
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   console.error(
     `Ingest: ${String(preview.totals.documents)} documents, ${String(preview.totals.chunks)} chunks, ${String(preview.totals.embeddingTokens)} estimated embedding tokens`,
   );
-  const provider = embeddingProviderFromEnv();
+  const provider = requireEmbeddingProvider();
   const cancellation = cliCancellation();
   try {
     const result = await withKnowledgeTenant(values.tenant, (tx) =>

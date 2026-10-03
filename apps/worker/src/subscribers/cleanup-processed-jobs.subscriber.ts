@@ -19,9 +19,9 @@ const RETENTION_DAYS = 30;
  */
 @Injectable()
 @MessageSubscriber({ definition: cleanupProcessedJobsCommand, id: 'inbox-cleaner' })
-export class CleanupProcessedJobsSubscriber
-  implements MessageSubscriberContract<typeof cleanupProcessedJobsCommand.schema>
-{
+export class CleanupProcessedJobsSubscriber implements MessageSubscriberContract<
+  typeof cleanupProcessedJobsCommand.schema
+> {
   private readonly logger = new Logger(CleanupProcessedJobsSubscriber.name);
 
   constructor(private readonly prisma: SystemPrismaService) {}
@@ -31,6 +31,8 @@ export class CleanupProcessedJobsSubscriber
     const { count } = await this.prisma.processedJob.deleteMany({
       where: { processedAt: { lt: cutoff } },
     });
-    this.logger.log(`Deleted ${String(count)} processed-job markers older than ${String(RETENTION_DAYS)}d`);
+    this.logger.log(
+      `Deleted ${String(count)} processed-job markers older than ${String(RETENTION_DAYS)}d`,
+    );
   }
 }

@@ -23,6 +23,7 @@ export interface KnowledgeChunkMatch {
   readonly language: string;
   readonly heading: string;
   readonly content: string;
+  readonly contentHash: string;
   readonly tokenCount: number;
   /** Cosine distance: smaller is closer. Not a calibrated confidence score. */
   readonly distance: number;
@@ -51,7 +52,7 @@ export class PostgresKnowledgeStore {
       (tx) => tx.$queryRaw<KnowledgeChunkMatch[]>`
       SELECT c.id AS "chunkId", d.id AS "documentId", s.key AS "sourceKey",
              d.revision, d.canonical_id AS "canonicalId", d.path, d.title, d.language,
-             c.heading, c.content, c.token_count AS "tokenCount",
+             c.heading, c.content, c.content_hash AS "contentHash", c.token_count AS "tokenCount",
              (c.embedding <=> ${vector}::vector(1536)) AS distance
       FROM ai_knowledge_chunks c
       JOIN ai_knowledge_documents d ON d.tenant_id = c.tenant_id AND d.id = c.document_id
@@ -66,4 +67,42 @@ export class PostgresKnowledgeStore {
     `,
     );
   }
+
+  /**
+   * Текст цитати при ВІДКРИТТІ (AI-2a.3, design.md D8): права перевіряються заново, а не
+   * беруться з моменту відповіді. Фрагмент мусить бути в опублікованій ревізії
+   * увімкненого джерела й видимий ролі. Після переіндексування `chunkId` інший, тому
+   * запасний шлях — той самий текст (`content_hash`) у тому ж джерелі.
+   */
+  async findCitation(query: {
+    readonly chunkId: string;
+    readonly sourceKey: string;
+    readonly contentHash: string;
+    readonly role: AiUserContext['role'];
+  }): Promise<KnowledgeCitationText | null> {
+    const rows = await this.tenantTx.withTenantTx(
+      (tx) => tx.$queryRaw<KnowledgeCitationText[]>`
+      SELECT d.title, d.path, c.heading, c.content, d.revision
+      FROM ai_knowledge_chunks c
+      JOIN ai_knowledge_documents d ON d.tenant_id = c.tenant_id AND d.id = c.document_id
+      JOIN ai_knowledge_sources s ON s.tenant_id = d.tenant_id AND s.id = d.source_id
+      WHERE (c.id = ${query.chunkId}
+             OR (c.content_hash = ${query.contentHash} AND s.key = ${query.sourceKey}))
+        AND s.is_enabled = true
+        AND d.revision = s.active_revision
+        AND ${query.role}::"Role" = ANY(d.audience)
+      ORDER BY (c.id = ${query.chunkId}) DESC, c.id ASC
+      LIMIT 1
+    `,
+    );
+    return rows[0] ?? null;
+  }
+}
+
+export interface KnowledgeCitationText {
+  readonly title: string;
+  readonly path: string;
+  readonly heading: string;
+  readonly content: string;
+  readonly revision: string;
 }

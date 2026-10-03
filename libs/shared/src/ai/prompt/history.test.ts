@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { selectHistoryPairs, type AiHistoryRow } from './history';
 
-function row(seq: number, role: 'USER' | 'ASSISTANT', status: AiHistoryRow['status'], content: string): AiHistoryRow {
+function row(
+  seq: number,
+  role: 'USER' | 'ASSISTANT',
+  status: AiHistoryRow['status'],
+  content: string,
+): AiHistoryRow {
   return { seq, role, status, content };
 }
 
@@ -34,10 +39,7 @@ describe('selectHistoryPairs', () => {
   });
 
   it('зупинена (CANCELLED) відповідь так само не входить у контекст', () => {
-    const rows = [
-      row(0, 'USER', 'COMPLETE', 'q1'),
-      row(1, 'ASSISTANT', 'CANCELLED', 'a1-partial'),
-    ];
+    const rows = [row(0, 'USER', 'COMPLETE', 'q1'), row(1, 'ASSISTANT', 'CANCELLED', 'a1-partial')];
 
     expect(selectHistoryPairs(rows, 10)).toEqual([]);
   });

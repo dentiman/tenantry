@@ -143,3 +143,25 @@ export class OpenAiEmbeddingProvider implements EmbeddingProvider {
     }
   }
 }
+
+/**
+ * Embedding-провайдер з оточення — для операторського CLI і воркера (AI-2a.3). Окремий
+ * endpoint задається ПАРОЮ `AI_EMBEDDING_BASE_URL`/`AI_EMBEDDING_API_KEY`; без неї —
+ * `AI_BASE_URL`/`AI_API_KEY` генерації. `null`, коли облікових даних немає зовсім.
+ */
+export function embeddingProviderFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): OpenAiEmbeddingProvider | null {
+  // A separately configured endpoint must also provide its own credential.
+  // An empty value counts as unset, hence `some(Boolean)` rather than `??`.
+  const dedicated = [env.AI_EMBEDDING_BASE_URL, env.AI_EMBEDDING_API_KEY].some(Boolean);
+  const baseUrl = dedicated ? env.AI_EMBEDDING_BASE_URL : env.AI_BASE_URL;
+  const apiKey = dedicated ? env.AI_EMBEDDING_API_KEY : env.AI_API_KEY;
+  if (!baseUrl || !apiKey) return null;
+  return new OpenAiEmbeddingProvider({
+    baseUrl,
+    apiKey,
+    timeoutMs: Number(env.AI_EMBEDDING_TIMEOUT_MS ?? 45000),
+    retries: Number(env.AI_EMBEDDING_RETRIES ?? 2),
+  });
+}

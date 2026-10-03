@@ -17,9 +17,9 @@ const RETENTION_DAYS = 30;
 
 @Injectable()
 @MessageSubscriber({ definition: cleanupExpiredTokensCommand, id: 'token-cleaner' })
-export class CleanupExpiredTokensSubscriber
-  implements MessageSubscriberContract<typeof cleanupExpiredTokensCommand.schema>
-{
+export class CleanupExpiredTokensSubscriber implements MessageSubscriberContract<
+  typeof cleanupExpiredTokensCommand.schema
+> {
   private readonly logger = new Logger(CleanupExpiredTokensSubscriber.name);
 
   constructor(

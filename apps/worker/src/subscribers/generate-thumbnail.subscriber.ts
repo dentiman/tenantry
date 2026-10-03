@@ -22,9 +22,9 @@ const THUMBNAIL_WEBP_QUALITY = 80;
  */
 @Injectable()
 @MessageSubscriber({ definition: generateThumbnailCommand, id: 'thumbnailer' })
-export class GenerateThumbnailSubscriber
-  implements MessageSubscriberContract<typeof generateThumbnailCommand.schema>
-{
+export class GenerateThumbnailSubscriber implements MessageSubscriberContract<
+  typeof generateThumbnailCommand.schema
+> {
   private readonly logger = new Logger(GenerateThumbnailSubscriber.name);
 
   constructor(

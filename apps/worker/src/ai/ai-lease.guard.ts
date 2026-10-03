@@ -31,8 +31,7 @@ export class AiLeaseGuard implements OnApplicationBootstrap {
     }
 
     const expireInMs = (consumer.expireInSeconds ?? 0) * 1_000;
-    const requiredMs =
-      this.config.leaseMs + this.config.retryDelayMs * this.config.providerRetries;
+    const requiredMs = this.config.leaseMs + this.config.retryDelayMs * this.config.providerRetries;
 
     if (expireInMs <= requiredMs) {
       throw new Error(

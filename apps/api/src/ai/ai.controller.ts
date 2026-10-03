@@ -1,22 +1,42 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBearerAuth,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { RATE_LIMITS, RateLimit } from '@saas-skeleton/shared';
-import type { AiConversationResponse, AskAiResponse } from '@saas-skeleton/contracts';
+import type {
+  AiCitationContentResponse,
+  AiConversationResponse,
+  AskAiResponse,
+} from '@saas-skeleton/contracts';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { AiService } from './ai.service';
 import { toAiConversationResponse, toAiMessageResponse } from './ai.mapper';
-import { AiConversationResponseDto, AskAiRequestDto, AskAiResponseDto } from './dto/ai.dto';
+import {
+  AiCitationContentResponseDto,
+  AiConversationResponseDto,
+  AskAiRequestDto,
+  AskAiResponseDto,
+} from './dto/ai.dto';
 
 /**
  * AI-асистент. Жоден роут не приймає id розмови — суб'єкт завжди з токена, як в
- * `/account` і `/settings`. Єдиний id у шляху — id ВІДПОВІДІ у `cancel`, і він
- * звіряється з власником.
+ * `/account` і `/settings`. Єдиний id у шляху — id ВІДПОВІДІ (у `cancel` і
+ * `citations`), і він звіряється з власником.
  */
 @ApiTags('ai')
 @ApiBearerAuth()
@@ -66,6 +86,23 @@ export class AiController {
     this.ai.assertEnabled();
     const { conversation, messages } = await this.ai.reset(actor);
     return toAiConversationResponse(conversation, messages);
+  }
+
+  /**
+   * Текст цитати `[n]` відповіді (AI-2a.3, design.md D8). Доступ перевіряється при
+   * КОЖНОМУ відкритті: власник відповіді, фрагмент опублікований і видимий поточній
+   * ролі. Усе інше — 404, без розрізнення причини
+   */
+  @Get('conversation/messages/:id/citations/:n')
+  @ApiOkResponse({ type: AiCitationContentResponseDto.Output })
+  @ApiNotFoundResponse()
+  async citation(
+    @Param('id') id: string,
+    @Param('n', ParseIntPipe) n: number,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<AiCitationContentResponse> {
+    this.ai.assertEnabled();
+    return this.ai.citation(actor, id, n);
   }
 
   @Post('conversation/messages/:id/cancel')

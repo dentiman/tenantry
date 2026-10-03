@@ -21,10 +21,7 @@ export interface AiHistoryRow {
  * функція не сортує сама — вона чиста й не знає про Prisma orderBy), і функція
  * повертає ОСТАННІ `turns` пар у порядку розмови (найстаріша перша).
  */
-export function selectHistoryPairs(
-  rows: readonly AiHistoryRow[],
-  turns: number,
-): AiHistoryTurn[] {
+export function selectHistoryPairs(rows: readonly AiHistoryRow[], turns: number): AiHistoryTurn[] {
   const pairs: AiHistoryTurn[][] = [];
 
   for (let i = 0; i < rows.length - 1; i += 1) {

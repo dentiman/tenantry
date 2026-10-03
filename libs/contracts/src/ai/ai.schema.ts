@@ -44,6 +44,21 @@ export const AiMessageErrorCodeSchema = z.enum([
   'INTERNAL',
 ]);
 
+/**
+ * Перевірене джерело відповіді (AI-2a.3, design.md D7): фрагмент документації, який
+ * сервер справді надав моделі для ЦІЄЇ відповіді І на який текст посилається `[n]`.
+ * Лише метадані — текст віддає окремий ендпоінт, що перевіряє доступ заново.
+ */
+export const AiCitationSchema = z.object({
+  /** Номер, під яким фрагмент цитується в тексті відповіді: `[n]` */
+  n: z.number().int().positive(),
+  title: z.string(),
+  /** Розділ документа (breadcrumb заголовків) */
+  heading: z.string(),
+  /** Шлях документа в джерелі — підпис для людини, а не URL */
+  path: z.string(),
+});
+
 export const AiMessageResponseSchema = z.object({
   id: z.uuid(),
   /**
@@ -69,6 +84,8 @@ export const AiMessageResponseSchema = z.object({
    * перечитування стрічки, не перечитуючи вдруге (design.md D6).
    */
   chunkCount: z.number().int().nonnegative(),
+  /** Порожній для питань, статичного корпусу й відповіді без посилань */
+  citations: z.array(AiCitationSchema),
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
 });
@@ -108,4 +125,12 @@ export const AskAiResponseSchema = z.object({
   conversationId: z.uuid(),
   question: AiMessageResponseSchema,
   reply: AiMessageResponseSchema,
+});
+
+/**
+ * Текст цитати (AI-2a.3, design.md D8). Видається власнику відповіді, лише поки фрагмент
+ * опублікований і видимий його ПОТОЧНІЙ ролі; інакше 404.
+ */
+export const AiCitationContentResponseSchema = AiCitationSchema.extend({
+  content: z.string(),
 });

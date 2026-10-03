@@ -18,9 +18,9 @@ const BATCH_SIZE = 100;
  */
 @Injectable()
 @MessageSubscriber({ definition: cleanupOrphanFilesCommand, id: 'orphan-cleaner' })
-export class CleanupOrphanFilesSubscriber
-  implements MessageSubscriberContract<typeof cleanupOrphanFilesCommand.schema>
-{
+export class CleanupOrphanFilesSubscriber implements MessageSubscriberContract<
+  typeof cleanupOrphanFilesCommand.schema
+> {
   private readonly logger = new Logger(CleanupOrphanFilesSubscriber.name);
 
   constructor(

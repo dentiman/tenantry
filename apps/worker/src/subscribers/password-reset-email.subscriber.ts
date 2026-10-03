@@ -26,9 +26,9 @@ const CONSUMER_ID = 'password-reset-email';
  */
 @Injectable()
 @MessageSubscriber({ definition: passwordResetRequestedEvent, id: CONSUMER_ID })
-export class PasswordResetEmailSubscriber
-  implements MessageSubscriberContract<typeof passwordResetRequestedEvent.schema>
-{
+export class PasswordResetEmailSubscriber implements MessageSubscriberContract<
+  typeof passwordResetRequestedEvent.schema
+> {
   private readonly logger = new Logger(PasswordResetEmailSubscriber.name);
 
   constructor(

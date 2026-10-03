@@ -29,6 +29,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useAiPanelStore } from '../../stores/ai-panel.store';
 import { Markdown } from './markdown';
+import { AiCitations } from './ai-citations';
 
 /**
  * Панель AI-асистента — ПʼЯТА колонка шела, найправіша.
@@ -62,9 +63,7 @@ export function AiPanel() {
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const messages = conversation?.messages ?? [];
-  const pending = messages.find(
-    (message) => message.role === 'ASSISTANT' && isInFlight(message),
-  );
+  const pending = messages.find((message) => message.role === 'ASSISTANT' && isInFlight(message));
 
   // Стрічка тримається біля низу, поки відповідь росте — інакше текст
   // «тікав» би за нижній край на кожному чанку
@@ -156,13 +155,7 @@ export function AiPanel() {
         >
           <Trash2Icon />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t('close')}
-          onClick={close}
-        >
+        <Button type="button" variant="ghost" size="icon" aria-label={t('close')} onClick={close}>
           <XIcon />
         </Button>
       </header>
@@ -283,6 +276,8 @@ function MessageRow({ message }: { message: AiMessageResponse }) {
       ) : (
         <Markdown>{message.content}</Markdown>
       )}
+
+      <AiCitations messageId={message.id} citations={message.citations} />
 
       {message.status === 'FAILED' && (
         <p className="mt-1 text-xs text-destructive">

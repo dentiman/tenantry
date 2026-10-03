@@ -924,6 +924,10 @@ model AiMessage {
   // §11.6). Пише `claim()` у тому ж фенсингованому UPDATE, що й `model`; NULL —
   // питання юзера або відповідь, згенерована до ai-1b
   knowledgeVersion String? @map("knowledge_version")
+  // Фрагменти retrieval, РЕАЛЬНО надіслані моделі в цій спробі (AI-2a.3, design.md D6):
+  // лише метадані (n, chunk/document id, джерело, ревізія, назва, шлях, розділ), без
+  // тексту. З них API рахує перевірені цитати; NULL — статичний корпус або до AI-2a.3
+  knowledgeChunks Json? @map("knowledge_chunks")
 
   // ВЛАСНІСТЬ ГЕНЕРАЦІЇ (AI-0.1, design.md D1). Захоплюється умовним UPDATE, що
   // збільшує `attempt` і виставляє оренду; кожен наступний запис — теж умовний

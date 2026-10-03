@@ -32,9 +32,7 @@ export class AiCancelChannel implements OnApplicationShutdown {
     try {
       await this.ensurePublisher().publish(channelFor(messageId), '1');
     } catch (error) {
-      this.logger.warn(
-        `Cancel request for ${messageId} was not delivered: ${errorMessage(error)}`,
-      );
+      this.logger.warn(`Cancel request for ${messageId} was not delivered: ${errorMessage(error)}`);
     }
   }
 

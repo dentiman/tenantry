@@ -24,6 +24,7 @@ import type {
 import type {
   ActivitiesFindAllParams,
   ActivityListResponseDtoOutput,
+  AiCitationContentResponseDtoOutput,
   AiConversationResponseDtoOutput,
   AiSettingsDto,
   AiSettingsDtoOutput,
@@ -5591,6 +5592,114 @@ export const useAiReset = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const aiCitation = (
+  id: string,
+  n: number,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiCitationContentResponseDtoOutput>(
+    { url: `/api/ai/conversation/messages/${id}/citations/${n}`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiCitationQueryKey = (id?: string, n?: number) => {
+  return [`/api/ai/conversation/messages/${id}/citations/${n}`] as const;
+};
+
+export const getAiCitationQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiCitation>>,
+  TError = void,
+>(
+  id: string,
+  n: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCitation>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiCitationQueryKey(id, n);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiCitation>>> = ({ signal }) =>
+    aiCitation(id, n, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!(id && n), ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiCitation>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiCitationQueryResult = NonNullable<Awaited<ReturnType<typeof aiCitation>>>;
+export type AiCitationQueryError = void;
+
+export function useAiCitation<TData = Awaited<ReturnType<typeof aiCitation>>, TError = void>(
+  id: string,
+  n: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCitation>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiCitation>>,
+          TError,
+          Awaited<ReturnType<typeof aiCitation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiCitation<TData = Awaited<ReturnType<typeof aiCitation>>, TError = void>(
+  id: string,
+  n: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCitation>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiCitation>>,
+          TError,
+          Awaited<ReturnType<typeof aiCitation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiCitation<TData = Awaited<ReturnType<typeof aiCitation>>, TError = void>(
+  id: string,
+  n: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCitation>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiCitation<TData = Awaited<ReturnType<typeof aiCitation>>, TError = void>(
+  id: string,
+  n: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCitation>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiCitationQueryOptions(id, n, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 export const aiCancel = (
   id: string,

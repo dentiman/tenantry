@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PostgresKnowledgeStore } from '@saas-skeleton/shared';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
@@ -12,6 +13,7 @@ import { AiService } from './ai.service';
 @Module({
   imports: [RealtimeModule],
   controllers: [AiController],
-  providers: [AiService],
+  // Сховище знань — лише для ЧИТАННЯ цитат (AI-2a.3): api моделі й embeddings не викликає
+  providers: [AiService, PostgresKnowledgeStore],
 })
 export class AiModule {}

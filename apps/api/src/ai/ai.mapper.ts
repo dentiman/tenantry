@@ -1,4 +1,5 @@
 import type { AiConversation, AiMessage } from '@saas-skeleton/database';
+import { citationsFor } from '@saas-skeleton/shared';
 import type {
   AiConversationResponse,
   AiMessageErrorCode,
@@ -20,6 +21,11 @@ export function toAiMessageResponse(message: AiMessage): AiMessageResponse {
     errorCode: message.errorCode as AiMessageErrorCode | null,
     attempt: message.attempt,
     chunkCount: message.chunkCount,
+    // Перевірені цитати рахуються при читанні (AI-2a.3, design.md D7): лише фрагменти,
+    // надані моделі в цій спробі, на чий `[n]` посилається поточний текст
+    citations: citationsFor(message.content, message.knowledgeChunks).map(
+      ({ n, title, heading, path }) => ({ n, title, heading, path }),
+    ),
     createdAt: message.createdAt.toISOString(),
     completedAt: message.completedAt?.toISOString() ?? null,
   };

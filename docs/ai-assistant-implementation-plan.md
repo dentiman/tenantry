@@ -77,7 +77,7 @@ API для сховища наразі немає.
 | **1. Foundation — зроблено**                   | образ/extension, три таблиці, RLS, профіль embedding, точний SQL search                              | реальна БД ранжує вектори, не видає чужі/неопубліковані/заборонені документи                                                  |
 | **2. FMS preview — зроблено**                  | manifest, parser, chunker, `ai:docs:preview`; реалізація AI-2a.0                                     | dry-run показує включені/відхилені файли з причиною, hash, chunk count, точний token count; нуль зовнішніх API-викликів       |
 | **3. FMS ingest і текстовий пошук — зроблено** | embedding API adapter, CLI `ai:docs:ingest` та `ai:docs:search`; AI-2a.2                             | реальні FMS-тексти й embeddings у PG; незмінний повторний import не викликає embedding API; природне питання повертає джерела |
-| **4. AiPanel + цитати**                        | `PostgresKnowledgeSource`, вибір backend, prompt budget, Zod-контракти citations, worker/UI; AI-2a.3 | питання у чинному чаті → відповідь із перевіреними посиланнями; порожній пошук → чесна відповідь про брак даних               |
+| **4. AiPanel + цитати — зроблено**             | `PostgresKnowledgeSource`, вибір backend, prompt budget, Zod-контракти citations, worker/UI; AI-2a.3 | питання у чинному чаті → відповідь із перевіреними посиланнями; порожній пошук → чесна відповідь про брак даних               |
 | **5. Hybrid і вимірювання**                    | FTS/GIN, `vector`/`fts`/`hybrid`, RRF, eval; AI-2a.4                                                 | порівняння трьох режимів на одному корпусі й питаннях; recall@K, p95, usage/cost                                              |
 | **6. Керовані джерела**                        | Files/S3 → worker ingest, UI статусів/публікації, global publishing; AI-2b                           | контроль доступу, повторний ingest, скасування публікації, ліміти й видалення наскрізно                                       |
 | **7. Доменні дані**                            | вузькі read-only tools для клієнтів, заявок тощо; AI-4                                               | актуальні структуровані дані через доменні сервіси/RLS; allowlist полів, аудит, обмежена кількість кроків                     |
@@ -289,5 +289,15 @@ OpenSpec change: `ai-2a-2-fms-ingest`. Міграція `20261003150000_ai_knowl
   → `resolve_tenant()` + перевірка в контексті; ingestor міг звітувати `AbortError`
   сусіда замість першої причини збою.
 
-Наступний інкремент: AI-2a.3 — `PostgresKnowledgeSource`, вибір backend, prompt budget,
-citations у worker/UI.
+Наступний інкремент AI-2a.3 виконано — див. нижче.
+
+## AI-2a.3: результат (2026-10-03)
+
+OpenSpec change: `ai-2a-3-assistant-citations`. Рішення, механізм і живий прогін —
+[ai-assistant-implementation.md §18](ai-assistant-implementation.md). Коротко:
+`AI_KNOWLEDGE_BACKEND=postgres` + `AI_KNOWLEDGE_PRODUCT=fms` вмикають retrieval у чаті
+(5 фрагментів / 2 500 токенів); embedding питання — поза транзакцією; збій embedding — явний
+`FAILED`. Цитати перевіряє сервер, а текст цитати віддається з повторною перевіркою доступу.
+Промпт FMS-відповіді ≈1k токенів проти ≈11k у статичного корпусу.
+
+Наступний інкремент: AI-2a.4 — FTS/hybrid, eval-набір питань, поріг релевантності.

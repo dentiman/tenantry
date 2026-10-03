@@ -34,9 +34,9 @@ const CONSUMER_ID = 'welcome-email';
  */
 @Injectable()
 @MessageSubscriber({ definition: userRegisteredEvent, id: CONSUMER_ID })
-export class WelcomeEmailSubscriber
-  implements MessageSubscriberContract<typeof userRegisteredEvent.schema>
-{
+export class WelcomeEmailSubscriber implements MessageSubscriberContract<
+  typeof userRegisteredEvent.schema
+> {
   private readonly logger = new Logger(WelcomeEmailSubscriber.name);
 
   constructor(

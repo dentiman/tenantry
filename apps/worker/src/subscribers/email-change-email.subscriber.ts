@@ -25,9 +25,9 @@ const CONSUMER_ID = 'email-change-email';
  */
 @Injectable()
 @MessageSubscriber({ definition: emailChangeRequestedEvent, id: CONSUMER_ID })
-export class EmailChangeEmailSubscriber
-  implements MessageSubscriberContract<typeof emailChangeRequestedEvent.schema>
-{
+export class EmailChangeEmailSubscriber implements MessageSubscriberContract<
+  typeof emailChangeRequestedEvent.schema
+> {
   private readonly logger = new Logger(EmailChangeEmailSubscriber.name);
 
   constructor(

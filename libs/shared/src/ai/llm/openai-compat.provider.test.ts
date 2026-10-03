@@ -2,11 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LlmProviderError, type LlmChunk, type LlmRequest } from './llm-provider';
-import {
-  OpenAiCompatProvider,
-  isAnthropicHost,
-  parseRetryAfter,
-} from './openai-compat.provider';
+import { OpenAiCompatProvider, isAnthropicHost, parseRetryAfter } from './openai-compat.provider';
 
 /**
  * `OpenAiCompatProvider` проти ЛОКАЛЬНОГО HTTP-стаба (ai-1a, design.md D9): жодної мережі,
@@ -220,7 +216,11 @@ describe('OpenAiCompatProvider', () => {
 
   it('finish_reason "length" (стеля max_tokens) — звичайна завершена відповідь, не помилка', async () => {
     handler = (_req, res): void => {
-      sse(res, [frame(contentChunk('Truncated by design')), frame(finishChunk('length')), 'data: [DONE]\n\n']);
+      sse(res, [
+        frame(contentChunk('Truncated by design')),
+        frame(finishChunk('length')),
+        'data: [DONE]\n\n',
+      ]);
     };
     const chunks = await collect(makeProvider().provider);
     expect(chunks.map((c) => c.text).join('')).toBe('Truncated by design');

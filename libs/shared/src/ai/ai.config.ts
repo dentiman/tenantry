@@ -45,6 +45,14 @@ const AiProviderSchema = z.enum(['fake', 'openai-compat']);
 
 const DEFAULT_FAKE_MODEL = 'fake-1';
 
+/**
+ * Звідки воркер бере знання для промпту (AI-2a.3, design.md D1). `static` — закомічений
+ * корпус рівня 1, як до AI-2a; `postgres` — retrieval з опублікованого pgvector-індексу
+ * ОДНОГО продукту (`AI_KNOWLEDGE_PRODUCT`). Змішування немає: порожній пошук у
+ * `postgres` не підтягує статичний корпус іншого продукту.
+ */
+const AiKnowledgeBackendSchema = z.enum(['static', 'postgres']);
+
 /** Порожній рядок у `.env` означає «не задано», як і в решті цього файлу */
 const optionalStringFromEnv = (): z.ZodType<string | null, string | undefined> =>
   z
@@ -132,6 +140,20 @@ const AiEnvSchema = z.object({
    * щоб обмежити сумарний розгін багатьма юзерами, кожен у межах власної квоти
    */
   AI_QUOTA_TENANT_DAILY_TOKENS: intFromEnv(10_000_000),
+  AI_KNOWLEDGE_BACKEND: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === undefined || value === '' ? 'static' : value))
+    .pipe(AiKnowledgeBackendSchema),
+  /** `product` у `ai_knowledge_sources`; обовʼязковий для `postgres` (перевіряє воркер) */
+  AI_KNOWLEDGE_PRODUCT: optionalStringFromEnv(),
+  /** Скільки кандидатів віддає vector-пошук до відбору (design.md D2) */
+  AI_DOCS_VECTOR_CANDIDATES: intFromEnv(12).pipe(z.number().max(50)),
+  /** Стеля фрагментів у промпті */
+  AI_DOCS_FINAL_CHUNKS: intFromEnv(5).pipe(z.number().max(20)),
+  /** Стеля токенів фрагментів разом із мітками — головна стеля витрат на знання */
+  AI_DOCS_MAX_CONTEXT_TOKENS: intFromEnv(2_500).pipe(z.number().max(20_000)),
 });
 
 /**
@@ -169,6 +191,14 @@ export interface AiConfig {
   quotaUserDailyTokens: number;
   /** Квота токенів на тенанта за ту саму добу (ai-1d, design.md D7) */
   quotaTenantDailyTokens: number;
+  /** AI-2a.3: джерело знань і бюджет retrieval (design.md D1/D2) */
+  knowledge: {
+    backend: z.infer<typeof AiKnowledgeBackendSchema>;
+    product: string | null;
+    vectorCandidates: number;
+    finalChunks: number;
+    maxContextTokens: number;
+  };
 }
 
 export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
@@ -200,6 +230,13 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     retentionDays: e.AI_RETENTION_DAYS,
     quotaUserDailyTokens: e.AI_QUOTA_USER_DAILY_TOKENS,
     quotaTenantDailyTokens: e.AI_QUOTA_TENANT_DAILY_TOKENS,
+    knowledge: {
+      backend: e.AI_KNOWLEDGE_BACKEND,
+      product: e.AI_KNOWLEDGE_PRODUCT,
+      vectorCandidates: e.AI_DOCS_VECTOR_CANDIDATES,
+      finalChunks: Math.min(e.AI_DOCS_FINAL_CHUNKS, e.AI_DOCS_VECTOR_CANDIDATES),
+      maxContextTokens: e.AI_DOCS_MAX_CONTEXT_TOKENS,
+    },
   };
 }
 

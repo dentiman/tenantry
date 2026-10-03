@@ -14,10 +14,16 @@ import {
   AiMessageStateService,
   AiUsageQuotaService,
   MessagePublisher,
+  PostgresKnowledgeStore,
+  citationsFor,
   generateAiReplyCommand,
   type AiConfig,
 } from '@saas-skeleton/shared';
-import { AI_QUOTA_EXCEEDED_CODE, type AiConversationChanged } from '@saas-skeleton/contracts';
+import {
+  AI_QUOTA_EXCEEDED_CODE,
+  type AiCitationContentResponse,
+  type AiConversationChanged,
+} from '@saas-skeleton/contracts';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
 
@@ -44,6 +50,7 @@ export class AiService {
     private readonly state: AiMessageStateService,
     private readonly realtime: RealtimeEmitter,
     private readonly usageQuota: AiUsageQuotaService,
+    private readonly knowledgeStore: PostgresKnowledgeStore,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
   ) {}
 
@@ -73,7 +80,12 @@ export class AiService {
       const closed = await this.state.closeAbandoned(tx, conversation.id);
       if (closed > 0) {
         this.transactions.onCommit(tx, () => {
-          this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'reply-closed');
+          this.emitConversationChanged(
+            conversation.tenantId,
+            actor.sub,
+            conversation.id,
+            'reply-closed',
+          );
         });
       }
     });
@@ -130,7 +142,10 @@ export class AiService {
 
       // «Зайнята» — це стан ОСТАННЬОЇ відповіді, а не окремий прапорець:
       // менше станів, які можуть розійтися між собою
-      if (last?.role === 'ASSISTANT' && (last.status === 'PENDING' || last.status === 'STREAMING')) {
+      if (
+        last?.role === 'ASSISTANT' &&
+        (last.status === 'PENDING' || last.status === 'STREAMING')
+      ) {
         throw new ConflictException('A reply is still being generated in this conversation');
       }
 
@@ -175,14 +190,24 @@ export class AiService {
 
       if (closed > 0) {
         this.transactions.onCommit(tx, () => {
-          this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'reply-closed');
+          this.emitConversationChanged(
+            conversation.tenantId,
+            actor.sub,
+            conversation.id,
+            'reply-closed',
+          );
         });
       }
       // Інші вкладки того самого юзера не бачать нового рядка інакше (design.md D7,
       // фікс §6.3): дельта прийде лише туди, де відповідь уже в кеші, а перше
       // питання ходу дельти не має взагалі
       this.transactions.onCommit(tx, () => {
-        this.emitConversationChanged(conversation.tenantId, actor.sub, conversation.id, 'turn-created');
+        this.emitConversationChanged(
+          conversation.tenantId,
+          actor.sub,
+          conversation.id,
+          'turn-created',
+        );
       });
 
       return { conversation, question, reply };
@@ -194,9 +219,7 @@ export class AiService {
    * а не історія. Обидві дії в одній транзакції, бо частковий унікальний індекс
    * не дозволить двом ACTIVE співіснувати навіть на мить.
    */
-  async reset(
-    actor: JwtPayload,
-  ): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
+  async reset(actor: JwtPayload): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
     const conversation = await this.transactions.withTenantTx(async (tx) => {
       await tx.aiConversation.updateMany({
         where: { userId: actor.sub, status: 'ACTIVE' },
@@ -220,6 +243,46 @@ export class AiService {
    * знайде), для `STREAMING` — маркер `cancelRequestedAt`, і сигнал швидкого
    * шляху публікується лише тоді, коли маркер дійсно поставлено на живому рядку.
    */
+  /**
+   * Текст цитати (AI-2a.3, design.md D8). Чужа/неіснуюча відповідь, номер, на який
+   * текст не посилається, або фрагмент, що вже неопублікований чи невидимий ПОТОЧНІЙ
+   * ролі, — однаково 404: нічого з цього не розкривається окремо.
+   */
+  async citation(
+    actor: JwtPayload,
+    messageId: string,
+    n: number,
+  ): Promise<AiCitationContentResponse> {
+    const message = await this.prisma.aiMessage.findUnique({
+      where: { id: messageId },
+      include: { conversation: { select: { userId: true } } },
+    });
+    if (message?.conversation.userId !== actor.sub) {
+      throw new NotFoundException('Message not found');
+    }
+    const ref = citationsFor(message.content, message.knowledgeChunks).find(
+      (citation) => citation.n === n,
+    );
+    // Роль — з БД, а не з токена: доступ перевіряється на момент відкриття
+    const user = await this.prisma.user.findUnique({
+      where: { id: actor.sub },
+      select: { role: true },
+    });
+    const text =
+      ref && user
+        ? await this.knowledgeStore.findCitation({
+            chunkId: ref.chunkId,
+            sourceKey: ref.sourceKey,
+            contentHash: ref.contentHash,
+            role: user.role,
+          })
+        : null;
+    if (!ref || !text) {
+      throw new NotFoundException('Citation not found');
+    }
+    return { n, title: text.title, heading: text.heading, path: text.path, content: text.content };
+  }
+
   async cancel(actor: JwtPayload, messageId: string): Promise<void> {
     const message = await this.prisma.aiMessage.findUnique({
       where: { id: messageId },
@@ -254,7 +317,9 @@ export class AiService {
     // Рядок уже STREAMING (не PENDING, інакше крок вище б спрацював): записуємо
     // маркер і лише за успіху публікуємо швидкий сигнал — на термінальному рядку
     // (worker встиг фіналізувати між нашими двома читаннями) публікувати нічого
-    const marked = await this.transactions.withTenantTx((tx) => this.state.requestCancel(tx, messageId));
+    const marked = await this.transactions.withTenantTx((tx) =>
+      this.state.requestCancel(tx, messageId),
+    );
     if (marked) {
       await this.cancelChannel.requestCancel(messageId);
     }
@@ -303,7 +368,9 @@ export class AiService {
     const conversation = await this.findActive(userId, tx);
     if (!conversation) {
       // Неможливо за конструкцією: або ми, або конкурент щойно вставили ACTIVE-рядок
-      throw new Error(`AiService.createActive: no active conversation for user ${userId} after insert`);
+      throw new Error(
+        `AiService.createActive: no active conversation for user ${userId} after insert`,
+      );
     }
     return conversation;
   }

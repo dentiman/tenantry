@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@saas-skeleton/database';
+import { Prisma } from '@saas-skeleton/database';
+import type { KnowledgeChunkRef } from './knowledge/citations';
 import type { LlmUsage } from './llm/llm-provider';
 
 /**
@@ -31,6 +32,8 @@ export class AiMessageStateService {
       readonly model: string;
       /** Версія знань промпту цієї спроби (ai-1b, design.md D7) */
       readonly knowledgeVersion: string;
+      /** Retrieval-фрагменти цієї спроби (AI-2a.3); `null` — статичний корпус */
+      readonly knowledgeChunks?: readonly KnowledgeChunkRef[] | null;
     },
   ): Promise<{
     readonly id: string;
@@ -66,6 +69,9 @@ export class AiMessageStateService {
         // перезахоплена покинута відповідь перепідготовлена з нуля і перезаписує її
         // тим, що справді надіслала (ai-1b, design.md D7). restart() промпт не змінює
         knowledgeVersion: options.knowledgeVersion,
+        // Так само належить спробі: перезахоплення перезаписує тим, що справді надіслано
+        knowledgeChunks:
+          options.knowledgeChunks == null ? Prisma.DbNull : [...options.knowledgeChunks],
         // Облік токенів — лише тієї спроби, що дала збережений текст (ai-1a, design.md D7):
         // перезахоплений рядок не має права зберегти числа попередньої
         promptTokens: null,

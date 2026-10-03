@@ -21,9 +21,9 @@ import {
  */
 @Injectable()
 @MessageSubscriber({ definition: purgeAiConversationsCommand, id: 'ai-conversation-purger' })
-export class AiPurgeConversationsSubscriber
-  implements MessageSubscriberContract<typeof purgeAiConversationsCommand.schema>
-{
+export class AiPurgeConversationsSubscriber implements MessageSubscriberContract<
+  typeof purgeAiConversationsCommand.schema
+> {
   private readonly logger = new Logger(AiPurgeConversationsSubscriber.name);
 
   constructor(
@@ -37,13 +37,12 @@ export class AiPurgeConversationsSubscriber
 
     const { count } = await this.prisma.aiConversation.deleteMany({
       where: {
-        OR: [
-          { lastMessageAt: { lt: cutoff } },
-          { lastMessageAt: null, createdAt: { lt: cutoff } },
-        ],
+        OR: [{ lastMessageAt: { lt: cutoff } }, { lastMessageAt: null, createdAt: { lt: cutoff } }],
       },
     });
 
-    this.logger.log(`Purged ${String(count)} AI conversations older than ${String(this.config.retentionDays)} days`);
+    this.logger.log(
+      `Purged ${String(count)} AI conversations older than ${String(this.config.retentionDays)} days`,
+    );
   }
 }

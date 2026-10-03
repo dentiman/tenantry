@@ -19,7 +19,10 @@ async function collect(question: string, signal: AbortSignal): Promise<string> {
 describe('FakeLlmProvider', () => {
   it('стрімить канований Markdown кількома кадрами', async () => {
     const chunks: string[] = [];
-    for await (const chunk of provider.generate(requestFor('how do I rename the workspace?'), new AbortController().signal)) {
+    for await (const chunk of provider.generate(
+      requestFor('how do I rename the workspace?'),
+      new AbortController().signal,
+    )) {
       chunks.push(chunk.text);
     }
 
@@ -32,8 +35,9 @@ describe('FakeLlmProvider', () => {
   });
 
   it(`${FAKE_LLM_DIRECTIVES.fail} кидає LlmProviderError, а не звичайний Error`, async () => {
-    await expect(collect(`please ${FAKE_LLM_DIRECTIVES.fail}`, new AbortController().signal))
-      .rejects.toBeInstanceOf(LlmProviderError);
+    await expect(
+      collect(`please ${FAKE_LLM_DIRECTIVES.fail}`, new AbortController().signal),
+    ).rejects.toBeInstanceOf(LlmProviderError);
   });
 
   it(`${FAKE_LLM_DIRECTIVES.fail} — помилка РЕТРАЙ-ПРИДАТНА (design.md D2)`, async () => {
@@ -85,7 +89,9 @@ describe('FakeLlmProvider', () => {
     const pending = collect(`please ${FAKE_LLM_DIRECTIVES.stall}`, controller.signal);
 
     // Нічого не прилетіло; вихід лише через abort (таймаут або кнопка Stop)
-    setTimeout(() => { controller.abort(); }, 20);
+    setTimeout(() => {
+      controller.abort();
+    }, 20);
 
     await expect(pending).resolves.toBe('');
     expect(Date.now() - started).toBeGreaterThanOrEqual(15);
@@ -102,7 +108,10 @@ describe('FakeLlmProvider', () => {
     const slow = new FakeLlmProvider({ chunkDelayMs: 5, chunkChars: 4 });
 
     const received: string[] = [];
-    for await (const chunk of slow.generate(requestFor(`${FAKE_LLM_DIRECTIVES.long} go`), controller.signal)) {
+    for await (const chunk of slow.generate(
+      requestFor(`${FAKE_LLM_DIRECTIVES.long} go`),
+      controller.signal,
+    )) {
       received.push(chunk.text);
       if (received.length === 3) {
         controller.abort();
@@ -120,7 +129,10 @@ describe('FakeLlmProvider', () => {
 
   it('віддає синтетичний usage РІВНО ОДНИМ термінальним кадром (ai-1a, design.md D8)', async () => {
     const chunks = [];
-    for await (const chunk of provider.generate(requestFor('usage please'), new AbortController().signal)) {
+    for await (const chunk of provider.generate(
+      requestFor('usage please'),
+      new AbortController().signal,
+    )) {
       chunks.push(chunk);
     }
     const withUsage = chunks.filter((chunk) => chunk.usage !== undefined);
@@ -135,14 +147,19 @@ describe('FakeLlmProvider', () => {
   it('usage детермінований і росте з довжиною вводу та відповіді', async () => {
     async function usageFor(question: string): Promise<LlmUsage | undefined> {
       let usage: LlmUsage | undefined;
-      for await (const chunk of provider.generate(requestFor(question), new AbortController().signal)) {
+      for await (const chunk of provider.generate(
+        requestFor(question),
+        new AbortController().signal,
+      )) {
         usage = chunk.usage ?? usage;
       }
       return usage;
     }
     const short = await usageFor('short');
     expect(await usageFor('short')).toEqual(short);
-    const longer = await usageFor(`${'much longer question '.repeat(20)} ${FAKE_LLM_DIRECTIVES.long}`);
+    const longer = await usageFor(
+      `${'much longer question '.repeat(20)} ${FAKE_LLM_DIRECTIVES.long}`,
+    );
     expect(longer?.promptTokens).toBeGreaterThan(short?.promptTokens ?? 0);
     expect(longer?.completionTokens).toBeGreaterThan(short?.completionTokens ?? 0);
   });

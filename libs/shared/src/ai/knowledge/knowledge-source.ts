@@ -1,4 +1,5 @@
 import type { AiKnowledgeDocument, AiUserContext } from '../prompt/prompt-builder';
+import type { KnowledgeExcerpt } from './citations';
 
 /**
  * Що потрібно джерелу, щоб вибрати знання для відповіді (ai-1b design.md D6).
@@ -17,6 +18,12 @@ export interface KnowledgeSelection {
   readonly version: string;
   /** У порядку, в якому вони йдуть у промпт (стабільний префікс для кешу) */
   readonly documents: readonly AiKnowledgeDocument[];
+  /**
+   * Фрагменти, знайдені retrieval-ом для ЦЬОГО питання (AI-2a.3). `undefined` —
+   * джерело без retrieval (статичний корпус); `[]` — пошук нічого не знайшов, і
+   * промпт мусить сказати це явно, а не мовчки відповідати без джерел.
+   */
+  readonly excerpts?: readonly KnowledgeExcerpt[];
 }
 
 /**

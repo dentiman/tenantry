@@ -2,7 +2,7 @@ import '../libs/database/load-root-env';
 import { parseArgs } from 'node:util';
 import {
   cliCancellation,
-  embeddingProviderFromEnv,
+  requireEmbeddingProvider,
   withKnowledgeTenant,
 } from '../libs/shared/src/ai/knowledge/cli-runtime';
 import { PostgresKnowledgeStore } from '../libs/shared/src/ai/knowledge/postgres-knowledge-store';
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     throw new Error('Invalid search arguments');
   // Narrow rather than cast an unvalidated CLI role.
   if (role !== 'ADMIN' && role !== 'USER') throw new Error('Invalid role');
-  const provider = embeddingProviderFromEnv();
+  const provider = requireEmbeddingProvider();
   const cancellation = cliCancellation();
   try {
     const result = await withKnowledgeTenant(tenant, async (tx) => {
