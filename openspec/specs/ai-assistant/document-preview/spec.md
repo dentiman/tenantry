@@ -1,4 +1,9 @@
-## ADDED Requirements
+# ai-assistant/document-preview Specification
+
+## Purpose
+Defines the offline preview of an external Markdown documentation source: which files a manifest admits, why others are rejected, how admitted text is chunked and counted, and the guarantee that preview needs no database, keys or network.
+
+## Requirements
 
 ### Requirement: Offline source preview
 

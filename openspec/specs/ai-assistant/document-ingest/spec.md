@@ -1,4 +1,9 @@
-## ADDED Requirements
+# ai-assistant/document-ingest Specification
+
+## Purpose
+Defines how an admitted documentation snapshot becomes a searchable, tenant-scoped index: atomic publication of complete revisions, embedding reuse across imports, and operator text search over the published index.
+
+## Requirements
 
 ### Requirement: Atomic tenant-scoped ingestion
 
