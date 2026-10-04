@@ -49,6 +49,8 @@ export const TenantResponseSchema = z.object({
   name: z.string(),
   isActive: z.boolean(),
   locale: z.string(),
+  /** Дозвіл платформи на AI-асистента (AI-5a); немає запису — дозволено */
+  aiAllowed: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -74,6 +76,8 @@ export const UpdateTenantSchema = z.object({
   locale: z.string().optional(),
   /** suspend/resume: login у data plane відмовляє всім юзерам неактивного tenant-а */
   isActive: z.boolean().optional(),
+  /** Дозвіл AI-асистента цьому tenant-у (AI-5a). Tenant Admin вмикає лише в межах дозволу */
+  aiAllowed: z.boolean().optional(),
 });
 
 /** Той самий whitelist-патерн, що UserQuerySchema: sortBy — закритий enum у Swagger */

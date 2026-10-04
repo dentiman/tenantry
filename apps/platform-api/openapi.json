@@ -441,6 +441,118 @@
           "jobs"
         ]
       }
+    },
+    "/api/ai/settings": {
+      "get": {
+        "operationId": "aiSettingsGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAiSettingsResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ai-settings"
+        ]
+      },
+      "put": {
+        "operationId": "aiSettingsUpdate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlatformAiSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAiSettingsResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ai-settings"
+        ]
+      }
+    },
+    "/api/ai/settings/api-key/reveal": {
+      "post": {
+        "operationId": "aiSettingsReveal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAiApiKeyRevealResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ai-settings"
+        ]
+      }
+    },
+    "/api/ai/settings/events": {
+      "get": {
+        "operationId": "aiSettingsEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAiSettingsEventListResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ai-settings"
+        ]
+      }
     }
   },
   "info": {
@@ -588,6 +700,9 @@
                 "locale": {
                   "type": "string"
                 },
+                "aiAllowed": {
+                  "type": "boolean"
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -605,6 +720,7 @@
                 "name",
                 "isActive",
                 "locale",
+                "aiAllowed",
                 "createdAt",
                 "updatedAt"
               ],
@@ -653,6 +769,9 @@
           "locale": {
             "type": "string"
           },
+          "aiAllowed": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -670,6 +789,7 @@
           "name",
           "isActive",
           "locale",
+          "aiAllowed",
           "createdAt",
           "updatedAt"
         ],
@@ -730,6 +850,9 @@
             "type": "string"
           },
           "isActive": {
+            "type": "boolean"
+          },
+          "aiAllowed": {
             "type": "boolean"
           }
         }
@@ -902,6 +1025,249 @@
         },
         "required": [
           "queues"
+        ],
+        "additionalProperties": false
+      },
+      "PlatformAiSettingsResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "installationEnabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fake",
+              "openai-compat",
+              null
+            ],
+            "nullable": true
+          },
+          "baseUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "apiKey": {
+            "type": "object",
+            "properties": {
+              "configured": {
+                "type": "boolean"
+              },
+              "masked": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "configured",
+              "masked"
+            ],
+            "additionalProperties": false
+          },
+          "effective": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fake",
+                  "openai-compat"
+                ]
+              },
+              "baseUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "model": {
+                "type": "string"
+              },
+              "apiKeyPresent": {
+                "type": "boolean"
+              },
+              "sources": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "env"
+                    ]
+                  },
+                  "baseUrl": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "env"
+                    ]
+                  },
+                  "model": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "env"
+                    ]
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "env"
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "baseUrl",
+                  "model",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "provider",
+              "baseUrl",
+              "model",
+              "apiKeyPresent",
+              "sources"
+            ],
+            "additionalProperties": false
+          },
+          "encryptionAvailable": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "installationEnabled",
+          "provider",
+          "baseUrl",
+          "model",
+          "apiKey",
+          "effective",
+          "encryptionAvailable",
+          "updatedAt",
+          "updatedBy"
+        ],
+        "additionalProperties": false
+      },
+      "UpdatePlatformAiSettingsDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fake",
+              "openai-compat",
+              null
+            ],
+            "nullable": true
+          },
+          "baseUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "nullable": true
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "provider",
+          "baseUrl",
+          "model"
+        ]
+      },
+      "PlatformAiApiKeyRevealResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiKey"
+        ],
+        "additionalProperties": false
+      },
+      "PlatformAiSettingsEventListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "updated",
+                    "key_revealed"
+                  ]
+                },
+                "actorLabel": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "changes": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "actorLabel",
+                "changes",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
         ],
         "additionalProperties": false
       }

@@ -80,7 +80,11 @@
     "instructionsHint": "What to emphasize, tone and level of detail. Up to {{max}} characters.",
     "boundaries": "The assistant's built-in limits always apply and cannot be changed here: it has no access to your data, cannot perform actions, does not guess beyond the documentation, and answers in the language of the question.",
     "save": "Save AI assistant settings",
-    "saved": "AI assistant settings saved"
+    "saved": "AI assistant settings saved",
+    "enabled": "Assistant enabled for the organization",
+    "enabledHint": "When off, nobody in the organization sees the assistant. The persona and instructions below are kept.",
+    "blockedTitle": "Turned off by the platform",
+    "blocked": "The platform operator has disabled the assistant or not enabled it for your organization. You can still edit the persona and instructions; they apply once the assistant is available."
   },
   "activity": {
     "title": "Activity",

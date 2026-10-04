@@ -109,12 +109,41 @@ export const AI_SETTINGS_LIMITS = {
 } as const;
 
 export const AiSettingsSchema = z.object({
+  /**
+   * Вибір Tenant Admin (AI-5a): чи вмикає компанія асистента своїм людям. Діє лише разом
+   * із вмикачем і дозволом платформи (docs/ai-platform-controls.md §2.5)
+   */
+  enabled: z.boolean(),
   persona: z.string().trim().max(AI_SETTINGS_LIMITS.personaMaxChars),
   instructions: z.string().trim().max(AI_SETTINGS_LIMITS.instructionsMaxChars),
 });
 
+/**
+ * Доступність асистента для tenant-а (AI-5a): чотири рівні окремо, щоб екран Tenant Admin
+ * міг сказати, ЧОМУ асистент недоступний — і не пропонувати вмикач, який нічого не змінить.
+ */
+export const AiAvailabilitySchema = z.object({
+  /** `AI_ENABLED` інсталяції */
+  installation: z.boolean(),
+  /** Вмикач оператора платформи */
+  platform: z.boolean(),
+  /** Дозвіл платформи цьому tenant-у */
+  tenantAllowed: z.boolean(),
+  /** Вибір Tenant Admin */
+  tenantEnabled: z.boolean(),
+  /** Усе разом */
+  available: z.boolean(),
+});
+
+/** Секція плюс read-only доступність — те, що віддає `GET/PUT /settings/ai` */
+export const AiSettingsResponseSchema = AiSettingsSchema.extend({
+  availability: AiAvailabilitySchema,
+});
+
 /** Відсутній ключ `ai` читається як «нічого не задано» — бекфіл не потрібен */
 export const AI_SETTINGS_DEFAULTS: z.infer<typeof AiSettingsSchema> = {
+  // Увімкнено: tenant-и, що існували до AI-5a, не втрачають асистента
+  enabled: true,
   persona: '',
   instructions: '',
 };

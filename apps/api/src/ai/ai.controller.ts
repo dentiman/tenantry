@@ -47,7 +47,7 @@ export class AiController {
   @Get('conversation')
   @ApiOkResponse({ type: AiConversationResponseDto.Output })
   async conversation(@CurrentUser() actor: JwtPayload): Promise<AiConversationResponse> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     const { conversation, messages } = await this.ai.currentConversation(actor);
     return toAiConversationResponse(conversation, messages);
   }
@@ -65,7 +65,7 @@ export class AiController {
     @Body() dto: AskAiRequestDto,
     @CurrentUser() actor: JwtPayload,
   ): Promise<AskAiResponse> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     const { conversation, question, reply } = await this.ai.ask(actor, dto.text);
     return {
       conversationId: conversation.id,
@@ -83,7 +83,7 @@ export class AiController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AiConversationResponseDto.Output })
   async reset(@CurrentUser() actor: JwtPayload): Promise<AiConversationResponse> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     const { conversation, messages } = await this.ai.reset(actor);
     return toAiConversationResponse(conversation, messages);
   }
@@ -101,7 +101,7 @@ export class AiController {
     @Param('n', ParseIntPipe) n: number,
     @CurrentUser() actor: JwtPayload,
   ): Promise<AiCitationContentResponse> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     return this.ai.citation(actor, id, n);
   }
 
@@ -109,7 +109,7 @@ export class AiController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   async cancel(@Param('id') id: string, @CurrentUser() actor: JwtPayload): Promise<void> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     await this.ai.cancel(actor, id);
   }
 
@@ -122,7 +122,7 @@ export class AiController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   async deleteAllConversations(@CurrentUser() actor: JwtPayload): Promise<void> {
-    this.ai.assertEnabled();
+    await this.ai.assertEnabled();
     await this.ai.deleteAllConversations(actor);
   }
 }

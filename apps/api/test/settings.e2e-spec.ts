@@ -217,9 +217,16 @@ describe('Organization settings API (e2e)', () => {
   // ------------------------------------------------------------ ai (AI-1c)
 
   interface AiBody {
+    enabled: boolean;
     persona: string;
     instructions: string;
+    availability?: unknown;
   }
+  /** Секція без read-only зрізу доступності (AI-5a) — те, що порівнюють ці тести */
+  const section = (body: unknown): Omit<AiBody, 'availability'> => {
+    const { availability: _availability, ...rest } = body as AiBody;
+    return rest;
+  };
   interface ErrorBody {
     fieldErrors?: { field: string; message: string }[];
   }
@@ -231,7 +238,9 @@ describe('Organization settings API (e2e)', () => {
       .get('/api/settings/ai')
       .set(headers)
       .expect(200);
-    expect(response.body).toEqual({ persona: '', instructions: '' });
+    // AI-5a: секції немає — асистент увімкнений Tenant Admin-ом за замовчуванням
+    expect(section(response.body)).toEqual({ enabled: true, persona: '', instructions: '' });
+    expect((response.body as AiBody).availability).toBeDefined();
   });
 
   it('lets an admin replace the AI section, trims it, keeps other sections and journals without text', async () => {
@@ -244,15 +253,20 @@ describe('Organization settings API (e2e)', () => {
     const saved = await request(app.getHttpServer())
       .put('/api/settings/ai')
       .set(headers)
-      .send({ persona: '  You are Ava.  ', instructions: 'Mention the helpdesk.\n' })
+      .send({ enabled: true, persona: '  You are Ava.  ', instructions: 'Mention the helpdesk.\n' })
       .expect(200);
-    expect(saved.body).toEqual({ persona: 'You are Ava.', instructions: 'Mention the helpdesk.' });
+    expect(section(saved.body)).toEqual({
+      enabled: true,
+      persona: 'You are Ava.',
+      instructions: 'Mention the helpdesk.',
+    });
 
     const read = await request(app.getHttpServer())
       .get('/api/settings/ai')
       .set(headers)
       .expect(200);
-    expect(read.body as AiBody).toEqual({
+    expect(section(read.body)).toEqual({
+      enabled: true,
       persona: 'You are Ava.',
       instructions: 'Mention the helpdesk.',
     });
@@ -281,7 +295,7 @@ describe('Organization settings API (e2e)', () => {
     await request(app.getHttpServer())
       .put('/api/settings/ai')
       .set(headers)
-      .send({ persona: 'Hijacked', instructions: '' })
+      .send({ enabled: false, persona: 'Hijacked', instructions: '' })
       .expect(403);
 
     const tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } });
@@ -289,8 +303,8 @@ describe('Organization settings API (e2e)', () => {
   });
 
   it.each([
-    ['persona', { persona: 'x'.repeat(501), instructions: '' }],
-    ['instructions', { persona: '', instructions: 'x'.repeat(4001) }],
+    ['persona', { enabled: true, persona: 'x'.repeat(501), instructions: '' }],
+    ['instructions', { enabled: true, persona: '', instructions: 'x'.repeat(4001) }],
   ])('rejects %s over its limit with a field error and stores nothing', async (field, body) => {
     const headers = await login(`${Date.now()}-ai-limit-${field}`, 'ADMIN');
 
@@ -311,7 +325,7 @@ describe('Organization settings API (e2e)', () => {
     await request(app.getHttpServer())
       .put('/api/settings/ai')
       .set(headers)
-      .send({ persona: `${'p'.repeat(500)}   `, instructions: 'i'.repeat(4000) })
+      .send({ enabled: true, persona: `${'p'.repeat(500)}   `, instructions: 'i'.repeat(4000) })
       .expect(200);
   });
 });

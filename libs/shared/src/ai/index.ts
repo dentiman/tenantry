@@ -19,3 +19,6 @@ export * from './knowledge/postgres-knowledge-store';
 export * from './knowledge/postgres-knowledge-source';
 export * from './knowledge/citations';
 export * from './knowledge/openai-embedding-provider';
+export * from './platform/secret-box';
+export * from './platform/platform-ai-settings';
+export * from './platform/platform-ai-settings.reader';

@@ -14,6 +14,7 @@ import layoutEn from '../locales/en/layout.json';
 import tenantsEn from '../locales/en/tenants.json';
 import jobsEn from '../locales/en/jobs.json';
 import userSettingsEn from '../locales/en/user-settings.json';
+import aiEn from '../locales/en/ai.json';
 
 export const LOCALE_STORAGE_KEY = 'saas_platform_locale';
 
@@ -45,6 +46,7 @@ void i18n.use(initReactI18next).init({
       tenants: tenantsEn,
       jobs: jobsEn,
       'user-settings': userSettingsEn,
+      ai: aiEn,
     },
   },
   lng: detectLocale(),

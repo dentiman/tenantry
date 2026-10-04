@@ -14,4 +14,5 @@ export interface UpdateTenantDto {
   name?: string;
   locale?: string;
   isActive?: boolean;
+  aiAllowed?: boolean;
 }

@@ -255,24 +255,24 @@ describe('citations', () => {
 
 describe('createKnowledgeSource', () => {
   const transactions = {} as never;
+  const noSettings = { read: (): Promise<null> => Promise.resolve(null) };
 
   it('defaults to the static corpus', () => {
-    expect(createKnowledgeSource(loadAiConfig({}), transactions, {})).toBeInstanceOf(
+    expect(createKnowledgeSource(loadAiConfig({}), transactions, noSettings, {})).toBeInstanceOf(
       StaticKnowledgeSource,
     );
   });
 
-  it('postgres mode names every missing setting instead of falling back', () => {
+  it('postgres mode without a product fails boot instead of falling back', () => {
     const config = loadAiConfig({ AI_KNOWLEDGE_BACKEND: 'postgres' });
-    expect(() => createKnowledgeSource(config, transactions, {})).toThrow(
-      /AI_KNOWLEDGE_PRODUCT.*AI_EMBEDDING_BASE_URL/,
+    expect(() => createKnowledgeSource(config, transactions, noSettings, {})).toThrow(
+      /AI_KNOWLEDGE_PRODUCT/,
     );
   });
 
-  it('postgres mode builds the retrieval source with generation credentials as fallback', () => {
+  it('postgres mode no longer needs embedding credentials at boot (AI-5a: they may come from the UI)', () => {
     const config = loadAiConfig({ AI_KNOWLEDGE_BACKEND: 'postgres', AI_KNOWLEDGE_PRODUCT: 'fms' });
-    const env = { AI_BASE_URL: 'https://openrouter.ai/api/v1', AI_API_KEY: 'sk-test' };
-    expect(createKnowledgeSource(config, transactions, env)).toBeInstanceOf(
+    expect(createKnowledgeSource(config, transactions, noSettings, {})).toBeInstanceOf(
       PostgresKnowledgeSource,
     );
   });

@@ -10,7 +10,7 @@
  * Префікс URL кожної area. Він же її «домівка»: клік у рейлі веде саме на префікс,
  * а індексний роут area вирішує, що там показати.
  */
-export type AreaPrefix = '/tenants' | '/operations' | '/user-settings';
+export type AreaPrefix = '/tenants' | '/operations' | '/ai' | '/user-settings';
 
 /** Усі адресовані пункти другої колонки (включно з префіксами area — це індексні пункти). */
 export type NavPath =
@@ -18,6 +18,8 @@ export type NavPath =
   | '/operations'
   | '/operations/jobs'
   | '/operations/queues'
+  | '/ai'
+  | '/ai/settings'
   | '/user-settings'
   | '/user-settings/appearance';
 

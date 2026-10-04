@@ -7,7 +7,7 @@ import {
   AiUsageQuotaService,
   EmbeddingRequestError,
   KNOWLEDGE_SOURCE,
-  LLM_PROVIDER,
+  AI_RUNTIME,
   LlmProviderError,
   MessageSubscriber,
   buildPrompt,
@@ -16,6 +16,8 @@ import {
   selectHistoryPairs,
   toKnowledgeChunkRefs,
   type AiConfig,
+  type AiGeneration,
+  type AiRuntime,
   type AiHistoryTurn,
   type AiOrganizationInstructions,
   type KnowledgeSelection,
@@ -45,6 +47,9 @@ interface GenerationContext {
   readonly history: readonly AiHistoryTurn[];
   readonly user: { readonly role: 'ADMIN' | 'USER'; readonly locale: string };
   readonly organization: AiOrganizationInstructions;
+  /** Для realtime-адресації, якщо відповідь закривається, не дійшовши до claim() */
+  readonly tenantId: string;
+  readonly userId: string;
 }
 
 interface PreparedGeneration {
@@ -52,6 +57,8 @@ interface PreparedGeneration {
   readonly userId: string;
   readonly attempt: number;
   readonly prompt: LlmRequest;
+  /** Провайдер ЦІЄЇ генерації (AI-5a): з налаштувань суперадміна поверх env */
+  readonly provider: LlmProvider;
 }
 
 /**
@@ -84,7 +91,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     private readonly state: AiMessageStateService,
     private readonly realtime: WorkerRealtimeEmitter,
     private readonly cancelChannel: AiCancelChannel,
-    @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
+    @Inject(AI_RUNTIME) private readonly runtime: AiRuntime,
     @Inject(KNOWLEDGE_SOURCE) private readonly knowledgeSource: KnowledgeSource,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
     private readonly usageQuota: AiUsageQuotaService,
@@ -95,7 +102,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     if (!prepared) {
       return;
     }
-    const { tenantId, userId, prompt } = prepared;
+    const { tenantId, userId, prompt, provider } = prepared;
     let attempt = prepared.attempt;
 
     const controller = new AbortController();
@@ -139,7 +146,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       streamLoop: for (;;) {
         providerCalls += 1;
         try {
-          for await (const chunk of this.llm.generate(prompt, controller.signal)) {
+          for await (const chunk of provider.generate(prompt, controller.signal)) {
             if (chunk.usage) {
               usage = chunk.usage;
             }
@@ -272,6 +279,26 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       return null;
     }
 
+    // Асистента вимкнули (платформа, дозвіл tenant-у чи сам Tenant Admin) після того, як
+    // питання стало в чергу (AI-5a, design.md D6): закриваємо без виклику моделі
+    if (!(await this.runtime.availableForCurrentTenant())) {
+      await this.cancelUnavailable(data, context);
+      return null;
+    }
+
+    // Провайдер і модель — на кожну генерацію з налаштувань суперадміна (AI-5a, design.md
+    // D5). Не налаштовано чи не розшифровується ключ — явний FAILED після claim(), як і
+    // збій embeddings нижче
+    let generation: AiGeneration | null = null;
+    try {
+      generation = await this.runtime.generation();
+    } catch (error) {
+      this.logger.error(
+        { err: error instanceof Error ? error.message : 'unknown', messageId: data.messageId },
+        'AI provider is not usable with the current settings',
+      );
+    }
+
     // Фільтр `audience` — за роллю юзера на момент генерації; у джерело йдуть лише
     // роль і питання (§9.1). Помилка embedding — не привід відповідати без джерел
     // (design.md D4): відповідь буде явно FAILED, але лише після claim()
@@ -296,7 +323,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     const claimed = await this.transactions.withTenantTx((tx) =>
       this.state.claim(tx, data.messageId, data.conversationId, {
         leaseMs: this.config.leaseMs,
-        model: this.config.model,
+        model: generation?.model ?? this.config.model,
         knowledgeVersion: knowledge?.version ?? KNOWLEDGE_UNAVAILABLE,
         knowledgeChunks: knowledge?.excerpts ? toKnowledgeChunkRefs(knowledge.excerpts) : null,
       }),
@@ -306,7 +333,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       return null;
     }
 
-    if (knowledge === null) {
+    if (generation === null || knowledge === null) {
       await this.finalize({
         messageId: data.messageId,
         conversationId: data.conversationId,
@@ -316,7 +343,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         text: '',
         chunkCount: 0,
         status: 'FAILED',
-        errorCode: knowledgeFailure,
+        errorCode: generation === null ? 'PROVIDER_UNAVAILABLE' : knowledgeFailure,
         usage: null,
       });
       return null;
@@ -335,10 +362,40 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
           user: context.user,
           organization: context.organization,
         }),
-        model: this.config.model,
+        model: generation.model,
         maxOutputTokens: this.config.maxOutputTokens,
       },
+      provider: generation.provider,
     };
+  }
+
+  /**
+   * Закриття відповіді, коли асистент недоступний tenant-у (AI-5a): той самий умовний
+   * перехід, що для RETIRED-розмови, плюс `completed` після комміту — відкрита панель
+   * перестає чекати на відповідь, яка вже не прийде.
+   */
+  private async cancelUnavailable(
+    data: GenerateAiReply,
+    context: GenerationContext,
+  ): Promise<void> {
+    await this.transactions.withTenantTx(async (tx) => {
+      const cancelled = await this.state.cancelRetired(tx, data.messageId);
+      if (!cancelled) {
+        return;
+      }
+      this.transactions.onCommit(tx, () => {
+        this.realtime.aiCompleted(context.tenantId, context.userId, {
+          conversationId: data.conversationId,
+          messageId: data.messageId,
+          status: 'CANCELLED',
+          errorCode: null,
+          occurredAt: new Date().toISOString(),
+        });
+      });
+    });
+    this.logger.log(
+      `AI reply ${data.messageId} cancelled — assistant is unavailable for the tenant`,
+    );
   }
 
   /**
@@ -436,6 +493,8 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         history,
         user: { role: user.role, locale: user.locale },
         organization: aiSettings.settings,
+        tenantId: reply.tenantId,
+        userId: reply.conversation.userId,
       };
     });
   }

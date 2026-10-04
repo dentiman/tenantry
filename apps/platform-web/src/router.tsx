@@ -18,6 +18,7 @@ import { TenantsPage } from './pages/tenants';
 import { TenantDetailPage } from './pages/tenant-detail';
 import { JobsPage } from './pages/jobs';
 import { QueuesPage } from './pages/queues';
+import { AiSettingsPage } from './pages/ai-settings';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAppearancePage } from './pages/user-settings/appearance';
 
@@ -189,6 +190,27 @@ const operationsQueuesRoute = createRoute({
   component: QueuesPage,
 });
 
+/** Area «AI» — налаштування асистента платформи (AI-5a). Layout-роут без компонента */
+const aiRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/ai',
+});
+
+const aiIndexRoute = createRoute({
+  getParentRoute: () => aiRoute,
+  path: '/',
+  beforeLoad: () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: '/ai/settings', replace: true });
+  },
+});
+
+const aiSettingsRoute = createRoute({
+  getParentRoute: () => aiRoute,
+  path: 'settings',
+  component: AiSettingsPage,
+});
+
 /**
  * ОСОБИСТІ налаштування — area без пункту в рейлі: вхід із дропдауна аватара.
  * Той самий URL-префікс, що в tenant-web — однакова ментальна модель для
@@ -229,11 +251,8 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     appIndexRoute,
     tenantsRoute.addChildren([tenantsIndexRoute, tenantDetailRoute]),
-    operationsRoute.addChildren([
-      operationsIndexRoute,
-      operationsJobsRoute,
-      operationsQueuesRoute,
-    ]),
+    operationsRoute.addChildren([operationsIndexRoute, operationsJobsRoute, operationsQueuesRoute]),
+    aiRoute.addChildren([aiIndexRoute, aiSettingsRoute]),
     userSettingsRoute.addChildren([userSettingsProfileRoute, userSettingsAppearanceRoute]),
     notFoundRoute,
   ]),

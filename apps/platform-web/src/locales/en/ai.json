@@ -1,0 +1,54 @@
+{
+  "title": "AI",
+  "loading": "Loading AI settings",
+  "loadFailed": "Could not load the AI settings.",
+  "settings": {
+    "title": "Assistant settings",
+    "description": "One provider and model for the whole platform. A field left empty uses the deployment environment."
+  },
+  "installationDisabledTitle": "Disabled by the deployment",
+  "installationDisabled": "AI_ENABLED is off in this installation's environment. These settings are saved but the assistant stays off until the deployment enables it.",
+  "enabled": "Assistant enabled on the platform",
+  "enabledHint": "When off, the assistant is unavailable to every tenant. Tenant permissions and tenant admins' choices are kept.",
+  "provider": "Provider",
+  "providerFromEnv": "From the environment ({{value}})",
+  "providers": {
+    "openai-compat": "OpenAI-compatible (OpenRouter, OpenAI, …)",
+    "fake": "Fake (development, no network)"
+  },
+  "baseUrl": "Base URL",
+  "model": "Model",
+  "effective": "In use: {{value}} ({{source}})",
+  "notSet": "not set",
+  "source": {
+    "platform": "set here",
+    "env": "from the environment"
+  },
+  "apiKey": {
+    "title": "API key",
+    "stored": "Stored key",
+    "reveal": "Show the key",
+    "hide": "Hide the key",
+    "revealHint": "Showing the key is recorded in the change log with your name.",
+    "fromEnv": "No key is stored here; the key from the environment is used.",
+    "none": "No key is configured here or in the environment.",
+    "setLabel": "API key",
+    "replaceLabel": "New API key",
+    "setHint": "Stored encrypted. Leave empty to keep the current key.",
+    "replace": "Replace key",
+    "clear": "Remove key",
+    "undoClear": "Keep key",
+    "clearPending": "The key will be removed when you save; the environment key, if any, applies.",
+    "noEncryptionTitle": "Encryption is not configured",
+    "noEncryption": "AI_SECRETS_KEY is not set for the platform API, so a key cannot be stored here. Other settings can still be saved."
+  },
+  "save": "Save settings",
+  "saved": "AI settings saved",
+  "updated": "Last changed {{at}} by {{by}}",
+  "events": {
+    "title": "Change log",
+    "updated": "Settings changed: {{fields}}",
+    "keyRevealed": "API key shown"
+  },
+  "fromEnvPlaceholder": "Not set — the environment value applies"
+}

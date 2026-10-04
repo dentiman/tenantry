@@ -7,6 +7,7 @@
  */
 
 export interface AiSettingsDto {
+  enabled: boolean;
   /** @maxLength 500 */
   persona: string;
   /** @maxLength 4000 */

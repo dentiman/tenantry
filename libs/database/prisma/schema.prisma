@@ -30,6 +30,7 @@ model Tenant {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   users                    User[]
+  aiAccess                 TenantAiAccess?
   authSessions             AuthSession[]
   verificationTokens       VerificationToken[]
   files                    File[]
@@ -1259,4 +1260,48 @@ model AiKnowledgeChunk {
   @@index([tenantId, contentHash, embeddingModel], map: "ai_knowledge_chunks_tenant_hash_idx")
   @@index([searchVector], map: "ai_knowledge_chunks_search_vector_idx", type: Gin)
   @@map("ai_knowledge_chunks")
+}
+
+// AI-5a (docs/ai-platform-controls.md): налаштування асистента, якими керує оператор
+// платформи. Один рядок; NULL-поля беруться з env. Пише лише platform-api, saas_app —
+// тільки SELECT (міграція ai_platform_settings). Ключ — лише зашифрований.
+model PlatformAiSettings {
+  id              String   @id @default("default")
+  enabled         Boolean  @default(true)
+  provider        String?
+  baseUrl         String?  @map("base_url")
+  model           String?
+  // v1:<iv>:<tag>:<ciphertext> (AES-256-GCM, AI_SECRETS_KEY); підказка — для маски
+  apiKeyEncrypted String?  @map("api_key_encrypted")
+  apiKeyHint      String?  @map("api_key_hint")
+  updatedBy       String?  @map("updated_by")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("platform_ai_settings")
+}
+
+// Append-only журнал змін налаштувань і розкриттів ключа. saas_app доступу не має
+model PlatformAiSettingsEvent {
+  id         String   @id @default(uuid())
+  type       String
+  actorId    String?  @map("actor_id")
+  actorLabel String?  @map("actor_label")
+  changes    Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("platform_ai_settings_events")
+}
+
+// Дозвіл платформи для tenant-а. Немає рядка — дозволено. saas_app читає лише свій
+// рядок (RLS FOR SELECT), пише лише platform-api
+model TenantAiAccess {
+  tenantId  String   @id @map("tenant_id")
+  allowed   Boolean
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_ai_access")
 }

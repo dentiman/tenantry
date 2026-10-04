@@ -1,14 +1,14 @@
-import { Body, Controller, Get, Inject, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
-  AiSettings,
+  AiSettingsResponse,
   CalendarSettings,
   SettingsBootstrap,
   GeneralSettingsResponse,
 } from '@saas-skeleton/contracts';
 import { Role } from '@saas-skeleton/database';
-import { AI_CONFIG, type AiConfig } from '@saas-skeleton/shared';
+import { AiAvailabilityService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SettingsService } from './settings.service';
@@ -17,6 +17,7 @@ import { toActivityResponse } from '../activities/activities.mapper';
 import { ActivityListResponseDto } from '../activities/dto/activity-response.dto';
 import {
   AiSettingsDto,
+  AiSettingsResponseDto,
   SettingsBootstrapDto,
   CalendarSettingsDto,
   GeneralSettingsDto,
@@ -45,7 +46,7 @@ export class SettingsController {
   constructor(
     private readonly settings: SettingsService,
     private readonly activities: ActivitiesService,
-    @Inject(AI_CONFIG) private readonly aiConfig: AiConfig,
+    private readonly availability: AiAvailabilityService,
   ) {}
 
   /**
@@ -57,7 +58,8 @@ export class SettingsController {
   async bootstrap(): Promise<SettingsBootstrap> {
     const organization = await this.settings.current();
     return toSettingsBootstrap(organization, this.settings.parseCalendar(organization.settings), {
-      ai: this.aiConfig.enabled,
+      // AI-5a: усі чотири рівні — інсталяція, платформа, дозвіл tenant-у, Tenant Admin
+      ai: (await this.availability.forCurrentTenant()).available,
     });
   }
 
@@ -111,19 +113,27 @@ export class SettingsController {
    */
   @Get('ai')
   @Roles(Role.ADMIN)
-  @ApiOkResponse({ type: AiSettingsDto.Output })
-  async ai(): Promise<AiSettings> {
-    return this.settings.ai();
+  @ApiOkResponse({ type: AiSettingsResponseDto.Output })
+  async ai(): Promise<AiSettingsResponse> {
+    return {
+      ...(await this.settings.ai()),
+      availability: await this.availability.forCurrentTenant(),
+    };
   }
 
+  /**
+   * Секція разом із вмикачем Tenant Admin (AI-5a). Доступність у відповіді рахується ПІСЛЯ
+   * запису — екран одразу бачить, чи зміна щось увімкнула з урахуванням рівнів платформи
+   */
   @Put('ai')
   @Roles(Role.ADMIN)
-  @ApiOkResponse({ type: AiSettingsDto.Output })
+  @ApiOkResponse({ type: AiSettingsResponseDto.Output })
   async updateAi(
     @Body() dto: AiSettingsDto,
     @CurrentUser() actor: JwtPayload,
-  ): Promise<AiSettings> {
-    return this.settings.updateAi(dto, actor);
+  ): Promise<AiSettingsResponse> {
+    const ai = await this.settings.updateAi(dto, actor);
+    return { ...ai, availability: await this.availability.forCurrentTenant() };
   }
 
   /**

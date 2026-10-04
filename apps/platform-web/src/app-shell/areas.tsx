@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react';
-import { Activity, Building2, UserCog, type LucideIcon } from 'lucide-react';
+import { Activity, Bot, Building2, UserCog, type LucideIcon } from 'lucide-react';
 import { isUnder, type AreaPrefix } from './paths';
 import { OperationsSidebar } from './areas/operations-sidebar';
+import { AiSidebar } from './areas/ai-sidebar';
 import { TenantsSidebar } from './areas/tenants-sidebar';
 import { UserSettingsSidebar } from './areas/user-settings-sidebar';
 
-export type AreaId = 'tenants' | 'operations' | 'user-settings';
+export type AreaId = 'tenants' | 'operations' | 'ai' | 'user-settings';
 
 export interface AppArea {
   id: AreaId;
@@ -47,6 +48,13 @@ export const APP_AREAS: readonly AppArea[] = [
     labelKey: 'areas.operations',
     icon: Activity,
     Sidebar: OperationsSidebar,
+  },
+  {
+    id: 'ai',
+    prefix: '/ai',
+    labelKey: 'areas.ai',
+    icon: Bot,
+    Sidebar: AiSidebar,
   },
   {
     id: 'user-settings',

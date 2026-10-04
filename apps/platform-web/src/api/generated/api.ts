@@ -25,6 +25,9 @@ import type {
   CreateTenantDto,
   JobListResponseDtoOutput,
   JobsFindAllParams,
+  PlatformAiApiKeyRevealResponseDtoOutput,
+  PlatformAiSettingsEventListResponseDtoOutput,
+  PlatformAiSettingsResponseDtoOutput,
   PlatformAuthResponseDtoOutput,
   PlatformAuthTokensDtoOutput,
   PlatformLoginDto,
@@ -33,6 +36,7 @@ import type {
   TenantListResponseDtoOutput,
   TenantResponseDtoOutput,
   TenantsFindAllParams,
+  UpdatePlatformAiSettingsDto,
   UpdateTenantDto,
 } from './model';
 
@@ -1001,6 +1005,350 @@ export function useJobsQueues<TData = Awaited<ReturnType<typeof jobsQueues>>, TE
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getJobsQueuesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiSettingsGet = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PlatformAiSettingsResponseDtoOutput>(
+    { url: `/api/ai/settings`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiSettingsGetQueryKey = () => {
+  return [`/api/ai/settings`] as const;
+};
+
+export const getAiSettingsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiSettingsGetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiSettingsGet>>> = ({ signal }) =>
+    aiSettingsGet(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiSettingsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiSettingsGetQueryResult = NonNullable<Awaited<ReturnType<typeof aiSettingsGet>>>;
+export type AiSettingsGetQueryError = unknown;
+
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiSettingsGetQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiSettingsUpdate = (
+  updatePlatformAiSettingsDto: UpdatePlatformAiSettingsDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<PlatformAiSettingsResponseDtoOutput>(
+    {
+      url: `/api/ai/settings`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: updatePlatformAiSettingsDto,
+    },
+    options,
+  );
+};
+
+export const getAiSettingsUpdateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiSettingsUpdate>>,
+    TError,
+    { data: UpdatePlatformAiSettingsDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>,
+  TError,
+  { data: UpdatePlatformAiSettingsDto },
+  TContext
+> => {
+  const mutationKey = ['aiSettingsUpdate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiSettingsUpdate>>,
+    { data: UpdatePlatformAiSettingsDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiSettingsUpdate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiSettingsUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>
+>;
+export type AiSettingsUpdateMutationBody = UpdatePlatformAiSettingsDto;
+export type AiSettingsUpdateMutationError = unknown;
+
+export const useAiSettingsUpdate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiSettingsUpdate>>,
+      TError,
+      { data: UpdatePlatformAiSettingsDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>,
+  TError,
+  { data: UpdatePlatformAiSettingsDto },
+  TContext
+> => {
+  const mutationOptions = getAiSettingsUpdateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiSettingsReveal = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PlatformAiApiKeyRevealResponseDtoOutput>(
+    { url: `/api/ai/settings/api-key/reveal`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getAiSettingsRevealMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiSettingsReveal>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<Awaited<ReturnType<typeof aiSettingsReveal>>, TError, void, TContext> => {
+  const mutationKey = ['aiSettingsReveal'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSettingsReveal>>, void> = () => {
+    return aiSettingsReveal(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiSettingsRevealMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiSettingsReveal>>
+>;
+
+export type AiSettingsRevealMutationError = unknown;
+
+export const useAiSettingsReveal = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiSettingsReveal>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof aiSettingsReveal>>, TError, void, TContext> => {
+  const mutationOptions = getAiSettingsRevealMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiSettingsEvents = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<PlatformAiSettingsEventListResponseDtoOutput>(
+    { url: `/api/ai/settings/events`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiSettingsEventsQueryKey = () => {
+  return [`/api/ai/settings/events`] as const;
+};
+
+export const getAiSettingsEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiSettingsEvents>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsEvents>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiSettingsEventsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiSettingsEvents>>> = ({ signal }) =>
+    aiSettingsEvents(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiSettingsEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiSettingsEventsQueryResult = NonNullable<Awaited<ReturnType<typeof aiSettingsEvents>>>;
+export type AiSettingsEventsQueryError = unknown;
+
+export function useAiSettingsEvents<
+  TData = Awaited<ReturnType<typeof aiSettingsEvents>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsEvents>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsEvents>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsEvents<
+  TData = Awaited<ReturnType<typeof aiSettingsEvents>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsEvents>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsEvents>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsEvents<
+  TData = Awaited<ReturnType<typeof aiSettingsEvents>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiSettingsEvents<
+  TData = Awaited<ReturnType<typeof aiSettingsEvents>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiSettingsEventsQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

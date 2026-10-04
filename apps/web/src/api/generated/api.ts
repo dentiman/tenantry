@@ -27,7 +27,7 @@ import type {
   AiCitationContentResponseDtoOutput,
   AiConversationResponseDtoOutput,
   AiSettingsDto,
-  AiSettingsDtoOutput,
+  AiSettingsResponseDtoOutput,
   AskAiRequestDto,
   AskAiResponseDtoOutput,
   AuthResponseDtoOutput,
@@ -3142,7 +3142,7 @@ export const settingsAi = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<AiSettingsDtoOutput>(
+  return customInstance<AiSettingsResponseDtoOutput>(
     { url: `/api/settings/ai`, method: 'GET', signal },
     options,
   );
@@ -3236,7 +3236,7 @@ export const settingsUpdateAi = (
   aiSettingsDto: AiSettingsDto,
   options?: SecondParameter<typeof customInstance>,
 ) => {
-  return customInstance<AiSettingsDtoOutput>(
+  return customInstance<AiSettingsResponseDtoOutput>(
     {
       url: `/api/settings/ai`,
       method: 'PUT',

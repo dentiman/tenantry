@@ -3,6 +3,10 @@ import { AI_CONFIG, loadAiConfig, type AiConfig } from './ai.config';
 import { AiCancelChannel } from './ai-cancel.channel';
 import { AiMessageStateService } from './ai-message-state.service';
 import { AiUsageQuotaService } from './ai-usage-quota.service';
+import {
+  AiAvailabilityService,
+  PlatformAiSettingsReader,
+} from './platform/platform-ai-settings.reader';
 
 const aiConfigProvider: Provider = {
   provide: AI_CONFIG,
@@ -15,7 +19,22 @@ const aiConfigProvider: Provider = {
  */
 @Global()
 @Module({
-  providers: [aiConfigProvider, AiCancelChannel, AiMessageStateService, AiUsageQuotaService],
-  exports: [AI_CONFIG, AiCancelChannel, AiMessageStateService, AiUsageQuotaService],
+  providers: [
+    aiConfigProvider,
+    AiCancelChannel,
+    AiMessageStateService,
+    AiUsageQuotaService,
+    // AI-5a: налаштування платформи й доступність — і api (403, bootstrap), і worker
+    PlatformAiSettingsReader,
+    AiAvailabilityService,
+  ],
+  exports: [
+    AI_CONFIG,
+    AiCancelChannel,
+    AiMessageStateService,
+    AiUsageQuotaService,
+    PlatformAiSettingsReader,
+    AiAvailabilityService,
+  ],
 })
 export class AiModule {}

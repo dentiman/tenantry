@@ -18,13 +18,15 @@ describe('readAiSettings', () => {
 
   it('валідна секція читається й тримиться; бракуючий ключ добивається дефолтом', () => {
     expect(readAiSettings({ ai: { persona: '  Ava  ', instructions: 'Be brief.' } })).toEqual({
-      settings: { persona: 'Ava', instructions: 'Be brief.' },
+      // AI-5a: секція до вмикача Tenant Admin читається як увімкнена
+      settings: { enabled: true, persona: 'Ava', instructions: 'Be brief.' },
       valid: true,
     });
     expect(readAiSettings({ ai: { persona: 'Ava' } })).toEqual({
-      settings: { persona: 'Ava', instructions: '' },
+      settings: { enabled: true, persona: 'Ava', instructions: '' },
       valid: true,
     });
+    expect(readAiSettings({ ai: { enabled: false } }).settings.enabled).toBe(false);
   });
 
   it.each([

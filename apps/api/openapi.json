@@ -1415,7 +1415,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AiSettingsDto_Output"
+                  "$ref": "#/components/schemas/AiSettingsResponseDto_Output"
                 }
               }
             }
@@ -1449,7 +1449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AiSettingsDto_Output"
+                  "$ref": "#/components/schemas/AiSettingsResponseDto_Output"
                 }
               }
             }
@@ -5349,9 +5349,12 @@
           "defaultAllDayReminderMinutes"
         ]
       },
-      "AiSettingsDto_Output": {
+      "AiSettingsResponseDto_Output": {
         "type": "object",
         "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
           "persona": {
             "type": "string",
             "maxLength": 500
@@ -5359,17 +5362,50 @@
           "instructions": {
             "type": "string",
             "maxLength": 4000
+          },
+          "availability": {
+            "type": "object",
+            "properties": {
+              "installation": {
+                "type": "boolean"
+              },
+              "platform": {
+                "type": "boolean"
+              },
+              "tenantAllowed": {
+                "type": "boolean"
+              },
+              "tenantEnabled": {
+                "type": "boolean"
+              },
+              "available": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "installation",
+              "platform",
+              "tenantAllowed",
+              "tenantEnabled",
+              "available"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
+          "enabled",
           "persona",
-          "instructions"
+          "instructions",
+          "availability"
         ],
         "additionalProperties": false
       },
       "AiSettingsDto": {
         "type": "object",
         "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
           "persona": {
             "type": "string",
             "maxLength": 500
@@ -5380,6 +5416,7 @@
           }
         },
         "required": [
+          "enabled",
           "persona",
           "instructions"
         ]

@@ -106,6 +106,23 @@ async function ensureDbGrants(dbName: string): Promise<void> {
          GRANT USAGE, SELECT ON SEQUENCES TO saas_app, saas_platform`,
     );
 
+    // Розділення plane-ів на рівні привілеїв (міграції роблять REVOKE для таблиць control
+    // plane). Широкий GRANT вище при КОЖНОМУ запуску повертав saas_app DML і на них —
+    // тобто скасовував REVOKE міграцій щоразу, коли ролі переналаштовували після міграцій
+    // (e2e global setup, ws:init, db_roles після деплою). Тому обмеження застосовуються
+    // тут заново, для тих таблиць, що вже існують.
+    for (const { table, saasApp } of CONTROL_PLANE_TABLES) {
+      const exists = await client.query(
+        `SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = $1`,
+        [table],
+      );
+      if ((exists.rowCount ?? 0) === 0) continue;
+      await client.query(`REVOKE ALL ON public."${table}" FROM saas_app`);
+      if (saasApp === 'select') {
+        await client.query(`GRANT SELECT ON public."${table}" TO saas_app`);
+      }
+    }
+
     // pg-boss: схема належить runtime-ролі (він сам мігрує свої таблиці при старті).
     // CREATE на database — бо install-шлях pg-boss робить CREATE SCHEMA IF NOT EXISTS,
     // а Postgres перевіряє ACL до перевірки існування схеми
@@ -128,6 +145,20 @@ async function ensureDbGrants(dbName: string): Promise<void> {
     await client.end();
   }
 }
+
+/**
+ * Таблиці control plane і що з ними може tenant-runtime (`saas_app`). Має збігатися з
+ * REVOKE/GRANT у міграціях — ті діють при створенні таблиці, цей список — при кожному
+ * переналаштуванні ролей.
+ */
+const CONTROL_PLANE_TABLES: readonly { table: string; saasApp: 'none' | 'select' }[] = [
+  { table: 'platform_users', saasApp: 'none' },
+  { table: 'platform_auth_sessions', saasApp: 'none' },
+  // AI-5a: tenant-процеси читають налаштування й свій дозвіл, але не пишуть
+  { table: 'platform_ai_settings', saasApp: 'select' },
+  { table: 'platform_ai_settings_events', saasApp: 'none' },
+  { table: 'tenant_ai_access', saasApp: 'select' },
+];
 
 async function main(): Promise<void> {
   const dbName = targetDbName();

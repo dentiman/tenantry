@@ -100,6 +100,9 @@ x-ai-env: &ai-env
 x-ai-provider-env: &ai-provider-env
   AI_BASE_URL: ${AI_BASE_URL:-}
   AI_API_KEY: ${AI_API_KEY:-}
+  # AI-5a: майстер-ключ, яким зашифровано ключ провайдера, збережений суперадміном у UI.
+  # Лише worker і platform-api (docs/ai-platform-controls.md §2.3); tenant api — ні
+  AI_SECRETS_KEY: ${AI_SECRETS_KEY:-}
 
 x-s3-env: &s3-env
   S3_ENDPOINT: ${S3_ENDPOINT}
@@ -226,7 +229,11 @@ services:
     environment:
       # AUTH-2 (R-15): platform-api — другий споживач throttler-а на Valkey,
       # тому *realtime-broker-env тут, а не тільки *db-env
-      <<: [*db-env, *realtime-broker-env]
+      # AI-5a: *ai-env — env-дефолти, які екран налаштувань AI показує як «з environment»;
+      # AI_SECRETS_KEY — шифрування ключа провайдера (ключа самого провайдера тут немає)
+      <<: [*db-env, *realtime-broker-env, *ai-env]
+      AI_SECRETS_KEY: ${AI_SECRETS_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
       NODE_ENV: production
       PLATFORM_PORT: 3002
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET}

@@ -22,6 +22,8 @@ export * from './aiConversationResponseDtoOutputMessagesItemRole';
 export * from './aiConversationResponseDtoOutputMessagesItemStatus';
 export * from './aiSettingsDto';
 export * from './aiSettingsDtoOutput';
+export * from './aiSettingsResponseDtoOutput';
+export * from './aiSettingsResponseDtoOutputAvailability';
 export * from './askAiRequestDto';
 export * from './askAiResponseDtoOutput';
 export * from './askAiResponseDtoOutputQuestion';

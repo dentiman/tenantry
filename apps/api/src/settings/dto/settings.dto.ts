@@ -3,6 +3,7 @@ import {
   SettingsBootstrapSchema,
   CalendarSettingsSchema,
   AiSettingsSchema,
+  AiSettingsResponseSchema,
   GeneralSettingsResponseSchema,
   GeneralSettingsSchema,
 } from '@saas-skeleton/contracts';
@@ -12,3 +13,4 @@ export class GeneralSettingsResponseDto extends createZodDto(GeneralSettingsResp
 export class CalendarSettingsDto extends createZodDto(CalendarSettingsSchema) {}
 export class SettingsBootstrapDto extends createZodDto(SettingsBootstrapSchema) {}
 export class AiSettingsDto extends createZodDto(AiSettingsSchema) {}
+export class AiSettingsResponseDto extends createZodDto(AiSettingsResponseSchema) {}

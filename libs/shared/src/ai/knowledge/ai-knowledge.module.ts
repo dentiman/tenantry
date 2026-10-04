@@ -1,19 +1,21 @@
 import { Logger, Module, type Provider } from '@nestjs/common';
 import { TenantTransactions } from '@saas-skeleton/database';
 import { AI_CONFIG, type AiConfig } from '../ai.config';
+import { PlatformAiSettingsReader } from '../platform/platform-ai-settings.reader';
 import { createKnowledgeSource } from './knowledge-source.factory';
 import { KNOWLEDGE_SOURCE, type KnowledgeSource } from './knowledge-source';
 import { StaticKnowledgeSource } from './static-knowledge-source';
 
 const knowledgeSourceFactory: Provider = {
   provide: KNOWLEDGE_SOURCE,
-  inject: [AI_CONFIG, TenantTransactions],
+  inject: [AI_CONFIG, TenantTransactions, PlatformAiSettingsReader],
   useFactory: async (
     config: AiConfig,
     transactions: TenantTransactions,
+    settings: PlatformAiSettingsReader,
   ): Promise<KnowledgeSource> => {
     const logger = new Logger('AiKnowledgeModule');
-    const source = createKnowledgeSource(config, transactions);
+    const source = createKnowledgeSource(config, transactions, settings);
     if (source instanceof StaticKnowledgeSource) {
       const { version, documents } = await source.select({ role: 'ADMIN', question: '' });
       logger.log(`AI knowledge: static, version ${version}, ${String(documents.length)} documents`);

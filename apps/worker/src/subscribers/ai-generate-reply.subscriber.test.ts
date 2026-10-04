@@ -12,6 +12,7 @@ import {
   buildKnowledgeCorpus,
   serializeKnowledgeCorpus,
   type AiConfig,
+  type AiRuntime,
   type KnowledgeExcerpt,
   type KnowledgeQuery,
   type KnowledgeSelection,
@@ -416,6 +417,7 @@ function makeSubscriber(
   cancel: Partial<AiCancelChannel> = {},
   provider: LlmProvider = new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 }),
   knowledgeSource: KnowledgeSource = new StaticKnowledgeSource(TEST_KNOWLEDGE),
+  runtime: Partial<AiRuntime> = {},
 ): AiGenerateReplySubscriber {
   const config: AiConfig = {
     enabled: true,
@@ -460,7 +462,12 @@ function makeSubscriber(
     new AiMessageStateService(),
     world.realtime as never,
     cancelChannel,
-    provider,
+    {
+      // AI-5a: доступність і провайдер — на кожну генерацію; тут статичні
+      availableForCurrentTenant: () => Promise.resolve(true),
+      generation: () => Promise.resolve({ provider, model: config.model }),
+      ...runtime,
+    },
     knowledgeSource,
     config,
     new AiUsageQuotaService(config),
@@ -1351,5 +1358,44 @@ describe('AiGenerateReplySubscriber — AI-2a.3 retrieval', () => {
     const world = makeWorld();
     await makeSubscriber(world).handle(job);
     expect(world.reply().knowledgeChunks).not.toBeInstanceOf(Array);
+  });
+});
+
+describe('AiGenerateReplySubscriber — AI-5a runtime settings and availability', () => {
+  it('асистент недоступний tenant-у: CANCELLED без виклику моделі, completed емітиться', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider, undefined, {
+      availableForCurrentTenant: () => Promise.resolve(false),
+    }).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(world.reply().attempt).toBe(0); // claim() так і не відбувся
+    expect(world.completed).toEqual([expect.objectContaining({ status: 'CANCELLED' })]);
+  });
+
+  it('модель береться з налаштувань платформи на кожну генерацію', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider, undefined, {
+      generation: () => Promise.resolve({ provider, model: 'platform-model' }),
+    }).handle(job);
+
+    expect(requests[0]?.model).toBe('platform-model');
+    expect(world.reply().status).toBe('COMPLETE');
+  });
+
+  it('налаштування не дають провайдера: FAILED / PROVIDER_UNAVAILABLE, модель не викликається', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    await makeSubscriber(world, {}, {}, provider, undefined, {
+      generation: () => Promise.reject(new Error('secret-invalid')),
+    }).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
+    expect(world.completed).toHaveLength(1);
   });
 });

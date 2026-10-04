@@ -1,4 +1,11 @@
 import { useState, type ReactNode } from 'react';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from '@saas-skeleton/ui/components/ui/field';
+import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { TriangleAlert } from 'lucide-react';
 import { useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -201,6 +208,22 @@ export function TenantDetailPage() {
             </Fact>
             <Separator />
             <Fact label={t('detail.state.since')}>{formatDate(tenant.createdAt)}</Fact>
+            <Separator />
+            {/* Дозвіл платформи (AI-5a): Tenant Admin вмикає асистента лише в його межах */}
+            <Field orientation="horizontal" className="py-1.5">
+              <FieldContent>
+                <FieldLabel htmlFor="tenant-ai-allowed">{t('detail.state.ai')}</FieldLabel>
+                <FieldDescription>{t('detail.state.aiHint')}</FieldDescription>
+              </FieldContent>
+              <Switch
+                id="tenant-ai-allowed"
+                checked={tenant.aiAllowed}
+                disabled={updateTenant.isPending}
+                onCheckedChange={(checked) => {
+                  updateTenant.mutate({ id: tenant.id, data: { aiAllowed: checked } });
+                }}
+              />
+            </Field>
           </CardContent>
         </Card>
       </div>

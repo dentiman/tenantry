@@ -221,6 +221,11 @@ Zero Data Retention у кабінеті і дешевою моделлю з [ai-
    У stack-файлі `AI_BASE_URL`/`AI_API_KEY` сидять в окремому якорі `x-ai-provider-env`, який
    отримує **лише `worker`**: api модель не викликає, і ключ йому не видається.
 4. `AI_ENABLED=true` (читають і api, і worker).
+5. **AI-5a: `AI_SECRETS_KEY` — CI Variable (Protected + Masked)**, `openssl rand -base64 32`.
+   Отримують лише `worker` і `platform-api`. Без нього суперадмін не може зберегти ключ провайдера
+   в platform-web → AI; з ним модель, URL і ключ міняються в UI без redeploy, а `AI_*` вище лишаються
+   дефолтами ([ai-platform-controls.md](ai-platform-controls.md)). Втрата майстер-ключа = ключ
+   провайдера треба ввести в UI заново.
 
 Без `AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` при `AI_ENABLED=true` worker не стартує й називає
 змінну; у worker-а `update_config` з `order: start-first` + `failure_action: rollback`, тож

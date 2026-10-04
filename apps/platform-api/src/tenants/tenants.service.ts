@@ -1,12 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemPrismaService } from '@saas-skeleton/database';
-import type { Tenant } from '@saas-skeleton/database';
+import type { TenantWithAiAccess } from './tenants.mapper';
 import type { CreateTenant, TenantQuery, UpdateTenant } from '@saas-skeleton/contracts/platform';
 import { fieldConflictException } from '@saas-skeleton/shared/errors';
 import * as argon2 from 'argon2';
 
 /** Назва дефолтного каналу чату (docs/chat.md §7.4) */
 const DEFAULT_CHANNEL_TITLE = 'General';
+
+/** Дозвіл AI-асистента поруч із tenant-ом у кожній відповіді (AI-5a) */
+const AI_ACCESS = { aiAccess: { select: { allowed: true } } } as const;
 
 /**
  * CRUD тенантів — ЄДИНЕ місце в системі, де tenant-и створюються/suspend-яться
@@ -21,7 +24,7 @@ export class TenantsService {
   constructor(private readonly prisma: SystemPrismaService) {}
 
   async findAll(query: TenantQuery): Promise<{
-    items: Tenant[];
+    items: TenantWithAiAccess[];
     total: number;
     page: number;
     limit: number;
@@ -49,6 +52,7 @@ export class TenantsService {
         skip: (page - 1) * limit,
         take: limit,
         orderBy,
+        include: AI_ACCESS,
       }),
       this.prisma.tenant.count({ where }),
     ]);
@@ -56,8 +60,8 @@ export class TenantsService {
     return { items, total, page, limit };
   }
 
-  async findOne(id: string): Promise<Tenant> {
-    const tenant = await this.prisma.tenant.findUnique({ where: { id } });
+  async findOne(id: string): Promise<TenantWithAiAccess> {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id }, include: AI_ACCESS });
     if (!tenant) {
       throw new NotFoundException(`Tenant with id "${id}" not found`);
     }
@@ -68,7 +72,7 @@ export class TenantsService {
    * Створення = Tenant + перший admin в ОДНІЙ транзакції (або все, або нічого).
    * Початковий пароль admin-а задає оператор (рішення 2026-07-16; invite-флоу — MT-4).
    */
-  async create(data: CreateTenant): Promise<Tenant> {
+  async create(data: CreateTenant): Promise<TenantWithAiAccess> {
     this.logger.log(`Creating tenant: ${data.slug}`);
 
     const existing = await this.prisma.tenant.findUnique({ where: { slug: data.slug } });
@@ -150,13 +154,25 @@ export class TenantsService {
     });
 
     this.logger.log(`Tenant created: ${tenant.slug} (${tenant.id}), admin: ${data.admin.email}`);
-    return tenant;
+    // Новий tenant без запису дозволу — дозволено, як і решта (AI-5a)
+    return { ...tenant, aiAccess: null };
   }
 
   /** suspend/resume (isActive) + перейменування; login у data plane реагує миттєво */
-  async update(id: string, data: UpdateTenant): Promise<Tenant> {
+  async update(id: string, data: UpdateTenant): Promise<TenantWithAiAccess> {
     await this.findOne(id);
-    const tenant = await this.prisma.tenant.update({ where: { id }, data });
+    const { aiAllowed, ...fields } = data;
+    const tenant = await this.prisma.$transaction(async (tx) => {
+      // Дозвіл AI — окрема таблиця, яку tenant-процеси лише читають (AI-5a, design.md D4)
+      if (aiAllowed !== undefined) {
+        await tx.tenantAiAccess.upsert({
+          where: { tenantId: id },
+          create: { tenantId: id, allowed: aiAllowed },
+          update: { allowed: aiAllowed },
+        });
+      }
+      return tx.tenant.update({ where: { id }, data: fields, include: AI_ACCESS });
+    });
     this.logger.log(
       `Tenant updated: ${tenant.slug} (${tenant.id})${data.isActive !== undefined ? ` — isActive: ${String(data.isActive)}` : ''}`,
     );

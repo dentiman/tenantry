@@ -4,6 +4,8 @@ export {
   CalendarSettingsSchema,
   CALENDAR_SETTINGS_DEFAULTS,
   AiSettingsSchema,
+  AiAvailabilitySchema,
+  AiSettingsResponseSchema,
   AI_SETTINGS_DEFAULTS,
   AI_SETTINGS_LIMITS,
   SettingsBootstrapSchema,
@@ -13,5 +15,7 @@ export type {
   GeneralSettingsResponse,
   CalendarSettings,
   AiSettings,
+  AiAvailability,
+  AiSettingsResponse,
   SettingsBootstrap,
 } from './settings.types';

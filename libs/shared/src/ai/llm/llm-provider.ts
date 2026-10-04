@@ -83,6 +83,3 @@ export class LlmProviderError extends Error {
 export interface LlmProvider {
   generate(request: LlmRequest, signal: AbortSignal): AsyncIterable<LlmChunk>;
 }
-
-/** DI-токен: інтерфейс не існує в рантаймі, класом інжектити не можна */
-export const LLM_PROVIDER = Symbol('LLM_PROVIDER');

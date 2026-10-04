@@ -63,6 +63,10 @@ read the relevant doc before working in that area instead of expecting it here.
   `AI_KNOWLEDGE_BACKEND=static|postgres`, embedding outside any transaction, server-verified
   citations re-authorized on every open; (§19) AI-2a.4 hybrid search (FTS + vector, RRF) and the
   distance threshold chosen by eval.
+- `docs/ai-platform-controls.md` — **current AI course** (AI-5): no new assistant features;
+  model/URL/encrypted key and three-level on/off switch in the superadmin UI (AI-5a), cost
+  ledger with provider-reported and tariff-based cost per call (AI-5b), answer-quality eval
+  with cost (AI-5c). Owner decisions of 2026-10-03 live there.
 - `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table) and
   `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured results) — the
   PostgreSQL + pgvector retrieval track. `docs/ai-sources/README.md` — operator guide for an
@@ -395,8 +399,8 @@ than repeated here:
   `0.3` (participant management, mentions, attachments) and `CHAT-1…4` are designed and not
   built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
 - **AI assistant**: AI-2a done (FMS documentation in the chat with verified citations, hybrid
-  search). Next is **AI-2b** — managed sources (upload, publish, delete through the UI, worker
-  ingest, global vs tenant scope); then AI-3 (maturity, needs EDA-2) and AI-4 (read-only domain
-  tools behind a separate gate) — `docs/ai-assistant.md` §10.
+  search). Feature expansion is paused (AI-2b/AI-3/AI-4 postponed); current work is **AI-5** —
+  platform controls (AI-5a), cost ledger (AI-5b), answer quality (AI-5c):
+  `docs/ai-platform-controls.md`.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

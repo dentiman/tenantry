@@ -12,6 +12,7 @@ import {
   AI_CONFIG,
   AiCancelChannel,
   AiMessageStateService,
+  AiAvailabilityService,
   AiUsageQuotaService,
   MessagePublisher,
   PostgresKnowledgeStore,
@@ -51,13 +52,18 @@ export class AiService {
     private readonly realtime: RealtimeEmitter,
     private readonly usageQuota: AiUsageQuotaService,
     private readonly knowledgeStore: PostgresKnowledgeStore,
+    private readonly availability: AiAvailabilityService,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
   ) {}
 
-  /** Гейт інсталяції. Дефолт — вимкнено, тому це перше, що робить кожен роут */
-  assertEnabled(): void {
-    if (!this.config.enabled) {
-      throw new ForbiddenException('AI assistant is disabled for this installation');
+  /**
+   * Гейт доступності (AI-5a, design.md D6): `AI_ENABLED` інсталяції, вмикач платформи,
+   * дозвіл tenant-у й вибір Tenant Admin. Перше, що робить кожен роут; 403 без
+   * розрізнення рівня — панель однаково зникає за `features.ai`.
+   */
+  async assertEnabled(): Promise<void> {
+    if (!(await this.availability.forCurrentTenant()).available) {
+      throw new ForbiddenException('AI assistant is not available for this tenant');
     }
   }
 

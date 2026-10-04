@@ -3,13 +3,15 @@
   "areas": {
     "tenants": "Tenants",
     "operations": "Operations",
-    "userSettings": "User settings"
+    "userSettings": "User settings",
+    "ai": "AI"
   },
   "nav": {
     "allTenants": "All tenants",
     "jobs": "Jobs",
     "queues": "Queues",
-    "userSettings": "User settings"
+    "userSettings": "User settings",
+    "aiSettings": "Settings"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",
