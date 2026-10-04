@@ -181,3 +181,16 @@ single-digit integers ignored, interleaved order, plus `--only q01,q02`. Clarifi
   set already includes them).
 - The report separates "answer cost as in production" from "actually spent by this run".
 - Dialogue cases: `turns = [{role, content}]` (prior pairs), `question` is the last question.
+
+## Deviations found during implementation
+
+- **Judge output limit 1200, not 400 (I7/I8).** The live run with `anthropic/claude-sonnet-5.5`
+  spent 393 of 400 output tokens on adaptive reasoning and cut the JSON at `{"grounded":5`. The
+  budget estimate uses the same constant, so it stays an upper bound.
+- **Judge error codes gained `truncated`** (unparsable output and `finish_reason = length`), and the
+  raw judge output is kept in `answers.json` for every judge error. A `note` longer than 300
+  characters is truncated instead of failing the schema.
+- **Embedding cost is not in the pre-run estimate** (I8 already said "once"): its billing provider
+  and model are known only after the first call; it is tens of tokens per question.
+- **`refusal_ok` with the judge stays proxy AND `refusal_correct`.** A refusal that still cites an
+  excerpt fails even when the judge approves it — the spec scenario says so; seen live on q37.

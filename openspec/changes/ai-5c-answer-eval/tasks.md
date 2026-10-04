@@ -22,6 +22,6 @@
 ## 4. Verification
 
 - [x] 4.1 Unit: every check, judge parsing, budget guard, config fallback.
-- [ ] 4.2 Run with `fake` (no network) end to end in a slot.
-- [ ] 4.3 Live run: two configurations on `fms-eval.json` via OpenRouter; ledger `eval` total equals the report's total.
-- [ ] 4.4 Docs: README section next to the retrieval eval; docs/ai-platform-controls.md "AI-5c: як реалізовано"; lint/typecheck/build.
+- [x] 4.2 Run with `fake` (no network) end to end in a slot.
+- [x] 4.3 Live run: two configurations on `fms-eval.json` via OpenRouter; ledger `eval` total equals the report's total.
+- [x] 4.4 Docs: README section next to the retrieval eval; docs/ai-platform-controls.md "AI-5c: як реалізовано"; lint/typecheck/build.

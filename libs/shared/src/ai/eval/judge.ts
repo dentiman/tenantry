@@ -8,21 +8,28 @@ import type { QuestionTurn } from './question-set';
  * температура 0, строгий JSON. Невалідний вихід — `judge_error`, без повторного запиту.
  */
 
-export const JUDGE_MAX_OUTPUT_TOKENS = 400;
+/**
+ * Стеля виходу судді. Із запасом: моделі з адаптивним міркуванням (Claude через OpenRouter)
+ * витрачають на нього частину ліміту — при 400 токенах живий прогін 2026-10-04 обрізав JSON
+ * на `{"grounded":5`, бо 393 з 400 пішли на reasoning
+ */
+export const JUDGE_MAX_OUTPUT_TOKENS = 1_200;
 
 export const JudgeVerdictSchema = z.object({
   grounded: z.number().int().min(1).max(5),
   answers_question: z.number().int().min(1).max(5),
   refusal_correct: z.boolean(),
-  note: z.string().max(300),
+  /** Довша примітка не робить оцінку невалідною — обрізається */
+  note: z.string().transform((note) => note.slice(0, 300)),
 });
 export type JudgeVerdict = z.infer<typeof JudgeVerdictSchema>;
 
-export type JudgeErrorCode = 'provider' | 'invalid-json' | 'schema';
+/** `truncated` — вихід не розібрано, і бекенд зупинився на ліміті (`finish_reason = length`) */
+export type JudgeErrorCode = 'provider' | 'truncated' | 'invalid-json' | 'schema';
 
 export type JudgeParseResult =
   | { readonly ok: true; readonly verdict: JudgeVerdict }
-  | { readonly ok: false; readonly error: Exclude<JudgeErrorCode, 'provider'> };
+  | { readonly ok: false; readonly error: Exclude<JudgeErrorCode, 'provider' | 'truncated'> };
 
 const JUDGE_INSTRUCTIONS = [
   'You grade one answer of an in-app documentation help assistant. The assistant was told to answer only from the documentation excerpts shown below, to cite excerpts as [n], and to say that the documentation does not cover a question instead of guessing.',

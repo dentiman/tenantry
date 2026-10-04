@@ -352,6 +352,19 @@ pnpm ai:docs:search --product fms --tenant default --role ADMIN --query "..." [-
 на `docs/ai-sources/fms-eval.json` (AI-2a.4). Потребують міграцій, `DATABASE_URL` під `saas_app` і ключа embeddings
 (`AI_EMBEDDING_*` або `AI_BASE_URL`/`AI_API_KEY`). [Деталі й змінні](ai-sources/README.md).
 
+### `pnpm ai:answers:eval`
+
+```bash
+pnpm ai:answers:eval --tenant default --max-cost 0.50 \
+  [--questions docs/ai-sources/fms-eval.json] [--configs docs/ai-sources/answer-eval-configs.json] \
+  [--judge <model>] [--repeat N] [--output <dir>] [--only q01,q02] [--fake]
+```
+
+Eval відповідей (AI-5c): набір питань × файл конфігурацій через той самий конвеєр, що в чаті →
+таблиця «якість × ціна відповіді», `summary.md` і `answers.json`. Пише лише журнал витрат
+(`kind = eval`); `--max-cost` обовʼязковий, якщо не `--fake`. Потребує ingest продукту в tenant-і й
+тарифів моделей. [Формат файлів і як читати звіт](ai-sources/README.md#eval-відповідей-pnpm-aianswerseval-ai-5c).
+
 ## Якість коду
 
 ### `pnpm lint` / `pnpm lint:fix`

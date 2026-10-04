@@ -71,6 +71,9 @@ read the relevant doc before working in that area instead of expecting it here.
   to messages), `ai_model_prices` (append-only, `valid_from` only), a row per attempt written in
   the transaction that already exists, reconciliation and price-sync crons, platform `Costs`/
   `Prices` pages. Money is `NUMERIC`/`Prisma.Decimal` and decimal strings on the wire.
+  AI-5c is built (§9): `pnpm ai:answers:eval`, a local CLI that answers a question set per
+  configuration through the worker's own request assembly (`buildGenerationRequest`, shared — keep
+  the worker on it) and writes nothing but `eval` ledger rows.
 - `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table) and
   `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured results) — the
   PostgreSQL + pgvector retrieval track. `docs/ai-sources/README.md` — operator guide for an
@@ -135,6 +138,8 @@ pnpm ai:docs:ingest        # → embeddings into a tenant's pgvector index, atom
 pnpm ai:docs:search        # question → top-K published chunks (operator check, no LLM)
 pnpm ai:docs:eval          # retrieval-only comparison of search modes/thresholds on a question set
                            # (all four: docs/ai-sources/README.md; ingest/search/eval need DB + key)
+pnpm ai:answers:eval       # answer quality × price per configuration file (AI-5c; --max-cost unless
+                           # --fake; writes only `eval` ledger rows — docs/ai-sources/README.md)
 pnpm lint && pnpm typecheck && pnpm build
 pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT run alongside a
                            # live dev stack (connection-pool exhaustion causes flaky neighbors)
@@ -404,7 +409,7 @@ than repeated here:
   built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
 - **AI assistant**: AI-2a done (FMS documentation in the chat with verified citations, hybrid
   search). Feature expansion is paused (AI-2b/AI-3/AI-4 postponed); current work is **AI-5** —
-  platform controls (AI-5a, done), cost ledger (AI-5b, done), answer quality (AI-5c, next):
-  `docs/ai-platform-controls.md`.
+  platform controls (AI-5a, done), cost ledger (AI-5b, done), answer eval (AI-5c, done); next —
+  owner review of the question set, then `ai-5c2-quality-settings`: `docs/ai-platform-controls.md`.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

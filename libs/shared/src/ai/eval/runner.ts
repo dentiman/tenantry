@@ -103,6 +103,8 @@ export interface AnswerEvalOptions {
 export interface JudgeOutcome {
   readonly verdict: JudgeVerdict | null;
   readonly error: JudgeErrorCode | null;
+  /** Сирий вихід судді — лише коли його не вдалося розібрати (для огляду в `answers.json`) */
+  readonly raw?: string;
   readonly cost: CallCost;
 }
 
@@ -516,7 +518,12 @@ export class AnswerEvalRunner {
     const parsed = parseJudgeOutput(result.text);
     return parsed.ok
       ? { verdict: parsed.verdict, error: null, cost }
-      : { verdict: null, error: parsed.error, cost };
+      : {
+          verdict: null,
+          error: result.finishReason === 'length' ? 'truncated' : parsed.error,
+          cost,
+          raw: result.text.slice(0, 4_000),
+        };
   }
 
   /**

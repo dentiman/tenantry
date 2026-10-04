@@ -288,11 +288,40 @@ describe('AnswerEvalRunner', () => {
     const result = await new AnswerEvalRunner(deps, options).run();
 
     expect(result.records[0]?.judge).toMatchObject({ verdict, error: null });
-    expect(result.records[1]?.judge).toMatchObject({ verdict: null, error: 'invalid-json' });
+    expect(result.records[1]?.judge).toMatchObject({
+      verdict: null,
+      error: 'invalid-json',
+      raw: 'not json',
+    });
     expect(judge.requests[0]).toMatchObject({ model: 'judge-1', temperature: 0 });
     expect(entries.filter((e) => e.sourceId === 'answers-eval:run1:judge')).toHaveLength(2);
     expect(result.spentJudge.toFixed()).toBe('0.02');
     expect(result.spentAnswers.toFixed()).toBe('0.0022');
+  });
+
+  it("суддя, обрізаний лімітом виходу (reasoning з'їв ліміт), — judge_error truncated із сирим виходом", async () => {
+    const cut: LlmChunk[] = [
+      { text: '{"grounded":5' },
+      {
+        text: '',
+        usage: {
+          promptTokens: 2855,
+          completionTokens: 1200,
+          reasoningTokens: 1190,
+          reportedCost: '0.01',
+        },
+        finishReason: 'length',
+      },
+    ];
+    const { deps, options } = harness(new ScriptedProvider([reply('Fee [1].')]), {
+      judge: new ScriptedProvider([cut]),
+      configs: [config('a')],
+    });
+    const result = await new AnswerEvalRunner(deps, {
+      ...options,
+      questions: QUESTIONS.slice(0, 1),
+    }).run();
+    expect(result.records[0]?.judge).toMatchObject({ error: 'truncated', raw: '{"grounded":5' });
   });
 
   it('бюджет до старту: модель без тарифу — відмова з назвою моделі; оцінка понад ліміт — відмова без викликів', async () => {

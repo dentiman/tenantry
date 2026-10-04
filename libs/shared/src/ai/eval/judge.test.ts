@@ -23,6 +23,15 @@ describe('parseJudgeOutput', () => {
       ),
     ).toEqual({ ok: false, error: 'schema' });
     expect(parseJudgeOutput('{"grounded": 5}')).toEqual({ ok: false, error: 'schema' });
+    const long = parseJudgeOutput(
+      JSON.stringify({
+        grounded: 3,
+        answers_question: 3,
+        refusal_correct: false,
+        note: 'x'.repeat(500),
+      }),
+    );
+    expect(long.ok && long.verdict.note.length).toBe(300);
   });
 });
 
@@ -39,7 +48,7 @@ describe('buildJudgeRequest', () => {
       excerpts: [{ n: 1, title: 'T', heading: 'H', path: 'p.md', content: 'Body' }],
       answer: 'Not covered.',
     });
-    expect(request).toMatchObject({ model: 'judge-1', temperature: 0, maxOutputTokens: 400 });
+    expect(request).toMatchObject({ model: 'judge-1', temperature: 0, maxOutputTokens: 1200 });
     const user = request.messages[1]?.content ?? '';
     expect(user).toContain('Is the documentation expected to answer it: no');
     expect(user).toContain('<excerpt n="1"');
