@@ -1,6 +1,6 @@
 ## 0. Before implementing
-- [ ] 0.1 Confirm design.md open questions and decisions D1–D6 with the owner.
-- [ ] 0.2 Verify whether OpenRouter exposes embedding model prices (models list or a separate endpoint).
+- [x] 0.1 Confirm design.md open questions and decisions D1–D6 with the owner.
+- [x] 0.2 Verify whether OpenRouter exposes embedding model prices (models list or a separate endpoint).
 
 ## 1. Provider usage
 - [ ] 1.1 `LlmUsage`: reported cost, request id, cache-write and reasoning tokens (OpenRouter parsing, defensive).
