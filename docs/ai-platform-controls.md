@@ -198,3 +198,77 @@ UI, ефект підтверджує журнал витрат. Парамет�
 - **UI:** platform-web — area «AI» → «Settings» (форма з підказкою «що діє зараз і звідки», ключ
   з «оком», журнал змін), перемикач дозволу в картці tenant-а; tenant web — вмикач у
   `/settings/ai` (неактивний із поясненням, коли платформа не дозволяє).
+
+## 6. AI-5b: стартовий пакет (для нової сесії)
+
+Підготовлено 2026-10-04 після коміту AI-5a (`6d17978`). OpenSpec change з проєктом рішення —
+`openspec/changes/ai-5b-cost-ledger/` (design.md містить відкриті питання, які треба
+підтвердити з власником **до** реалізації). Рішення власника для AI-5b вже є в §1: журнал
+зберігаємо повністю, звітність лише суперадміну, одна модель на платформу. Модель витрат і
+джерела цін — §3.
+
+### 6.1. Що є в коді зараз (точки входу)
+
+| Що | Де | Стан для AI-5b |
+| --- | --- | --- |
+| Usage генерації | `libs/shared/src/ai/llm/llm-provider.ts` (`LlmUsage`), `llm/openai-compat.provider.ts` (`toUsage()`) | лише `promptTokens`, `completionTokens`, `cachedPromptTokens`, `model`. **Не читаються** `usage.cost`, `cost_details`, `cache_write_tokens`, `reasoning_tokens`, id генерації (`gen-…` — поле `id` кадру стріму). Тип SDK `openai` не знає `cost` — читати захищено |
+| Токени ретраїв | `apps/worker/src/subscribers/ai-generate-reply.subscriber.ts` (стрім-цикл, `usage = null` на restart), `ai-message-state.service.ts` (`restart()`/`claim()` обнуляють токени) | **губляться**: у рядок і квоту йде лише спроба, що дала текст. Скасована (Stop) і обірвана спроби usage не мають взагалі |
+| Облік квот | `ai-usage-quota.service.ts` (`deduct()` у `finalize()` тієї ж транзакції) | лише токени, без грошей; лишається як є (квоти ≠ фінанси) |
+| Usage embeddings | `knowledge/embedding-provider.ts` (`EmbeddingBatch.inputTokens`), `openai-embedding-provider.ts` (`ResponseSchema`) | лише `prompt_tokens`; `usage.cost` і `id` (`embd-…`) не читаються |
+| Embedding питання | `knowledge/postgres-knowledge-source.ts` (`retrieve()` → `queryTokens`) | лише в лог; `KnowledgeSelection` не несе usage до субскрайбера |
+| Embedding ingest | `knowledge/ingest/knowledge-ingestor.ts` (`result.inputTokens`), `ingest/postgres-ingest-store.ts` (`write()` у tenant-транзакції) | сума в CLI-виводі, у БД нічого |
+| Налаштування/модель | `ai-llm.module.ts` (`PlatformAiRuntime`, `AI_RUNTIME`), `platform/platform-ai-settings*.ts` | провайдер і модель на кожну генерацію — звідси ж провайдер для рядка журналу |
+| System-scope cron | `libs/shared/src/messaging/topology.ts` (`cron:`), `definitions/ai.messages.ts` (`scope: 'system'`), `apps/worker/src/subscribers/ai-purge-conversations.subscriber.ts` | патерн для добору вартості й синхронізації цін |
+| Control plane | `apps/platform-api/src/ai-settings/`, `apps/platform-web/src/pages/ai-settings.tsx`, area «AI» (`app-shell/areas/ai-sidebar.tsx`) | сюди — `Costs` і `Prices` |
+| Ролі БД | `libs/database/scripts/ensure-roles.ts` (`CONTROL_PLANE_TABLES`) | нові таблиці control plane **треба** внести в список, інакше `db:roles` скасує REVOKE міграції |
+
+### 6.2. Порядок робіт (пропозиція)
+
+1. **Usage від провайдера.** Розширити `LlmUsage` / `EmbeddingBatch`: `reportedCost`,
+   `providerRequestId`, `cacheWriteTokens`, `reasoningTokens`, модель відповіді. Юніт-тести на
+   кадр OpenRouter із `cost` і на бекенд без нього.
+2. **Тарифи.** Платформна таблиця тарифів з історією (§3.3) + чиста функція розрахункової
+   вартості (`Prisma.Decimal`, не float). Юніт-тести формули з кешем.
+3. **Журнал.** Таблиця подій витрат під RLS, append-only для `saas_app`; запис у тих самих
+   транзакціях, що вже є: `finalize()` (усі спроби відповіді), `claim()`/`finalize()` (embedding
+   питання), `write()` ingest-у. Шлях «власність утрачено» пише свої спроби окремо.
+4. **Добір фактичної вартості.** System-scope cron: рядки `pending` з `gen-…` id →
+   `GET /api/v1/generation?id=` (ключ — з налаштувань платформи, worker розшифровує);
+   кілька спроб, далі `unknown` з розрахунковою вартістю.
+5. **Синхронізація цін.** Cron раз на добу + кнопка: `GET /api/v1/models` → новий рядок
+   тарифу лише при зміні. Ціни embeddings — перевірити, чи віддає їх OpenRouter
+   (`/models` документацією не гарантує; можливо, окремий список моделей embeddings), інакше
+   ручний тариф.
+6. **Звітність.** platform-api: зведення за період у розрізах tenant / модель / тип / день,
+   середня вартість відповіді, витрати на невдалі відповіді, економія кешу, фактичне проти
+   розрахункового. platform-web: сторінки `Costs` і `Prices` в area «AI».
+7. **Активація моделі без тарифу.** Збереження налаштувань AI-5a з моделлю провайдера, який не
+   повертає вартість, без тарифу → 400 на полі `model` (§3.3).
+
+### 6.3. Перевірка
+
+- Юніт: парсинг usage OpenRouter, формула з кешем і точністю, рядки на кожну спробу (успіх,
+  ретрай, Stop, втрата власності), embedding питання з id відповіді.
+- E2E: RLS журналу (tenant B не бачить A), `saas_app` не може UPDATE/DELETE журналу, вибір
+  тарифу за датою, зведення platform-api, журнал переживає «видалити мої розмови» і retention.
+- Живий прогін: питання через OpenRouter → сума фактичних вартостей у журналі збігається з
+  записом у кабінеті OpenRouter (Activity) для того самого `gen-…`.
+
+### 6.4. Підводні камені, виявлені в попередніх кроках
+
+- **Prettier — лише на змінені файли.** Репозиторій не prettier-чистий: масовий запуск на
+  теку переформатовує десятки чужих файлів (так було в AI-5a — довелося відкочувати).
+- **Нова таблиця control plane → `CONTROL_PLANE_TABLES`** в `ensure-roles.ts` (тип треба буде
+  розширити режимом «select + insert» для журналу, якщо його пише `saas_app`).
+- **Міграція не може `UPDATE` tenant-рядки** (FORCE RLS діє й на власника) — backfill лише через
+  `ADD COLUMN … DEFAULT` або STORED generated (CLAUDE.md правило 17).
+- **Жодного виклику провайдера всередині транзакції** — і запиту `generation?id=` теж
+  (правило 18).
+- **Кеш налаштувань платформи 5 с** — у тестах `PlatformAiSettingsReader.invalidate()`.
+- **Повний `pnpm api:test:e2e` не паралельно з живим dev-стеком**; цільові сьюти — так.
+- **Локальне середовище:** `.env` має `AI_SECRETS_KEY` і робочий ключ OpenRouter;
+  `AI_KNOWLEDGE_BACKEND=postgres`, FMS проіндексовано в tenant `default`; seed-входи
+  `admin@example.com` / `Admin1234567`, `platform@example.com` / `Platform12345`.
+- **Процес власника:** відповіді українською; дизайн-рішення — з варіантами й рекомендацією
+  перед реалізацією; коміт лише на прохання.
+
