@@ -1,5 +1,6 @@
 import { Logger, type LoggerService } from '@nestjs/common';
 import OpenAI, { APIConnectionError, APIError, APIUserAbortError } from 'openai';
+import { decimalString } from '../costs/money';
 import {
   LlmProviderError,
   type LlmChunk,
@@ -88,8 +89,15 @@ export class OpenAiCompatProvider implements LlmProvider {
 
     let finished = false;
     let usage: LlmUsage | undefined;
+    let requestId: string | undefined;
     try {
       for await (const chunk of stream) {
+        // Id запиту — першим, ще до тексту (AI-5b, design.md R4): спроба, яку зупинять до
+        // usage-кадру, теж мусить лишити в журналі ключ для добору вартості
+        if (requestId === undefined && typeof chunk.id === 'string' && chunk.id !== '') {
+          requestId = chunk.id;
+          yield { text: '', requestId };
+        }
         const choice = chunk.choices[0];
         if (choice?.finish_reason) {
           // `length` (стеля max_tokens) і `content_filter` — теж ЗАВЕРШЕНА відповідь:
@@ -132,14 +140,40 @@ export class OpenAiCompatProvider implements LlmProvider {
   }
 }
 
-function toUsage(usage: OpenAI.Completions.CompletionUsage, model: string | undefined): LlmUsage {
-  const cached = usage.prompt_tokens_details?.cached_tokens;
+/**
+ * Usage-кадр → `LlmUsage`. Поля OpenRouter (`cost`, `cache_write_tokens`) тип SDK не знає,
+ * тож вони читаються ЗАХИЩЕНО з сирого об'єкта: не те число — поля просто немає (AI-5b).
+ */
+export function toUsage(
+  usage: OpenAI.Completions.CompletionUsage,
+  model: string | undefined,
+): LlmUsage {
+  const raw = usage as unknown as Record<string, unknown>;
+  const promptDetails = asRecord(raw.prompt_tokens_details);
+  const completionDetails = asRecord(raw.completion_tokens_details);
+  const cached = tokenCount(promptDetails?.cached_tokens);
+  const cacheWrite = tokenCount(promptDetails?.cache_write_tokens);
+  const reasoning = tokenCount(completionDetails?.reasoning_tokens);
+  const cost = decimalString(raw.cost);
   return {
     promptTokens: usage.prompt_tokens,
     completionTokens: usage.completion_tokens,
     ...(model ? { model } : {}),
-    ...(typeof cached === 'number' ? { cachedPromptTokens: cached } : {}),
+    ...(cached !== undefined ? { cachedPromptTokens: cached } : {}),
+    ...(cacheWrite !== undefined ? { cacheWriteTokens: cacheWrite } : {}),
+    ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
+    ...(cost !== undefined ? { reportedCost: cost } : {}),
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function tokenCount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
 /**

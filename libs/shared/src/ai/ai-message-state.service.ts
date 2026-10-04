@@ -77,6 +77,8 @@ export class AiMessageStateService {
         promptTokens: null,
         completionTokens: null,
         cachedPromptTokens: null,
+        // Id запиту належить спробі (AI-5b): нова ще нічого в провайдера не запитала
+        providerRequestId: null,
         // НАВМИСНО НЕ чіпаємо cancelRequestedAt: якщо Stop уже стояв на покинутій
         // (наприклад, впала попередня спроба) STREAMING-відповіді, нова спроба
         // мусить побачити його одразу на пост-підписковому чеку (design.md D4) —
@@ -126,6 +128,7 @@ export class AiMessageStateService {
         promptTokens: null,
         completionTokens: null,
         cachedPromptTokens: null,
+        providerRequestId: null,
       },
     });
     return count === 0 ? null : { attempt: ownedAttempt + 1 };
@@ -136,6 +139,10 @@ export class AiMessageStateService {
    * правдивими «частковий вивід переживає обрив» і «reconnect посеред генерації».
    * Повертає, чи ще належить викликачу рядок: `false` — стрім має зупинитись
    * МОВЧКИ, нічого більше не пишучи й не емітуючи.
+   *
+   * `providerRequestId` (AI-5b, design.md R3) — id запиту спроби в провайдера: якщо воркер
+   * впаде, наступна доставка, перезахоплюючи рядок, запише мертву спробу в журнал витрат
+   * із цим id, і добір дізнається її справжню вартість.
    */
   async persistPartial(
     tx: Prisma.TransactionClient,
@@ -143,10 +150,15 @@ export class AiMessageStateService {
     ownedAttempt: number,
     text: string,
     chunkCount: number,
+    providerRequestId?: string | null,
   ): Promise<boolean> {
     const { count } = await tx.aiMessage.updateMany({
       where: { id: messageId, attempt: ownedAttempt, status: 'STREAMING' },
-      data: { content: text, chunkCount },
+      data: {
+        content: text,
+        chunkCount,
+        ...(providerRequestId ? { providerRequestId } : {}),
+      },
     });
     return count > 0;
   }

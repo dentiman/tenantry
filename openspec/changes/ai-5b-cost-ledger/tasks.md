@@ -3,18 +3,18 @@
 - [x] 0.2 Verify whether OpenRouter exposes embedding model prices (models list or a separate endpoint).
 
 ## 1. Provider usage
-- [ ] 1.1 `LlmUsage`: reported cost, request id, cache-write and reasoning tokens (OpenRouter parsing, defensive).
-- [ ] 1.2 `EmbeddingBatch`: reported cost and request id.
+- [x] 1.1 `LlmUsage`: reported cost, request id, cache-write and reasoning tokens (OpenRouter parsing, defensive).
+- [x] 1.2 `EmbeddingBatch`: reported cost and request id.
 
 ## 2. Tariffs and estimate
 - [ ] 2.1 Migration `ai_model_prices` (+ `CONTROL_PLANE_TABLES`), decimal estimate function with cache pricing.
 - [ ] 2.2 Price sync cron + platform endpoint; manual price entry; model activation check.
 
 ## 3. Ledger
-- [ ] 3.1 Migration `ai_usage_events` (RLS, append-only for `saas_app`).
-- [ ] 3.2 Worker: entries for every attempt (success, retry, cancel, lost ownership) and the question embedding.
-- [ ] 3.3 Ingest store and CLIs: ingest (and eval, if confirmed) entries.
-- [ ] 3.4 Reconciliation cron for `pending` entries.
+- [x] 3.1 Migration `ai_usage_events` (RLS, append-only for `saas_app`).
+- [x] 3.2 Worker: entries for every attempt (success, retry, cancel, lost ownership) and the question embedding.
+- [x] 3.3 Ingest store and CLIs: ingest (and eval, if confirmed) entries.
+- [x] 3.4 Reconciliation cron for `pending` entries.
 
 ## 4. Reporting
 - [ ] 4.1 platform-api summary endpoints (period × tenant/model/kind/day, reply average, failed spend, cache savings).

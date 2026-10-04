@@ -51,6 +51,7 @@ model Tenant {
   aiConversations          AiConversation[]
   aiMessages               AiMessage[]
   aiUsageCounters          AiUsageCounter[]
+  aiUsageEvents            AiUsageEvent[]
   aiKnowledgeSources       AiKnowledgeSource[]
   aiKnowledgeDocuments     AiKnowledgeDocument[]
   aiKnowledgeChunks        AiKnowledgeChunk[]
@@ -946,6 +947,10 @@ model AiMessage {
   // Факт Stop, записаний у БД РАНІШЕ за pub/sub-сигнал (design.md D4): доставляє
   // скасування, навіть якщо сигнал загублено або надійшов до підписки воркера
   cancelRequestedAt DateTime? @map("cancel_requested_at")
+  // Id запиту поточної спроби в провайдера (`gen-…`, AI-5b design.md R3) — пишеться разом із
+  // частковим текстом. Не вартість: потрібен, щоб спробу впалого воркера можна було
+  // дооцінити через добір, коли наступна доставка перезахопить рядок
+  providerRequestId String? @map("provider_request_id")
 
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
@@ -1304,4 +1309,78 @@ model TenantAiAccess {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_ai_access")
+}
+
+// ============================================================================
+// Журнал витрат AI (AI-5b, docs/ai-platform-controls.md §3, design.md R1–R6).
+// ============================================================================
+
+// Тарифи моделей — control plane, append-only: зміна ціни — новий рядок, тариф на момент T —
+// останній рядок з valid_from ≤ T (без valid_to, design.md R6). Ціни — USD за 1M токенів.
+// saas_app лише читає (розрахункова вартість у момент запису журналу), пишуть platform-api
+// і system-cron синхронізації (saas_platform)
+model AiModelPrice {
+  id                   String   @id @default(uuid())
+  // Білінговий ключ провайдера: `openrouter` | `fake` | хост base URL
+  provider             String
+  model                String
+  inputPerMillion      Decimal  @map("input_per_million") @db.Decimal(18, 10)
+  // NULL — провайдер не тарифікує кеш окремо (кешовані токени йдуть за ціною input)
+  cacheReadPerMillion  Decimal? @map("cache_read_per_million") @db.Decimal(18, 10)
+  cacheWritePerMillion Decimal? @map("cache_write_per_million") @db.Decimal(18, 10)
+  outputPerMillion     Decimal  @map("output_per_million") @db.Decimal(18, 10)
+  requestPrice         Decimal  @default(0) @map("request_price") @db.Decimal(18, 10)
+  // Ступінчасті ціни (OpenRouter `pricing.overrides`): [{minPromptTokens, inputPerMillion?, …}]
+  tiers                Json?
+  currency             String   @default("USD")
+  validFrom            DateTime @map("valid_from")
+  // `openrouter-sync` | `manual`
+  source               String
+  createdBy            String?  @map("created_by")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, model, validFrom])
+  @@map("ai_model_prices")
+}
+
+// Один рядок на платний виклик провайдера. Tenant-scoped (RLS), append-only для saas_app
+// (SELECT + INSERT); UPDATE лише добору вартості через saas_platform. Без FK на users,
+// розмови й повідомлення і без тексту: переживає «видалити мої розмови» і ретенцію
+model AiUsageEvent {
+  id                String    @id @default(uuid())
+  tenantId          String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  occurredAt        DateTime  @default(now()) @map("occurred_at")
+  // generation | query_embedding | ingest_embedding | eval
+  kind              String
+  // complete | failed | cancelled | timeout | retried | superseded | abandoned
+  outcome           String
+  userId            String?   @map("user_id")
+  messageId         String?   @map("message_id")
+  sourceId          String?   @map("source_id")
+  attempt           Int?
+  provider          String
+  model             String
+  // NULL — невідомо (провайдер usage не повідомив), а не нуль
+  inputTokens       Int?      @map("input_tokens")
+  cachedReadTokens  Int?      @map("cached_read_tokens")
+  cacheWriteTokens  Int?      @map("cache_write_tokens")
+  outputTokens      Int?      @map("output_tokens")
+  reasoningTokens   Int?      @map("reasoning_tokens")
+  reportedCost      Decimal?  @map("reported_cost") @db.Decimal(18, 10)
+  providerRequestId String?   @map("provider_request_id")
+  // Заморожена в момент запису; NULL — тарифу не було, ніколи не 0
+  estimatedCost     Decimal?  @map("estimated_cost") @db.Decimal(18, 10)
+  priceId           String?   @map("price_id")
+  // reported | estimated | pending | unknown
+  costStatus        String    @map("cost_status")
+  reconcileAttempts Int       @default(0) @map("reconcile_attempts")
+  reconcileAfter    DateTime? @map("reconcile_after")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([occurredAt])
+  @@index([tenantId, messageId])
+  @@index([costStatus, reconcileAfter])
+  @@map("ai_usage_events")
 }

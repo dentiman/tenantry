@@ -11,6 +11,8 @@ import type {
   EmbeddingProvider,
 } from '../libs/shared/src/ai/knowledge/embedding-provider';
 import { EmbeddingRequestError } from '../libs/shared/src/ai/knowledge/openai-embedding-provider';
+import { RecordingEmbeddingProvider } from '../libs/shared/src/ai/knowledge/recording-embedding-provider';
+import { AiUsageLedger } from '../libs/shared/src/ai/costs/usage-ledger';
 import {
   PostgresKnowledgeSource,
   type KnowledgeRetrieval,
@@ -72,7 +74,12 @@ class CachingEmbeddings implements EmbeddingProvider {
   readonly latencies: number[] = [];
   tokens = 0;
 
-  constructor(private readonly inner: EmbeddingProvider) {}
+  constructor(private inner: EmbeddingProvider) {}
+
+  /** AI-5b: обгорнути справжній провайдер — у журнал іде лише виклик, що не з кешу */
+  wrapInner(wrap: (inner: EmbeddingProvider) => EmbeddingProvider): void {
+    this.inner = wrap(this.inner);
+  }
 
   embed(texts: readonly string[], signal: AbortSignal): Promise<EmbeddingBatch> {
     const key = texts.join('\u0000');
@@ -168,6 +175,14 @@ async function main(): Promise<void> {
 
   const embeddings = new CachingEmbeddings(requireEmbeddingProvider());
   const results = await withKnowledgeTenant(values.tenant, async (tx) => {
+    // AI-5b: кожен оплачений embedding-виклик eval — рядок журналу витрат під цим tenant-ом
+    embeddings.wrapInner(
+      (inner) =>
+        new RecordingEmbeddingProvider(inner, tx, new AiUsageLedger(), {
+          kind: 'eval',
+          sourceId: 'ai:docs:eval',
+        }),
+    );
     const store = new PostgresKnowledgeStore(tx);
     const all = new Map<string, Outcome[]>();
     for (const config of configs) {

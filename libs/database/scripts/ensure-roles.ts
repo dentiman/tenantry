@@ -120,6 +120,8 @@ async function ensureDbGrants(dbName: string): Promise<void> {
       await client.query(`REVOKE ALL ON public."${table}" FROM saas_app`);
       if (saasApp === 'select') {
         await client.query(`GRANT SELECT ON public."${table}" TO saas_app`);
+      } else if (saasApp === 'select-insert') {
+        await client.query(`GRANT SELECT, INSERT ON public."${table}" TO saas_app`);
       }
     }
 
@@ -151,13 +153,20 @@ async function ensureDbGrants(dbName: string): Promise<void> {
  * REVOKE/GRANT у міграціях — ті діють при створенні таблиці, цей список — при кожному
  * переналаштуванні ролей.
  */
-const CONTROL_PLANE_TABLES: readonly { table: string; saasApp: 'none' | 'select' }[] = [
+const CONTROL_PLANE_TABLES: readonly {
+  table: string;
+  saasApp: 'none' | 'select' | 'select-insert';
+}[] = [
   { table: 'platform_users', saasApp: 'none' },
   { table: 'platform_auth_sessions', saasApp: 'none' },
   // AI-5a: tenant-процеси читають налаштування й свій дозвіл, але не пишуть
   { table: 'platform_ai_settings', saasApp: 'select' },
   { table: 'platform_ai_settings_events', saasApp: 'none' },
   { table: 'tenant_ai_access', saasApp: 'select' },
+  // AI-5b: тарифи читаються для розрахункової вартості; журнал витрат — tenant-таблиця під
+  // RLS, але append-only для tenant-процесів (добір вартості оновлює його як saas_platform)
+  { table: 'ai_model_prices', saasApp: 'select' },
+  { table: 'ai_usage_events', saasApp: 'select-insert' },
 ];
 
 async function main(): Promise<void> {

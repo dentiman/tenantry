@@ -124,6 +124,9 @@ export class FakeLlmProvider implements LlmProvider {
         promptTokens: estimateTokens(request.messages.reduce((n, m) => n + m.content.length, 0)),
         completionTokens: estimateTokens(answer.length),
         model: request.model,
+        // Fake безкоштовний — вартість відома й нульова (AI-5b, design.md R4): журнал
+        // витрат проходить увесь шлях у CI без мережі й без тарифу
+        reportedCost: '0',
       },
     };
   }

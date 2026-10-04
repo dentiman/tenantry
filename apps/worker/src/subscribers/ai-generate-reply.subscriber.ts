@@ -4,6 +4,7 @@ import {
   AI_CONFIG,
   AiCancelChannel,
   AiMessageStateService,
+  AiUsageLedger,
   AiUsageQuotaService,
   EmbeddingRequestError,
   KNOWLEDGE_SOURCE,
@@ -12,6 +13,8 @@ import {
   MessageSubscriber,
   buildPrompt,
   generateAiReplyCommand,
+  ledgerTokensForEmbedding,
+  ledgerTokensFromLlm,
   readAiSettings,
   selectHistoryPairs,
   toKnowledgeChunkRefs,
@@ -27,6 +30,8 @@ import {
   type LlmUsage,
   type MessageData,
   type MessageSubscriberContract,
+  type UsageEntry,
+  type UsageOutcome,
 } from '@saas-skeleton/shared';
 import type { AiMessageErrorCode } from '@saas-skeleton/contracts';
 import { WorkerRealtimeEmitter } from '../realtime/worker-realtime.emitter';
@@ -59,6 +64,33 @@ interface PreparedGeneration {
   readonly prompt: LlmRequest;
   /** Провайдер ЦІЄЇ генерації (AI-5a): з налаштувань суперадміна поверх env */
   readonly provider: LlmProvider;
+  /** Хто виставляє рахунок — ключ рядків журналу витрат (AI-5b) */
+  readonly billingProvider: string;
+}
+
+/**
+ * Одна спроба генерації для журналу витрат (AI-5b, design.md R2/R3): що провайдер устиг
+ * повідомити — id запиту, usage. Пишеться рівно раз: у транзакції `restart()` (пішла на
+ * ретрай), `finalize()` (остання) або власній (втрата власності)
+ */
+interface AttemptUsage {
+  readonly attempt: number;
+  readonly usage: LlmUsage | null;
+  readonly requestId: string | null;
+}
+
+/** Фінальний стан відповіді → результат її останньої спроби в журналі */
+function finalOutcome(
+  status: 'COMPLETE' | 'FAILED' | 'CANCELLED',
+  errorCode: AiMessageErrorCode | null,
+): UsageOutcome {
+  if (status === 'COMPLETE') {
+    return 'complete';
+  }
+  if (status === 'CANCELLED') {
+    return 'cancelled';
+  }
+  return errorCode === 'TIMEOUT' ? 'timeout' : 'failed';
 }
 
 /**
@@ -95,6 +127,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     @Inject(KNOWLEDGE_SOURCE) private readonly knowledgeSource: KnowledgeSource,
     @Inject(AI_CONFIG) private readonly config: AiConfig,
     private readonly usageQuota: AiUsageQuotaService,
+    private readonly ledger: AiUsageLedger,
   ) {}
 
   async handle(data: GenerateAiReply): Promise<void> {
@@ -104,6 +137,20 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     }
     const { tenantId, userId, prompt, provider } = prepared;
     let attempt = prepared.attempt;
+    // Рядок журналу для спроби — з тим, що провайдер устиг повідомити (AI-5b, design.md R2)
+    const attemptEntry = (current: AttemptUsage, outcome: UsageOutcome): UsageEntry => ({
+      kind: 'generation',
+      outcome,
+      userId,
+      messageId: data.messageId,
+      attempt: current.attempt,
+      provider: prepared.billingProvider,
+      model: current.usage?.model ?? prompt.model,
+      requestedModel: prompt.model,
+      tokens: ledgerTokensFromLlm(current.usage),
+      reportedCost: current.usage?.reportedCost ?? null,
+      requestId: current.requestId,
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
@@ -141,6 +188,12 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     // Облік токенів ПОТОЧНОЇ спроби (ai-1a, design.md D7): скидається разом із
     // коалесером на restart(), тож у рядок потрапляє usage спроби, що дала текст
     let usage: LlmUsage | null = null;
+    // Id запиту ПОТОЧНОЇ спроби (AI-5b): приходить першим кадром, зберігається з частковим
+    // текстом одразу — щоб спробу впалого воркера можна було дооцінити (design.md R3)
+    let requestId: string | null = null;
+    let requestIdPersisted = false;
+    // Спробу, що пішла на ретрай чи програла restart(), уже записано в журнал його транзакцією
+    let attemptRecorded = false;
 
     try {
       streamLoop: for (;;) {
@@ -150,19 +203,27 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
             if (chunk.usage) {
               usage = chunk.usage;
             }
+            if (chunk.requestId && requestId === null) {
+              requestId = chunk.requestId;
+            }
             const now = Date.now();
             const frame = coalescer.push(chunk.text, now);
             if (frame) {
               this.emitDelta(tenantId, userId, data, attempt, frame);
             }
 
-            if (now - lastPersistedAt >= this.config.partialPersistMs) {
+            if (
+              now - lastPersistedAt >= this.config.partialPersistMs ||
+              (requestId !== null && !requestIdPersisted)
+            ) {
               const stillOwned = await this.persistPartial(
                 data.messageId,
                 attempt,
                 coalescer.accumulatedText,
                 coalescer.chunkCount,
+                requestId,
               );
+              requestIdPersisted = requestId !== null;
               lastPersistedAt = now;
               if (!stillOwned) {
                 lostOwnership = true;
@@ -207,12 +268,17 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
               // визначить статус за причиною abort, ретраю не буде
               break streamLoop;
             }
-            const restarted = await this.restart(data.messageId, attempt);
+            const restarted = await this.restart(data.messageId, attempt, (succeeded) =>
+              attemptEntry({ attempt, usage, requestId }, succeeded ? 'retried' : 'superseded'),
+            );
             if (!restarted) {
               lostOwnership = true;
+              attemptRecorded = true;
               break streamLoop;
             }
             attempt = restarted.attempt;
+            requestId = null;
+            requestIdPersisted = false;
             // Нова спроба — новий коалесер: попередній текст скинуто (АТОМАРНО,
             // разом із рядком, у restart()), клієнт побачить chunkSeq 0 нового
             // attempt і викине накопичене від попередньої (design.md D6)
@@ -236,7 +302,11 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     }
 
     if (lostOwnership) {
-      // Мовчки: жодної дельти більше, жодної фіналізації (design.md D1)
+      // Мовчки: жодної дельти більше, жодної фіналізації (design.md D1). Але спроба платна —
+      // вона йде в журнал витрат власною короткою транзакцією (AI-5b, design.md R3)
+      if (!attemptRecorded) {
+        await this.recordLostAttempt(attemptEntry({ attempt, usage, requestId }, 'superseded'));
+      }
       return;
     }
 
@@ -245,6 +315,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     if (aborted && !cancelledByUser && failure === null) {
       failure = 'TIMEOUT';
     }
+    const status = failure !== null ? 'FAILED' : cancelledByUser ? 'CANCELLED' : 'COMPLETE';
 
     await this.finalize({
       messageId: data.messageId,
@@ -254,9 +325,10 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       attempt,
       text: coalescer.accumulatedText,
       chunkCount: coalescer.chunkCount,
-      status: failure !== null ? 'FAILED' : cancelledByUser ? 'CANCELLED' : 'COMPLETE',
+      status,
       errorCode: failure,
       usage,
+      attemptEntry: attemptEntry({ attempt, usage, requestId }, finalOutcome(status, failure)),
     });
   }
 
@@ -320,14 +392,57 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
 
     // Версія знань і фрагменти пишуться тим самим фенсингованим UPDATE, що
     // захоплює рядок (ai-1b, design.md D7; AI-2a.3, design.md D6)
-    const claimed = await this.transactions.withTenantTx((tx) =>
-      this.state.claim(tx, data.messageId, data.conversationId, {
+    const billingProvider = generation?.billingProvider ?? 'unknown';
+    const claimed = await this.transactions.withTenantTx(async (tx) => {
+      // Стан ДО захоплення: перезахоплений STREAMING — спроба впалого воркера (AI-5b, R3)
+      const before = await tx.aiMessage.findUnique({
+        where: { id: data.messageId },
+        select: { status: true, attempt: true, providerRequestId: true, model: true },
+      });
+      const result = await this.state.claim(tx, data.messageId, data.conversationId, {
         leaseMs: this.config.leaseMs,
         model: generation?.model ?? this.config.model,
         knowledgeVersion: knowledge?.version ?? KNOWLEDGE_UNAVAILABLE,
         knowledgeChunks: knowledge?.excerpts ? toKnowledgeChunkRefs(knowledge.excerpts) : null,
-      }),
-    );
+      });
+
+      // Журнал витрат (AI-5b, design.md R3) — у ЦІЙ Ж транзакції, і навіть коли claim()
+      // програв: embedding питання вже оплачено. Транзакція комітиться — програш claim()
+      // не помилка, а `null`
+      const entries: UsageEntry[] = [];
+      const embedding = knowledge?.queryEmbedding;
+      if (embedding) {
+        entries.push({
+          kind: 'query_embedding',
+          outcome: 'complete',
+          userId: context.userId,
+          messageId: data.messageId,
+          provider: embedding.billing?.provider ?? 'unknown',
+          model: embedding.billing?.model ?? 'unknown',
+          tokens: ledgerTokensForEmbedding(embedding.inputTokens),
+          reportedCost: embedding.billing?.reportedCost ?? null,
+          requestId: embedding.billing?.requestId ?? null,
+        });
+      }
+      if (result && before?.status === 'STREAMING' && before.attempt > 0) {
+        // Попередня спроба не дожила до finalize(): usage немає, але id запиту (якщо встиг)
+        // дасть добору фактичну вартість
+        entries.push({
+          kind: 'generation',
+          outcome: 'abandoned',
+          userId: context.userId,
+          messageId: data.messageId,
+          attempt: before.attempt,
+          provider: billingProvider,
+          model: before.model ?? generation?.model ?? this.config.model,
+          tokens: null,
+          reportedCost: null,
+          requestId: before.providerRequestId ?? null,
+        });
+      }
+      await this.ledger.record(tx, entries);
+      return result;
+    });
     if (!claimed) {
       this.logger.debug(`AI reply ${data.messageId} already claimed or terminal — skipping`);
       return null;
@@ -345,6 +460,8 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         status: 'FAILED',
         errorCode: generation === null ? 'PROVIDER_UNAVAILABLE' : knowledgeFailure,
         usage: null,
+        // Провайдера генерації не викликали — рядка спроби немає
+        attemptEntry: null,
       });
       return null;
     }
@@ -366,6 +483,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         maxOutputTokens: this.config.maxOutputTokens,
       },
       provider: generation.provider,
+      billingProvider,
     };
   }
 
@@ -511,10 +629,11 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     attempt: number,
     text: string,
     chunkCount: number,
+    providerRequestId: string | null,
   ): Promise<boolean> {
     try {
       return await this.transactions.withTenantTx((tx) =>
-        this.state.persistPartial(tx, messageId, attempt, text, chunkCount),
+        this.state.persistPartial(tx, messageId, attempt, text, chunkCount, providerRequestId),
       );
     } catch (error) {
       this.logger.warn(`Partial persist failed for ${messageId}: ${String(error)}`);
@@ -522,14 +641,38 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     }
   }
 
-  /** Перезапуск усередині доставки після тимчасової відмови (design.md D2) */
+  /**
+   * Перезапуск усередині доставки після тимчасової відмови (design.md D2). Спроба, що
+   * відмовила, пишеться в журнал витрат тією ж транзакцією (AI-5b, design.md R3):
+   * `retried`, або `superseded`, якщо restart() програв фенсинг
+   */
   private async restart(
     messageId: string,
     ownedAttempt: number,
+    failedAttempt: (restarted: boolean) => UsageEntry,
   ): Promise<{ attempt: number } | null> {
-    return this.transactions.withTenantTx((tx) =>
-      this.state.restart(tx, messageId, ownedAttempt, { leaseMs: this.config.leaseMs }),
-    );
+    return this.transactions.withTenantTx(async (tx) => {
+      const restarted = await this.state.restart(tx, messageId, ownedAttempt, {
+        leaseMs: this.config.leaseMs,
+      });
+      await this.ledger.record(tx, [failedAttempt(restarted !== null)]);
+      return restarted;
+    });
+  }
+
+  /**
+   * Спроба, що втратила власність посеред стріму (AI-5b, design.md R3): відповідь уже не
+   * наша, але гроші витрачено. Збій запису не валить доставку — лише лог
+   */
+  private async recordLostAttempt(entry: UsageEntry): Promise<void> {
+    try {
+      await this.transactions.withTenantTx((tx) => this.ledger.record(tx, [entry]));
+    } catch (error) {
+      this.logger.error(
+        { err: error, messageId: entry.messageId },
+        'AI usage of a superseded attempt was not recorded',
+      );
+    }
   }
 
   /** Читання маркера Stop (design.md D4). Помилка читання — не привід зупиняти генерацію */
@@ -559,6 +702,8 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     status: 'COMPLETE' | 'FAILED' | 'CANCELLED';
     errorCode: AiMessageErrorCode | null;
     usage: LlmUsage | null;
+    /** Остання спроба для журналу витрат; `null` — провайдера не викликали */
+    attemptEntry: UsageEntry | null;
   }): Promise<boolean> {
     return this.transactions.withTenantTx(async (tx) => {
       const finalized = await this.state.finalize(tx, input.messageId, input.attempt, {
@@ -568,6 +713,13 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         chunkCount: input.chunkCount,
         usage: input.usage,
       });
+      // Спроба платна незалежно від того, чи ми ще власники рядка (AI-5b, design.md R3):
+      // програний фенсинг лише міняє її результат на `superseded`
+      if (input.attemptEntry) {
+        await this.ledger.record(tx, [
+          finalized ? input.attemptEntry : { ...input.attemptEntry, outcome: 'superseded' },
+        ]);
+      }
       if (!finalized) {
         return false;
       }

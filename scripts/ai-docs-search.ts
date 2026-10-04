@@ -8,6 +8,8 @@ import {
 import { PostgresKnowledgeStore } from '../libs/shared/src/ai/knowledge/postgres-knowledge-store';
 import { countTokens } from '../libs/shared/src/ai/knowledge/ingest/chunker';
 import { EmbeddingRequestError } from '../libs/shared/src/ai/knowledge/openai-embedding-provider';
+import { RecordingEmbeddingProvider } from '../libs/shared/src/ai/knowledge/recording-embedding-provider';
+import { AiUsageLedger } from '../libs/shared/src/ai/costs/usage-ledger';
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -47,7 +49,12 @@ async function main(): Promise<void> {
   const cancellation = cliCancellation();
   try {
     const result = await withKnowledgeTenant(tenant, async (tx) => {
-      const embedding = await provider.embed([query], cancellation.signal);
+      // AI-5b: операторський пошук теж платний — рядок журналу `eval` під цим tenant-ом
+      const recorded = new RecordingEmbeddingProvider(provider, tx, new AiUsageLedger(), {
+        kind: 'eval',
+        sourceId: 'ai:docs:search',
+      });
+      const embedding = await recorded.embed([query], cancellation.signal);
       const items = await new PostgresKnowledgeStore(tx).search({
         product,
         role,

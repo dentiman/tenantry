@@ -10,6 +10,8 @@ import {
   withKnowledgeTenant,
 } from '../libs/shared/src/ai/knowledge/cli-runtime';
 import { EmbeddingRequestError } from '../libs/shared/src/ai/knowledge/openai-embedding-provider';
+import { RecordingEmbeddingProvider } from '../libs/shared/src/ai/knowledge/recording-embedding-provider';
+import { AiUsageLedger } from '../libs/shared/src/ai/costs/usage-ledger';
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -43,14 +45,17 @@ async function main(): Promise<void> {
   const cancellation = cliCancellation();
   try {
     const result = await withKnowledgeTenant(values.tenant, (tx) =>
-      new KnowledgeIngestor(new PostgresIngestStore(tx), provider).ingest(
-        preview,
-        cancellation.signal,
-        {
-          batchSize: Number(process.env.AI_EMBEDDING_BATCH_SIZE ?? 32),
-          concurrency: Number(process.env.AI_EMBEDDING_CONCURRENCY ?? 2),
-        },
-      ),
+      new KnowledgeIngestor(
+        new PostgresIngestStore(tx),
+        // AI-5b: кожен оплачений батч — рядок журналу витрат під цим tenant-ом
+        new RecordingEmbeddingProvider(provider, tx, new AiUsageLedger(), {
+          kind: 'ingest_embedding',
+          sourceId: `${preview.product}/${preview.sourceKey}`,
+        }),
+      ).ingest(preview, cancellation.signal, {
+        batchSize: Number(process.env.AI_EMBEDDING_BATCH_SIZE ?? 32),
+        concurrency: Number(process.env.AI_EMBEDDING_CONCURRENCY ?? 2),
+      }),
     );
     console.log(JSON.stringify(result, null, 2));
   } finally {

@@ -32,6 +32,16 @@ export interface LlmUsage {
    * прогін із живим ключем бачить, чи працює кеш; зберігати окремо — це `ai-1d`
    */
   readonly cachedPromptTokens?: number;
+  /** Токени запису в кеш (AI-5b): OpenRouter `prompt_tokens_details.cache_write_tokens` */
+  readonly cacheWriteTokens?: number;
+  /** Токени міркування — уже в `completionTokens`, окремо лише для видимості (AI-5b) */
+  readonly reasoningTokens?: number;
+  /**
+   * Вартість, яку списав провайдер (AI-5b, OpenRouter `usage.cost`), — USD десятковим
+   * рядком, щоб гроші ніколи не проходили через float-арифметику. Немає — провайдер не
+   * повідомив; тоді журнал бере розрахункову вартість за тарифом
+   */
+  readonly reportedCost?: string;
 }
 
 export interface LlmChunk {
@@ -39,6 +49,12 @@ export interface LlmChunk {
   readonly text: string;
   /** Є лише на ОСТАННЬОМУ кадрі, і то не в кожного провайдера */
   readonly usage?: LlmUsage;
+  /**
+   * Id запиту в провайдера (AI-5b, OpenRouter `gen-…`) — окремим порожнім кадром ОДРАЗУ,
+   * щойно відомий: Stop, таймаут чи обрив usage не отримають, а за цим id журнал добере
+   * фактичну вартість пізніше (design.md R3/R4)
+   */
+  readonly requestId?: string;
 }
 
 /**

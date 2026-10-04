@@ -1,5 +1,6 @@
 import type { AiKnowledgeDocument, AiUserContext } from '../prompt/prompt-builder';
 import type { KnowledgeExcerpt } from './citations';
+import type { EmbeddingBilling } from './embedding-provider';
 
 /**
  * Що потрібно джерелу, щоб вибрати знання для відповіді (ai-1b design.md D6).
@@ -24,6 +25,16 @@ export interface KnowledgeSelection {
    * промпт мусить сказати це явно, а не мовчки відповідати без джерел.
    */
   readonly excerpts?: readonly KnowledgeExcerpt[];
+  /**
+   * Платний embedding питання (AI-5b, design.md R3): воркер пише його в журнал витрат у
+   * транзакції `claim()`. `undefined` — embedding-виклику не було (статичний корпус, FTS)
+   */
+  readonly queryEmbedding?: QueryEmbeddingUsage;
+}
+
+export interface QueryEmbeddingUsage {
+  readonly inputTokens: number;
+  readonly billing?: EmbeddingBilling;
 }
 
 /**

@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LlmProviderError, type LlmChunk, type LlmRequest } from './llm-provider';
+import { decimalString } from '../costs/money';
 import { OpenAiCompatProvider, isAnthropicHost, parseRetryAfter } from './openai-compat.provider';
 
 /**
@@ -205,6 +206,59 @@ describe('OpenAiCompatProvider', () => {
     });
   });
 
+  it('AI-5b: id запиту — першим кадром, usage OpenRouter з cost і розбивкою токенів', async () => {
+    handler = (_req, res): void => {
+      sse(res, [
+        frame(contentChunk('Hi')),
+        frame(finishChunk('stop')),
+        frame({
+          ...USAGE_CHUNK,
+          usage: {
+            prompt_tokens: 2_000,
+            completion_tokens: 300,
+            total_tokens: 2_300,
+            cost: 0.00123456789,
+            is_byok: false,
+            prompt_tokens_details: { cached_tokens: 1_500, cache_write_tokens: 200 },
+            completion_tokens_details: { reasoning_tokens: 120 },
+            cost_details: { upstream_inference_cost: null },
+          },
+        }),
+        'data: [DONE]\n\n',
+      ]);
+    };
+    const chunks = await collect(makeProvider().provider);
+
+    expect(chunks[0]).toEqual({ text: '', requestId: 'gen-1' });
+    expect(chunks.filter((c) => c.requestId)).toHaveLength(1);
+    expect(chunks.at(-1)?.usage).toEqual({
+      promptTokens: 2_000,
+      completionTokens: 300,
+      model: `${MODEL}-20260901`,
+      cachedPromptTokens: 1_500,
+      cacheWriteTokens: 200,
+      reasoningTokens: 120,
+      reportedCost: '0.00123456789',
+    });
+  });
+
+  it('AI-5b: cost неочікуваної форми чи відʼємний — вартості просто немає', async () => {
+    handler = (_req, res): void => {
+      sse(res, [
+        frame(contentChunk('Hi', 'stop')),
+        frame({
+          ...USAGE_CHUNK,
+          usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12, cost: 'free' },
+        }),
+        'data: [DONE]\n\n',
+      ]);
+    };
+    const usage = (await collect(makeProvider().provider)).at(-1)?.usage;
+    expect(usage?.reportedCost).toBeUndefined();
+    expect(usage?.cacheWriteTokens).toBeUndefined();
+    expect(usage?.promptTokens).toBe(10);
+  });
+
   it('без finish_reason, але з usage-кадром — відповідь ЗАВЕРШЕНА', async () => {
     handler = (_req, res): void => {
       sse(res, [frame(contentChunk('Done.')), frame(USAGE_CHUNK), 'data: [DONE]\n\n']);
@@ -282,7 +336,7 @@ describe('OpenAiCompatProvider', () => {
         }
       })(),
     ).rejects.toMatchObject({ name: 'LlmProviderError', retryable: true });
-    expect(received).toEqual(['Hel']);
+    expect(received).toEqual(['', 'Hel']);
   });
 
   it('стрім закінчився без finish_reason і без usage — обрізаний, ретрай-придатна', async () => {
@@ -315,9 +369,12 @@ describe('OpenAiCompatProvider', () => {
     const chunks: LlmChunk[] = [];
     for await (const chunk of provider.generate(REQUEST, controller.signal)) {
       chunks.push(chunk);
-      controller.abort('cancelled');
+      if (chunk.text) {
+        controller.abort('cancelled');
+      }
     }
-    expect(chunks.map((c) => c.text)).toEqual(['thinking…']);
+    // Id запиту приходить ПЕРШИМ і переживає Stop — за ним журнал добере вартість (AI-5b)
+    expect(chunks).toEqual([{ text: '', requestId: 'gen-1' }, { text: 'thinking…' }]);
     await vi.waitFor(() => {
       expect(closedConnections).toBe(1);
     });
@@ -400,4 +457,25 @@ describe('parseRetryAfter', () => {
     expect(parseRetryAfter(new Headers(), now)).toBeUndefined();
     expect(parseRetryAfter(undefined, now)).toBeUndefined();
   });
+});
+
+describe('decimalString (AI-5b)', () => {
+  it.each([
+    [0.00123, '0.00123'],
+    [1e-7, '0.0000001'],
+    [1.5e-10, '0.00000000015'],
+    [0, '0'],
+    [12, '12'],
+    ['0.00000002', '0.00000002'],
+    [' 3.5 ', '3.5'],
+  ])('%s → %s', (input, expected) => {
+    expect(decimalString(input)).toBe(expected);
+  });
+
+  it.each([[-1], [Number.NaN], [Number.POSITIVE_INFINITY], ['1e-7'], ['abc'], [null], [{}]])(
+    '%s → undefined',
+    (input) => {
+      expect(decimalString(input)).toBeUndefined();
+    },
+  );
 });

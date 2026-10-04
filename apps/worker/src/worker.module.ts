@@ -17,6 +17,8 @@ import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { AiPurgeConversationsSubscriber } from './subscribers/ai-purge-conversations.subscriber';
+import { AiReconcileUsageCostsSubscriber } from './subscribers/ai-reconcile-usage-costs.subscriber';
+import { AiSyncModelPricesSubscriber } from './subscribers/ai-sync-model-prices.subscriber';
 import { CleanupExpiredTokensSubscriber } from './subscribers/cleanup-expired-tokens.subscriber';
 import { CleanupOrphanFilesSubscriber } from './subscribers/cleanup-orphan-files.subscriber';
 import { CleanupProcessedJobsSubscriber } from './subscribers/cleanup-processed-jobs.subscriber';
@@ -57,6 +59,9 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     AiLeaseGuard,
     AiGenerateReplySubscriber,
     AiPurgeConversationsSubscriber,
+    // AI-5b: журнал витрат — добір фактичної вартості й синхронізація тарифів
+    AiReconcileUsageCostsSubscriber,
+    AiSyncModelPricesSubscriber,
     CleanupExpiredTokensSubscriber,
     CleanupOrphanFilesSubscriber,
     CleanupProcessedJobsSubscriber,

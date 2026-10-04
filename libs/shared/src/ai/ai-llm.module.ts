@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger, Module } from '@nestjs/common';
 import { AI_CONFIG, requireProviderCredentials, type AiConfig } from './ai.config';
+import { billingProviderFor } from './costs/billing';
 import { FakeLlmProvider } from './llm/fake-llm.provider';
 import { LlmProviderError, type LlmChunk, type LlmProvider } from './llm/llm-provider';
 import { OpenAiCompatProvider } from './llm/openai-compat.provider';
@@ -52,6 +53,8 @@ class UnconfiguredLlmProvider implements LlmProvider {
 export interface AiGeneration {
   readonly provider: LlmProvider;
   readonly model: string;
+  /** Хто виставляє рахунок за цю генерацію — ключ рядка журналу й тарифу (AI-5b) */
+  readonly billingProvider: string;
 }
 
 /**
@@ -113,7 +116,11 @@ export class PlatformAiRuntime implements AiRuntime {
         `AI provider ${effective.provider} (source: ${effective.sources.provider}), model ${effective.model} (source: ${effective.sources.model})`,
       );
     }
-    return { provider: this.built.provider, model: effective.model };
+    return {
+      provider: this.built.provider,
+      model: effective.model,
+      billingProvider: billingProviderFor(effective.provider, effective.baseUrl),
+    };
   }
 }
 

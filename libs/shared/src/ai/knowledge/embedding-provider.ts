@@ -7,6 +7,19 @@ export interface EmbeddingBatch {
   /** Same order as the requested texts. */
   readonly vectors: readonly (readonly number[])[];
   readonly inputTokens: number;
+  /**
+   * Для журналу витрат (AI-5b, design.md R4): хто виставляє рахунок, модель, як її назвав
+   * провайдер (`openai/text-embedding-3-small` в OpenRouter), фактична вартість (USD
+   * десятковим рядком) і id запиту. Відсутнє — джерело без білінгу (тестовий дублер)
+   */
+  readonly billing?: EmbeddingBilling;
+}
+
+export interface EmbeddingBilling {
+  readonly provider: string;
+  readonly model: string;
+  readonly reportedCost?: string;
+  readonly requestId?: string;
 }
 
 /** Separate from generation; the ingestion step will supply an actual adapter. */

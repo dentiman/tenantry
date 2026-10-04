@@ -70,6 +70,30 @@ describe('OpenAiEmbeddingProvider', () => {
     });
   });
 
+  it('AI-5b: billing — OpenRouter cost and request id, read defensively', async () => {
+    const { request } = scripted([
+      Response.json({
+        id: 'gen-emb-1',
+        model: 'openai/text-embedding-3-small',
+        data: [{ index: 0, embedding: vector() }],
+        usage: { prompt_tokens: 9, cost: 1.8e-7 },
+      }),
+    ]);
+    const result = await provider(request, 'https://openrouter.ai/api/v1').embed(['a'], signal());
+    expect(result.billing).toEqual({
+      provider: 'openrouter',
+      model: 'openai/text-embedding-3-small',
+      reportedCost: '0.00000018',
+      requestId: 'gen-emb-1',
+    });
+  });
+
+  it('AI-5b: billing without cost or id (OpenAI) keeps the response valid', async () => {
+    const { request } = scripted([ok([vector()])]);
+    const result = await provider(request).embed(['a'], signal());
+    expect(result.billing).toEqual({ provider: 'api.openai.com', model: 'text-embedding-3-small' });
+  });
+
   it.each([
     'http://api.openai.com/v1',
     'https://evil.example.com/v1',

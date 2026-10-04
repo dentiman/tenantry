@@ -1,7 +1,12 @@
 import { Logger } from '@nestjs/common';
 import type { EmbeddingProvider } from './embedding-provider';
 import type { KnowledgeExcerpt } from './citations';
-import type { KnowledgeQuery, KnowledgeSelection, KnowledgeSource } from './knowledge-source';
+import type {
+  KnowledgeQuery,
+  KnowledgeSelection,
+  KnowledgeSource,
+  QueryEmbeddingUsage,
+} from './knowledge-source';
 import type {
   KnowledgeChunkCandidate,
   KnowledgeChunkMatch,
@@ -45,6 +50,8 @@ export interface KnowledgeRetrieval {
   readonly vector: readonly KnowledgeChunkMatch[];
   readonly text: readonly KnowledgeTextMatch[];
   readonly queryTokens: number;
+  /** Платний embedding питання для журналу витрат (AI-5b); `null` — виклику не було */
+  readonly queryEmbedding: QueryEmbeddingUsage | null;
   /** `hybrid` без embeddings (провайдер недоступний) — відповідали лише з FTS */
   readonly degraded: boolean;
   readonly embedMs: number;
@@ -88,12 +95,18 @@ export class PostgresKnowledgeSource implements KnowledgeSource {
       version: knowledgeVersion(this.options.product, result.excerpts),
       documents: [],
       excerpts: result.excerpts.map(({ tokenCount: _tokenCount, ...excerpt }) => excerpt),
+      ...(result.queryEmbedding ? { queryEmbedding: result.queryEmbedding } : {}),
     };
   }
 
   async retrieve(query: KnowledgeQuery): Promise<KnowledgeRetrieval> {
     const { mode, product } = this.options;
-    let embedding: { model: string; vector: readonly number[]; tokens: number } | null = null;
+    let embedding: {
+      model: string;
+      vector: readonly number[];
+      tokens: number;
+      usage: QueryEmbeddingUsage;
+    } | null = null;
     let degraded = false;
     const embedStartedAt = Date.now();
     if (mode !== 'fts') {
@@ -104,6 +117,10 @@ export class PostgresKnowledgeSource implements KnowledgeSource {
           model: batch.model,
           vector: batch.vectors[0] ?? [],
           tokens: batch.inputTokens,
+          usage: {
+            inputTokens: batch.inputTokens,
+            ...(batch.billing ? { billing: batch.billing } : {}),
+          },
         };
       } catch (error) {
         // `vector` без embeddings відповідати не може — явна помилка (AI-2a.3 D4);
@@ -146,6 +163,7 @@ export class PostgresKnowledgeSource implements KnowledgeSource {
       vector,
       text,
       queryTokens: embedding?.tokens ?? 0,
+      queryEmbedding: embedding?.usage ?? null,
       degraded,
       embedMs,
       searchMs,

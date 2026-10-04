@@ -1,19 +1,27 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
+import { billingProviderFor } from '../costs/billing';
+import { decimalString } from '../costs/money';
 import {
   KNOWLEDGE_EMBEDDING_MODEL as MODEL,
   KNOWLEDGE_EMBEDDING_DIMENSIONS as DIMENSIONS,
   serializeKnowledgeVector,
   type EmbeddingBatch,
+  type EmbeddingBilling,
   type EmbeddingProvider,
 } from './embedding-provider';
 
 const ResponseSchema = z.object({
+  // AI-5b: id запиту (`embd-…` / `gen-…`) і вартість — захищено, без них відповідь валідна
+  id: z.string().optional().catch(undefined),
   model: z.string(),
   data: z.array(
     z.object({ index: z.number().int().nonnegative(), embedding: z.array(z.number()) }),
   ),
-  usage: z.object({ prompt_tokens: z.number().int().nonnegative() }),
+  usage: z.object({
+    prompt_tokens: z.number().int().nonnegative(),
+    cost: z.unknown().optional(),
+  }),
 });
 export interface EmbeddingOptions {
   baseUrl: string;
@@ -32,6 +40,7 @@ export class EmbeddingRequestError extends Error {
 export class OpenAiEmbeddingProvider implements EmbeddingProvider {
   private readonly endpoint: string;
   private readonly requestModel: string;
+  private readonly billingProvider: string;
   private readonly timeoutMs: number;
   private readonly retries: number;
 
@@ -52,6 +61,7 @@ export class OpenAiEmbeddingProvider implements EmbeddingProvider {
       throw new Error('Embeddings require an OpenAI/OpenRouter HTTPS base URL and API key');
     this.endpoint = `${options.baseUrl.replace(/\/+$/, '')}/embeddings`;
     this.requestModel = url.hostname === 'openrouter.ai' ? `openai/${MODEL}` : MODEL;
+    this.billingProvider = billingProviderFor('openai-compat', options.baseUrl);
     this.timeoutMs = options.timeoutMs ?? 45_000;
     this.retries = options.retries ?? 2;
     if (
@@ -139,8 +149,20 @@ export class OpenAiEmbeddingProvider implements EmbeddingProvider {
         model: MODEL,
         vectors: ordered.map((row) => row.embedding),
         inputTokens: parsed.data.usage.prompt_tokens,
+        billing: this.billing(parsed.data),
       };
     }
+  }
+
+  private billing(response: z.infer<typeof ResponseSchema>): EmbeddingBilling {
+    const cost = decimalString(response.usage.cost);
+    return {
+      provider: this.billingProvider,
+      // Модель для тарифу — як назвав провайдер; OpenRouter ціни ключує `openai/…`
+      model: response.model === MODEL ? this.requestModel : response.model,
+      ...(cost !== undefined ? { reportedCost: cost } : {}),
+      ...(response.id ? { requestId: response.id } : {}),
+    };
   }
 }
 

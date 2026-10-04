@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AiCancelChannel,
   AiMessageStateService,
+  AiUsageLedger,
   AiUsageQuotaService,
   ASSISTANT_BOUNDARIES,
   FakeLlmProvider,
@@ -74,6 +75,8 @@ interface MessageRow {
   knowledgeVersion?: string | null;
   // AI-2a.3: так само — Prisma.DbNull для статичного корпусу, масив метаданих для retrieval
   knowledgeChunks?: unknown;
+  // AI-5b: так само — пише persistPartial()
+  providerRequestId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +156,8 @@ interface World {
   reply: () => MessageRow;
   /** ai-1d: рядки ai_usage_counters, які реально написав deduct() (design.md D4) */
   usageCounters: UsageCounterRow[];
+  /** AI-5b: рядки журналу витрат, які реально написав AiUsageLedger (design.md R3) */
+  usageEvents: Record<string, unknown>[];
 }
 
 /** Попередній хід розмови, доданий ПЕРЕД поточним питанням/відповіддю */
@@ -166,7 +171,9 @@ function makeWorld(
   replyStatus: Status = 'PENDING',
   question = 'How do I rename the workspace?',
   priorTurns: readonly PriorTurn[] = [],
-  replyOverrides: Partial<Pick<MessageRow, 'attempt' | 'leaseExpiresAt' | 'content'>> = {},
+  replyOverrides: Partial<
+    Pick<MessageRow, 'attempt' | 'leaseExpiresAt' | 'content' | 'providerRequestId'>
+  > = {},
   userRole: 'ADMIN' | 'USER' = 'USER',
   // ai-1c: вміст `tenants.settings` (JSON) — `{}` означає «тенант нічого не задавав»
   tenantSettings: unknown = {},
@@ -240,6 +247,7 @@ function makeWorld(
       errorCode: null,
       attempt: replyOverrides.attempt ?? 0,
       leaseExpiresAt: replyOverrides.leaseExpiresAt ?? null,
+      providerRequestId: replyOverrides.providerRequestId ?? null,
       chunkCount: 0,
       cancelRequestedAt: null,
       startedAt: null,
@@ -255,8 +263,17 @@ function makeWorld(
     status: conversationStatus,
   };
   const usageCounters: UsageCounterRow[] = [];
+  const usageEvents: Record<string, unknown>[] = [];
 
   const tx = {
+    // AI-5b: журнал витрат. Тарифів у цьому світі немає — оцінка лишається NULL
+    aiModelPrice: { findFirst: (): Promise<unknown> => Promise.resolve(null) },
+    aiUsageEvent: {
+      createMany: ({ data }: { data: Record<string, unknown>[] }): Promise<{ count: number }> => {
+        usageEvents.push(...data);
+        return Promise.resolve({ count: data.length });
+      },
+    },
     // AiUsageQuotaService.deduct() (ai-1d, design.md D4) — єдиний $executeRaw цього
     // шляху, точнісінько ті самі позиційні значення, що й реальний INSERT ... ON
     // CONFLICT: id, tenantId, userId, periodStart, promptTokens, cachedPromptTokens,
@@ -374,6 +391,7 @@ function makeWorld(
     completed,
     reply,
     usageCounters,
+    usageEvents,
   };
 }
 
@@ -465,12 +483,13 @@ function makeSubscriber(
     {
       // AI-5a: доступність і провайдер — на кожну генерацію; тут статичні
       availableForCurrentTenant: () => Promise.resolve(true),
-      generation: () => Promise.resolve({ provider, model: config.model }),
+      generation: () => Promise.resolve({ provider, model: config.model, billingProvider: 'fake' }),
       ...runtime,
     },
     knowledgeSource,
     config,
     new AiUsageQuotaService(config),
+    new AiUsageLedger(),
   );
 }
 
@@ -1379,7 +1398,8 @@ describe('AiGenerateReplySubscriber — AI-5a runtime settings and availability'
     const world = makeWorld();
     const { provider, requests } = capturingProvider();
     await makeSubscriber(world, {}, {}, provider, undefined, {
-      generation: () => Promise.resolve({ provider, model: 'platform-model' }),
+      generation: () =>
+        Promise.resolve({ provider, model: 'platform-model', billingProvider: 'fake' }),
     }).handle(job);
 
     expect(requests[0]?.model).toBe('platform-model');
@@ -1397,5 +1417,238 @@ describe('AiGenerateReplySubscriber — AI-5a runtime settings and availability'
     expect(world.reply().status).toBe('FAILED');
     expect(world.reply().errorCode).toBe('PROVIDER_UNAVAILABLE');
     expect(world.completed).toHaveLength(1);
+  });
+});
+
+describe('AiGenerateReplySubscriber — AI-5b cost ledger', () => {
+  const generationRows = (world: World): Record<string, unknown>[] =>
+    world.usageEvents.filter((e) => e.kind === 'generation');
+
+  /** Провайдер у формі OpenRouter: id запиту першим кадром, далі текст і тиша до abort */
+  function stallingWithRequestId(id: string): LlmProvider {
+    return {
+      async *generate(_request: LlmRequest, signal: AbortSignal): AsyncIterable<LlmChunk> {
+        yield { text: '', requestId: id };
+        yield { text: 'Partial answer' };
+        await new Promise<void>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              resolve();
+            },
+            { once: true },
+          );
+        });
+      },
+    };
+  }
+
+  it('успіх: рівно один рядок спроби з usage і вартістю провайдера', async () => {
+    const world = makeWorld();
+    await makeSubscriber(world).handle(job);
+
+    expect(generationRows(world)).toEqual([
+      expect.objectContaining({
+        kind: 'generation',
+        outcome: 'complete',
+        attempt: 1,
+        userId: USER,
+        messageId: REPLY,
+        provider: 'fake',
+        model: 'fake-1',
+        reportedCost: '0',
+        costStatus: 'reported',
+        estimatedCost: null,
+      }),
+    ]);
+    expect(generationRows(world)[0]?.inputTokens).toEqual(expect.any(Number));
+  });
+
+  it(`ретрай (${FAKE_LLM_DIRECTIVES.failOnce}): рядок на КОЖНУ спробу — retried, потім complete`, async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.failOnce} ledger retry`);
+    await makeSubscriber(world).handle(job);
+
+    expect(generationRows(world).map((e) => [e.attempt, e.outcome, e.costStatus])).toEqual([
+      [1, 'retried', 'unknown'],
+      [2, 'complete', 'reported'],
+    ]);
+  });
+
+  it(`вичерпані ретраї (${FAKE_LLM_DIRECTIVES.fail}): retried + failed, обидві спроби в журналі`, async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.fail} ledger`);
+    await makeSubscriber(world).handle(job);
+
+    expect(world.reply().status).toBe('FAILED');
+    expect(generationRows(world).map((e) => [e.attempt, e.outcome])).toEqual([
+      [1, 'retried'],
+      [2, 'failed'],
+    ]);
+  });
+
+  it('Stop: спроба cancelled з id запиту OpenRouter → pending для добору; id збережено в рядку', async () => {
+    const world = makeWorld();
+    const cancel: { fire?: () => void } = {};
+    const provider = stallingWithRequestId('gen-stop-1');
+    const running = makeSubscriber(
+      world,
+      {},
+      {
+        onCancel: (_id: string, handler: () => void): Promise<() => void> => {
+          cancel.fire = handler;
+          return Promise.resolve(() => undefined);
+        },
+      },
+      provider,
+      undefined,
+      {
+        generation: () =>
+          Promise.resolve({
+            provider,
+            model: 'openai/gpt-5.6-luna',
+            billingProvider: 'openrouter',
+          }),
+      },
+    ).handle(job);
+    await vi.waitFor(() => {
+      expect(world.reply().providerRequestId).toBe('gen-stop-1');
+    });
+    cancel.fire?.();
+    await running;
+
+    expect(world.reply().status).toBe('CANCELLED');
+    expect(generationRows(world)).toEqual([
+      expect.objectContaining({
+        outcome: 'cancelled',
+        attempt: 1,
+        provider: 'openrouter',
+        model: 'openai/gpt-5.6-luna',
+        providerRequestId: 'gen-stop-1',
+        inputTokens: null,
+        reportedCost: null,
+        costStatus: 'pending',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- асиметричний матчер vitest
+        reconcileAfter: expect.any(Date),
+      }),
+    ]);
+  });
+
+  it('таймаут: спроба timeout, без usage — unknown для провайдера без добору', async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.stall} ledger`);
+    await makeSubscriber(world, { requestTimeoutMs: 30 }).handle(job);
+
+    expect(generationRows(world)).toEqual([
+      expect.objectContaining({ outcome: 'timeout', costStatus: 'unknown', inputTokens: null }),
+    ]);
+  });
+
+  it('втрата власності посеред стріму: спроба superseded записана, хоча відповідь не фіналізована', async () => {
+    const world = makeWorld('PENDING', `${FAKE_LLM_DIRECTIVES.long} ledger lost`);
+    let bumped = false;
+    const originalAiDelta = world.realtime.aiDelta;
+    world.realtime.aiDelta = (t, u, payload): void => {
+      originalAiDelta(t, u, payload);
+      if (!bumped) {
+        bumped = true;
+        world.reply().attempt += 1;
+      }
+    };
+    await makeSubscriber(world, { partialPersistMs: 0 }).handle(job);
+
+    expect(world.completed).toHaveLength(0);
+    expect(generationRows(world)).toEqual([
+      expect.objectContaining({ outcome: 'superseded', attempt: 1, messageId: REPLY }),
+    ]);
+  });
+
+  it('embedding питання — рядок query_embedding з id відповіді, у транзакції claim()', async () => {
+    const world = makeWorld();
+    const source: KnowledgeSource = {
+      select: () =>
+        Promise.resolve({
+          version: 'postgres:fms:fms@rev-1',
+          documents: [],
+          excerpts: [EXCERPT],
+          queryEmbedding: {
+            inputTokens: 7,
+            billing: {
+              provider: 'openrouter',
+              model: 'openai/text-embedding-3-small',
+              reportedCost: '0.00000014',
+              requestId: 'gen-emb-1',
+            },
+          },
+        }),
+    };
+    await makeSubscriber(world, {}, {}, undefined, source).handle(job);
+
+    const embedding = world.usageEvents.filter((e) => e.kind === 'query_embedding');
+    expect(embedding).toEqual([
+      expect.objectContaining({
+        messageId: REPLY,
+        userId: USER,
+        outcome: 'complete',
+        provider: 'openrouter',
+        model: 'openai/text-embedding-3-small',
+        inputTokens: 7,
+        outputTokens: 0,
+        reportedCost: '0.00000014',
+        providerRequestId: 'gen-emb-1',
+        costStatus: 'reported',
+      }),
+    ]);
+    expect(generationRows(world)).toHaveLength(1);
+  });
+
+  it('embedding питання записується, навіть коли claim() програв конкурентній доставці', async () => {
+    const world = makeWorld();
+    const { provider, requests } = capturingProvider();
+    const source: KnowledgeSource = {
+      select: () => {
+        // Поки ми рахували embedding, рядок закрила інша доставка
+        world.reply().status = 'COMPLETE';
+        return Promise.resolve({
+          version: 'postgres:fms:fms@rev-1',
+          documents: [],
+          excerpts: [],
+          queryEmbedding: { inputTokens: 5 },
+        });
+      },
+    };
+    await makeSubscriber(world, {}, {}, provider, source).handle(job);
+
+    expect(requests).toHaveLength(0);
+    expect(world.usageEvents).toEqual([
+      expect.objectContaining({ kind: 'query_embedding', messageId: REPLY, inputTokens: 5 }),
+    ]);
+  });
+
+  it('перезахоплена покинута відповідь: мертва спроба — abandoned/pending за збереженим id', async () => {
+    const world = makeWorld('STREAMING', undefined, [], {
+      attempt: 2,
+      content: 'LEFTOVER',
+      providerRequestId: 'gen-dead-2',
+    });
+    const provider = new FakeLlmProvider({ chunkDelayMs: 1, chunkChars: 12 });
+    await makeSubscriber(world, {}, {}, provider, undefined, {
+      generation: () =>
+        Promise.resolve({ provider, model: 'openai/gpt-5.6-luna', billingProvider: 'openrouter' }),
+    }).handle(job);
+
+    expect(generationRows(world).map((e) => [e.attempt, e.outcome, e.costStatus])).toEqual([
+      [2, 'abandoned', 'pending'],
+      [3, 'complete', 'reported'],
+    ]);
+    expect(generationRows(world)[0]?.providerRequestId).toBe('gen-dead-2');
+    expect(world.reply().providerRequestId).toBeNull();
+  });
+
+  it('збій налаштувань провайдера — жодного рядка спроби: моделі не викликали', async () => {
+    const world = makeWorld();
+    await makeSubscriber(world, {}, {}, undefined, undefined, {
+      generation: () => Promise.reject(new Error('secret-invalid')),
+    }).handle(job);
+
+    expect(world.reply().status).toBe('FAILED');
+    expect(world.usageEvents).toEqual([]);
   });
 });

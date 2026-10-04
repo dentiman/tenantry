@@ -1,14 +1,16 @@
 import type { MessageDefinition } from './message-definition';
-import { generateAiReplyCommand, purgeAiConversationsCommand } from './definitions/ai.messages';
+import {
+  generateAiReplyCommand,
+  purgeAiConversationsCommand,
+  reconcileAiUsageCostsCommand,
+  syncAiModelPricesCommand,
+} from './definitions/ai.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
   passwordResetRequestedEvent,
 } from './definitions/auth.messages';
-import {
-  cleanupOrphanFilesCommand,
-  generateThumbnailCommand,
-} from './definitions/files.messages';
+import { cleanupOrphanFilesCommand, generateThumbnailCommand } from './definitions/files.messages';
 import {
   cleanupExpiredTokensCommand,
   cleanupProcessedJobsCommand,
@@ -134,6 +136,20 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     cron: '45 3 * * *',
   },
   {
+    // AI-5b, design.md R5: фактична вартість спроб без usage-кадру (Stop, таймаут, обрив,
+    // падіння воркера). Кожні 5 хв, власний backoff рядка — у самій таблиці журналу
+    definition: reconcileAiUsageCostsCommand,
+    consumers: [{ id: 'ai-usage-cost-reconciler', retryLimit: 1 }],
+    cron: '*/5 * * * *',
+  },
+  {
+    // AI-5b, design.md R7: тарифи з публічних списків OpenRouter раз на добу, у вільний
+    // нічний слот після чисток 03:xx
+    definition: syncAiModelPricesCommand,
+    consumers: [{ id: 'ai-model-price-syncer', retryLimit: 1 }],
+    cron: '15 4 * * *',
+  },
+  {
     // Перший споживач, якому дефолти pg-boss не підходять (docs/ai-assistant-plan.md §3.4).
     //
     // localConcurrency 4: дефолт 1 означав би ОДНУ генерацію на всю інсталяцію —
@@ -230,9 +246,7 @@ for (const entry of MESSAGE_TOPOLOGY) {
   // кілька НЕЗАЛЕЖНИХ messageId — це вже не одна подія, а N різних. Якщо колись
   // знадобиться розклад із fan-out-ом, він має публікувати подію, а не тікати в черги.
   if (entry.cron && entry.consumers.length > 1) {
-    throw new Error(
-      `Scheduled message ${entry.definition.name} must have exactly one consumer`,
-    );
+    throw new Error(`Scheduled message ${entry.definition.name} must have exactly one consumer`);
   }
   BY_NAME.set(entry.definition.name, entry);
 }
