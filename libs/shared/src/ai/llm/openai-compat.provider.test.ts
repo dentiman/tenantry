@@ -148,9 +148,10 @@ const REQUEST: LlmRequest = {
 async function collect(
   provider: OpenAiCompatProvider,
   signal: AbortSignal = new AbortController().signal,
+  request: LlmRequest = REQUEST,
 ): Promise<LlmChunk[]> {
   const chunks: LlmChunk[] = [];
-  for await (const chunk of provider.generate(REQUEST, signal)) {
+  for await (const chunk of provider.generate(request, signal)) {
     chunks.push(chunk);
   }
   return chunks;
@@ -191,6 +192,7 @@ describe('OpenAiCompatProvider', () => {
         model: `${MODEL}-20260901`,
         cachedPromptTokens: 1_024,
       },
+      finishReason: 'stop',
     });
 
     expect(recorded).toHaveLength(1);
@@ -204,6 +206,27 @@ describe('OpenAiCompatProvider', () => {
       stream_options: { include_usage: true },
       messages: REQUEST.messages,
     });
+    // AI-5c: прод температуру не задає — ключа в тілі немає зовсім (ні undefined, ні null)
+    expect(Object.keys(request?.body ?? {}).sort()).toEqual(
+      ['max_tokens', 'messages', 'model', 'stream', 'stream_options'].sort(),
+    );
+  });
+
+  it('AI-5c: temperature судді eval іде в тіло лише тоді, коли задана; finish_reason — на usage-кадрі', async () => {
+    handler = (_req, res): void => {
+      sse(res, [
+        frame(contentChunk('Cut')),
+        frame(finishChunk('length')),
+        frame(USAGE_CHUNK),
+        'data: [DONE]\n\n',
+      ]);
+    };
+    const chunks = await collect(makeProvider().provider, undefined, {
+      ...REQUEST,
+      temperature: 0,
+    });
+    expect(recorded[0]?.body).toMatchObject({ temperature: 0 });
+    expect(chunks.at(-1)?.finishReason).toBe('length');
   });
 
   it('AI-5b: id запиту — першим кадром, usage OpenRouter з cost і розбивкою токенів', async () => {

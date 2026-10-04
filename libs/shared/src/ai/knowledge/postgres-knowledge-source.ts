@@ -91,12 +91,7 @@ export class PostgresKnowledgeSource implements KnowledgeSource {
       },
       'AI knowledge retrieval',
     );
-    return {
-      version: knowledgeVersion(this.options.product, result.excerpts),
-      documents: [],
-      excerpts: result.excerpts.map(({ tokenCount: _tokenCount, ...excerpt }) => excerpt),
-      ...(result.queryEmbedding ? { queryEmbedding: result.queryEmbedding } : {}),
-    };
+    return selectionFromRetrieval(this.options.product, result);
   }
 
   async retrieve(query: KnowledgeQuery): Promise<KnowledgeRetrieval> {
@@ -232,6 +227,22 @@ export function selectExcerpts(
     });
   }
   return selected;
+}
+
+/**
+ * Retrieval → вибір знань для промпту. Окремо від `select()`, щоб eval відповідей (AI-5c)
+ * отримав РІВНО той вибір, що й воркер, і водночас діагностику з `retrieve()`.
+ */
+export function selectionFromRetrieval(
+  product: string,
+  result: KnowledgeRetrieval,
+): KnowledgeSelection {
+  return {
+    version: knowledgeVersion(product, result.excerpts),
+    documents: [],
+    excerpts: result.excerpts.map(({ tokenCount: _tokenCount, ...excerpt }) => excerpt),
+    ...(result.queryEmbedding ? { queryEmbedding: result.queryEmbedding } : {}),
+  };
 }
 
 /** `postgres:<product>:<sourceKey@revision,…>` відібраних фрагментів (AI-2a.3 design.md D6) */

@@ -11,17 +11,16 @@ import {
   AI_RUNTIME,
   LlmProviderError,
   MessageSubscriber,
-  buildPrompt,
+  buildGenerationRequest,
   generateAiReplyCommand,
   ledgerTokensForEmbedding,
   ledgerTokensFromLlm,
   readAiSettings,
-  selectHistoryPairs,
   toKnowledgeChunkRefs,
   type AiConfig,
   type AiGeneration,
   type AiRuntime,
-  type AiHistoryTurn,
+  type AiHistoryRow,
   type AiOrganizationInstructions,
   type KnowledgeSelection,
   type KnowledgeSource,
@@ -49,7 +48,8 @@ const KNOWLEDGE_UNAVAILABLE = 'unavailable';
 /** Усе, що читається до вибору знань — першою короткою транзакцією `prepare()` */
 interface GenerationContext {
   readonly question: string;
-  readonly history: readonly AiHistoryTurn[];
+  /** Рядки до питання в порядку `seq`; вікно `historyTurns` відбирає `buildGenerationRequest` */
+  readonly historyRows: readonly AiHistoryRow[];
   readonly user: { readonly role: 'ADMIN' | 'USER'; readonly locale: string };
   readonly organization: AiOrganizationInstructions;
   /** Для realtime-адресації, якщо відповідь закривається, не дійшовши до claim() */
@@ -470,18 +470,17 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       tenantId: claimed.tenantId,
       userId: claimed.userId,
       attempt: claimed.attempt,
-      prompt: {
-        messages: buildPrompt({
-          question: context.question,
-          history: context.history,
-          knowledge: knowledge.documents,
-          excerpts: knowledge.excerpts,
-          user: context.user,
-          organization: context.organization,
-        }),
+      // Той самий запит будує eval відповідей (AI-5c): eval міряє рівно те, що йде в прод
+      prompt: buildGenerationRequest({
+        question: context.question,
+        historyRows: context.historyRows,
+        historyTurns: this.config.historyTurns,
+        user: context.user,
+        organization: context.organization,
+        knowledge,
         model: generation.model,
         maxOutputTokens: this.config.maxOutputTokens,
-      },
+      }),
       provider: generation.provider,
       billingProvider,
     };
@@ -588,7 +587,6 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         take: (this.config.historyTurns + HISTORY_SLACK_TURNS) * 2,
         select: { seq: true, role: true, status: true, content: true },
       });
-      const history = selectHistoryPairs(historyRows.reverse(), this.config.historyTurns);
 
       // Персона й інструкції організації (AI-1c) — у тій самій транзакції, під RLS.
       // `reply.tenantId` — власна колонка рядка, не аргумент сервісу; RLS однаково
@@ -608,7 +606,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
 
       return {
         question: questionRow.content,
-        history,
+        historyRows: historyRows.reverse(),
         user: { role: user.role, locale: user.locale },
         organization: aiSettings.settings,
         tenantId: reply.tenantId,

@@ -15,6 +15,11 @@ export interface LlmRequest {
   readonly messages: readonly LlmMessage[];
   readonly model: string;
   readonly maxOutputTokens: number;
+  /**
+   * Лише для LLM-судді eval відповідей (AI-5c, design.md D4): прод її не задає, і тоді
+   * ключа `temperature` у тілі запиту НЕМАЄ — бекенд бере власний дефолт, як і раніше
+   */
+  readonly temperature?: number;
 }
 
 /**
@@ -55,6 +60,11 @@ export interface LlmChunk {
    * фактичну вартість пізніше (design.md R3/R4)
    */
   readonly requestId?: string;
+  /**
+   * Чому бекенд зупинився (`stop`, `length`…) — разом з usage на термінальному кадрі (AI-5c:
+   * eval відрізняє обрізання лімітом виходу). Воркер його не читає
+   */
+  readonly finishReason?: string;
 }
 
 /**

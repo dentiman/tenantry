@@ -75,6 +75,8 @@ export class OpenAiCompatProvider implements LlmProvider {
           // `max_tokens`, а не `max_completion_tokens`: друге — лише first-party OpenAI,
           // перше розуміють усі сумісні бекенди й OpenRouter
           max_tokens: request.maxOutputTokens,
+          // Лише суддя eval (AI-5c): прод температуру не задає, і ключа в тілі немає зовсім
+          ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
           stream: true,
           stream_options: { include_usage: true },
         },
@@ -88,6 +90,7 @@ export class OpenAiCompatProvider implements LlmProvider {
     }
 
     let finished = false;
+    let finishReason: string | undefined;
     let usage: LlmUsage | undefined;
     let requestId: string | undefined;
     try {
@@ -103,6 +106,7 @@ export class OpenAiCompatProvider implements LlmProvider {
           // `length` (стеля max_tokens) і `content_filter` — теж ЗАВЕРШЕНА відповідь:
           // стеля виводу задумана, текст до неї лишається
           finished = true;
+          finishReason = choice.finish_reason;
         }
         if (chunk.usage) {
           usage = toUsage(chunk.usage, chunk.model);
@@ -135,7 +139,7 @@ export class OpenAiCompatProvider implements LlmProvider {
       });
     }
     if (usage) {
-      yield { text: '', usage };
+      yield { text: '', usage, ...(finishReason !== undefined ? { finishReason } : {}) };
     }
   }
 }

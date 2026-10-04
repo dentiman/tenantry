@@ -8,6 +8,7 @@ export * from './llm/openai-compat.provider';
 export * from './prompt/prompt-builder';
 export * from './prompt/organization-instructions';
 export * from './prompt/history';
+export * from './prompt/generation-request';
 export * from './ai-message-state.service';
 export * from './ai-usage-quota.service';
 export * from './knowledge/corpus-builder';
