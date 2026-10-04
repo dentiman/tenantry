@@ -265,7 +265,7 @@ message → subscribers, and one `publish(tx, def, data, …)` inserts one job p
 the same transaction, sequentially, fail-fast. `tx` is always the first argument — publishing
 outside the transaction that produced the fact is not possible by construction. A subscriber
 class without a matching topology entry (or vice versa) crashes the worker at boot, not
-silently. Idempotency is keyed by delivery, not by pg-boss job: `MessageInboxService.runOnce
+silently. Idempotency is keyed by message and consumer, not by pg-boss job: `MessageInboxService.runOnce
 (envelope, consumerId, fn)`, key `messageId:consumerId` (`publish` mints a new `messageId`, so a
 deliberate re-publish runs again — guarding that needs a business key on the domain table). The
 marker is `INSERT … ON CONFLICT DO NOTHING` in the same tx as `fn`; an error thrown by `fn`
