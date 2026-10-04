@@ -350,7 +350,9 @@ if (entry.definition.scope === 'tenant') {
 самий tenant-extended клієнт, той самий `set_config` на кожній операції.
 `MessageInboxService.runOnce` (exactly-once ефекти) іде через `withTenantTx`, тож бізнес-записи
 всередині inbox-транзакції теж отримують tenant-контекст; сам маркер `processed_jobs` —
-інфра-таблиця без `tenant_id`.
+інфра-таблиця без `tenant_id`. Маркер вставляється як `createMany({ skipDuplicates: true })`
+(`ON CONFLICT DO NOTHING`), `count === 0` → `skipped`; помилка `fn` (зокрема бізнесовий `P2002`)
+іде назовні разом з відкотом маркера й усіх записів транзакції.
 
 Разом із tenant-контекстом із конверта піднімається і **контекст ланцюга**
 (`correlationId`/`causationId`), тому публікація, зроблена всередині підписника, успадковує їх

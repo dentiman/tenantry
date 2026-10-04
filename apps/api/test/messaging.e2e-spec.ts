@@ -28,6 +28,7 @@ import {
   type MessageEnvelope,
 } from '@saas-skeleton/shared';
 import { DEFAULT_TENANT_ID } from './test-users';
+import { Prisma } from '@saas-skeleton/database';
 import { randomUUID } from 'node:crypto';
 
 describe('Messaging pipeline (e2e)', () => {
@@ -157,29 +158,152 @@ describe('Messaging pipeline (e2e)', () => {
     const runInTenant = async <T>(fn: () => Promise<T>): Promise<T> =>
       app.get(TenantContextService).runWith(DEFAULT_TENANT_ID, fn);
 
+    /** Бізнесовий ефект для тестів: рядок customers із унікальними (tenant, number) і (tenant, external_id) */
+    const customerData = (
+      externalId: string,
+      number: number,
+    ): Prisma.CustomerUncheckedCreateInput => ({
+      name: 'inbox-test',
+      number,
+      externalId,
+      tenantId: DEFAULT_TENANT_ID,
+    });
+    const uniqueNumber = (): number => 900_000_000 + Math.floor(Math.random() * 90_000_000);
+    const customersOf = (externalIds: string[]): Promise<number> =>
+      prisma.customer.count({ where: { tenantId: DEFAULT_TENANT_ID, externalId: { in: externalIds } } });
+
     beforeEach(async () => {
       await prisma.processedJob.deleteMany();
     });
 
+    afterEach(async () => {
+      await prisma.customer.deleteMany({ where: { name: 'inbox-test' } });
+    });
+
     it('той самий messageId для того самого споживача виконується РАЗ', async () => {
       const envelope = envelopeFor(randomUUID());
+      const externalId = randomUUID();
       let calls = 0;
+      const effect = async (tx: Prisma.TransactionClient): Promise<void> => {
+        calls += 1;
+        // другий виклик, якби він дійшов до fn, впав би на unique (tenant, external_id)
+        await tx.customer.create({ data: customerData(externalId, uniqueNumber()) });
+      };
 
-      const first = await runInTenant(() =>
-        inboxOf().runOnce(envelope, 'welcome-email', async () => {
-          calls += 1;
-        }),
-      );
-      const second = await runInTenant(() =>
-        inboxOf().runOnce(envelope, 'welcome-email', async () => {
-          calls += 1;
-        }),
-      );
+      const first = await runInTenant(() => inboxOf().runOnce(envelope, 'welcome-email', effect));
+      const second = await runInTenant(() => inboxOf().runOnce(envelope, 'welcome-email', effect));
 
       expect(first).toBe('processed');
       expect(second).toBe('skipped');
       expect(calls).toBe(1);
+      expect(await customersOf([externalId])).toBe(1);
     });
+
+    it('бізнесовий P2002 усередині fn НЕ ковтається: маркер і ефекти відкочуються, ретрай можливий', async () => {
+      const envelope = envelopeFor(randomUUID());
+      const duplicated = randomUUID();
+      const earlier = randomUUID();
+
+      // Перший запис у транзакції успішний, другий порушує unique (tenant_id, external_id)
+      const failure = await runInTenant(() =>
+        inboxOf().runOnce(envelope, 'welcome-email', async (tx) => {
+          await tx.customer.create({ data: customerData(earlier, uniqueNumber()) });
+          await tx.customer.create({ data: customerData(duplicated, uniqueNumber()) });
+          await tx.customer.create({ data: customerData(duplicated, uniqueNumber()) });
+        }),
+      ).then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+      expect(failure).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
+      expect((failure as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');
+      expect(await prisma.processedJob.count({ where: { id: `${envelope.messageId}:welcome-email` } })).toBe(0);
+      expect(await customersOf([earlier, duplicated])).toBe(0);
+
+      // Причину усунено — та сама доставка виконується, а не «skipped»
+      const retry = await runInTenant(() =>
+        inboxOf().runOnce(envelope, 'welcome-email', async (tx) => {
+          await tx.customer.create({ data: customerData(earlier, uniqueNumber()) });
+          await tx.customer.create({ data: customerData(duplicated, uniqueNumber()) });
+        }),
+      );
+      expect(retry).toBe('processed');
+      expect(await customersOf([earlier, duplicated])).toBe(2);
+    });
+
+    it('звичайна помилка fn іде назовні, а маркер і ефекти відкочуються', async () => {
+      const envelope = envelopeFor(randomUUID());
+      const externalId = randomUUID();
+
+      await expect(
+        runInTenant(() =>
+          inboxOf().runOnce(envelope, 'welcome-email', async (tx) => {
+            await tx.customer.create({ data: customerData(externalId, uniqueNumber()) });
+            throw new Error('boom');
+          }),
+        ),
+      ).rejects.toThrow('boom');
+
+      expect(await prisma.processedJob.count({ where: { id: `${envelope.messageId}:welcome-email` } })).toBe(0);
+      expect(await customersOf([externalId])).toBe(0);
+    });
+
+    it('два одночасні runOnce одного ключа на справжньому Postgres: processed + skipped, один ефект', async () => {
+      const envelope = envelopeFor(randomUUID());
+      const externalIds = [randomUUID(), randomUUID()] as const;
+      let calls = 0;
+
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markEntered!: () => void;
+      const firstEntered = new Promise<void>((resolve) => {
+        markEntered = resolve;
+      });
+
+      // Транзакція A вставила маркер і тримає його незакоміченим, поки gate закритий
+      const a = runInTenant(() =>
+        inboxOf().runOnce(envelope, 'welcome-email', async (tx) => {
+          calls += 1;
+          await tx.customer.create({ data: customerData(externalIds[0], uniqueNumber()) });
+          markEntered();
+          await gate;
+        }),
+      );
+      await firstEntered;
+
+      const b = runInTenant(() =>
+        inboxOf().runOnce(envelope, 'welcome-email', async (tx) => {
+          calls += 1;
+          await tx.customer.create({ data: customerData(externalIds[1], uniqueNumber()) });
+        }),
+      );
+
+      // Детермінована координація без sleep-ів: чекаємо, поки Postgres сам покаже, що
+      // вставка маркера в B заблокована на незакоміченому маркері з A
+      const deadline = Date.now() + 10_000;
+      let blocked = 0;
+      while (blocked === 0 && Date.now() < deadline) {
+        // pg_locks видно будь-якій ролі (на відміну від query у pg_stat_activity)
+        const rows = await prisma.$queryRaw<{ n: number }[]>`
+          SELECT count(*)::int AS n FROM pg_locks
+          WHERE NOT granted AND locktype IN ('transactionid', 'speculative token')`;
+        blocked = rows[0]?.n ?? 0;
+        if (blocked === 0) await new Promise((resolve) => setImmediate(resolve));
+      }
+      expect(blocked).toBeGreaterThan(0);
+
+      release();
+      const results = await Promise.all([a, b]);
+
+      expect([...results].sort()).toEqual(['processed', 'skipped']);
+      expect(results[0]).toBe('processed'); // A першою вставила маркер
+      expect(calls).toBe(1);
+      expect(await customersOf([...externalIds])).toBe(1);
+      expect(await prisma.processedJob.count({ where: { id: `${envelope.messageId}:welcome-email` } })).toBe(1);
+    }, 30_000);
 
     it('різні споживачі обробляють ОДНЕ повідомлення незалежно', async () => {
       // Саме це ламалося б, якби ключем був лише messageId без суфікса споживача:
