@@ -47,7 +47,7 @@ export function parseKnowledgeChunkRefs(value: unknown): KnowledgeChunkRef[] {
 }
 
 /** `[1]`, `[2, 3]`, `[2,3]` — номери посилань у тексті відповіді */
-const CITATION_MARKER = /\[(\d{1,3}(?:\s*,\s*\d{1,3})*)\]/g;
+export const CITATION_MARKER = /\[(\d{1,3}(?:\s*,\s*\d{1,3})*)\]/g;
 
 export function citedNumbers(content: string): Set<number> {
   const numbers = new Set<number>();

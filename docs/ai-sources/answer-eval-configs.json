@@ -1,0 +1,16 @@
+{
+  "description": "Example for pnpm ai:answers:eval. Unset fields come from the effective settings (model: superadmin UI over AI_MODEL; the rest: AI_MAX_OUTPUT_TOKENS, AI_HISTORY_TURNS, AI_DOCS_*).",
+  "configs": [
+    {
+      "name": "current",
+      "description": "Exactly what production uses now"
+    },
+    {
+      "name": "lean-context",
+      "description": "Fewer, cheaper excerpts and a tighter output limit",
+      "finalChunks": 3,
+      "maxContextTokens": 1500,
+      "maxOutputTokens": 600
+    }
+  ]
+}

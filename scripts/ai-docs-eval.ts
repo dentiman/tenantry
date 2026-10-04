@@ -19,32 +19,14 @@ import {
   type KnowledgeSearchMode,
 } from '../libs/shared/src/ai/knowledge/postgres-knowledge-source';
 import { PostgresKnowledgeStore } from '../libs/shared/src/ai/knowledge/postgres-knowledge-store';
+import { QuestionSetSchema, type EvalQuestion } from '../libs/shared/src/ai/eval/question-set';
 
 /**
  * Retrieval-only eval (AI-2a.4, design.md D6): ті самі питання через кожен режим і поріг,
  * без генерації й без LLM-судді — детерміновано й майже безкоштовно. Embedding кожного
  * питання робиться ОДИН раз і кешується на всі конфігурації.
  */
-const QuestionSetSchema = z.object({
-  product: z.string().min(1),
-  status: z.string().optional(),
-  questions: z
-    .array(
-      z.object({
-        id: z.string().min(1),
-        category: z.string().min(1),
-        language: z.string().min(1),
-        role: z.enum(['ADMIN', 'USER']),
-        question: z.string().min(1),
-        /** Порожньо — питання без відповіді: правильна поведінка — нічого не знайти */
-        expected: z.array(z.string()),
-        /** Потрібні ВСІ очікувані сторінки (питання, що зачіпає кілька документів) */
-        expectAll: z.boolean().optional(),
-      }),
-    )
-    .min(1),
-});
-type Question = z.infer<typeof QuestionSetSchema>['questions'][number];
+type Question = EvalQuestion;
 
 interface Config {
   readonly mode: KnowledgeSearchMode;
