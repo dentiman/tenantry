@@ -6,6 +6,7 @@ import { HealthController } from './health.controller';
 import { PlatformAuthModule } from './auth/platform-auth.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { JobsMonitorModule } from './jobs/jobs.module';
+import { AiCostsModule } from './ai-costs/ai-costs.module';
 import { AiSettingsModule } from './ai-settings/ai-settings.module';
 import { RedisModule } from './redis/redis.module';
 import { AppThrottlerModule } from './common/app-throttler.module';
@@ -38,6 +39,8 @@ import { validatePlatformEnv } from './config/env.schema';
     TenantsModule,
     JobsMonitorModule,
     AiSettingsModule,
+    // AI-5b: журнал витрат і тарифи
+    AiCostsModule,
   ],
   controllers: [HealthController],
 })

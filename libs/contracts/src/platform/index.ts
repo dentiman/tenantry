@@ -4,3 +4,5 @@ export * from './platform.schema';
 export * from './platform.types';
 export * from './ai-settings.schema';
 export * from './ai-settings.types';
+export * from './ai-costs.schema';
+export * from './ai-costs.types';

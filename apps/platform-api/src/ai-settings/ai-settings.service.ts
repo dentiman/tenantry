@@ -7,6 +7,7 @@ import type {
   UpdatePlatformAiSettings,
 } from '@saas-skeleton/contracts/platform';
 import { loadAiConfig } from '@saas-skeleton/shared/ai/ai.config';
+import { billingProviderFor, reportsCost } from '@saas-skeleton/shared/ai/costs/billing';
 import { resolveGenerationSettings } from '@saas-skeleton/shared/ai/platform/platform-ai-settings';
 import {
   SecretBoxError,
@@ -69,6 +70,7 @@ export class AiSettingsService {
     }
 
     this.assertUsable(data, apiKeyEncrypted !== null);
+    await this.assertPriced(data);
 
     const changes: Record<string, Prisma.InputJsonValue> = {};
     for (const field of ['enabled', 'provider', 'baseUrl', 'model'] as const) {
@@ -181,6 +183,30 @@ export class AiSettingsService {
       throw new BadRequestException({
         message: `openai-compat requires ${missing.join(', ')} (in the platform settings or env)`,
         fieldErrors: missing.map((field) => ({ field, message: 'Required', code: 'required' })),
+      });
+    }
+  }
+
+  /**
+   * Модель без тарифу не можна активувати для провайдера, який не повертає вартість сам
+   * (AI-5b, design.md R8): інакше журнал витрат знав би токени, але не гроші. OpenRouter і
+   * `fake` вартість повідомляють — для них тариф не обов'язковий.
+   */
+  private async assertPriced(data: UpdatePlatformAiSettings): Promise<void> {
+    const provider = data.provider ?? this.config.provider;
+    const billing = billingProviderFor(provider, data.baseUrl ?? this.config.baseUrl);
+    if (reportsCost(billing)) return;
+    const model = data.model ?? this.config.model;
+    const tariff = await this.prisma.aiModelPrice.findFirst({
+      where: { provider: billing, model, validFrom: { lte: new Date() } },
+      select: { id: true },
+    });
+    if (!tariff) {
+      throw new BadRequestException({
+        message: `No tariff for ${model} at ${billing}; add a manual price before activating it`,
+        fieldErrors: [
+          { field: 'model', message: 'No tariff for this model', code: 'model_price_missing' },
+        ],
       });
     }
   }

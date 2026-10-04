@@ -7,8 +7,8 @@
 - [x] 1.2 `EmbeddingBatch`: reported cost and request id.
 
 ## 2. Tariffs and estimate
-- [ ] 2.1 Migration `ai_model_prices` (+ `CONTROL_PLANE_TABLES`), decimal estimate function with cache pricing.
-- [ ] 2.2 Price sync cron + platform endpoint; manual price entry; model activation check.
+- [x] 2.1 Migration `ai_model_prices` (+ `CONTROL_PLANE_TABLES`), decimal estimate function with cache pricing.
+- [x] 2.2 Price sync cron + platform endpoint; manual price entry; model activation check.
 
 ## 3. Ledger
 - [x] 3.1 Migration `ai_usage_events` (RLS, append-only for `saas_app`).
@@ -17,7 +17,7 @@
 - [x] 3.4 Reconciliation cron for `pending` entries.
 
 ## 4. Reporting
-- [ ] 4.1 platform-api summary endpoints (period × tenant/model/kind/day, reply average, failed spend, cache savings).
+- [x] 4.1 platform-api summary endpoints (period × tenant/model/kind/day, reply average, failed spend, cache savings).
 - [ ] 4.2 platform-web `Costs` and `Prices` pages in the AI area.
 
 ## 5. Verification

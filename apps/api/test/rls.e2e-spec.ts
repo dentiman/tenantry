@@ -16,6 +16,7 @@ const TENANT_TABLES = [
   'ai_conversations',
   'ai_messages',
   'ai_usage_counters',
+  'ai_usage_events',
   'ai_knowledge_sources',
   'ai_knowledge_documents',
   'ai_knowledge_chunks',
