@@ -18,9 +18,9 @@
 
 ## 4. Reporting
 - [x] 4.1 platform-api summary endpoints (period × tenant/model/kind/day, reply average, failed spend, cache savings).
-- [ ] 4.2 platform-web `Costs` and `Prices` pages in the AI area.
+- [x] 4.2 platform-web `Costs` and `Prices` pages in the AI area.
 
 ## 5. Verification
-- [ ] 5.1 Unit: usage parsing, estimate formula, entries per attempt.
-- [ ] 5.2 E2E: RLS, append-only, tariff by date, survives conversation deletion, platform summary.
-- [ ] 5.3 Live: ledger total for a `gen-…` equals OpenRouter activity; docs; lint/typecheck/build.
+- [x] 5.1 Unit: usage parsing, estimate formula, entries per attempt.
+- [x] 5.2 E2E: RLS, append-only, tariff by date, survives conversation deletion, platform summary.
+- [x] 5.3 Live: ledger total for a `gen-…` equals OpenRouter activity; docs; lint/typecheck/build.

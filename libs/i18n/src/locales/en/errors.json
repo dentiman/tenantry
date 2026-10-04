@@ -31,6 +31,7 @@
     "invalid_key": "Invalid key",
     "invalid_element": "Invalid value",
     "invalid_value": "Invalid value",
-    "custom": "Invalid value"
+    "custom": "Invalid value",
+    "model_price_missing": "This model has no price. Add one under AI → Prices before activating it."
   }
 }

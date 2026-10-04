@@ -57,14 +57,16 @@ export async function reconcilePendingUsage(
         : { status: 'retry', reason: lookup ? 'not-openrouter' : 'not-configured' };
 
     if (result.status === 'found') {
-      const model = result.model ?? row.model;
+      // Модель рядка НЕ перезаписується: запис генерації називає її з датою
+      // (`openai/gpt-5.6-luna-20260709`), стрім — без неї, і звіт «за моделлю» розщепився б
+      // на дві групи. Назва із запису — лише запасний ключ тарифу
       let estimatedCost = row.estimatedCost;
       let priceId = row.priceId;
       // Заморожена оцінка не переписується (design.md R5): лише туди, де її ще не було
       if (estimatedCost === null) {
         const tariff = await findTariff(prisma, row.provider, row.occurredAt, [
-          model,
-          ...(model !== row.model ? [row.model] : []),
+          row.model,
+          ...(result.model && result.model !== row.model ? [result.model] : []),
         ]);
         estimatedCost = tariff ? estimateCost(result.tokens, tariff) : null;
         priceId = estimatedCost !== null && tariff ? tariff.id : null;
@@ -74,7 +76,6 @@ export async function reconcilePendingUsage(
         data: {
           costStatus: 'reported',
           reportedCost: result.cost,
-          model,
           inputTokens: result.tokens.inputTokens,
           cachedReadTokens: result.tokens.cachedReadTokens,
           cacheWriteTokens: result.tokens.cacheWriteTokens,

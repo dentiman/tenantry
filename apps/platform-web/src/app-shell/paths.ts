@@ -20,6 +20,8 @@ export type NavPath =
   | '/operations/queues'
   | '/ai'
   | '/ai/settings'
+  | '/ai/costs'
+  | '/ai/prices'
   | '/user-settings'
   | '/user-settings/appearance';
 

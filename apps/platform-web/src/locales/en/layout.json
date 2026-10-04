@@ -11,7 +11,9 @@
     "jobs": "Jobs",
     "queues": "Queues",
     "userSettings": "User settings",
-    "aiSettings": "Settings"
+    "aiSettings": "Settings",
+    "aiCosts": "Costs",
+    "aiPrices": "Prices"
   },
   "accountMenu": "Account menu",
   "logout": "Log out",

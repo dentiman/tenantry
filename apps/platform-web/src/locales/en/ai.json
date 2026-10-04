@@ -50,5 +50,117 @@
     "updated": "Settings changed: {{fields}}",
     "keyRevealed": "API key shown"
   },
-  "fromEnvPlaceholder": "Not set — the environment value applies"
+  "fromEnvPlaceholder": "Not set — the environment value applies",
+  "costs": {
+    "title": "Costs",
+    "subtitle": "Spending of every provider call — all attempts, question embeddings, ingest and eval. USD.",
+    "loading": "Loading AI costs",
+    "loadFailed": "Could not load the AI costs.",
+    "periods": {
+      "this-month": "This month",
+      "last-month": "Last month",
+      "last-30-days": "30 days",
+      "last-7-days": "7 days"
+    },
+    "periodLabel": "Period",
+    "kpi": {
+      "total": "Total spend",
+      "totalHint": "{{calls}} calls · {{tokens}} tokens",
+      "average": "Average completed reply",
+      "averageHint": "{{completed}} of {{count}} replies completed",
+      "failed": "Failed and cancelled replies",
+      "failedHint": "Retries and lost attempts: {{retried}}",
+      "cache": "Cache savings",
+      "cacheHint": "At the base tariff prices",
+      "reconciliation": "Reported minus estimated",
+      "reconciliationHint": "{{rows}} calls have both costs; a large gap means a stale tariff",
+      "pending": "Waiting for the provider cost",
+      "pendingHint": "{{unknown}} calls never got a provider cost and keep the estimate"
+    },
+    "breakdown": {
+      "title": "Breakdown",
+      "by": {
+        "tenant": "By tenant",
+        "model": "By model",
+        "kind": "By call type",
+        "day": "By day"
+      },
+      "ariaLabel": "AI spending breakdown",
+      "name": "Name",
+      "calls": "Calls",
+      "inputTokens": "Input tokens",
+      "outputTokens": "Output tokens",
+      "reported": "Reported",
+      "estimated": "Estimated",
+      "cost": "Cost"
+    },
+    "kinds": {
+      "generation": "Reply generation",
+      "query_embedding": "Question embedding",
+      "ingest_embedding": "Ingest embedding",
+      "eval": "Eval and search"
+    },
+    "empty": "No AI spending in this period",
+    "emptyHint": "Every provider call is recorded here as soon as it happens."
+  },
+  "prices": {
+    "title": "Prices",
+    "subtitle": "Model tariffs per 1M tokens, USD. A price change adds a row; history is never rewritten.",
+    "ariaLabel": "Model prices",
+    "searchPlaceholder": "Search models",
+    "total": "Total",
+    "selected": "Selected",
+    "loading": "Loading prices",
+    "empty": "No prices yet — sync with OpenRouter or add one manually.",
+    "model": "Model",
+    "provider": "Provider",
+    "input": "Input / 1M",
+    "cacheRead": "Cache read / 1M",
+    "cacheWrite": "Cache write / 1M",
+    "output": "Output / 1M",
+    "request": "Per request",
+    "tiers": "Tiers",
+    "tiersCount_one": "{{count}} tier",
+    "tiersCount_other": "{{count}} tiers",
+    "tierFrom": "From {{tokens}} tokens (in · out)",
+    "source": "Source",
+    "sources": {
+      "openrouter-sync": "OpenRouter",
+      "manual": "Manual"
+    },
+    "validFrom": "Valid from",
+    "createdBy": "Added by",
+    "manualOnOpenRouter": "The next OpenRouter sync replaces this price if OpenRouter's differs.",
+    "history": "Price history",
+    "historyAction": "History",
+    "historyEmpty": "No history",
+    "sync": {
+      "action": "Sync with OpenRouter",
+      "running": "Syncing…",
+      "done": "Prices synced: {{created}} new, {{unchanged}} unchanged",
+      "partial": "Some price lists could not be read",
+      "failed": "Could not sync the prices"
+    },
+    "create": {
+      "trigger": "Add price",
+      "heading": "Add a model price",
+      "description": "For providers that do not report the cost themselves. Prices are USD per 1M tokens.",
+      "provider": "Provider",
+      "providerHint": "openrouter, or the host of the provider's base URL (api.deepseek.com)",
+      "model": "Model",
+      "modelHint": "Exactly as the provider names it",
+      "input": "Input / 1M",
+      "output": "Output / 1M",
+      "cacheRead": "Cache read / 1M",
+      "cacheWrite": "Cache write / 1M",
+      "cacheHint": "Leave empty if the provider does not price cache separately",
+      "request": "Per request",
+      "validFrom": "Valid from",
+      "validFromHint": "Empty — from now",
+      "cancel": "Cancel",
+      "submit": "Add price",
+      "submitting": "Adding…",
+      "added": "Price added"
+    }
+  }
 }

@@ -66,7 +66,11 @@ read the relevant doc before working in that area instead of expecting it here.
 - `docs/ai-platform-controls.md` — **current AI course** (AI-5): no new assistant features;
   model/URL/encrypted key and three-level on/off switch in the superadmin UI (AI-5a), cost
   ledger with provider-reported and tariff-based cost per call (AI-5b), answer-quality eval
-  with cost (AI-5c). Owner decisions of 2026-10-03 live there.
+  with cost (AI-5c). Owner decisions of 2026-10-03 live there. AI-5a and AI-5b are built;
+  §7 is how the ledger works: `ai_usage_events` (tenant RLS, append-only for `saas_app`, no FK
+  to messages), `ai_model_prices` (append-only, `valid_from` only), a row per attempt written in
+  the transaction that already exists, reconciliation and price-sync crons, platform `Costs`/
+  `Prices` pages. Money is `NUMERIC`/`Prisma.Decimal` and decimal strings on the wire.
 - `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table) and
   `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured results) — the
   PostgreSQL + pgvector retrieval track. `docs/ai-sources/README.md` — operator guide for an
@@ -400,7 +404,7 @@ than repeated here:
   built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
 - **AI assistant**: AI-2a done (FMS documentation in the chat with verified citations, hybrid
   search). Feature expansion is paused (AI-2b/AI-3/AI-4 postponed); current work is **AI-5** —
-  platform controls (AI-5a), cost ledger (AI-5b), answer quality (AI-5c):
+  platform controls (AI-5a, done), cost ledger (AI-5b, done), answer quality (AI-5c, next):
   `docs/ai-platform-controls.md`.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

@@ -19,6 +19,8 @@ import { TenantDetailPage } from './pages/tenant-detail';
 import { JobsPage } from './pages/jobs';
 import { QueuesPage } from './pages/queues';
 import { AiSettingsPage } from './pages/ai-settings';
+import { AiCostsPage } from './pages/ai-costs';
+import { AiPricesPage } from './pages/ai-prices';
 import { UserSettingsProfilePage } from './pages/user-settings/profile';
 import { UserSettingsAppearancePage } from './pages/user-settings/appearance';
 
@@ -211,6 +213,38 @@ const aiSettingsRoute = createRoute({
   component: AiSettingsPage,
 });
 
+/** AI-5b: період і розріз звіту витрат живуть в URL — посиланням можна поділитись */
+export const AI_COST_PERIODS = ['this-month', 'last-month', 'last-30-days', 'last-7-days'] as const;
+export const AI_COST_DIMENSIONS = ['tenant', 'model', 'kind', 'day'] as const;
+const AiCostsSearchSchema = z.object({
+  period: z.enum(AI_COST_PERIODS).optional().catch(undefined),
+  by: z.enum(AI_COST_DIMENSIONS).optional().catch(undefined),
+});
+export type AiCostsSearch = z.infer<typeof AiCostsSearchSchema>;
+
+const aiCostsRoute = createRoute({
+  getParentRoute: () => aiRoute,
+  path: 'costs',
+  validateSearch: (search) => AiCostsSearchSchema.parse(search),
+  component: AiCostsPage,
+});
+
+const AiPricesSearchSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
+  search: z.string().trim().max(200).optional().catch(undefined),
+});
+/** TFilters для DataGrid тарифів — runtime-форму гарантує validateSearch */
+export type AiPricesSearch = z.infer<typeof AiPricesSearchSchema>;
+
+const aiPricesRoute = createRoute({
+  getParentRoute: () => aiRoute,
+  path: 'prices',
+  validateSearch: (search) => AiPricesSearchSchema.parse(search),
+  component: AiPricesPage,
+  staticData: { layout: 'bleed' },
+});
+
 /**
  * ОСОБИСТІ налаштування — area без пункту в рейлі: вхід із дропдауна аватара.
  * Той самий URL-префікс, що в tenant-web — однакова ментальна модель для
@@ -252,7 +286,7 @@ const routeTree = rootRoute.addChildren([
     appIndexRoute,
     tenantsRoute.addChildren([tenantsIndexRoute, tenantDetailRoute]),
     operationsRoute.addChildren([operationsIndexRoute, operationsJobsRoute, operationsQueuesRoute]),
-    aiRoute.addChildren([aiIndexRoute, aiSettingsRoute]),
+    aiRoute.addChildren([aiIndexRoute, aiSettingsRoute, aiCostsRoute, aiPricesRoute]),
     userSettingsRoute.addChildren([userSettingsProfileRoute, userSettingsAppearanceRoute]),
     notFoundRoute,
   ]),

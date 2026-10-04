@@ -109,6 +109,11 @@ CLI/parser не імпортуються в runtime barrel `libs/shared/src/ai/i
 
 ## Ingest: `pnpm ai:docs:ingest`
 
+> **Облік витрат (AI-5b).** `ai:docs:ingest`, `ai:docs:eval` і `ai:docs:search` пишуть кожен
+> оплачений embedding-виклик у журнал витрат (`ai_usage_events`) під tenant-ом із `--tenant`:
+> ingest — `ingest_embedding` (`source_id = product/sourceKey`), eval і search — `eval`.
+> Звіт — platform-web → AI → Costs; деталі — [ai-platform-controls.md](../ai-platform-controls.md) §7.
+
 ```bash
 pnpm ai:docs:ingest --source fms \
   --root /path/to/fms-api/fms-docs \
