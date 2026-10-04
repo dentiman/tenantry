@@ -7,7 +7,11 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { JobQuerySchema } from '@saas-skeleton/contracts';
-import { TenantQuerySchema } from '@saas-skeleton/contracts/platform';
+import {
+  AiCostStatusSchema,
+  AiUsageKindSchema,
+  TenantQuerySchema,
+} from '@saas-skeleton/contracts/platform';
 import { useAuthStore } from './stores/auth.store';
 import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
 import { AppShell } from './app-shell/app-shell';
@@ -216,9 +220,18 @@ const aiSettingsRoute = createRoute({
 /** AI-5b: період і розріз звіту витрат живуть в URL — посиланням можна поділитись */
 export const AI_COST_PERIODS = ['this-month', 'last-month', 'last-30-days', 'last-7-days'] as const;
 export const AI_COST_DIMENSIONS = ['tenant', 'model', 'kind', 'day'] as const;
+/** Зведення чи перелік окремих рядків журналу (events) для того самого періоду */
+export const AI_COST_VIEWS = ['overview', 'events'] as const;
 const AiCostsSearchSchema = z.object({
   period: z.enum(AI_COST_PERIODS).optional().catch(undefined),
   by: z.enum(AI_COST_DIMENSIONS).optional().catch(undefined),
+  view: z.enum(AI_COST_VIEWS).optional().catch(undefined),
+  // DataGrid events: TFilters сумісний — DataGridFiltersBase вимагає лише ці поля опційними
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+  limit: z.coerce.number().int().min(1).max(200).optional().catch(undefined),
+  search: z.string().trim().max(200).optional().catch(undefined),
+  kind: AiUsageKindSchema.optional().catch(undefined),
+  costStatus: AiCostStatusSchema.optional().catch(undefined),
 });
 export type AiCostsSearch = z.infer<typeof AiCostsSearchSchema>;
 

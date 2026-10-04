@@ -118,6 +118,60 @@ export const PlatformAiCostsBreakdownResponseSchema = z.object({
   items: z.array(PlatformAiCostsBreakdownItemSchema),
 });
 
+// -------------------------------------------------------------- окремі рядки журналу
+
+/**
+ * Один рядок журналу (не зведення): перелік для розбору конкретних викликів — напр.
+ * звірка з прогоном `ai:answers:eval` чи пошук конкретної відповіді. Пагінація, як усюди
+ * в репо (`page`/`limit`/`total`/`totalPages`); сортування фіксоване — найновіші перші.
+ */
+export const AiUsageEventQuerySchema = PaginationQuerySchema.extend({
+  from: z.iso.datetime(),
+  to: z.iso.datetime(),
+  tenantId: z.string().trim().min(1).max(200).optional(),
+  kind: AiUsageKindSchema.optional(),
+  costStatus: AiCostStatusSchema.optional(),
+  /** Підрядок у моделі, `source_id` чи `message_id` (напр. `answers-eval:<runId>`) */
+  search: z.string().trim().max(200).optional(),
+})
+  .refine((q) => Date.parse(q.from) < Date.parse(q.to), {
+    message: '`from` must be before `to`',
+    path: ['to'],
+  })
+  .refine((q) => Date.parse(q.to) - Date.parse(q.from) <= 366 * 24 * 60 * 60 * 1000, {
+    message: 'The period must not exceed 366 days',
+    path: ['to'],
+  });
+
+export const AiUsageEventSchema = z.object({
+  id: z.uuid(),
+  tenantId: z.string(),
+  /** Назва tenant-а, якщо жива; інакше сам id (видалений чи системний tenant) */
+  tenantLabel: z.string(),
+  occurredAt: z.iso.datetime(),
+  kind: AiUsageKindSchema,
+  outcome: z.string(),
+  userId: z.string().nullable(),
+  messageId: z.string().nullable(),
+  sourceId: z.string().nullable(),
+  attempt: z.number().int().nullable(),
+  provider: z.string(),
+  model: z.string(),
+  inputTokens: z.number().int().nullable(),
+  cachedReadTokens: z.number().int().nullable(),
+  cacheWriteTokens: z.number().int().nullable(),
+  outputTokens: z.number().int().nullable(),
+  reasoningTokens: z.number().int().nullable(),
+  reportedCost: MoneySchema.nullable(),
+  estimatedCost: MoneySchema.nullable(),
+  /** Найкраще відоме: фактична, а без неї — розрахункова; `null` — обидві невідомі */
+  cost: MoneySchema.nullable(),
+  costStatus: AiCostStatusSchema,
+  providerRequestId: z.string().nullable(),
+});
+
+export const AiUsageEventListResponseSchema = paginatedResponseSchema(AiUsageEventSchema);
+
 // ------------------------------------------------------------------ тарифи
 
 export const AiModelPriceSourceSchema = z.enum(['openrouter-sync', 'manual']);

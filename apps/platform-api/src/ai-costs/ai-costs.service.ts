@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SystemPrismaService } from '@saas-skeleton/database';
 import type {
+  AiUsageEvent,
+  AiUsageEventListResponse,
+  AiUsageEventQuery,
+  AiUsageKind,
+  AiCostStatus,
   PlatformAiCostTotals,
   PlatformAiCostsBreakdownQuery,
   PlatformAiCostsBreakdownResponse,
@@ -58,6 +63,11 @@ function totals(row: TotalsRow | undefined): PlatformAiCostTotals {
 /** `NUMERIC::text` → канонічний десятковий рядок (без хвостових нулів) */
 function money(value: string | null | undefined): string {
   return value == null ? '0' : new Prisma.Decimal(value).toString();
+}
+
+/** Як `money()`, але для одного рядка журналу: `null` лишається `null` (невідомо, не нуль) */
+function moneyOrNull(value: string | null | undefined): string | null {
+  return value == null ? null : new Prisma.Decimal(value).toString();
 }
 
 @Injectable()
@@ -207,4 +217,108 @@ export class AiCostsService {
       items: rows.map((row) => ({ key: row.key, label: row.label, ...totals(row) })),
     };
   }
+
+  /** Сирий рядок журналу для `events()`: гроші — `::text`, `total` — вікно на всю вибірку */
+  private async eventRows(query: AiUsageEventQuery): Promise<{ rows: EventRow[]; total: number }> {
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    const limit = query.limit;
+    const offset = (query.page - 1) * limit;
+
+    const conditions = [Prisma.sql`e.occurred_at >= ${from} AND e.occurred_at < ${to}`];
+    if (query.tenantId) {
+      conditions.push(Prisma.sql`e.tenant_id = ${query.tenantId}`);
+    }
+    if (query.kind) {
+      conditions.push(Prisma.sql`e.kind = ${query.kind}`);
+    }
+    if (query.costStatus) {
+      conditions.push(Prisma.sql`e.cost_status = ${query.costStatus}`);
+    }
+    if (query.search) {
+      const like = `%${query.search}%`;
+      conditions.push(
+        Prisma.sql`(e.model ILIKE ${like} OR e.source_id ILIKE ${like} OR e.message_id ILIKE ${like})`,
+      );
+    }
+    const where = Prisma.join(conditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<EventRow[]>`
+      SELECT e.id, e.tenant_id, coalesce(t.name, e.tenant_id) AS tenant_label,
+        e.occurred_at, e.kind, e.outcome, e.user_id, e.message_id, e.source_id, e.attempt,
+        e.provider, e.model, e.input_tokens, e.cached_read_tokens, e.cache_write_tokens,
+        e.output_tokens, e.reasoning_tokens, e.reported_cost::text AS reported_cost,
+        e.estimated_cost::text AS estimated_cost, e.cost_status, e.provider_request_id,
+        count(*) OVER()::bigint AS total
+      FROM ai_usage_events e LEFT JOIN tenants t ON t.id = e.tenant_id
+      WHERE ${where}
+      ORDER BY e.occurred_at DESC, e.id DESC
+      LIMIT ${limit} OFFSET ${offset}`;
+
+    return { rows, total: Number(rows[0]?.total ?? 0) };
+  }
+
+  /**
+   * Окремі рядки журналу (не зведення) — для розбору конкретних викликів, напр. звірка з
+   * прогоном `pnpm ai:answers:eval` за `source_id`. Той самий період-фільтр, що в summary/
+   * breakdown; сортування фіксоване — найновіші перші.
+   */
+  async events(query: AiUsageEventQuery): Promise<AiUsageEventListResponse> {
+    const { rows, total } = await this.eventRows(query);
+    return {
+      items: rows.map((row): AiUsageEvent => ({
+        id: row.id,
+        tenantId: row.tenant_id,
+        tenantLabel: row.tenant_label,
+        occurredAt: row.occurred_at.toISOString(),
+        kind: row.kind as AiUsageKind,
+        outcome: row.outcome,
+        userId: row.user_id,
+        messageId: row.message_id,
+        sourceId: row.source_id,
+        attempt: row.attempt,
+        provider: row.provider,
+        model: row.model,
+        inputTokens: row.input_tokens,
+        cachedReadTokens: row.cached_read_tokens,
+        cacheWriteTokens: row.cache_write_tokens,
+        outputTokens: row.output_tokens,
+        reasoningTokens: row.reasoning_tokens,
+        reportedCost: moneyOrNull(row.reported_cost),
+        estimatedCost: moneyOrNull(row.estimated_cost),
+        cost: moneyOrNull(row.reported_cost ?? row.estimated_cost),
+        costStatus: row.cost_status as AiCostStatus,
+        providerRequestId: row.provider_request_id,
+      })),
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    };
+  }
+}
+
+interface EventRow {
+  id: string;
+  tenant_id: string;
+  tenant_label: string;
+  occurred_at: Date;
+  kind: string;
+  outcome: string;
+  user_id: string | null;
+  message_id: string | null;
+  source_id: string | null;
+  attempt: number | null;
+  provider: string;
+  model: string;
+  input_tokens: number | null;
+  cached_read_tokens: number | null;
+  cache_write_tokens: number | null;
+  output_tokens: number | null;
+  reasoning_tokens: number | null;
+  reported_cost: string | null;
+  estimated_cost: string | null;
+  cost_status: string;
+  provider_request_id: string | null;
+  total: bigint;
 }

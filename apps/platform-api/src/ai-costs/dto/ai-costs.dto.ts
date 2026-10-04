@@ -6,6 +6,8 @@ import {
   AiModelPriceQuerySchema,
   AiModelPriceResponseSchema,
   AiModelPriceSyncResponseSchema,
+  AiUsageEventListResponseSchema,
+  AiUsageEventQuerySchema,
   CreateAiModelPriceSchema,
   PlatformAiCostsBreakdownQuerySchema,
   PlatformAiCostsBreakdownResponseSchema,
@@ -32,3 +34,5 @@ export class AiModelPriceHistoryResponseDto extends createZodDto(
 ) {}
 export class CreateAiModelPriceDto extends createZodDto(CreateAiModelPriceSchema) {}
 export class AiModelPriceSyncResponseDto extends createZodDto(AiModelPriceSyncResponseSchema) {}
+export class AiUsageEventQueryDto extends createZodDto(AiUsageEventQuerySchema) {}
+export class AiUsageEventListResponseDto extends createZodDto(AiUsageEventListResponseSchema) {}

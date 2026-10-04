@@ -101,7 +101,37 @@
       "eval": "Eval and search"
     },
     "empty": "No AI spending in this period",
-    "emptyHint": "Every provider call is recorded here as soon as it happens."
+    "emptyHint": "Every provider call is recorded here as soon as it happens.",
+    "viewLabel": "View",
+    "views": {
+      "overview": "Overview",
+      "events": "Events"
+    },
+    "events": {
+      "ariaLabel": "Individual cost ledger rows",
+      "searchPlaceholder": "Model, source or message id",
+      "kindLabel": "Call type",
+      "statusLabel": "Cost status",
+      "all": "All {{label}}",
+      "total": "{{count}} rows",
+      "selected": "{{count}} selected",
+      "loading": "Loading ledger rows",
+      "empty": "No ledger rows match these filters",
+      "occurredAt": "Time",
+      "kind": "Type",
+      "tenant": "Tenant",
+      "model": "Model",
+      "tokens": "Tokens (in/out)",
+      "cost": "Cost",
+      "status": "Status",
+      "source": "Source",
+      "statuses": {
+        "reported": "Reported",
+        "estimated": "Estimated",
+        "pending": "Pending",
+        "unknown": "Unknown"
+      }
+    }
   },
   "prices": {
     "title": "Prices",

@@ -6,6 +6,11 @@ import type {
   AiModelPriceQuerySchema,
   AiModelPriceResponseSchema,
   AiModelPriceSyncResponseSchema,
+  AiCostStatusSchema,
+  AiUsageEventListResponseSchema,
+  AiUsageEventQuerySchema,
+  AiUsageEventSchema,
+  AiUsageKindSchema,
   CreateAiModelPriceSchema,
   PlatformAiCostTotalsSchema,
   PlatformAiCostsBreakdownQuerySchema,
@@ -28,3 +33,8 @@ export type AiModelPriceHistoryQuery = z.infer<typeof AiModelPriceHistoryQuerySc
 export type AiModelPriceHistoryResponse = z.infer<typeof AiModelPriceHistoryResponseSchema>;
 export type CreateAiModelPrice = z.infer<typeof CreateAiModelPriceSchema>;
 export type AiModelPriceSyncResponse = z.infer<typeof AiModelPriceSyncResponseSchema>;
+export type AiUsageKind = z.infer<typeof AiUsageKindSchema>;
+export type AiCostStatus = z.infer<typeof AiCostStatusSchema>;
+export type AiUsageEventQuery = z.infer<typeof AiUsageEventQuerySchema>;
+export type AiUsageEvent = z.infer<typeof AiUsageEventSchema>;
+export type AiUsageEventListResponse = z.infer<typeof AiUsageEventListResponseSchema>;

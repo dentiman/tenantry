@@ -5,6 +5,7 @@ import type {
   AiModelPriceListResponse,
   AiModelPriceResponse,
   AiModelPriceSyncResponse,
+  AiUsageEventListResponse,
   PlatformAiCostsBreakdownResponse,
   PlatformAiCostsSummaryResponse,
 } from '@saas-skeleton/contracts/platform';
@@ -21,6 +22,8 @@ import {
   AiModelPriceQueryDto,
   AiModelPriceResponseDto,
   AiModelPriceSyncResponseDto,
+  AiUsageEventListResponseDto,
+  AiUsageEventQueryDto,
   CreateAiModelPriceDto,
   PlatformAiCostsBreakdownQueryDto,
   PlatformAiCostsBreakdownResponseDto,
@@ -53,6 +56,12 @@ export class AiCostsController {
     @Query() query: PlatformAiCostsBreakdownQueryDto,
   ): Promise<PlatformAiCostsBreakdownResponse> {
     return this.costs.breakdown(query);
+  }
+
+  @Get('costs/events')
+  @ApiOkResponse({ type: AiUsageEventListResponseDto.Output })
+  events(@Query() query: AiUsageEventQueryDto): Promise<AiUsageEventListResponse> {
+    return this.costs.events(query);
   }
 
   @Get('prices')

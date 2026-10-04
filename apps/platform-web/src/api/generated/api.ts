@@ -23,6 +23,7 @@ import type {
 
 import type {
   AiCostsBreakdownParams,
+  AiCostsEventsParams,
   AiCostsListPricesParams,
   AiCostsPriceHistoryParams,
   AiCostsSummaryParams,
@@ -30,6 +31,7 @@ import type {
   AiModelPriceListResponseDtoOutput,
   AiModelPriceResponseDtoOutput,
   AiModelPriceSyncResponseDtoOutput,
+  AiUsageEventListResponseDtoOutput,
   CreateAiModelPriceDto,
   CreateTenantDto,
   JobListResponseDtoOutput,
@@ -1588,6 +1590,120 @@ export function useAiCostsBreakdown<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getAiCostsBreakdownQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiCostsEvents = (
+  params: AiCostsEventsParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiUsageEventListResponseDtoOutput>(
+    { url: `/api/ai/costs/events`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getAiCostsEventsQueryKey = (params?: AiCostsEventsParams) => {
+  return [`/api/ai/costs/events`, ...(params ? [params] : [])] as const;
+};
+
+export const getAiCostsEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiCostsEvents>>,
+  TError = unknown,
+>(
+  params: AiCostsEventsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCostsEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiCostsEventsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiCostsEvents>>> = ({ signal }) =>
+    aiCostsEvents(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiCostsEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiCostsEventsQueryResult = NonNullable<Awaited<ReturnType<typeof aiCostsEvents>>>;
+export type AiCostsEventsQueryError = unknown;
+
+export function useAiCostsEvents<
+  TData = Awaited<ReturnType<typeof aiCostsEvents>>,
+  TError = unknown,
+>(
+  params: AiCostsEventsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCostsEvents>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiCostsEvents>>,
+          TError,
+          Awaited<ReturnType<typeof aiCostsEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiCostsEvents<
+  TData = Awaited<ReturnType<typeof aiCostsEvents>>,
+  TError = unknown,
+>(
+  params: AiCostsEventsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCostsEvents>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiCostsEvents>>,
+          TError,
+          Awaited<ReturnType<typeof aiCostsEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiCostsEvents<
+  TData = Awaited<ReturnType<typeof aiCostsEvents>>,
+  TError = unknown,
+>(
+  params: AiCostsEventsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCostsEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiCostsEvents<
+  TData = Awaited<ReturnType<typeof aiCostsEvents>>,
+  TError = unknown,
+>(
+  params: AiCostsEventsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiCostsEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiCostsEventsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

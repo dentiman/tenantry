@@ -210,6 +210,74 @@ describe('Platform AI costs and prices (e2e)', () => {
     ]);
   });
 
+  it('окремі рядки журналу: без токена — 401, найновіші перші, фільтри й пагінація', async () => {
+    await api().get('/api/ai/costs/events').query(OCT).expect(401);
+
+    await seedLedger();
+    const list = async (query: Record<string, string | number>) =>
+      (
+        await api()
+          .get('/api/ai/costs/events')
+          .query({ ...OCT, ...query })
+          .set(auth())
+          .expect(200)
+      ).body as {
+        items: Record<string, unknown>[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+
+    const all = await list({});
+    expect(all).toMatchObject({ total: 6, page: 1, limit: 20, totalPages: 1 });
+    expect(all.items).toHaveLength(6);
+    // Найновіший рядок (05.10) — перший; оцінка без фактичної, cost — розрахункова
+    expect(all.items[0]).toMatchObject({
+      tenantId: tenantB,
+      tenantLabel: 'Beta Costs',
+      kind: 'generation',
+      outcome: 'cancelled',
+      costStatus: 'estimated',
+      reportedCost: null,
+      estimatedCost: '0.0005',
+      cost: '0.0005',
+    });
+
+    const byTenant = await list({ tenantId: tenantB });
+    expect(byTenant.total).toBe(2);
+    expect(byTenant.items.every((i) => i.tenantId === tenantB)).toBe(true);
+
+    const byKind = await list({ kind: 'ingest_embedding' });
+    expect(byKind).toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          sourceId: 'fms/fms',
+          model: 'openai/text-embedding-3-small',
+          inputTokens: 50_000,
+          cost: '0.001',
+          costStatus: 'reported',
+        }),
+      ],
+    });
+
+    const byStatus = await list({ costStatus: 'pending' });
+    expect(byStatus).toMatchObject({
+      total: 1,
+      items: [expect.objectContaining({ reportedCost: null, estimatedCost: null, cost: null })],
+    });
+
+    // Пошук за підрядком моделі — обидва embedding-рядки, різних tenant-ів
+    const bySearch = await list({ search: 'text-embedding' });
+    expect(bySearch.total).toBe(2);
+
+    const page2 = await list({ limit: 1, page: 2 });
+    expect(page2).toMatchObject({ total: 6, page: 2, limit: 1, totalPages: 6 });
+    expect(page2.items).toHaveLength(1);
+    expect(page2.items[0]?.id).not.toBe(all.items[0]?.id);
+  });
+
   it('період довший за рік чи перевернутий — 400', async () => {
     await api()
       .get('/api/ai/costs/summary')
