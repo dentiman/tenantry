@@ -11,8 +11,31 @@ set -eu
 
 echo "[entrypoint-api] prisma migrate deploy (saas_migrator)…"
 cd /usr/src/app/libs/database
-# .bin/prisma — це shell-шим (pnpm+shamefully-hoist), запускаємо НАПРЯМУ (не через node)
-/usr/src/app/node_modules/.bin/prisma migrate deploy
+# Postgres може перезапускатися в тому самому `stack deploy` (новий образ, stop-first) —
+# тоді migrate отримує P1001, таск падає, і `failure_action: rollback` відкочує api.
+# Спіймано 2026-10-05 (postgres:17-alpine → pgvector). Тому P1001 («сервер недоступний»)
+# ретраїмо, а будь-яку іншу помилку міграції — ні: вона має валити таск одразу.
+# Бюджет 24×5с = 120с вкладається в healthcheck api (start_period 40s + 3×30s).
+attempt=1
+while :; do
+  # .bin/prisma — це shell-шим (pnpm+shamefully-hoist), запускаємо НАПРЯМУ (не через node)
+  if out=$(/usr/src/app/node_modules/.bin/prisma migrate deploy 2>&1); then
+    echo "$out"
+    break
+  fi
+  echo "$out"
+  case "$out" in
+    *P1001*) ;;
+    *) exit 1 ;;
+  esac
+  if [ "$attempt" -ge 24 ]; then
+    echo "[entrypoint-api] postgres недоступний 120с — здаюсь"
+    exit 1
+  fi
+  echo "[entrypoint-api] postgres недоступний (спроба $attempt/24) — чекаю 5с…"
+  attempt=$((attempt + 1))
+  sleep 5
+done
 cd /usr/src/app
 
 echo "[entrypoint-api] starting api…"

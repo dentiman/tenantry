@@ -185,6 +185,34 @@ stack-файлу тихо повертає сервіс на попередні�
 
 Плюс `--detach=false`: джоба чекає конвергенції, а не завершується за секунди.
 
+**Спіймано 2026-10-05 на `saas-dev` (коміт `add8571`): зміна образу Postgres.** Деплой уперше
+привіз `postgres:17-alpine` → `pgvector/pgvector:0.8.6-pg17-bookworm` (AI-2a). Swarm перезапустив
+postgres (stop-first) у тому самому `stack deploy`, новий `api` у цей момент робив
+`migrate deploy`, отримав `P1001`, впав — і `failure_action: rollback` відкотив `api` і `worker`,
+лишивши стек змішаним. Що з цього випливає:
+
+- **entrypoint `api` ретраїть `P1001`** до 120 с (у межах healthcheck); будь-яка інша помилка
+  міграції валить таск одразу.
+- **Зміна образу Postgres на наявному томі — не просто retry.** Init-скрипти
+  (`docker/postgres/init/`) у стек не змонтовані й на наявному томі все одно не виконуються, тож
+  розширення `vector` ставить лише `db:roles` (до деплою, що несе міграції з `vector`). Перехід
+  musl (alpine) → glibc (Debian) змінює порядок сортування `en_US.utf8` — текстові індекси
+  потребують `REINDEX DATABASE`.
+- **`db_roles_dev` не допоможе після провального деплою**: він має `needs: deploy_dev`, тож у
+  пайплайні з упалим `deploy_dev` його не запустити. Manager сам tools-образ не спулить (немає
+  кредів реєстру) — на свіжому томі ролі й `vector` накатуються init-SQL через `psql` у
+  контейнері postgres.
+
+На `saas-dev` дані фейкові, тому базу перестворили, а не мігрували: стару теку відкладено в
+`/srv/saas-dev/data/postgres.bak-20261005-alpine`, свіжий том → `01-roles.sql` + `02-vector.sql`
+→ retry `deploy_dev` (усі міграції з нуля) → `db_roles_dev` → `seed_dev`, плюс `FLUSHALL` у Valkey
+(сесії/presence старих користувачів). Під час `db_roles_dev` tools-образ 20+ хв висів на
+розпакуванні: `/var/lib/docker` manager-а був заповнений на 95% образами попередніх деплоїв
+(build-джоби чистять лише демон раннера). Тому `.deploy_base` після успішної пост-перевірки
+прибирає на manager зупинені таски свого стеку й образи `$CI_REGISTRY_IMAGE/*`, крім поточного
+SHA (кроку 4 у script). **Для prod** ту саму зміну образу треба робити як
+міграцію даних: `db:roles` до деплою, після — `REINDEX DATABASE`.
+
 > **Диск на ноді.** Наш `after_script` у build-джобах чистить свої образи і BuildKit-кеш
 > (`$CI_REGISTRY_IMAGE/*` + `builder prune --filter until=24h`), але нода спільна з іншими
 > проєктами, які за собою не прибирають. Якщо `df -h /var/lib/docker` наближається до

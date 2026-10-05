@@ -233,6 +233,19 @@ build_tools:
         echo "Деплой НЕ розкотився: swarm відкотив частину сервісів на попередній образ."
         exit 1
       fi
+    # 4) Прибирання на manager — ЛИШЕ після успішної пост-перевірки і лише свого namespace.
+    #    after_script build-джоб чистить демон раннера, а manager накопичує образ кожного деплою
+    #    (і зупинені таски, що їх тримають). 2026-10-05 /var/lib/docker дійшов до 95%, і tools-образ
+    #    для db_roles_dev висів на розпакуванні 20+ хв. Старий образ як ціль відкату вже не потрібен:
+    #    за потреби swarm спулить його з реєстру. Сусідні проєкти на ноді не чіпаємо.
+    - |
+      DOCKER_CONTEXT=swarm docker ps -a --filter "name=${STACK_NAME}_" \
+        --filter status=exited --filter status=created --filter status=dead -q \
+        | xargs -r env DOCKER_CONTEXT=swarm docker rm >/dev/null 2>&1 || true
+      DOCKER_CONTEXT=swarm docker images "$CI_REGISTRY_IMAGE/*" --format '{{.Repository}}:{{.Tag}}' \
+        | grep -v ":$CI_COMMIT_SHA$" | grep -v '<none>' \
+        | xargs -r env DOCKER_CONTEXT=swarm docker rmi >/dev/null 2>&1 || true
+      DOCKER_CONTEXT=swarm docker system df --format '{{.Type}}: {{.Size}} ({{.Reclaimable}} reclaimable)' || true
 
 deploy_dev:
   extends: .deploy_base
