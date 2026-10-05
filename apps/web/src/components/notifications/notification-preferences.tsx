@@ -4,6 +4,7 @@ import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import { notificationDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import {
   getNotificationsGetPreferencesQueryKey,
   useNotificationsGetPreferences,
@@ -17,6 +18,12 @@ import {
  * Немутабельні типи (security) приходять із бекенда з `muteable: false` — фронт
  * не тримає власного списку винятків, інакше вони розійшлися б.
  */
+/** Підпис типу — у текстах модуля-власника (`calendar:notifications.label.…`) */
+function preferenceLabelKey(type: string): string {
+  const definition = notificationDefinition(type);
+  return definition ? `${textKeyBase(definition.texts)}label.${type}` : 'unknown';
+}
+
 export function NotificationPreferences({ onBack }: { onBack?: () => void }) {
   const { t } = useTranslation('notifications');
   const queryClient = useQueryClient();
@@ -57,7 +64,7 @@ export function NotificationPreferences({ onBack }: { onBack?: () => void }) {
               {/* Окремий ключ-підпис, а не текст самого сповіщення: тому в ньому
                   немає ні розмітки, ні інтерполяцій, які тут нічим заповнити */}
               <span className="min-w-0 text-sm text-foreground">
-                {t(`settings.label.${pref.type}`)}
+                {t(preferenceLabelKey(pref.type))}
               </span>
               {pref.muteable ? (
                 <Switch

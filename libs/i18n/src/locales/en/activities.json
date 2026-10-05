@@ -11,24 +11,6 @@
     "disabled": "<b>{{actor}}</b> disabled access for <b>{{user}}</b>",
     "email_changed": "<b>{{actor}}</b> changed the email of <b>{{user}}</b> from {{from}} to {{to}}"
   },
-  "customer": {
-    "created": "<b>{{actor}}</b> created customer <b>{{customer}}</b>",
-    "archived": "<b>{{actor}}</b> archived <b>{{customer}}</b>",
-    "restored": "<b>{{actor}}</b> restored <b>{{customer}}</b>",
-    "owner_changed": "<b>{{actor}}</b> assigned <b>{{customer}}</b> to <b>{{owner}}</b>",
-    "owner_cleared": "<b>{{actor}}</b> removed the owner of <b>{{customer}}</b>",
-    "deleted": "<b>{{actor}}</b> deleted customer <b>{{customer}}</b>"
-  },
-  "calendar_event": {
-    "created": "<b>{{actor}}</b> scheduled <b>{{event}}</b>",
-    "rescheduled": "<b>{{actor}}</b> changed the time of <b>{{event}}</b>",
-    "cancelled": "<b>{{actor}}</b> cancelled <b>{{event}}</b>",
-    "restored": "<b>{{actor}}</b> restored <b>{{event}}</b>",
-    "deleted": "<b>{{actor}}</b> deleted <b>{{event}}</b>",
-    "attendee_added": "<b>{{actor}}</b> invited <b>{{attendee}}</b> to <b>{{event}}</b>",
-    "attendee_removed": "<b>{{actor}}</b> removed <b>{{attendee}}</b> from <b>{{event}}</b>",
-    "rsvp_changed": "<b>{{attendee}}</b> replied {{response}} to <b>{{event}}</b>"
-  },
   "settings": {
     "updated": "<b>{{actor}}</b> updated the <b>{{section}}</b> settings",
     "numbering_shifted": "<b>{{actor}}</b> moved the <b>{{series}}</b> numbering to {{nextNumber}}"

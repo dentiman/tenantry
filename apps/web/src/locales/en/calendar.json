@@ -165,5 +165,66 @@
   "dashboardWidget": {
     "title": "Upcoming Events",
     "openCalendar": "Open calendar"
+  },
+  "notifications": {
+    "type": {
+      "calendar_event": {
+        "invited_one": "<b>{{actor}}</b> invited you to <a>{{event}}</a>",
+        "invited_other": "<b>{{actor}}</b> invited you to {{count}} events, latest <a>{{event}}</a>",
+        "rescheduled_one": "<b>{{actor}}</b> moved <a>{{event}}</a>",
+        "rescheduled_other": "<b>{{actor}}</b> moved <a>{{event}}</a> {{count}} times",
+        "cancelled": "<b>{{actor}}</b> cancelled <a>{{event}}</a>",
+        "rsvp_changed_one": "<b>{{actor}}</b> replied to <a>{{event}}</a>",
+        "rsvp_changed_other": "{{count}} replies to <a>{{event}}</a>, latest from <b>{{actor}}</b>",
+        "reminder": "<a>{{event}}</a> starts soon"
+      }
+    },
+    "label": {
+      "calendar_event": {
+        "invited": "Invitations to events",
+        "rescheduled": "Event time changes",
+        "cancelled": "Event cancellations",
+        "rsvp_changed": "Replies to my events",
+        "reminder": "Event reminders"
+      }
+    },
+    "category": {
+      "calendar": "Calendar"
+    }
+  },
+  "activity": {
+    "calendar_event": {
+      "created": "<b>{{actor}}</b> scheduled <b>{{event}}</b>",
+      "rescheduled": "<b>{{actor}}</b> changed the time of <b>{{event}}</b>",
+      "cancelled": "<b>{{actor}}</b> cancelled <b>{{event}}</b>",
+      "restored": "<b>{{actor}}</b> restored <b>{{event}}</b>",
+      "deleted": "<b>{{actor}}</b> deleted <b>{{event}}</b>",
+      "attendee_added": "<b>{{actor}}</b> invited <b>{{attendee}}</b> to <b>{{event}}</b>",
+      "attendee_removed": "<b>{{actor}}</b> removed <b>{{attendee}}</b> from <b>{{event}}</b>",
+      "rsvp_changed": "<b>{{attendee}}</b> replied {{response}} to <b>{{event}}</b>"
+    }
+  },
+  "settings": {
+    "title": "Calendar",
+    "description": "Defaults for everyone in the organization. People can override their own time zone in user settings.",
+    "loading": "Loading calendar settings",
+    "timeZone": "Default time zone",
+    "timeZoneHint": "IANA name, e.g. Europe/Kyiv. Used for people who have not set their own.",
+    "weekStartsOn": "Week starts on",
+    "weekDays": {
+      "0": "Sunday",
+      "1": "Monday",
+      "6": "Saturday"
+    },
+    "workDayStart": "Work day starts",
+    "workDayEnd": "Work day ends",
+    "duration": "Default event length (minutes)",
+    "durationHint": "Used when a new event is created from the grid.",
+    "reminder": "Default reminder (minutes before)",
+    "reminderHint": "Applied to new timed events. Set 0 to remind at the start.",
+    "allDayReminder": "Default all-day reminder (minutes before)",
+    "allDayReminderHint": "900 means 09:00 on the previous day — the same default Google uses.",
+    "save": "Save calendar settings",
+    "saved": "Calendar settings saved"
   }
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { EntityRefSchema } from '../activity/activity.schema';
 import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
+// Перелік типів і категорій збирає root із визначень модулів-власників (docs/module-registries.md R1)
+import { NotificationCategorySchema, NotificationTypeSchema } from '../notification-types';
 
 /**
  * Контракти персонального інбокса (docs/notifications.md).
@@ -10,89 +11,6 @@ import { CursorQuerySchema, cursorResponseSchema } from '../pagination/paginatio
  * activities, НЕ зберігається: type + payload, рендерить фронт через i18next.
  */
 
-/** Закритий перелік типів — єдине місце додавання нового сповіщення */
-export const NOTIFICATION_TYPES = [
-  // адмінам тенанта: у воркспейсі з'явився юзер
-  'user.created',
-  // самому юзеру: адмін змінив йому пароль (security — не вимикається)
-  'user.password_changed',
-  // новому юзеру, пишеться воркером після welcome-листа
-  'user.welcome',
-  // відповідальному: на нього повісили кастомера (докладно — docs/customers.md §6).
-  // НЕ розсилаємо всім адмінам, як user.created: юзерів заводять десятками на рік,
-  // кастомерів — десятками на день, і це перше, що змусить вимкнути сповіщення взагалі
-  'customer.assigned',
-  // --- Календар (docs/calendar.md §9.2). Адресат тут — не роль, а УЧАСТЬ:
-  // сповіщення йдуть тим, хто в події, а не «всім адмінам»
-  'calendar_event.invited',
-  'calendar_event.rescheduled',
-  'calendar_event.cancelled',
-  // організатору: учасник відповів
-  'calendar_event.rsvp_changed',
-  // нагадування — єдиний тип, який народжується не з дії людини, а з розкладу
-  // (scheduled_notifications + cron-сканер, §8 доку)
-  'calendar_event.reminder',
-  // --- Безпека акаунта (AUTH-1). Адресат завжди ОДИН — власник акаунта:
-  // це єдиний клас сповіщень, де отримувач не обчислюється, а відомий за
-  // побудовою, і де «дізнатись пізно» дорівнює «не дізнатись».
-  'auth.new_device',
-  'auth.session_reuse_detected',
-] as const;
-export const NotificationTypeSchema = z.enum(NOTIFICATION_TYPES);
-export type NotificationType = z.infer<typeof NotificationTypeSchema>;
-
-/**
- * Форма payload-у ПО ТИПУ: recorder валідує на записі (fail fast — невалідний payload
- * це баг викликача), фронт знає, що інтерполювати в i18next-ключ.
- */
-export const NOTIFICATION_PAYLOAD_SCHEMAS = {
-  'user.created': z.object({ user: EntityRefSchema }),
-  // Ні пароля, ні хеша, ні довжини — тільки факт; хто змінив, видно з actorLabel
-  'user.password_changed': z.object({}),
-  'user.welcome': z.object({ tenant: z.string().min(1) }),
-  'customer.assigned': z.object({ customer: EntityRefSchema }),
-  // startsAt у payload-і, а не join на подію: рядок інбокса рендериться без
-  // звертання до живих таблиць (те саме правило, що в activities), а «коли»
-  // тут — половина сенсу повідомлення
-  'calendar_event.invited': z.object({
-    event: EntityRefSchema, // kind: 'calendar_event'
-    startsAt: z.iso.datetime(),
-    allDay: z.boolean(),
-  }),
-  'calendar_event.rescheduled': z.object({
-    event: EntityRefSchema,
-    startsAt: z.iso.datetime(),
-    allDay: z.boolean(),
-  }),
-  'calendar_event.cancelled': z.object({
-    event: EntityRefSchema,
-    startsAt: z.iso.datetime(),
-    allDay: z.boolean(),
-  }),
-  'calendar_event.rsvp_changed': z.object({
-    event: EntityRefSchema,
-    attendee: EntityRefSchema,
-    response: z.enum(['NEEDS_ACTION', 'ACCEPTED', 'DECLINED', 'TENTATIVE']),
-  }),
-  'calendar_event.reminder': z.object({
-    event: EntityRefSchema,
-    startsAt: z.iso.datetime(),
-    allDay: z.boolean(),
-    /** «за 30 хв» — рядок інбокса підписує, ЧОМУ він прийшов саме зараз */
-    minutesBefore: z.number().int().nonnegative(),
-  }),
-  // Обидва поля nullable: заголовка User-Agent може не бути взагалі (curl, старий
-  // клієнт), а ip — за проксі, якому ми не довіряємо. Рядок інбокса мусить
-  // рендеритись і без них: «новий вхід» сам по собі вже сигнал
-  'auth.new_device': z.object({
-    deviceLabel: z.string().nullable(),
-    ip: z.string().nullable(),
-  }),
-  'auth.session_reuse_detected': z.object({
-    deviceLabel: z.string().nullable(),
-  }),
-} as const satisfies Record<NotificationType, z.ZodType>;
-
 /**
  * Канали доставки. У V1 живий рівно один, але ключ (type, channel) закладений з
  * першого дня: email/push додаються рядком у преференсах, а не міграцією семантики.
@@ -100,53 +18,6 @@ export const NOTIFICATION_PAYLOAD_SCHEMAS = {
 export const NOTIFICATION_CHANNELS = ['in_app'] as const;
 export const NotificationChannelSchema = z.enum(NOTIFICATION_CHANNELS);
 export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;
-
-// 'organization' — усе, що стосується компанії; 'security' — особиста безпека;
-// 'calendar' — мій час (запрошення, перенесення, нагадування).
-// Слово 'workspace' свідомо не вживаємо: воно зарезервоване за навігаційним
-// поняттям у сайдбарі (docs/settings.md § «Іменування»).
-//
-// Календар отримав СВОЮ категорію, а не рядок в 'organization' (рішення
-// 2026-09-06): категорія — це заголовок групи на екрані преференсів, і
-// «нагадування про зустріч» поруч зі «створено юзера» — неправильна ментальна
-// модель. Ціна нульова: категорії живуть у коді, міграції не потребують
-export const NotificationCategorySchema = z.enum(['organization', 'security', 'calendar']);
-export type NotificationCategory = z.infer<typeof NotificationCategorySchema>;
-
-export interface NotificationTypeMeta {
-  readonly category: NotificationCategory;
-  readonly defaultEnabled: boolean;
-  /**
-   * false = юзер не може вимкнути. Це не «забули дати перемикач»: про зміну власного
-   * пароля людина мусить дізнатись незалежно від своїх налаштувань.
-   */
-  readonly muteable: boolean;
-}
-
-/**
- * Метадані типу — дефолти живуть у КОДІ, не в БД: новий тип не потребує бекфілу
- * преференсів для наявних юзерів (рядок у notification_preferences з'являється
- * тільки коли юзер явно змінив дефолт).
- */
-export const NOTIFICATION_TYPE_META = {
-  'user.created': { category: 'organization', defaultEnabled: true, muteable: true },
-  'user.password_changed': { category: 'security', defaultEnabled: true, muteable: false },
-  'user.welcome': { category: 'organization', defaultEnabled: true, muteable: true },
-  'customer.assigned': { category: 'organization', defaultEnabled: true, muteable: true },
-  'calendar_event.invited': { category: 'calendar', defaultEnabled: true, muteable: true },
-  'calendar_event.rescheduled': { category: 'calendar', defaultEnabled: true, muteable: true },
-  // НЕмутабельне: «зустріч скасовано» мусить дійти навіть до того, хто вимкнув
-  // усе інше — інакше людина приїде на скасовану зустріч. Той самий клас, що
-  // 'user.password_changed'
-  'calendar_event.cancelled': { category: 'calendar', defaultEnabled: true, muteable: false },
-  'calendar_event.rsvp_changed': { category: 'calendar', defaultEnabled: true, muteable: true },
-  'calendar_event.reminder': { category: 'calendar', defaultEnabled: true, muteable: true },
-  // Немутабельні за тим самим правилом, що 'user.password_changed': сповіщення про
-  // безпеку — це не інформування, а єдиний канал, яким людина може дізнатися про
-  // чужий вхід у свій акаунт. Перемикача тут не буде
-  'auth.new_device': { category: 'security', defaultEnabled: true, muteable: false },
-  'auth.session_reuse_detected': { category: 'security', defaultEnabled: true, muteable: false },
-} as const satisfies Record<NotificationType, NotificationTypeMeta>;
 
 // ---------------------------------------------------------------- читання
 

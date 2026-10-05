@@ -27,33 +27,7 @@
     "open": "Notification settings",
     "title": "Notification settings",
     "back": "Back to notifications",
-    "always": "Always on",
-    "category": {
-      "organization": "Organization",
-      "security": "Security",
-      "calendar": "Calendar"
-    },
-    "label": {
-      "user": {
-        "created": "New users in the organization",
-        "password_changed": "Password changes",
-        "welcome": "Welcome message"
-      },
-      "customer": {
-        "assigned": "Customers assigned to me"
-      },
-      "calendar_event": {
-        "invited": "Invitations to events",
-        "rescheduled": "Event time changes",
-        "cancelled": "Event cancellations",
-        "rsvp_changed": "Replies to my events",
-        "reminder": "Event reminders"
-      },
-      "auth": {
-        "new_device": "Sign-ins from new devices",
-        "session_reuse_detected": "Suspicious session activity"
-      }
-    }
+    "always": "Always on"
   },
   "type": {
     "user": {
@@ -62,24 +36,25 @@
       "password_changed": "<b>{{actor}}</b> changed your password",
       "welcome": "Welcome to <b>{{tenant}}</b>"
     },
-    "customer": {
-      "assigned_one": "<b>{{actor}}</b> assigned you <a>{{customer}}</a>",
-      "assigned_other": "<b>{{actor}}</b> assigned you {{count}} customers, latest <a>{{customer}}</a>"
-    },
-    "calendar_event": {
-      "invited_one": "<b>{{actor}}</b> invited you to <a>{{event}}</a>",
-      "invited_other": "<b>{{actor}}</b> invited you to {{count}} events, latest <a>{{event}}</a>",
-      "rescheduled_one": "<b>{{actor}}</b> moved <a>{{event}}</a>",
-      "rescheduled_other": "<b>{{actor}}</b> moved <a>{{event}}</a> {{count}} times",
-      "cancelled": "<b>{{actor}}</b> cancelled <a>{{event}}</a>",
-      "rsvp_changed_one": "<b>{{actor}}</b> replied to <a>{{event}}</a>",
-      "rsvp_changed_other": "{{count}} replies to <a>{{event}}</a>, latest from <b>{{actor}}</b>",
-      "reminder": "<a>{{event}}</a> starts soon"
-    },
     "auth": {
       "new_device": "New sign-in from <b>{{deviceLabel}}</b> ({{ip}})",
       "session_reuse_detected": "We ended the session on <b>{{deviceLabel}}</b> after suspicious activity"
     }
+  },
+  "label": {
+    "user": {
+      "created": "New users in the organization",
+      "password_changed": "Password changes",
+      "welcome": "Welcome message"
+    },
+    "auth": {
+      "new_device": "Sign-ins from new devices",
+      "session_reuse_detected": "Suspicious session activity"
+    }
+  },
+  "category": {
+    "organization": "Organization",
+    "security": "Security"
   },
   "auth": {
     "unknownDevice": "an unknown device",

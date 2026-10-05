@@ -131,9 +131,10 @@ Prisma на зміну типу колонки генерує `DROP + ADD` — �
 - `ActivityRecorder.record(tx, …)` — `tx` перший обов'язковий аргумент.
 - `NotificationRecorder.notify(tx, …)` — так само; recorder сам відсіює «актор ==
   отримувач» і поважає преференси (немутабельні типи — виняток).
-- Нові типи реєструються в `libs/contracts/src/activity/activity.schema.ts` і
-  `libs/contracts/src/notification/notification.schema.ts` (закритий enum + payload-схема
-  - `NOTIFICATION_TYPE_META`).
+- Нові типи реєструються в контрактах модуля-власника: `auth/auth.notifications.ts`,
+  `user/user.activities.ts` тощо (`defineNotificationTypes` / `defineActivityTypes`; з
+  2026-10-05 — docs/module-registries.md R1). Root-и `notification-types.ts` /
+  `activity-types.ts` збирають їх у закритий enum, payload-схеми і `NOTIFICATION_TYPE_META`.
 - **Рутинні події auth в activities НЕ пишемо** (успішний логін кожні 15 хв засмітить
   фід). Туди йдуть лише аномалії і свідомі дії: `sessions_revoked`, `password_changed`,
   reuse-detected, вмикання/вимикання 2FA.

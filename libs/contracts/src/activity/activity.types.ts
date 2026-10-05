@@ -1,6 +1,6 @@
 import type { z } from 'zod';
+import type { EntityRefSchema } from './activity-definition';
 import type {
-  EntityRefSchema,
   ActivityQuerySchema,
   ActivityResponseSchema,
   ActivityListResponseSchema,

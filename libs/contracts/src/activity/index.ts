@@ -1,14 +1,17 @@
 export {
   EntityRefSchema,
+  defineActivityTypes,
+  mergeTypeGroups,
+  textKeyBase,
+} from './activity-definition';
+export type { ActivityTypeDef, TypeTexts } from './activity-definition';
+export {
   ActivityLinkRoleSchema,
-  ActivityTypeSchema,
-  ACTIVITY_TYPES,
-  ACTIVITY_PAYLOAD_SCHEMAS,
   ActivityQuerySchema,
   ActivityResponseSchema,
   ActivityListResponseSchema,
 } from './activity.schema';
-export type { ActivityLinkRole, ActivityType } from './activity.schema';
+export type { ActivityLinkRole } from './activity.schema';
 export type {
   EntityRef,
   ActivityQuery,

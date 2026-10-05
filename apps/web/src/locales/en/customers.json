@@ -166,5 +166,28 @@
     "cancel": "Cancel",
     "submit": "Save changes",
     "submitting": "Saving…"
+  },
+  "notifications": {
+    "type": {
+      "customer": {
+        "assigned_one": "<b>{{actor}}</b> assigned you <a>{{customer}}</a>",
+        "assigned_other": "<b>{{actor}}</b> assigned you {{count}} customers, latest <a>{{customer}}</a>"
+      }
+    },
+    "label": {
+      "customer": {
+        "assigned": "Customers assigned to me"
+      }
+    }
+  },
+  "activity": {
+    "customer": {
+      "created": "<b>{{actor}}</b> created customer <b>{{customer}}</b>",
+      "archived": "<b>{{actor}}</b> archived <b>{{customer}}</b>",
+      "restored": "<b>{{actor}}</b> restored <b>{{customer}}</b>",
+      "owner_changed": "<b>{{actor}}</b> assigned <b>{{customer}}</b> to <b>{{owner}}</b>",
+      "owner_cleared": "<b>{{actor}}</b> removed the owner of <b>{{customer}}</b>",
+      "deleted": "<b>{{actor}}</b> deleted customer <b>{{customer}}</b>"
+    }
   }
 }

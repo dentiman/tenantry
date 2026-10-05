@@ -1,30 +1,11 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import type { NotificationResponseDtoOutput } from '../../api/generated/model/notificationResponseDtoOutput';
+import { notificationDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import { entityLink } from '../../lib/entity-routes';
+import { payloadValues } from '../../lib/payload-values';
 
 type Notification = NotificationResponseDtoOutput;
-
-// Типи, які фронт уміє рендерити явно; решта → generic-ключ (фронт може бути
-// старіший за бекенд — панель не падає на невідомому типі)
-const KNOWN_TYPES = [
-  'user.created',
-  'user.password_changed',
-  'user.welcome',
-  'customer.assigned',
-  'calendar_event.invited',
-  'calendar_event.rescheduled',
-  'calendar_event.cancelled',
-  'calendar_event.rsvp_changed',
-  'calendar_event.reminder',
-  'auth.new_device',
-  'auth.session_reuse_detected',
-] as const;
-type KnownType = (typeof KNOWN_TYPES)[number];
-
-function isKnown(type: string): type is KnownType {
-  return KNOWN_TYPES.some((known) => known === type);
-}
 
 interface EntityRef {
   kind: string;
@@ -47,7 +28,8 @@ function strField(payload: Record<string, unknown>, key: string): string {
 
 /**
  * Текст сповіщення — i18next у локалі юзера (бекенд шле код + payload). Ключ
- * `notifications:type.<тип з крапками як вкладеність>`; для схлопнутих груп
+ * `<неймспейс власника типу>:…type.<тип з крапками як вкладеність>` — тексти календаря
+ * живуть у `calendar.json`, платформні — у `notifications.json`; для схлопнутих груп
  * i18next сам бере плюральну форму за `count`.
  *
  * Тут же відбувається те, заради чого EntityRef несе `kind`+`id`: фронт зі знання
@@ -67,30 +49,26 @@ export function NotificationMessage({
 }) {
   const { t } = useTranslation('notifications');
   const payload = notification.payload;
+  // Визначення типу — з реєстру контрактів (docs/module-registries.md R1): там же,
+  // у якому неймспейсі тексти і на яку сутність веде посилання. Невідомий тип — не
+  // помилка: фронт може бути старіший за бекенд
+  const definition = notificationDefinition(notification.type);
 
-  if (!isKnown(notification.type)) {
+  if (!definition) {
     return <>{t('unknown')}</>;
   }
 
-  // Сутність, на яку веде текст: у user.* це юзер, у customer.* — кастомер.
-  // Ключ у payload один на тип, тому беремо перший знайдений
-  const subject =
-    entityRef(payload, 'user') ?? entityRef(payload, 'customer') ?? entityRef(payload, 'event');
+  const subject = definition.subject ? entityRef(payload, definition.subject) : null;
   const link = subject && !plain ? entityLink(subject.kind, subject.id) : null;
 
   return (
     <Trans
       t={t}
-      i18nKey={`type.${notification.type}`}
+      i18nKey={`${textKeyBase(definition.texts)}type.${notification.type}`}
       count={notification.groupCount}
       values={{
+        ...payloadValues(payload),
         actor: notification.actorLabel ?? t('system'),
-        // Обидва імені вказують на ту саму сутність: ключ повідомлення вживає те,
-        // яким сутність зветься в його тексті ({{user}} / {{customer}})
-        user: subject?.label ?? '',
-        customer: subject?.label ?? '',
-        event: subject?.label ?? '',
-        tenant: strField(payload, 'tenant'),
         // AUTH-1: обидва поля бувають null (агент без User-Agent, невідомий ip) —
         // підставляємо чесне «unknown», а не порожнечу посеред речення
         deviceLabel: strField(payload, 'deviceLabel') || t('auth.unknownDevice'),

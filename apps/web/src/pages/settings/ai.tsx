@@ -42,7 +42,10 @@ import { applyServerError, FormTextareaField } from '../../components/form';
  * бачити, що вони їдуть до зовнішнього LLM-провайдера з кожним питанням.
  */
 export function SettingsAiPage() {
-  const { t } = useTranslation('settings');
+  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/module-registries.md R1);
+  // з `settings` береться лише назва розділу для крихт
+  const { t } = useTranslation('ai');
+  const { t: tSettings } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { data, isLoading } = useAiSettingsGet();
   const update = useAiSettingsUpdate();
@@ -77,7 +80,7 @@ export function SettingsAiPage() {
       await queryClient.invalidateQueries({ queryKey: getAiSettingsGetQueryKey() });
       // Вмикач міняє `features.ai`: панель асистента з'являється/зникає без перезавантаження
       await queryClient.invalidateQueries({ queryKey: getSettingsBootstrapQueryKey() });
-      toast.add({ type: 'success', title: t('ai.saved') });
+      toast.add({ type: 'success', title: t('settings.saved') });
     } catch (error) {
       applyServerError(error, form);
     }
@@ -86,31 +89,31 @@ export function SettingsAiPage() {
   return (
     <ContentSection>
       <PageHeader
-        breadcrumbs={[{ label: t('title'), to: '/settings' }, { label: t('ai.title') }]}
-        subtitle={t('ai.description')}
+        breadcrumbs={[{ label: tSettings('title'), to: '/settings' }, { label: t('settings.title') }]}
+        subtitle={t('settings.description')}
       />
       {isLoading || !data ? (
-        <Spinner aria-label={t('ai.loading')} />
+        <Spinner aria-label={t('settings.loading')} />
       ) : (
         <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
           <Alert accent="left">
             <InfoIcon />
-            <AlertTitle>{t('ai.providerNoticeTitle')}</AlertTitle>
-            <AlertDescription>{t('ai.providerNotice')}</AlertDescription>
+            <AlertTitle>{t('settings.providerNoticeTitle')}</AlertTitle>
+            <AlertDescription>{t('settings.providerNotice')}</AlertDescription>
           </Alert>
 
           {blockedByPlatform && (
             <Alert accent="left" variant="warning">
               <TriangleAlertIcon />
-              <AlertTitle>{t('ai.blockedTitle')}</AlertTitle>
-              <AlertDescription>{t('ai.blocked')}</AlertDescription>
+              <AlertTitle>{t('settings.blockedTitle')}</AlertTitle>
+              <AlertDescription>{t('settings.blocked')}</AlertDescription>
             </Alert>
           )}
 
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel htmlFor="ai-enabled">{t('ai.enabled')}</FieldLabel>
-              <FieldDescription>{t('ai.enabledHint')}</FieldDescription>
+              <FieldLabel htmlFor="ai-enabled">{t('settings.enabled')}</FieldLabel>
+              <FieldDescription>{t('settings.enabledHint')}</FieldDescription>
             </FieldContent>
             <Switch
               id="ai-enabled"
@@ -126,24 +129,24 @@ export function SettingsAiPage() {
             <FormTextareaField
               control={form.control}
               name="persona"
-              label={t('ai.persona')}
-              placeholder={t('ai.personaPlaceholder')}
-              description={t('ai.personaHint', { max: AI_SETTINGS_LIMITS.personaMaxChars })}
+              label={t('settings.persona')}
+              placeholder={t('settings.personaPlaceholder')}
+              description={t('settings.personaHint', { max: AI_SETTINGS_LIMITS.personaMaxChars })}
               rows={3}
             />
             <FormTextareaField
               control={form.control}
               name="instructions"
-              label={t('ai.instructions')}
-              placeholder={t('ai.instructionsPlaceholder')}
-              description={t('ai.instructionsHint', {
+              label={t('settings.instructions')}
+              placeholder={t('settings.instructionsPlaceholder')}
+              description={t('settings.instructionsHint', {
                 max: AI_SETTINGS_LIMITS.instructionsMaxChars,
               })}
               rows={10}
             />
           </FieldGroup>
 
-          <p className="text-sm text-muted-foreground">{t('ai.boundaries')}</p>
+          <p className="text-sm text-muted-foreground">{t('settings.boundaries')}</p>
 
           {form.formState.errors.root?.server && (
             <p className="text-sm text-destructive">{form.formState.errors.root.server.message}</p>
@@ -151,7 +154,7 @@ export function SettingsAiPage() {
 
           <div>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {t('ai.save')}
+              {t('settings.save')}
             </Button>
           </div>
         </form>

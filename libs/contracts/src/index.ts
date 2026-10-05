@@ -18,3 +18,5 @@ export * from './realtime';
 export * from './ai';
 export * from './chat';
 export * from './bootstrap.schema';
+export * from './activity-types';
+export * from './notification-types';

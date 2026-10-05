@@ -1,11 +1,8 @@
+export { defineNotificationTypes } from './notification-definition';
+export type { NotificationTypeDef } from './notification-definition';
 export {
-  NOTIFICATION_TYPES,
-  NOTIFICATION_PAYLOAD_SCHEMAS,
   NOTIFICATION_CHANNELS,
-  NOTIFICATION_TYPE_META,
-  NotificationTypeSchema,
   NotificationChannelSchema,
-  NotificationCategorySchema,
   NotificationFilterSchema,
   NotificationQuerySchema,
   NotificationTargetSchema,
@@ -18,11 +15,8 @@ export {
   UpdateNotificationPreferencesSchema,
 } from './notification.schema';
 export type {
-  NotificationType,
   NotificationChannel,
-  NotificationCategory,
   NotificationFilter,
-  NotificationTypeMeta,
   UpdateNotification,
   UpdateNotificationPreferences,
 } from './notification.schema';

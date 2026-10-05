@@ -185,15 +185,16 @@ barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.t
 
 `pnpm modules:check` — **0 порушень**. Усі сім ребер, знайдених першим прогоном, закрито:
 
-| Було                                  | Як закрито                                                                                                                                                  |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `users → chat`                        | `UserLifecycleHooks`: chat реєструє членство в дефолтному каналі, users його не імпортує                                                                    |
-| `settings → ai`                       | секція `ai` переїхала в модуль `ai` (контракт, сервіс, `AiSettingsController`), прапорець — `BootstrapRegistry`                                             |
-| `customers → calendar`                | слот `customerOverviewCards`                                                                                                                                |
-| `dashboard → calendar`                | агенда переїхала в `calendar` (`dashboard-agenda-widget.tsx`), слот `dashboardWidgets`                                                                      |
-| `app → ai`                            | слоти `shellHeaderActions` / `shellSidePanels`                                                                                                              |
-| `auth → tenants`, `app → tenants`     | `platform.schema.ts` розділено: `platform-auth.schema.ts` (auth) і `tenant.schema.ts`                                                                       |
-| `settings` знає `calendar` (невидиме) | секція переїхала в `calendar` (контракт, `CalendarSettingsService`, `CalendarSettingsController`); bootstrap-секцію календар реєструє в `BootstrapRegistry` |
+| Було                                                 | Як закрито                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users → chat`                                       | `UserLifecycleHooks`: chat реєструє членство в дефолтному каналі, users його не імпортує                                                                                                                                           |
+| `settings → ai`                                      | секція `ai` переїхала в модуль `ai` (контракт, сервіс, `AiSettingsController`), прапорець — `BootstrapRegistry`                                                                                                                    |
+| `customers → calendar`                               | слот `customerOverviewCards`                                                                                                                                                                                                       |
+| `dashboard → calendar`                               | агенда переїхала в `calendar` (`dashboard-agenda-widget.tsx`), слот `dashboardWidgets`                                                                                                                                             |
+| `app → ai`                                           | слоти `shellHeaderActions` / `shellSidePanels`                                                                                                                                                                                     |
+| `auth → tenants`, `app → tenants`                    | `platform.schema.ts` розділено: `platform-auth.schema.ts` (auth) і `tenant.schema.ts`                                                                                                                                              |
+| `settings` знає `calendar` (невидиме)                | секція переїхала в `calendar` (контракт, `CalendarSettingsService`, `CalendarSettingsController`); bootstrap-секцію календар реєструє в `BootstrapRegistry`                                                                        |
+| `notifications`, `activities` знають фічі (невидиме) | R1: типи, payload-схеми, дефолти й тексти — у контрактах і неймспейсах власників (`*.notifications.ts`, `*.activities.ts`), root-и `notification-types.ts` / `activity-types.ts`; `KNOWN_TYPES` прибрано; `registry-texts.test.ts` |
 
 Лишилися звʼязки, яких скрипт **не бачить** (§6): спільні реєстри нижчих модулів, у які
 фічі дописують свої типи сповіщень і активностей, події realtime, маршрути й навігацію,

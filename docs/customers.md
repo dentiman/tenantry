@@ -500,6 +500,8 @@ Controller, як вимагає CLAUDE.md. `phone`/`phoneCountry` беруть �
 
 ## 9. Активності і сповіщення
 
+*(З 2026-10-05 типи модуля живуть у його контрактах — `*.activities.ts` / `*.notifications.ts`, тексти — у його неймспейсі; docs/module-registries.md R1.)*
+
 Нові типи в `ACTIVITY_TYPES` (закритий enum + payload-схема на тип):
 
 | Тип                      | Коли                         | Payload                                                                                     |

@@ -45,7 +45,10 @@ const WEEK_STARTS = [1, 0, 6] as const;
  * фолбек для тих, хто свою не задав.
  */
 export function SettingsCalendarPage() {
-  const { t } = useTranslation('settings');
+  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/module-registries.md R1);
+  // з `settings` береться лише назва розділу для крихт
+  const { t } = useTranslation('calendar');
+  const { t: tSettings } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { data, isLoading } = useCalendarSettingsGet();
   const update = useCalendarSettingsUpdate();
@@ -70,7 +73,7 @@ export function SettingsCalendarPage() {
         // Сітка бере ці значення з bootstrap-зрізу
         queryClient.invalidateQueries({ queryKey: getSettingsBootstrapQueryKey() }),
       ]);
-      toast.add({ type: 'success', title: t('calendar.saved') });
+      toast.add({ type: 'success', title: t('settings.saved') });
     } catch (error) {
       applyServerError(error, form);
     }
@@ -79,29 +82,29 @@ export function SettingsCalendarPage() {
   return (
     <ContentSection>
       <PageHeader
-        breadcrumbs={[{ label: t('title'), to: '/settings' }, { label: t('calendar.title') }]}
-        subtitle={t('calendar.description')}
+        breadcrumbs={[{ label: tSettings('title'), to: '/settings' }, { label: t('settings.title') }]}
+        subtitle={t('settings.description')}
       />
       {isLoading || !data ? (
-        <Spinner aria-label={t('calendar.loading')} />
+        <Spinner aria-label={t('settings.loading')} />
       ) : (
         <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)} noValidate>
           <FieldGroup>
             <FormTextField
               control={form.control}
               name="timeZone"
-              label={t('calendar.timeZone')}
-              description={t('calendar.timeZoneHint')}
+              label={t('settings.timeZone')}
+              description={t('settings.timeZoneHint')}
             />
             <Field>
-              <FieldLabel htmlFor="week-starts-on">{t('calendar.weekStartsOn')}</FieldLabel>
+              <FieldLabel htmlFor="week-starts-on">{t('settings.weekStartsOn')}</FieldLabel>
               {/* Не `FormSelect`: він працює з рядковим ключем, а поле числове
                   (`Date.getDay()`-формат — той, який споживають і Intl, і сітка).
                   Конвертація тут, а не другий тип у контракті */}
               <Select
                 items={WEEK_STARTS.map((day) => ({
                   value: String(day),
-                  label: t(`calendar.weekDays.${String(day)}`),
+                  label: t(`settings.weekDays.${String(day)}`),
                 }))}
                 value={String(form.watch('weekStartsOn'))}
                 onValueChange={(next: string | null) => {
@@ -119,7 +122,7 @@ export function SettingsCalendarPage() {
                   <SelectGroup>
                     {WEEK_STARTS.map((day) => (
                       <SelectItem key={day} value={String(day)}>
-                        {t(`calendar.weekDays.${String(day)}`)}
+                        {t(`settings.weekDays.${String(day)}`)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -128,16 +131,16 @@ export function SettingsCalendarPage() {
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field>
-                <FieldLabel htmlFor="work-day-start">{t('calendar.workDayStart')}</FieldLabel>
+                <FieldLabel htmlFor="work-day-start">{t('settings.workDayStart')}</FieldLabel>
                 <Input id="work-day-start" type="time" {...form.register('workDayStart')} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="work-day-end">{t('calendar.workDayEnd')}</FieldLabel>
+                <FieldLabel htmlFor="work-day-end">{t('settings.workDayEnd')}</FieldLabel>
                 <Input id="work-day-end" type="time" {...form.register('workDayEnd')} />
               </Field>
             </div>
             <Field>
-              <FieldLabel htmlFor="default-duration">{t('calendar.duration')}</FieldLabel>
+              <FieldLabel htmlFor="default-duration">{t('settings.duration')}</FieldLabel>
               <Input
                 id="default-duration"
                 type="number"
@@ -145,10 +148,10 @@ export function SettingsCalendarPage() {
                 max={1440}
                 {...form.register('defaultEventDurationMinutes', { valueAsNumber: true })}
               />
-              <FieldDescription>{t('calendar.durationHint')}</FieldDescription>
+              <FieldDescription>{t('settings.durationHint')}</FieldDescription>
             </Field>
             <Field>
-              <FieldLabel htmlFor="default-reminder">{t('calendar.reminder')}</FieldLabel>
+              <FieldLabel htmlFor="default-reminder">{t('settings.reminder')}</FieldLabel>
               <Input
                 id="default-reminder"
                 type="number"
@@ -156,11 +159,11 @@ export function SettingsCalendarPage() {
                 max={40320}
                 {...form.register('defaultReminderMinutes', { valueAsNumber: true })}
               />
-              <FieldDescription>{t('calendar.reminderHint')}</FieldDescription>
+              <FieldDescription>{t('settings.reminderHint')}</FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="default-all-day-reminder">
-                {t('calendar.allDayReminder')}
+                {t('settings.allDayReminder')}
               </FieldLabel>
               <Input
                 id="default-all-day-reminder"
@@ -169,7 +172,7 @@ export function SettingsCalendarPage() {
                 max={40320}
                 {...form.register('defaultAllDayReminderMinutes', { valueAsNumber: true })}
               />
-              <FieldDescription>{t('calendar.allDayReminderHint')}</FieldDescription>
+              <FieldDescription>{t('settings.allDayReminderHint')}</FieldDescription>
             </Field>
           </FieldGroup>
 
@@ -179,7 +182,7 @@ export function SettingsCalendarPage() {
 
           <div>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {t('calendar.save')}
+              {t('settings.save')}
             </Button>
           </div>
         </form>

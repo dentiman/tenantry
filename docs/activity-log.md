@@ -159,6 +159,14 @@ CREATE POLICY tenant_isolation ON "activities"
 
 ## Контракти (`libs/contracts/src/activity/`)
 
+> **Оновлено 2026-10-05 (docs/module-registries.md R1).** `ACTIVITY_TYPES` більше не
+> пишеться руками: кожен модуль оголошує свої типи в контрактах
+> (`calendar/calendar.activities.ts`: `defineActivityTypes({ ns, prefix }, { тип: { payload,
+> textVariant? } })`), root `libs/contracts/src/activity-types.ts` їх збирає, перелік і
+> payload-схеми виводяться звідти. `EntityRefSchema` — у `activity/activity-definition.ts`.
+> Тексти — у неймспейсі власника (`calendar.json` → `activity.*`); платформні — у
+> `activities.json`. Блок нижче — історичний вигляд V1.
+
 ```ts
 // Референс на сутність усередині payload: id — для майбутнього лінка на сторінку,
 // label — СНАПШОТ назви на момент події (сутність можуть перейменувати/видалити,
