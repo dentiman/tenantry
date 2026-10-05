@@ -1,4 +1,4 @@
-# SaaS Skeleton — CLAUDE.md
+# SaaS Skeleton — AGENTS.md
 
 Forkable skeleton for multitenant CRM/ERP products (billing, customers, tickets, queues).
 Two planes, each a full stack: **tenant plane** (`apps/api` + `apps/web`) and **control
@@ -10,10 +10,18 @@ conventions, and rules that are easy to violate by accident. Subsystem depth (da
 protocol, historical rationale, gotchas caught during implementation) lives in `docs/` —
 read the relevant doc before working in that area instead of expecting it here.
 
+**This is the one instruction file for every agent.** Codex reads it directly; `CLAUDE.md`
+only imports it (`@AGENTS.md`). Edit this file, never a copy. Phase status ("done", "next")
+does not belong here — it goes stale first; it lives in `docs/roadmap.md` and the feature doc.
+
 ## Documentation map
 
 - `docs/multi-tenancy-architecture.md` — **the** reference for multitenancy: schema, RLS,
   tenant context, both planes' auth, queues, contract for adding a new domain module
+- `docs/backend-conventions.md` — rules for evolving the backend (data ownership, module public
+  API, transaction ownership, read-modify-write guards, after-commit effects, async guarantees,
+  record-level access), each with a reference implementation in code and how it is enforced.
+  The procedure is the `backend-change` skill (`.agents/skills/backend-change/`)
 - `docs/auth-hardening-plan.md` — current auth/session state and the AUTH-0…4 roadmap
   (rate limiting, session-as-entity, cookie migration, password recovery, 2FA)
 - `docs/event-driven-architecture.md` — messaging (events/commands), topology, DLQ
@@ -26,10 +34,10 @@ read the relevant doc before working in that area instead of expecting it here.
 - `docs/i18n-plan.md` — localization approach and phases
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
-- `docs/deploy-swarm.md` — GitLab CI → Docker Swarm deploy
+- `docs/deploy-swarm.md` — GitLab CI (check → build → deploy) → Docker Swarm
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
-- `docs/roadmap.md` — priorities and what's intentionally not built yet
+- `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet
 - `docs/frontend/ui-stack.md` — primitives, tokens, form and **DataGrid** conventions
   (**start here** for any UI work, including `createDataGrid<TFilters, TItem>()`);
   `docs/frontend/ui-registry.md` — where to find a new component; `docs/frontend/theming.md` —
@@ -39,46 +47,27 @@ read the relevant doc before working in that area instead of expecting it here.
   `docs/frontend/layout-structure.md` — quick visual map + naming of shell columns/
   panels (rail, area sidebar, context panel) for both frontends;
   `docs/frontend/ui-known-issues.md` — open vendored-code issues
-- `docs/chat.md` — **the** reference for chat. §7 holds the phase plan; **CHAT-0.1 is built**
-  (internal conversations over REST: `seq`, cursor feed, `clientMessageId`, read state, the
-  default channel, the Chat area screen) and **there is no realtime in it yet** — the screen
-  refreshes on window focus and after sending, by design. §7.6 lists the invariants `0.2`/`0.3`
-  build on; don't break them. `docs/bulk-operations.md` — **design fixed, not implemented**
-  (a disabled demo slot on `/users`); not a working feature.
+- `docs/chat.md` — **the** reference for chat (human conversations). §7 is the phase plan,
+  §7.6 the invariants later phases build on — don't break them. The built slice is REST-only
+  **by design**: no realtime yet, the screen re-reads on window focus and after sending.
+  `docs/bulk-operations.md` — **design only, not implemented** (a disabled demo slot on `/users`).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
-  why, the research behind them (OpenAI-compat is lossy, provider strategies, tool-calling
-  mechanics, files), budget, privacy, and phases AI-0…AI-4. §0 keeps the decision sequence;
-  §10.1 splits AI-1 into five changes `ai-1a`…`ai-1e` (only `OpenAiCompatProvider` — native
-  Anthropic is deferred, §5.3).
-  Distinct from `docs/chat.md` (that's human/customer conversations);
-  `docs/ai-assistant-implementation.md` — what AI-0…AI-1e and AI-2a actually shipped: data model, the two
-  access boundaries, the streaming protocol and why a socket event may carry payload here, queue
-  options, config, and (§7.1) the one real provider `OpenAiCompatProvider` — worker-only key,
-  error classification, `Retry-After`, token usage; (§14) the AI-1b knowledge corpus —
-  `docs/ai-knowledge/` is **end-user product documentation**, not engineering docs: edit the
-  Markdown, copy every quoted UI label from the English locale files, run `pnpm ai:knowledge`,
-  commit both; (§15) the AI-1c persona/instructions in `settings.ai` — boundaries stay in code as
-  message 0 (`ASSISTANT_BOUNDARIES`, byte-identical text), tenant text only after them, fenced;
-  (§16/§17) AI-1d quotas and AI-1e retention; (§18) AI-2a.3 retrieval-grounded answers —
-  `AI_KNOWLEDGE_BACKEND=static|postgres`, embedding outside any transaction, server-verified
-  citations re-authorized on every open; (§19) AI-2a.4 hybrid search (FTS + vector, RRF) and the
-  distance threshold chosen by eval.
-- `docs/ai-platform-controls.md` — **current AI course** (AI-5): no new assistant features;
-  model/URL/encrypted key and three-level on/off switch in the superadmin UI (AI-5a), cost
-  ledger with provider-reported and tariff-based cost per call (AI-5b), answer-quality eval
-  with cost (AI-5c). Owner decisions of 2026-10-03 live there. AI-5a and AI-5b are built;
-  §7 is how the ledger works: `ai_usage_events` (tenant RLS, append-only for `saas_app`, no FK
-  to messages), `ai_model_prices` (append-only, `valid_from` only), a row per attempt written in
-  the transaction that already exists, reconciliation and price-sync crons, platform `Costs`/
-  `Prices` pages. Money is `NUMERIC`/`Prisma.Decimal` and decimal strings on the wire.
-- `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table) and
-  `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured results) — the
-  PostgreSQL + pgvector retrieval track. `docs/ai-sources/README.md` — operator guide for an
-  external documentation source (FMS): manifest admission, `ai:docs:preview/ingest/search/eval`,
-  atomic revision publication, embedding config, and the eval table behind the search defaults;
+  why (OpenAI-compat is lossy, provider strategies, tool-calling, files), budget, privacy,
+  phases AI-0…AI-4 (§0 decision sequence). Distinct from `docs/chat.md`.
+- `docs/ai-assistant-implementation.md` — what actually shipped: data model, the two access
+  boundaries, the streaming protocol, queue options, config, `OpenAiCompatProvider` (§7.1:
+  worker-only key, error classification, `Retry-After`, token usage), knowledge corpus (§14),
+  persona/instructions (§15), quotas and retention (§16–17), retrieval-grounded answers with
+  server-verified citations re-authorized on every open (§18), hybrid FTS + vector search (§19).
+- `docs/ai-platform-controls.md` — the current AI course (AI-5: no new assistant features;
+  superadmin model/URL/encrypted key and on/off switches, cost ledger §7, answer eval §9) and
+  the owner decisions of 2026-10-03.
+- `docs/ai-assistant-retrieval-proposal.md` (research, costs, phase table — read before planning
+  the next AI phase) and `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured
+  results — read before touching anything under `ai/`). `docs/ai-sources/README.md` — operator
+  guide for an external documentation source (FMS) and the `ai:docs:*` / `ai:answers:eval` CLIs;
   `docs/ai-sources/fms-eval.json` is a **draft** question set pending product-owner review.
-  `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost). Read the second before touching anything under `ai/`, the first before planning the
-  next phase.
+  `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost).
 
 ## Planning layers
 
@@ -135,7 +124,12 @@ pnpm ai:docs:ingest        # → embeddings into a tenant's pgvector index, atom
 pnpm ai:docs:search        # question → top-K published chunks (operator check, no LLM)
 pnpm ai:docs:eval          # retrieval-only comparison of search modes/thresholds on a question set
                            # (all four: docs/ai-sources/README.md; ingest/search/eval need DB + key)
-pnpm lint && pnpm typecheck && pnpm build
+pnpm ai:answers:eval       # answer quality × price per configuration file (AI-5c; --max-cost unless
+                           # --fake; writes only `eval` ledger rows — docs/ai-sources/README.md)
+pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:check + eslint
+pnpm deps:check            # madge: no runtime import cycles in backend apps and libs
+bash scripts/ci-verify.sh  # the full CI gate locally (lint → typecheck → unit → both e2e) in
+                           # throwaway Docker containers; doesn't touch the dev stack or slots
 pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT run alongside a
                            # live dev stack (connection-pool exhaustion causes flaky neighbors)
 pnpm platform:test:e2e     # platform e2e
@@ -157,6 +151,19 @@ Generated OpenAPI/orval artifacts are committed. Regenerate and commit both toge
 a contract or controller changes — see `docs/commands.md` for the full list including
 `db:roles`, `db:studio`, `docker:prod:up`.
 
+## Branches and CI
+
+- **`dev` is the primary branch.** Work lands in `dev` (or a feature branch merged into it);
+  a push to `dev` deploys the `saas-dev` stack.
+- **`main` is a mirror of `dev` and is not deployed.** It is fast-forwarded to `dev` from time
+  to time; on `main` only the `check` stage runs — no images, no prod jobs (`.prod_disabled` in
+  `.gitlab-ci.yml`). Do not re-enable prod or retarget prod jobs to another branch without an
+  explicit request. GitLab's default branch is still `main`, so `$CI_DEFAULT_BRANCH` ≠ `dev`.
+- **CI is GitLab only** (there is no GitHub remote). Stage `check` (`ai_knowledge_check`,
+  `verify` = `scripts/ci-verify.sh`) gates `build`, and `build` gates `deploy_dev` — an
+  unverified SHA is never built or deployed. A red `verify` blocks the dev deploy: fix the cause,
+  don't skip the job. Details: `docs/deploy-swarm.md` §6.
+
 ## Architecture
 
 ```
@@ -169,7 +176,7 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
                      JWT/DB role), tenants CRUD, jobs monitoring (moved here because
-                     `pgboss.*` sits outside RLS).
+                     `pgboss.*` sits outside RLS), AI settings and the AI cost ledger/prices.
 apps/worker         NestJS application context, no HTTP. Message subscribers
                      (`src/subscribers/`) + cron via pg-boss, MailerService → Mailpit,
                      local i18next for email content. AI reply generation lives here
@@ -179,13 +186,13 @@ apps/worker         NestJS application context, no HTTP. Message subscribers
 apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zustand,
                      Tailwind 4, react-hook-form, shadcn/ui on Base UI, react-i18next.
                      Two-level nav shell (`AppRail` + `AreaSidebar`, docs/frontend/app-shell.md):
-                     areas Workspace / Chat (placeholder) / Settings (ADMIN) / Playground,
+                     areas Workspace / Calendar / Chat / Settings (ADMIN) / Playground / Guide,
                      plus User settings (entry via avatar menu). Context panel (third column,
                      `libs/ui`) is the default surface for record detail — prefer it over
                      `Sheet` unless the interaction is a dismiss-and-forget overlay.
 apps/platform-web    Same stack/shell pattern as apps/web (:5174, proxy → :3002). Areas:
-                     Tenants, Operations (Jobs/Queues), User settings. No org-level Settings —
-                     the platform itself is the subject.
+                     Tenants, Operations (Jobs/Queues), AI (settings, costs, prices), User
+                     settings. No org-level Settings — the platform itself is the subject.
 libs/contracts       Zod 4 schemas + z.infer types — the only source of truth for API types.
                      Platform contracts live under the `/platform` subpath, not re-exported
                      from the root (needs an explicit `exports` entry in package.json — Vite/
@@ -217,24 +224,20 @@ TanStack Query hooks. There are no hand-written API types.
 
 ## Auth
 
-Access JWT (`{ sub, email, role, tenantId }`, 15m). Sessions are a first-class entity —
-`AuthSession` / `auth_sessions` (rotating `tokenHash`, a short `prevTokenHash` grace window
-for concurrent refreshes, `generation`, sliding `idleExpiresAt`, fixed `absoluteExpiresAt`,
-`revokedAt`/`revokedReason` so a revoked row still exists for reuse-detection,
-`userAgent`/`ip`/`deviceLabel`). `GET /account/sessions` lists devices,
-`DELETE /account/sessions/:id` revokes one, `POST /account/sessions/revoke-all` revokes all
-and returns a fresh pair for the caller. `POST /auth/logout` is public and silently
-idempotent (always 204). Public self-registration does not exist — tenant admins create
-users, platform operators create tenants + their first admin. Login checks both
-`user.isActive` and `tenant.isActive` (same 401 for either). Global `JwtAuthGuard`
-(`APP_GUARD`, no Passport) cross-checks `payload.tenantId` against the resolved tenant
-context; open routes use `@Public()`. `access-token.service.ts` is the single place that
-verifies an access token — shared by the HTTP guard and the realtime socket middleware; do
-not fork it. Tenant web keeps the access token in memory and the refresh token in
-localStorage; platform web keeps its (refresh-less, 60m) access token in localStorage too.
-Rate limiting, CORS allowlist, env validation, and the session model above are done
-(AUTH-0/AUTH-1). httpOnly-cookie refresh, password recovery, and 2FA are not — see
-`docs/auth-hardening-plan.md` for current state and the rest of the plan.
+Access JWT (`{ sub, email, role, tenantId }`, 15m) in memory on both frontends; the refresh
+token is an **httpOnly cookie** scoped to `Path=/api/auth` (`refresh-cookie.ts`, `SameSite=Lax` +
+origin guard), rotated on every refresh. Sessions are a first-class entity (`auth_sessions`:
+rotating hash with a short grace window, `generation`, sliding idle + fixed absolute expiry,
+revoked rows kept for reuse detection; devices under `/account/sessions`). Platform plane
+mirrors the same model with its own identity, secret and cookie. Password recovery and
+email change go through `verification_tokens`. `POST /auth/logout` is public and always 204.
+No public self-registration — tenant admins create users, platform operators create tenants +
+their first admin. Login checks `user.isActive` and `tenant.isActive` (same 401 for either).
+Global `JwtAuthGuard` (`APP_GUARD`, no Passport) cross-checks `payload.tenantId` against the
+resolved tenant context; open routes use `@Public()`. `access-token.service.ts` is the single
+place that verifies an access token — shared by the HTTP guard and the realtime socket
+middleware; do not fork it. Model, decisions and the remaining step (2FA, AUTH-4):
+`docs/auth-hardening-plan.md`.
 
 ## Errors
 
@@ -286,6 +289,30 @@ List responses: `{ items, total, page, limit, totalPages }`. A related live enti
 flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without an FK
 (activities, notifications — the user may since have been deleted). Input takes flat ids
 (`attendees: [{ userId, role }]`) — requests address, responses describe.
+
+## Backend change rules
+
+Before changing a service, transaction, subscriber, migration or cross-module dependency, load
+the `backend-change` skill; reasons and reference code are in `docs/backend-conventions.md`.
+The rules most easily broken:
+
+- **A module's public API is its `*.module.ts` `exports`** plus mapper/dto/decorators. Another
+  module's controller, access function, subscriber or gateway is never imported (ESLint).
+  Another module's table is written through its exported service or a shared `libs/shared`
+  recorder that takes `tx`.
+- **No import cycles, no `forwardRef`** — `pnpm deps:check` fails on a cycle.
+- **The top-level method owns the transaction**: one `withTenantTx`; helpers that must be atomic
+  with it take `tx` first and never open their own.
+- **Read-modify-write is guarded**: the read happens inside the same `withTenantTx`, with a
+  conditional `updateMany` + `count`, an atomic increment, a unique index → 409, or
+  `SELECT … FOR UPDATE`. Never compute a diff from a `findOne` done before the transaction
+  (`CalendarService.update`/`setAttendees` still do — known debt, deferred).
+- **After commit**: `onCommit` only for lossy accelerators (socket emit); anything that must
+  happen goes through `publish(tx, …)`.
+- **RLS is the tenant boundary only**; who may see or change a record inside the tenant is the
+  module's single access function (`calendar.access.ts`, `conversation-access.service.ts`).
+- **An invariant change ships with the e2e that would break without it** (negative, concurrent
+  `Promise.all`, or retry).
 
 ## Critical rules and pitfalls
 
@@ -363,6 +390,17 @@ flat `actorType`/`actorId`/`actorLabel` triple is reserved for snapshots without
     belong to the main checkout; `ws:init` also reserves non-zero slots found in other git
     worktrees even if their processes are stopped. Never work around a conflict by choosing
     the next port or by setting `PORT` manually. See `docs/workspace-slots.md`.
+20. `docs/ai-knowledge/` is **end-user product documentation**, not engineering docs: copy every
+    quoted UI label from the English locale files, run `pnpm ai:knowledge`, commit the Markdown
+    and the generated JSON together (`pnpm lint` fails on drift).
+21. Assistant boundaries stay in code as message 0 (`ASSISTANT_BOUNDARIES`, byte-identical
+    text); tenant persona/instructions from `settings.ai` come only after them, fenced.
+22. Money (AI cost ledger, prices) is `NUMERIC` / `Prisma.Decimal` in the DB and a decimal
+    string on the wire — never a JS `number`. `ai_usage_events` (one row per attempt, written in
+    the transaction that already exists) and `ai_model_prices` are append-only
+    (`docs/ai-platform-controls.md` §7).
+23. The worker and `pnpm ai:answers:eval` share one request assembly (`buildGenerationRequest`);
+    keep the worker on it, or the eval measures something production doesn't send.
 
 ## Fixed decisions
 
@@ -391,23 +429,20 @@ Do not revisit without an explicit user request.
 
 ## Open work
 
-Priorities and detail: `docs/roadmap.md`. Notable gaps, tracked in their own plan docs rather
-than repeated here:
+Priorities and **phase status** live in `docs/roadmap.md` (and each feature doc) — this file
+deliberately doesn't track what is done or next. What is designed but **not built**, so it is
+not assumed to exist:
 
-- **Auth hardening** (`docs/auth-hardening-plan.md`): httpOnly-cookie refresh (AUTH-2),
-  password recovery (AUTH-3), 2FA (AUTH-4) are designed but not built.
+- **2FA** (AUTH-4, `docs/auth-hardening-plan.md`).
 - **RBAC**: only the `@Roles(ADMIN)` opt-in guard exists; permission-string based
   `@RequirePermissions()` is not built.
 - **Multitenancy MT-4**: subdomains, invite flow for a tenant's first admin, billing, tiered
-  reference data — see `docs/multi-tenancy-architecture.md` backlog section.
+  reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
-  messaging pipeline currently has no failure-visibility surface.
-- **Chat**: `CHAT-0.1` shipped (REST-only internal chat). `0.2` (realtime, notifications),
-  `0.3` (participant management, mentions, attachments) and `CHAT-1…4` are designed and not
-  built — `docs/chat.md` §7.3. **Bulk operations**: fully designed, not implemented.
-- **AI assistant**: AI-2a done (FMS documentation in the chat with verified citations, hybrid
-  search). Feature expansion is paused (AI-2b/AI-3/AI-4 postponed); current work is **AI-5** —
-  platform controls (AI-5a, done), cost ledger (AI-5b, done), answer quality (AI-5c, next):
-  `docs/ai-platform-controls.md`.
+  messaging pipeline has no failure-visibility surface yet.
+- **Chat** beyond the REST slice (realtime, notifications, participants, mentions,
+  attachments) — `docs/chat.md` §7.3. **Bulk operations** — design only.
+- **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
+  platform controls — `docs/ai-platform-controls.md`.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

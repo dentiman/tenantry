@@ -3,7 +3,7 @@
 Фундамент для мультитенантних CRM/ERP-систем: NestJS + React монорепозиторій із наскрізними
 типізованими контрактами (Zod → OpenAPI → TanStack Query hooks). Скелетон призначений для
 форків під конкретні продукти. Архітектурні рішення — у [docs/architecture-proposal.md](docs/architecture-proposal.md),
-план фаз — у [docs/roadmap.md](docs/roadmap.md), інструкції для Claude Code — у [CLAUDE.md](CLAUDE.md).
+план фаз — у [docs/roadmap.md](docs/roadmap.md), інструкції для агентів (Codex, Claude Code) — у [AGENTS.md](AGENTS.md); `CLAUDE.md` лише імпортує його.
 
 ## Стек
 
@@ -102,7 +102,9 @@ pnpm api:test:e2e      # Jest + supertest проти реальної БД, tena
 pnpm platform:test:e2e # те саме для control plane (11 тестів)
 ```
 
-CI (GitHub Actions): lint → typecheck → build → міграції → e2e з сервісами PostgreSQL і Valkey.
+CI (GitLab, джоба `verify` перед збіркою образів): lint → typecheck → unit → e2e проти
+одноразових PostgreSQL і Valkey. Локально той самий прогін — `bash scripts/ci-verify.sh`
+(`docs/deploy-swarm.md` §6).
 
 ## Асинхронні повідомлення (EDA-1 — готово)
 
