@@ -55,6 +55,7 @@ docker run --rm --network "$RUN_ID" \
     tar -C /src --exclude=./node_modules --exclude="*/node_modules" --exclude=./.turbo \
       --exclude=./.env --exclude=./.env.local -cf - . | tar -C /work -xf -
     cd /work
+    echo "verify: $(nproc) CPU, $(awk "/MemTotal/ {print int(\$2/1024)}" /proc/meminfo) MB RAM, node heap limit $(node -p "Math.round(require(\"v8\").getHeapStatistics().heap_size_limit/1048576)") MB"
     corepack enable
     npm pkg delete scripts.prepare
     pnpm install --frozen-lockfile

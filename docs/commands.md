@@ -370,7 +370,8 @@ Eval відповідей (AI-5c): набір питань × файл конф�
 ### `pnpm lint` / `pnpm lint:fix`
 
 ```bash
-pnpm lint       # → ai:knowledge --check && deps:check && eslint . --max-warnings 0
+pnpm lint       # → ai:knowledge --check && deps:check && lint:eslint
+pnpm lint:eslint  # → eslint <dir> --max-warnings 0 по черзі для apps/*, libs/*, scripts
 pnpm lint:fix   # → eslint . --fix
 ```
 
@@ -378,6 +379,11 @@ ESLint strict-type-checked, нуль попереджень допускаєть
 знань AI (мілісекунди, без залежностей): забутий `pnpm ai:knowledge` ловиться локально, а не
 в CI. ESLint також тримає межі залежностей (`no-restricted-imports`): внутрішні файли чужого
 модуля, імпорти між апками, шари бібліотек — `docs/backend-conventions.md` §1–§2.
+
+ESLint запускається **окремим процесом на кожен пакет**, а не один раз на `.`: type-aware
+правила (`projectService`) тримають у пам'яті TS-програми всіх пакетів, і прогін на весь
+монорепо сягає ~4.4 ГБ RSS — більше за типовий heap Node 2 ГБ (так упала перша джоба `verify`
+на раннері, 2026-10-05). Окремий пакет — до ~1.4 ГБ. Час той самий (~50 с).
 
 ### `pnpm deps:check`
 
