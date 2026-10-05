@@ -39,6 +39,11 @@
 частини вниз (у `libs/shared` чи окремий провайдер), подією через messaging або інверсією
 залежності — не `forwardRef`.
 
+Над графом файлів є граф **модулів** (доменів, що живуть у кількох застосунках одразу):
+рівні `infra → platform → core → feature`, явні ребра в `modules.config.ts`, звʼязок угору —
+лише через слот. Пояснення й відомі порушення — `docs/modules.md`, перевірка —
+`pnpm modules:check`.
+
 Шари бібліотек: `contracts` і `database` — листки; `shared` → `contracts`, `database`;
 `ui` → `contracts`. Фронтенди й `libs/ui` не імпортують `database`/`shared` (це затягнуло б
 Prisma в браузерний бандл). Перевіряє ESLint.
@@ -154,6 +159,7 @@ RLS гарантує, що чужий тенант не видимий. Хто *
 | §1 неекспортований провайдер                  | Nest DI на старті (e2e піднімають модулі)                                |
 | §2 цикли                                      | `pnpm deps:check` (madge, у складі `pnpm lint`)                          |
 | §2 шари бібліотек, фронтенд без backend-лібів | ESLint `no-restricted-imports`                                           |
+| §2 граф модулів (`modules.config.ts`)         | `pnpm modules:check --strict` (у складі `pnpm lint`)                     |
 | §3 голий `$transaction`                       | ESLint `no-restricted-syntax`                                            |
 | §4–§7, §9                                     | рев'ю + чекліст skill-а `backend-change`                                 |
 | §10                                           | рев'ю; e2e у CI-джобі `verify`                                           |

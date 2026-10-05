@@ -22,6 +22,9 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   API, transaction ownership, read-modify-write guards, after-commit effects, async guarantees,
   record-level access), each with a reference implementation in code and how it is enforced.
   The procedure is the `backend-change` skill (`.agents/skills/backend-change/`)
+- `docs/modules.md` — the module graph across all apps and libs: tiers (infra → platform →
+  core → feature), declared `dependsOn` edges, slots for upward links, known violations.
+  Source of truth is `modules.config.ts`; checked by `pnpm modules:check`
 - `docs/auth-hardening-plan.md` — current auth/session state and the AUTH-0…4 roadmap
   (rate limiting, session-as-entity, cookie migration, password recovery, 2FA)
 - `docs/event-driven-architecture.md` — messaging (events/commands), topology, DLQ
@@ -126,8 +129,11 @@ pnpm ai:docs:eval          # retrieval-only comparison of search modes/threshold
                            # (all four: docs/ai-sources/README.md; ingest/search/eval need DB + key)
 pnpm ai:answers:eval       # answer quality × price per configuration file (AI-5c; --max-cost unless
                            # --fake; writes only `eval` ledger rows — docs/ai-sources/README.md)
-pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:check + eslint
+pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:check +
+                                            # modules:check --strict + eslint
 pnpm deps:check            # madge: no runtime import cycles in backend apps and libs
+pnpm modules:check         # imports vs the declared module graph (modules.config.ts); `--strict`
+                           # runs inside `pnpm lint`. Blind spots (string links, Prisma) — docs/modules.md §6
 bash scripts/ci-verify.sh  # the full CI gate locally (lint → typecheck → unit → both e2e) in
                            # throwaway Docker containers; doesn't touch the dev stack or slots
 pnpm api:test:e2e          # tenant e2e — needs Postgres AND Valkey; do NOT run alongside a
@@ -301,6 +307,10 @@ The rules most easily broken:
   Another module's table is written through its exported service or a shared `libs/shared`
   recorder that takes `tx`.
 - **No import cycles, no `forwardRef`** — `pnpm deps:check` fails on a cycle.
+- **A module depends only on what `modules.config.ts` declares**, and only downward
+  (feature → core → platform). A lower module that must show a feature (customer page → its
+  events) gets a slot the feature fills — it never imports the feature (`docs/modules.md` §4).
+  A new file must fall under some module's path pattern.
 - **The top-level method owns the transaction**: one `withTenantTx`; helpers that must be atomic
   with it take `tx` first and never open their own.
 - **Read-modify-write is guarded**: the read happens inside the same `withTenantTx`, with a

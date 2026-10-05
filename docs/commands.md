@@ -370,7 +370,7 @@ Eval відповідей (AI-5c): набір питань × файл конф�
 ### `pnpm lint` / `pnpm lint:fix`
 
 ```bash
-pnpm lint       # → ai:knowledge --check && deps:check && lint:eslint
+pnpm lint       # → ai:knowledge --check && deps:check && modules:check --strict && lint:eslint
 pnpm lint:eslint  # → eslint <dir> --max-warnings 0 по черзі для apps/*, libs/*, scripts
 pnpm lint:fix   # → eslint . --fix
 ```
@@ -393,6 +393,19 @@ pnpm deps:check  # → madge --circular по apps/{api,platform-api,worker}/src 
 
 Падає на будь-якому циклі runtime-імпортів (type-only імпорти не рахуються, `.madgerc`).
 Секунди; входить у `pnpm lint`.
+
+### `pnpm modules:check`
+
+```bash
+pnpm modules:check            # звіт: порушення графа модулів, файли без власника; exit 0
+pnpm modules:check --strict   # exit 1 на порушення або файл без власника
+pnpm modules:check --edges    # фактичний граф модуль → модуль з кількістю імпортів
+```
+
+Порівнює імпорти з графом у `modules.config.ts` (`docs/modules.md`). Резолвить кожен іменований
+імпорт до файлу оголошення, тож бачить крізь barrel-и `@saas-skeleton/*`. ~12 с (TypeScript-
+програма на кожен застосунок і бібліотеку). Входить у `pnpm lint` з `--strict` (а з ним — у CI
+`verify`). Чого не бачить — рядкових звʼязків і Prisma relations — `docs/modules.md` §6.
 
 ### `bash scripts/ci-verify.sh`
 
