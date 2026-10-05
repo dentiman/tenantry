@@ -135,7 +135,7 @@ area.
 
 ### Крок 1 — контракт і бекенд: пагінований `GET /tenants`
 
-**`libs/contracts/src/platform/platform.schema.ts`**
+**`libs/contracts/src/platform/tenant.schema.ts`**
 
 ```ts
 import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
@@ -153,7 +153,7 @@ export const TenantQuerySchema = listQuerySchema(['slug', 'name', 'isActive', 'c
 export const TenantListResponseSchema = paginatedResponseSchema(TenantResponseSchema);
 ```
 
-Тип `TenantQuery` — у `platform.types.ts` (там уже перелічені всі `z.infer`
+Тип `TenantQuery` — у `tenant.types.ts` (там уже перелічені всі `z.infer`
 поштучно; `index.ts` реекспортує обидва файли зірочкою, тому більше нічого
 дописувати не треба).
 

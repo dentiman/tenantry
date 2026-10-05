@@ -2,37 +2,11 @@ import { z } from 'zod';
 import { listQuerySchema, paginatedResponseSchema } from '../pagination/pagination.schema';
 import { PasswordSchema } from '../user/user.schema';
 
-// MT-3: контракти CONTROL PLANE (apps/platform-api). Свідомо ОКРЕМИЙ підпростір:
-// імпортуються як '@saas-skeleton/contracts/platform' і НЕ реекспортуються з головного
+// MT-3: контракти CONTROL PLANE (apps/platform-api) — тенанти; вхід оператора —
+// platform-auth.schema.ts. Свідомо ОКРЕМИЙ підпростір: імпортуються як '@saas-skeleton/contracts/platform' і НЕ реекспортуються з головного
 // index — OpenAPI-конвеєри двох plane-ів незалежні (docs/multi-tenancy-plan.md §1).
 
 const normalizedEmail = z.string().trim().toLowerCase().pipe(z.email());
-
-// ── Platform auth (операторська identity: platform_users, НЕ tenant-юзери) ──
-
-export const PlatformLoginSchema = z.object({
-  email: normalizedEmail,
-  password: z.string().min(1),
-});
-
-export const PlatformUserResponseSchema = z.object({
-  id: z.uuid(),
-  email: z.email(),
-  name: z.string().nullable(),
-  createdAt: z.iso.datetime(),
-});
-
-export const PlatformAuthResponseSchema = z.object({
-  user: PlatformUserResponseSchema,
-  // AUTH-2: access 15 хв; refresh їде в httpOnly cookie `saas_platform_refresh`
-  // (Path=/api/auth) — у тілі його більше немає (було: MVP MT-3, 60m без refresh)
-  accessToken: z.string(),
-});
-
-/** Відповідь `POST /auth/refresh` — та сама форма, що accessToken у логіні */
-export const PlatformAuthTokensSchema = z.object({
-  accessToken: z.string(),
-});
 
 // ── Tenants CRUD ──
 
