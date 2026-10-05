@@ -14,9 +14,9 @@ import { Role } from '@saas-skeleton/database';
 import * as argon2 from 'argon2';
 import { fieldConflictException } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
-import { DefaultChannelService } from '../chat/default-channel.service';
 import { AuthSessionService } from '../auth/auth-session.service';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
+import { UserLifecycleHooks } from './user-lifecycle.hooks';
 // Пара phone/phoneCountry узгоджується одним правилом на застосунок (common/phone.ts):
 // те саме поле є в кастомерів і їхніх контактів
 import { normalizePhonePair } from '../common/phone';
@@ -36,7 +36,7 @@ export class UsersService {
     private readonly notifications: NotificationRecorder,
     private readonly sessions: AuthSessionService,
     private readonly realtime: RealtimeEmitter,
-    private readonly defaultChannel: DefaultChannelService,
+    private readonly lifecycle: UserLifecycleHooks,
   ) {}
 
   async findAll(query: UserQuery): Promise<{
@@ -122,10 +122,10 @@ export class UsersService {
         include: { avatarFile: true },
       });
 
-      // Дефолтний канал — частина появи людини в тенанті, а не окремий крок:
-      // у тій самій транзакції, тож «юзер є, але поза каналом» не існує як стан
-      // (docs/chat.md §7.4, design.md D3)
-      await this.defaultChannel.ensureMembership(tx, created);
+      // Те, що є частиною появи людини в тенанті (членство в дефолтному каналі
+      // чату — docs/chat.md §7.4), реєструють самі модулі: у тій самій транзакції,
+      // тож «юзер є, але поза каналом» не існує як стан (docs/modules.md §4)
+      await this.lifecycle.runCreated(tx, created);
 
       await this.activities.record(tx, {
         type: 'user.created',

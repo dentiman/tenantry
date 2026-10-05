@@ -1014,7 +1014,7 @@ POST /conversations/:id/read        { seq }
 | міграція `chat_conversations` | backfill для тенантів, які вже є |
 | `apps/platform-api` → `tenants.service` | канал і членство першого адміна в тій самій `$transaction`, що й тенант |
 | `libs/database/prisma/seed.ts` | канал і членство — **двома незалежно ідемпотентними кроками** |
-| `apps/api` → `DefaultChannelService.ensureMembership` | вводить нового юзера з `users.service`, у тій самій `withTenantTx`, і пише `member.added` у стрічку |
+| `apps/api` → `DefaultChannelService.ensureMembership` | вводить нового юзера в тій самій `withTenantTx`, що його створює, і пише `member.added` у стрічку. Users чат не імпортує: chat реєструє хук `UserLifecycleHooks.onCreated` (docs/modules.md §4), а `users.service` виконує всі хуки в своїй транзакції |
 
 Два кроки в сіді — не педантизм: на свіжій БД канал для дефолтного тенанта створює **backfill
 міграції** (тенант там уже є, юзерів ще немає), і «створити канал разом із членством» тихо

@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import type { Prisma } from '@saas-skeleton/database';
+import { UserLifecycleHooks } from '../users/user-lifecycle.hooks';
 
 /**
  * Дефолтний канал тенанта («General»): розмова, у якій перебувають усі його юзери.
@@ -10,11 +11,20 @@ import type { Prisma } from '@saas-skeleton/database';
  * без курсора прочитаного рівно там, де їх побачать найпершими.
  *
  * Канал народжується разом із тенантом (platform-api / сід), а не тут: цей
- * сервіс лише вводить у нього нового юзера.
+ * сервіс лише вводить у нього нового юзера — через хук появи юзера, який реєструє
+ * сам (users чат не імпортує, docs/modules.md §4).
  */
 @Injectable()
-export class DefaultChannelService {
+export class DefaultChannelService implements OnModuleInit {
   private readonly logger = new Logger(DefaultChannelService.name);
+
+  constructor(private readonly userLifecycle: UserLifecycleHooks) {}
+
+  onModuleInit(): void {
+    this.userLifecycle.onCreated('chat.default-channel', {
+      onUserCreated: (tx, user) => this.ensureMembership(tx, user),
+    });
+  }
 
   /**
    * Ввести юзера в дефолтний канал. Викликається З ТІЄЇ САМОЇ транзакції, що
