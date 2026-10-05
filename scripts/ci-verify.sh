@@ -52,8 +52,10 @@ docker run --rm --network "$RUN_ID" \
   -e PLATFORM_JWT_SECRET=ci-only-platform-secret-not-for-production-32chars \
   "$NODE_IMAGE" bash -euo pipefail -c '
     mkdir -p /work
+    # logs/ — пишуть запущені поруч dev-процеси (`api:dev`, `worker:dev`): tar падає на
+    # «file changed as we read it», а самі логи перевірці не потрібні
     tar -C /src --exclude=./node_modules --exclude="*/node_modules" --exclude=./.turbo \
-      --exclude=./.env --exclude=./.env.local -cf - . | tar -C /work -xf -
+      --exclude=./.env --exclude=./.env.local --exclude="./apps/*/logs" -cf - . | tar -C /work -xf -
     cd /work
     echo "verify: $(nproc) CPU, $(awk "/MemTotal/ {print int(\$2/1024)}" /proc/meminfo) MB RAM, node heap limit $(node -p "Math.round(require(\"v8\").getHeapStatistics().heap_size_limit/1048576)") MB"
     corepack enable
