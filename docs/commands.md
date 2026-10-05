@@ -500,6 +500,12 @@ pnpm logs:clean  # → rm -rf apps/api/logs/*.log*
 Pino-логи пишуться в `join(process.cwd(), 'logs')` — команди `api` треба запускати з cwd
 `apps/api` (`pnpm --filter` це гарантує).
 
+У dev кожен застосунок пише у свою теку `apps/{api,platform-api,worker}/logs/` з **ротацією за
+розміром**: 10 МБ на файл, два попередні поруч (`<дата>-NN-worker.log`) і службовий `*.log.txt`
+з історією ротації — тобто ≤ ~30 МБ на файл логу. Без ротації лог воркера (cron щохвилини) за
+кілька днів доростав до сотень мегабайтів. Прод api ротує свій файл так само (добово, 30 днів,
+gzip); worker і platform-api у проді пишуть лише в stdout.
+
 ---
 
 ## JetBrains Run Configurations

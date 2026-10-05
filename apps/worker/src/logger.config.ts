@@ -1,5 +1,7 @@
 import { join } from 'node:path';
-import type { Level } from 'pino';
+import { multistream, type Level } from 'pino';
+import pretty from 'pino-pretty';
+import { createStream } from 'rotating-file-stream';
 import type { LoggerModuleAsyncParams } from 'nestjs-pino';
 import { ClsService } from 'nestjs-cls';
 
@@ -7,7 +9,29 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const logLevel = (process.env.LOG_LEVEL ?? (isDevelopment ? 'debug' : 'info')) as Level;
 
 // cwd = apps/worker (pnpm --filter це гарантує)
-const jsonLogPath = join(process.cwd(), 'logs', 'worker.log');
+const logsDir = join(process.cwd(), 'logs');
+
+/**
+ * Dev: консоль (pretty) + JSON-файл із ротацією за розміром. Без ротації `pino/file` писав
+ * безкінечно — лог воркера (cron щохвилини) доростав до сотень мегабайтів. 10 МБ на файл,
+ * два попередні поруч (`<дата>-NN-worker.log`) — максимум ~30 МБ на застосунок.
+ * Прод пише в stdout, файли там не потрібні (збирає Docker).
+ */
+const devStream = (): ReturnType<typeof multistream> =>
+  multistream([
+    {
+      level: logLevel,
+      stream: pretty({
+        colorize: true,
+        translateTime: 'yyyy-mm-dd HH:MM:ss',
+        ignore: 'pid,hostname',
+      }),
+    },
+    {
+      level: logLevel,
+      stream: createStream('worker.log', { path: logsDir, size: '10M', maxFiles: 2 }),
+    },
+  ]);
 
 export const loggerConfig: LoggerModuleAsyncParams = {
   inject: [ClsService],
@@ -19,26 +43,7 @@ export const loggerConfig: LoggerModuleAsyncParams = {
         const tenantId = cls.isActive() ? cls.get<string | undefined>('tenantId') : undefined;
         return tenantId ? { tenantId } : {};
       },
-      transport: isDevelopment
-        ? {
-            targets: [
-              {
-                target: 'pino-pretty',
-                level: logLevel,
-                options: {
-                  colorize: true,
-                  translateTime: 'yyyy-mm-dd HH:MM:ss',
-                  ignore: 'pid,hostname',
-                },
-              },
-              {
-                target: 'pino/file',
-                level: logLevel,
-                options: { destination: jsonLogPath, mkdir: true },
-              },
-            ],
-          }
-        : undefined,
+      ...(isDevelopment ? { stream: devStream() } : {}),
     },
   }),
 };

@@ -6,7 +6,7 @@ export const logLevel = (process.env.LOG_LEVEL ?? (isDevelopment ? 'debug' : 'in
 
 // Log file paths (absolute to ensure they work in all environments)
 // cwd = apps/api (nest start / node dist запускаються звідси)
-const logsDir = join(process.cwd(), 'logs');
+export const logsDir = join(process.cwd(), 'logs');
 
 export const jsonLogPath = join(logsDir, 'api.log'); // JSON format (for parsing, AI, monitoring)
 export const prettyLogPath = join(logsDir, 'api-pretty.log'); // Human-readable format (for IDE, developers)

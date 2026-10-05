@@ -1,13 +1,16 @@
 import type { LoggerModuleAsyncParams } from 'nestjs-pino';
 import { ClsService } from 'nestjs-cls';
 import { multistream } from 'pino';
+import pretty from 'pino-pretty';
 import type { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { basename } from 'node:path';
 import { createStream } from 'rotating-file-stream';
 import {
   isDevelopment,
   logLevel,
   jsonLogPath,
+  logsDir,
   prettyLogPath,
   redactPaths,
 } from './logger.constants';
@@ -27,6 +30,30 @@ const createRotatingStream = (): ReturnType<typeof createStream> | null => {
 };
 
 const rotatingStream = createRotatingStream();
+
+/**
+ * Dev: консоль (pretty) + `api.log` (JSON) + `api-pretty.log` (для людини й IDE), обидва
+ * файли з ротацією за розміром. Без неї `pino/file` писав безкінечно — сотні мегабайтів за
+ * кілька днів dev-стеку. 10 МБ на файл, два попередні поруч — `pnpm logs:tail` і далі
+ * дивиться в той самий `api-pretty.log`.
+ */
+const devStream = (): ReturnType<typeof multistream> => {
+  const devFile = (name: string): ReturnType<typeof createStream> =>
+    createStream(name, { path: logsDir, size: '10M', maxFiles: 2 });
+  const prettyOptions = { translateTime: 'yyyy-mm-dd HH:MM:ss', ignore: 'pid,hostname' };
+  return multistream([
+    { level: logLevel, stream: pretty({ ...prettyOptions, colorize: true }) },
+    { level: logLevel, stream: devFile(basename(jsonLogPath)) },
+    {
+      level: logLevel,
+      stream: pretty({
+        ...prettyOptions,
+        colorize: false,
+        destination: devFile(basename(prettyLogPath)),
+      }),
+    },
+  ]);
+};
 
 /**
  * Дефолт pino-http — лічильник, що починається з 1 на КОЖНОМУ процесі: після рестарту
@@ -53,48 +80,14 @@ export const loggerConfig: LoggerModuleAsyncParams = {
     };
     return {
       pinoHttp: isDevelopment
-        ? // Development: use transport targets (pretty console + files)
+        ? // Development: pretty console + rotating files (devStream)
           {
             level: logLevel,
             genReqId,
             mixin: tenantMixin,
             serializers: customSerializers,
             redact: redactPaths,
-            transport: {
-              targets: [
-                // Console: pretty format with colors
-                {
-                  target: 'pino-pretty',
-                  level: logLevel,
-                  options: {
-                    colorize: true,
-                    translateTime: 'yyyy-mm-dd HH:MM:ss',
-                    ignore: 'pid,hostname',
-                  },
-                },
-                // File 1: JSON format (for parsing, AI, monitoring)
-                {
-                  target: 'pino/file',
-                  level: logLevel,
-                  options: {
-                    destination: jsonLogPath,
-                    mkdir: true,
-                  },
-                },
-                // File 2: Pretty format (for humans, IDE)
-                {
-                  target: 'pino-pretty',
-                  level: logLevel,
-                  options: {
-                    destination: prettyLogPath,
-                    colorize: false,
-                    translateTime: 'yyyy-mm-dd HH:MM:ss',
-                    ignore: 'pid,hostname',
-                    mkdir: true,
-                  },
-                },
-              ],
-            },
+            stream: devStream(),
             autoLogging: {
               ignore: (req): boolean => req.url === '/health' || req.url === '/api/health',
             },
