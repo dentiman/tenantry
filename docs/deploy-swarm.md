@@ -60,7 +60,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | Транспорт | `docker context over SSH`, без файлів на сервері (§6) |
 | Registry | GitLab Registry. Build — предефайнений job-token. **Deploy — Deploy Token (`read_registry`)**, бо job-token дійсний лише поки живе job, а pull на ноді асинхронний (§6, «Три запобіжники»); нодам роздається через `--with-registry-auth` |
 | SSH login | раннер↔manager уже налаштований (ключ на рівні раннера); у CI не інжектимо. Job-и — за runner-тегом (тимчасово `deploy_dev` для всіх) |
-| Середовища | **dev** (гілка `dev`→`saas-dev`) + **prod** (`main`→`saas-prod`) |
+| Середовища | **dev** (гілка `dev`→`saas-dev`) — єдине, що зараз деплоїться. `dev` — головна гілка розробки. **prod** (`main`→`saas-prod`) **вимкнено з 2026-10-05**: `main` — дзеркало `dev`, яке синхронізуємо, але не деплоїмо (§6, «main не деплоїться») |
 | Стан | у стеку, прибито до manager (`node.role==manager`, `replicas:1`); volume `local`+`o:bind` у `${SAAS_DATA_DIR}` → бекап = весь сервер |
 | Зовнішній доступ | **IP:port без проксі** (тестовий прод): web/platform-web/seaweedfs — `mode:host` на `0.0.0.0`, браузер по http напряму; api/platform-api — на `127.0.0.1`. Прод → `127.0.0.1` + reverse-proxy з TLS |
 | Міграції | entrypoint `api`-контейнера: `prisma migrate deploy` під `MIGRATE_DATABASE_URL` (saas_migrator) → старт під `DATABASE_URL` (saas_app) |
@@ -120,8 +120,30 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 
 ## 6. CI-пайплайн і транспорт
 
-**build** (dind + BuildKit): 6 образів паралельно, тег `$CI_COMMIT_SHA` (+`latest` на `main`),
-теги передаються далі dotenv-артефактом `build.env`.
+**check** — до будь-якої збірки, на кожній гілці:
+- `ai_knowledge_check` — закомічений корпус знань AI не розійшовся з `docs/ai-knowledge`;
+- `verify` — `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` →
+  unit → e2e обох API. Postgres (той самий pgvector-образ і digest) і Valkey — одноразові
+  контейнери на власній docker-мережі джоби; checkout монтується read-only і копіюється в
+  node-контейнер (shell-executor не зміг би прибрати root-овий `node_modules`). pnpm store
+  кешується в іменованому томі `saas-verify-pnpm-store` на раннері.
+
+Стадія build стартує лише після зеленої check — неперевірений SHA не збирається і не
+деплоїться. **Локально той самий прогін** — `bash scripts/ci-verify.sh` (потрібен лише Docker;
+dev-стек і workspace-слоти не чіпає, бо все живе в окремій мережі). GitHub Actions
+(`.github/workflows/ci.yml`) прибрано 2026-10-05: remote — лише GitLab, тож він ніколи не
+запускався.
+
+**build** (dind + BuildKit): 6 образів паралельно, тег `$CI_COMMIT_SHA` (+`latest` на default-гілці
+GitLab; `latest` ніде не споживається — стек бере образ за SHA), теги передаються далі
+dotenv-артефактом `build.env`.
+
+**main не деплоїться.** На `main` біжить лише стадія check: build-джоби мають виняток для
+`main`, а всі prod-джоби (`deploy_prod`, `db_roles_prod`, `seed_prod`, `dump_db_prod`)
+успадковують `.prod_disabled` (`when: never`). Увімкнення — дві правки, описані в коментарі над
+`.prod_disabled` у `.gitlab-ci.yml`. Prod-правила посилаються на `main` явно, а не через
+`$CI_DEFAULT_BRANCH`: default-гілка GitLab (зараз `main`) може стати `dev`, і тоді prod-джоби не
+мають причепитися до dev-пайплайнів.
 
 **deploy** (`docker:27` + `openssh-client`, приземляється на раннер за тегом `deploy_dev`/`deploy_prod`):
 ```
@@ -280,7 +302,7 @@ redeploy.
 | міграції в entrypoint | ✅ (адаптовано під saas_migrator/saas_app) |
 | runtime config.json через nginx-entrypoint | ✖️ не треба (фронт на відносному `/api`) |
 | seeder-образ + manual `pg_dump` | ✅ (`Dockerfile.tools`, `db_roles`/`seed`/`dump`) |
-| dev/prod по гілках | ✅ |
+| dev/prod по гілках | ✅ (prod поки вимкнено, §6) |
 | **`scp` stack + `.env` на сервер** | **→ docker context**: stack читається локально, env інтерполюється client-side, S3-config — swarm `config` з локального файлу. Нуль файлів на сервері |
 
 ## 10. Масштабування (коли single-node стане тісно)

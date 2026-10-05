@@ -336,8 +336,8 @@ location /socket.io/ {
 HTTP і клієнт вічно реконектиться) і **без** `changeOrigin`: підміна origin не пройшла б
 allowlist.
 
-**CI** — сервіс `valkey` поруч із Postgres. Без пароля: `services` у GitHub Actions не
-вміє передавати аргументи серверу, а сам сервіс ефемерний і доступний лише job-у.
+**CI** — одноразовий контейнер `valkey` поруч із Postgres у мережі джоби `verify`
+(`scripts/ci-verify.sh`). Без пароля: він ефемерний і доступний лише цій мережі.
 
 **Коли зʼявиться TLS-проксі**: термінувати TLS на edge, socket стає `wss://`, ті самі
 Upgrade-заголовки й idle timeout переїжджають туди. Повертати polling+sticky доведеться

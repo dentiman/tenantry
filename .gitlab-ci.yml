@@ -63,6 +63,19 @@ ai_knowledge_check:
   script:
     - docker run --rm -v "$CI_PROJECT_DIR:/repo:ro" -w /repo node:24-bookworm-slim node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check
 
+# Повна перевірка коміту: lint (+ deps:check) → typecheck → unit → e2e обох API проти
+# одноразових Postgres (pgvector) і Valkey. Стадія build стартує лише після зеленої check,
+# тож неперевірений SHA не збирається і не деплоїться. Уся логіка — у скрипті, щоб локальний
+# прогін (`bash scripts/ci-verify.sh`) був тим самим, що тут.
+verify:
+  stage: check
+  tags: [deploy_dev]
+  rules:
+    - if: $CI_COMMIT_BRANCH
+  timeout: 45m
+  script:
+    - bash scripts/ci-verify.sh
+
 # ===========================================================================
 # BUILD — усі образи паралельно (dind + BuildKit). Тег = $CI_COMMIT_SHA (+latest на default).
 # ===========================================================================
@@ -75,6 +88,9 @@ ai_knowledge_check:
     DOCKER_BUILDKIT: "1"
   tags: [deploy_dev]      # ТИМЧАСОВО: усе (в т.ч. prod) під deploy_dev-раннерами
   rules:
+    # main поки не деплоїться (див. .prod_disabled нижче) — образи для нього не потрібні
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: never
     - if: $CI_COMMIT_BRANCH
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
@@ -233,15 +249,22 @@ deploy_dev:
     SAAS_DATA_DIR: /srv/saas-dev/data
     # прикладні секрети — з docker/deploy.env (source у before_script)
 
+# PROD ВИМКНЕНО (2026-10-05). Розробка йде в `dev` (головна гілка, деплой → saas-dev);
+# `main` — дзеркало, яке синхронізуємо з `dev`, але НЕ деплоїмо: на ньому біжить лише стадія
+# check. Усі prod-джоби нижче успадковують ці rules. Щоб увімкнути prod:
+#   1) тут замінити `when: never` на `if: '$CI_COMMIT_BRANCH == "main"'` + `when: manual`;
+#   2) прибрати виняток для main у .build_base.rules.
+# Гілка вказана явно, а не через $CI_DEFAULT_BRANCH: якщо default у GitLab стане `dev`,
+# prod-джоби не мають причепитися до dev-пайплайнів. Деталі — docs/deploy-swarm.md.
+.prod_disabled:
+  rules:
+    - when: never
+
 deploy_prod:
-  extends: .deploy_base
+  extends: [.deploy_base, .prod_disabled]
   stage: deploy_prod
   tags: [deploy_dev]
   environment: { name: production }
-  rules:
-    # ТИМЧАСОВО manual: поки деплоїмо тільки dev-стек. Прибрати when:manual, коли піде реальний prod.
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: manual
   variables:
     STACK_NAME: saas-prod
     DEPLOY_USER: $DEPLOY_USER_PROD
@@ -269,14 +292,11 @@ deploy_prod:
     - set -a; . ./docker/deploy.env; set +a
 
 db_roles_prod:
-  extends: .tools_base
+  extends: [.tools_base, .prod_disabled]
   stage: deploy_prod
   needs:
     - { job: build_tools, artifacts: true }
     - { job: deploy_prod }
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: manual
   variables:
     STACK_NAME: saas-prod
     DEPLOY_USER: $DEPLOY_USER_PROD
@@ -294,14 +314,11 @@ db_roles_prod:
       echo "[db_roles] не вдалося за 30 спроб — перевір: docker service ps saas-prod_postgres"; exit 1
 
 seed_prod:
-  extends: .tools_base
+  extends: [.tools_base, .prod_disabled]
   stage: deploy_prod
   needs:
     - { job: build_tools, artifacts: true }
     - { job: deploy_prod }
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: manual
   variables:
     STACK_NAME: saas-prod
     DEPLOY_USER: $DEPLOY_USER_PROD
@@ -316,6 +333,9 @@ seed_prod:
 db_roles_dev:
   extends: .tools_base
   stage: deploy_prod
+  rules:                       # лише там, де є deploy_dev (needs нижче), інакше пайплайн не створиться
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
   needs:                       # мусить чекати deploy_dev — інакше мережі saas-dev_saas_net ще нема
     - { job: build_tools, artifacts: true }
     - { job: deploy_dev }
@@ -338,6 +358,9 @@ db_roles_dev:
 seed_dev:
   extends: .tools_base
   stage: deploy_prod
+  rules:                       # лише там, де є deploy_dev (needs нижче), інакше пайплайн не створиться
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
   needs:
     - { job: build_tools, artifacts: true }
     - { job: deploy_dev }
@@ -353,13 +376,11 @@ seed_dev:
         "$TOOLS_IMAGE" pnpm db:seed
 
 dump_db_prod:
+  extends: .prod_disabled
   image: docker:27
   stage: deploy_prod
   when: manual
   tags: [deploy_dev]
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: manual
   variables:
     STACK_NAME: saas-prod
     DEPLOY_USER: $DEPLOY_USER_PROD
