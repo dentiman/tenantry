@@ -2,7 +2,6 @@ import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
-  CalendarSettings,
   SettingsBootstrap,
   GeneralSettingsResponse,
 } from '@saas-skeleton/contracts';
@@ -10,13 +9,12 @@ import { Role } from '@saas-skeleton/database';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SettingsService } from './settings.service';
-import { BootstrapFeatures } from './bootstrap-features';
+import { BootstrapRegistry } from './bootstrap-registry';
 import { ActivitiesService } from '../activities/activities.service';
 import { toActivityResponse } from '../activities/activities.mapper';
 import { ActivityListResponseDto } from '../activities/dto/activity-response.dto';
 import {
   SettingsBootstrapDto,
-  CalendarSettingsDto,
   GeneralSettingsDto,
   GeneralSettingsResponseDto,
 } from './dto/settings.dto';
@@ -43,7 +41,7 @@ export class SettingsController {
   constructor(
     private readonly settings: SettingsService,
     private readonly activities: ActivitiesService,
-    private readonly features: BootstrapFeatures,
+    private readonly bootstrapRegistry: BootstrapRegistry,
   ) {}
 
   /**
@@ -54,11 +52,11 @@ export class SettingsController {
   @ApiOkResponse({ type: SettingsBootstrapDto.Output })
   async bootstrap(): Promise<SettingsBootstrap> {
     const organization = await this.settings.current();
-    // Прапорці реєструють самі фічі (BootstrapFeatures): settings їх не знає
+    // Прапорці й секції реєструють самі фічі (BootstrapRegistry): settings їх не знає
     return toSettingsBootstrap(
       organization,
-      this.settings.parseCalendar(organization.settings),
-      await this.features.resolve(),
+      await this.bootstrapRegistry.resolveFlags(),
+      this.bootstrapRegistry.resolveSections(organization),
     );
   }
 
@@ -81,27 +79,6 @@ export class SettingsController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<GeneralSettingsResponse> {
     return toGeneralSettingsResponse(await this.settings.updateGeneral(dto, actor));
-  }
-
-  /**
-   * Секція календаря — теж документ (`GET`/`PUT`), просто зберігається в
-   * `settings` JSON, а не в колонках (docs/calendar.md §9.5). Для клієнта
-   * різниці немає — у цьому й сенс секційної абстракції.
-   */
-  @Get('calendar')
-  @ApiOkResponse({ type: CalendarSettingsDto.Output })
-  async calendar(): Promise<CalendarSettings> {
-    return this.settings.calendar();
-  }
-
-  @Put('calendar')
-  @Roles(Role.ADMIN)
-  @ApiOkResponse({ type: CalendarSettingsDto.Output })
-  async updateCalendar(
-    @Body() dto: CalendarSettingsDto,
-    @CurrentUser() actor: JwtPayload,
-  ): Promise<CalendarSettings> {
-    return this.settings.updateCalendar(dto, actor);
   }
 
   /**

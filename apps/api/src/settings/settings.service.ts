@@ -1,8 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Tenant } from '@saas-skeleton/database';
-import type { CalendarSettings, GeneralSettings } from '@saas-skeleton/contracts';
-import { CALENDAR_SETTINGS_DEFAULTS, CalendarSettingsSchema } from '@saas-skeleton/contracts';
+import type { GeneralSettings } from '@saas-skeleton/contracts';
 import { ActivityRecorder } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 
@@ -36,31 +35,12 @@ export class SettingsService {
   }
 
   /**
-   * Секція `calendar` живе в `Tenant.settings` JSON (docs/calendar.md §9.5) —
-   * перший реальний споживач гібридного сховища з docs/settings.md.
-   *
-   * Відсутній ключ читається як ДЕФОЛТИ схеми, тому наявним тенантам не
-   * потрібен ні бекфіл, ні міграція: рядок зʼявляється лише коли адмін щось
-   * змінив (той самий патерн, що `notification_preferences`). Сміття в JSON
-   * (чужий райтер, старий формат) теж не валить читання — `catch` віддає
-   * дефолти, бо календар мусить намалюватись навіть із зіпсованим конфігом.
-   */
-  async calendar(): Promise<CalendarSettings> {
-    const organization = await this.current();
-    return this.parseCalendar(organization.settings);
-  }
-
-  async updateCalendar(data: CalendarSettings, actor: JwtPayload): Promise<CalendarSettings> {
-    return this.parseCalendar(await this.updateSection('calendar', data, actor));
-  }
-
-  /**
    * Замінити одну секцію `Tenant.settings` JSON і записати це в журнал змін. Повертає
    * весь JSON після запису — секцію з нього розбирає її власник.
    *
    * Сховищем секцій володіє settings, а схемою секції — модуль, якому вона належить:
-   * `ai` викликає це зі свого контролера (docs/modules.md §4), і settings не знає, що в
-   * секції. Активність несе лише назву секції: вміст — конфігурація, яку може читати
+   * `calendar` і `ai` викликають це зі своїх контролерів (docs/modules.md §4), і settings
+   * не знає, що в секції. Активність несе лише назву секції: вміст — конфігурація, яку може читати
    * вужче коло, ніж стрічку активності (так у `ai` — лише ADMIN).
    *
    * Read-modify-write під `SELECT … FOR UPDATE` (docs/backend-conventions.md §4): JSON
@@ -99,30 +79,6 @@ export class SettingsService {
       this.logger.log(`Settings section "${section}" updated: ${updated.slug}`);
       return updated.settings;
     });
-  }
-
-  /** Порожній/невалідний ключ → дефолти схеми, а не помилка (див. calendar()) */
-  parseCalendar(settings: unknown): CalendarSettings {
-    const section =
-      typeof settings === 'object' && settings !== null && !Array.isArray(settings)
-        ? (settings as Record<string, unknown>).calendar
-        : undefined;
-    // Відсутні ключі добиваються константою дефолтів, а не `.default()` у схемі
-    // (див. CALENDAR_SETTINGS_DEFAULTS): так наявним тенантам не потрібен бекфіл,
-    // а новий тумблер зʼявляється без міграції
-    const parsed = CalendarSettingsSchema.safeParse({
-      ...CALENDAR_SETTINGS_DEFAULTS,
-      ...(typeof section === 'object' && section !== null && !Array.isArray(section)
-        ? section
-        : {}),
-    });
-    if (parsed.success) {
-      return parsed.data;
-    }
-    // Зіпсована секція (чужий райтер, старий формат) не має валити календар:
-    // він мусить намалюватись навіть із нечитабельним конфігом
-    this.logger.warn('Calendar settings section is invalid — falling back to defaults');
-    return CALENDAR_SETTINGS_DEFAULTS;
   }
 
   /**

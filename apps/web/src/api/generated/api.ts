@@ -2399,191 +2399,6 @@ export const useSettingsUpdateGeneral = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
-export const settingsCalendar = (
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<CalendarSettingsDtoOutput>(
-    { url: `/api/settings/calendar`, method: 'GET', signal },
-    options,
-  );
-};
-
-export const getSettingsCalendarQueryKey = () => {
-  return [`/api/settings/calendar`] as const;
-};
-
-export const getSettingsCalendarQueryOptions = <
-  TData = Awaited<ReturnType<typeof settingsCalendar>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsCalendar>>, TError, TData>>;
-  request?: SecondParameter<typeof customInstance>;
-}) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getSettingsCalendarQueryKey();
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof settingsCalendar>>> = ({ signal }) =>
-    settingsCalendar(requestOptions, signal);
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof settingsCalendar>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type SettingsCalendarQueryResult = NonNullable<Awaited<ReturnType<typeof settingsCalendar>>>;
-export type SettingsCalendarQueryError = unknown;
-
-export function useSettingsCalendar<
-  TData = Awaited<ReturnType<typeof settingsCalendar>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsCalendar>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsCalendar>>,
-          TError,
-          Awaited<ReturnType<typeof settingsCalendar>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useSettingsCalendar<
-  TData = Awaited<ReturnType<typeof settingsCalendar>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsCalendar>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsCalendar>>,
-          TError,
-          Awaited<ReturnType<typeof settingsCalendar>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useSettingsCalendar<
-  TData = Awaited<ReturnType<typeof settingsCalendar>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsCalendar>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function useSettingsCalendar<
-  TData = Awaited<ReturnType<typeof settingsCalendar>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsCalendar>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getSettingsCalendarQueryOptions(options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const settingsUpdateCalendar = (
-  calendarSettingsDto: CalendarSettingsDto,
-  options?: SecondParameter<typeof customInstance>,
-) => {
-  return customInstance<CalendarSettingsDtoOutput>(
-    {
-      url: `/api/settings/calendar`,
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      data: calendarSettingsDto,
-    },
-    options,
-  );
-};
-
-export const getSettingsUpdateCalendarMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof settingsUpdateCalendar>>,
-    TError,
-    { data: CalendarSettingsDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof settingsUpdateCalendar>>,
-  TError,
-  { data: CalendarSettingsDto },
-  TContext
-> => {
-  const mutationKey = ['settingsUpdateCalendar'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof settingsUpdateCalendar>>,
-    { data: CalendarSettingsDto }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return settingsUpdateCalendar(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type SettingsUpdateCalendarMutationResult = NonNullable<
-  Awaited<ReturnType<typeof settingsUpdateCalendar>>
->;
-export type SettingsUpdateCalendarMutationBody = CalendarSettingsDto;
-export type SettingsUpdateCalendarMutationError = unknown;
-
-export const useSettingsUpdateCalendar = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof settingsUpdateCalendar>>,
-      TError,
-      { data: CalendarSettingsDto },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof settingsUpdateCalendar>>,
-  TError,
-  { data: CalendarSettingsDto },
-  TContext
-> => {
-  const mutationOptions = getSettingsUpdateCalendarMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-
 export const settingsActivity = (
   params?: SettingsActivityParams,
   options?: SecondParameter<typeof customInstance>,
@@ -3953,6 +3768,201 @@ export const useCalendarSetReminders = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getCalendarSetRemindersMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const calendarSettingsGet = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<CalendarSettingsDtoOutput>(
+    { url: `/api/settings/calendar`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getCalendarSettingsGetQueryKey = () => {
+  return [`/api/settings/calendar`] as const;
+};
+
+export const getCalendarSettingsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof calendarSettingsGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof calendarSettingsGet>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getCalendarSettingsGetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof calendarSettingsGet>>> = ({ signal }) =>
+    calendarSettingsGet(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof calendarSettingsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type CalendarSettingsGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof calendarSettingsGet>>
+>;
+export type CalendarSettingsGetQueryError = unknown;
+
+export function useCalendarSettingsGet<
+  TData = Awaited<ReturnType<typeof calendarSettingsGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof calendarSettingsGet>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof calendarSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof calendarSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useCalendarSettingsGet<
+  TData = Awaited<ReturnType<typeof calendarSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof calendarSettingsGet>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof calendarSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof calendarSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useCalendarSettingsGet<
+  TData = Awaited<ReturnType<typeof calendarSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof calendarSettingsGet>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useCalendarSettingsGet<
+  TData = Awaited<ReturnType<typeof calendarSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof calendarSettingsGet>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getCalendarSettingsGetQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const calendarSettingsUpdate = (
+  calendarSettingsDto: CalendarSettingsDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<CalendarSettingsDtoOutput>(
+    {
+      url: `/api/settings/calendar`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: calendarSettingsDto,
+    },
+    options,
+  );
+};
+
+export const getCalendarSettingsUpdateMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof calendarSettingsUpdate>>,
+    TError,
+    { data: CalendarSettingsDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof calendarSettingsUpdate>>,
+  TError,
+  { data: CalendarSettingsDto },
+  TContext
+> => {
+  const mutationKey = ['calendarSettingsUpdate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof calendarSettingsUpdate>>,
+    { data: CalendarSettingsDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return calendarSettingsUpdate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CalendarSettingsUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof calendarSettingsUpdate>>
+>;
+export type CalendarSettingsUpdateMutationBody = CalendarSettingsDto;
+export type CalendarSettingsUpdateMutationError = unknown;
+
+export const useCalendarSettingsUpdate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof calendarSettingsUpdate>>,
+      TError,
+      { data: CalendarSettingsDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof calendarSettingsUpdate>>,
+  TError,
+  { data: CalendarSettingsDto },
+  TContext
+> => {
+  const mutationOptions = getCalendarSettingsUpdateMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

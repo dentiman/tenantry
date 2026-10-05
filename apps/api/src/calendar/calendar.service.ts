@@ -25,7 +25,7 @@ import {
 import type { ActivityActor, ScheduleNotificationInput } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
-import { SettingsService } from '../settings/settings.service';
+import { CalendarSettingsService } from './calendar-settings.service';
 import { CalendarAccessService } from './calendar.access';
 import { daysBetween, normalizeAllDayRange, reminderFireAt } from './calendar-time';
 
@@ -88,7 +88,7 @@ export class CalendarService {
     private readonly activities: ActivityRecorder,
     private readonly notifications: NotificationRecorder,
     private readonly scheduled: ScheduledNotificationService,
-    private readonly settings: SettingsService,
+    private readonly settings: CalendarSettingsService,
     private readonly access: CalendarAccessService,
     private readonly tenantContext: TenantContextService,
     private readonly realtime: RealtimeEmitter,
@@ -765,12 +765,12 @@ export class CalendarService {
     if (user?.timeZone) {
       return user.timeZone;
     }
-    return (await this.settings.calendar()).timeZone;
+    return (await this.settings.get()).timeZone;
   }
 
   /** Дефолтні нагадування компанії; для all-day — своє поле (900 хв = 09:00 попереднього дня) */
   private async defaultReminders(allDay: boolean): Promise<CalendarReminderInput[]> {
-    const settings = await this.settings.calendar();
+    const settings = await this.settings.get();
     const minutes = allDay
       ? settings.defaultAllDayReminderMinutes
       : settings.defaultReminderMinutes;
@@ -782,7 +782,9 @@ export class CalendarService {
     if (!customer) {
       throw new BadRequestException({
         message: 'customerId must reference a customer of this workspace',
-        fieldErrors: [{ field: 'customerId', message: 'Unknown customer', code: 'invalid_customer' }],
+        fieldErrors: [
+          { field: 'customerId', message: 'Unknown customer', code: 'invalid_customer' },
+        ],
       });
     }
   }
@@ -809,9 +811,7 @@ export class CalendarService {
       if (users.length !== ids.length) {
         throw new BadRequestException({
           message: 'attendees must reference active users of this workspace',
-          fieldErrors: [
-            { field: 'attendees', message: 'Unknown user', code: 'invalid_attendee' },
-          ],
+          fieldErrors: [{ field: 'attendees', message: 'Unknown user', code: 'invalid_attendee' }],
         });
       }
     }
@@ -842,15 +842,13 @@ export class CalendarService {
     onlyRecipientIds?: readonly string[],
   ): void {
     const tenantId = this.tenantContext.requireTenantId();
-    const recipients =
-      onlyRecipientIds ??
-      [
-        ...new Set([
-          ...event.attendees.map((attendee) => attendee.userId),
-          ...(event.ownerId ? [event.ownerId] : []),
-          ...extraRecipientIds,
-        ]),
-      ];
+    const recipients = onlyRecipientIds ?? [
+      ...new Set([
+        ...event.attendees.map((attendee) => attendee.userId),
+        ...(event.ownerId ? [event.ownerId] : []),
+        ...extraRecipientIds,
+      ]),
+    ];
     if (recipients.length === 0) {
       return;
     }

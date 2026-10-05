@@ -1,13 +1,10 @@
 export {
   GeneralSettingsSchema,
   GeneralSettingsResponseSchema,
-  CalendarSettingsSchema,
-  CALENDAR_SETTINGS_DEFAULTS,
-  SettingsBootstrapSchema,
+  SettingsBootstrapCoreSchema,
 } from './settings.schema';
 export type {
   GeneralSettings,
   GeneralSettingsResponse,
-  CalendarSettings,
-  SettingsBootstrap,
+  SettingsBootstrapCore,
 } from './settings.types';

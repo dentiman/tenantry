@@ -4,7 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@saas-skeleton/ui/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@saas-skeleton/ui/components/ui/field';
 import { Input } from '@saas-skeleton/ui/components/ui/input';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
@@ -16,9 +21,9 @@ import {
 } from '@saas-skeleton/contracts';
 import {
   getSettingsBootstrapQueryKey,
-  getSettingsCalendarQueryKey,
-  useSettingsCalendar,
-  useSettingsUpdateCalendar,
+  getCalendarSettingsGetQueryKey,
+  useCalendarSettingsGet,
+  useCalendarSettingsUpdate,
 } from '../../api/generated/api';
 import { ContentSection } from '../../components/section/content-section';
 import {
@@ -42,8 +47,8 @@ const WEEK_STARTS = [1, 0, 6] as const;
 export function SettingsCalendarPage() {
   const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
-  const { data, isLoading } = useSettingsCalendar();
-  const update = useSettingsUpdateCalendar();
+  const { data, isLoading } = useCalendarSettingsGet();
+  const update = useCalendarSettingsUpdate();
 
   const form = useForm<CalendarSettings>({
     resolver: zodResolver(CalendarSettingsSchema),
@@ -61,7 +66,7 @@ export function SettingsCalendarPage() {
     try {
       await update.mutateAsync({ data: values });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getSettingsCalendarQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getCalendarSettingsGetQueryKey() }),
         // Сітка бере ці значення з bootstrap-зрізу
         queryClient.invalidateQueries({ queryKey: getSettingsBootstrapQueryKey() }),
       ]);

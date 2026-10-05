@@ -1,9 +1,6 @@
 import type { Tenant } from '@saas-skeleton/database';
-import type {
-  CalendarSettings,
-  SettingsBootstrap,
-  GeneralSettingsResponse,
-} from '@saas-skeleton/contracts';
+import type { SettingsBootstrap, GeneralSettingsResponse } from '@saas-skeleton/contracts';
+import { SettingsBootstrapSchema } from '@saas-skeleton/contracts';
 
 /**
  * Назовні йдуть ТІЛЬКИ поля, які тенант має бачити. `isActive` і `settings`
@@ -19,23 +16,27 @@ export function toGeneralSettingsResponse(tenant: Tenant): GeneralSettingsRespon
   };
 }
 
+/**
+ * Ядро (general, features) плюс секції фіч з `BootstrapRegistry`. Форма — з composition
+ * root контрактів (`SettingsBootstrapSchema`): `parse` перевіряє, що кожна секція, яку
+ * обіцяє схема, справді зареєстрована (фіча прибрана з модулів, але лишилась у схемі —
+ * 500 на старті сесії, а не тихий `undefined` у SPA), і відкидає незадекларовані.
+ */
 export function toSettingsBootstrap(
   tenant: Tenant,
-  calendar: CalendarSettings,
   features: Record<string, boolean>,
+  sections: Record<string, unknown>,
 ): SettingsBootstrap {
-  return {
+  return SettingsBootstrapSchema.parse({
+    ...sections,
     general: {
       name: tenant.name,
       slug: tenant.slug,
       locale: tenant.locale,
       currency: tenant.currency,
     },
-    // Без цих полів неможливо намалювати сітку першим рендером (перший день
-    // тижня і робочі години), а другий запит дав би стрибок розкладки
-    calendar,
     // Ключ був закладений порожнім саме під це: AI-0 став його першим споживачем
     // (`features.ai`), і жодного нового ендпоінта для прапорця не знадобилось
     features,
-  };
+  });
 }

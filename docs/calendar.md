@@ -687,6 +687,11 @@ email — це рівно той «мертвий код», який boot-assert
 `GET /settings/bootstrap` отримує `calendar: { timeZone, weekStartsOn, workDayStart,
 workDayEnd }` — сітка мусить намалюватись першим рендером, без другого запиту.
 
+Власник секції — модуль календаря, не settings (з 2026-10-05, docs/modules.md §4):
+`CalendarSettingsService` розбирає секцію (відсутній ключ → `CALENDAR_SETTINGS_DEFAULTS`),
+`CalendarSettingsController` віддає `GET/PUT /settings/calendar`, а частину bootstrap календар
+реєструє в `BootstrapRegistry`. Зберігання — спільний `SettingsService.updateSection`.
+
 ### 9.6. Кастомери
 
 - `customerId` на події (§5) + фільтр `GET /calendar/events?customerId=…`;

@@ -1095,66 +1095,6 @@
         ]
       }
     },
-    "/api/settings/calendar": {
-      "get": {
-        "operationId": "settingsCalendar",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "settings"
-        ]
-      },
-      "put": {
-        "operationId": "settingsUpdateCalendar",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CalendarSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "settings"
-        ]
-      }
-    },
     "/api/settings/activity": {
       "get": {
         "operationId": "settingsActivity",
@@ -1916,6 +1856,66 @@
         ],
         "tags": [
           "calendar"
+        ]
+      }
+    },
+    "/api/settings/calendar": {
+      "get": {
+        "operationId": "calendarSettingsGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "calendarSettingsUpdate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSettingsDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
         ]
       }
     },
@@ -4587,6 +4587,12 @@
             ],
             "additionalProperties": false
           },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
           "calendar": {
             "type": "object",
             "properties": {
@@ -4636,18 +4642,12 @@
               "defaultAllDayReminderMinutes"
             ],
             "additionalProperties": false
-          },
-          "features": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "boolean"
-            }
           }
         },
         "required": [
           "general",
-          "calendar",
-          "features"
+          "features",
+          "calendar"
         ],
         "additionalProperties": false
       },
@@ -4703,105 +4703,6 @@
           "name",
           "locale",
           "currency"
-        ]
-      },
-      "CalendarSettingsDto_Output": {
-        "type": "object",
-        "properties": {
-          "timeZone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "weekStartsOn": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 6
-          },
-          "workDayStart": {
-            "type": "string",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-          },
-          "workDayEnd": {
-            "type": "string",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-          },
-          "defaultEventDurationMinutes": {
-            "type": "integer",
-            "minimum": 5,
-            "maximum": 1440
-          },
-          "defaultReminderMinutes": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 40320,
-            "nullable": true
-          },
-          "defaultAllDayReminderMinutes": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 40320,
-            "nullable": true
-          }
-        },
-        "required": [
-          "timeZone",
-          "weekStartsOn",
-          "workDayStart",
-          "workDayEnd",
-          "defaultEventDurationMinutes",
-          "defaultReminderMinutes",
-          "defaultAllDayReminderMinutes"
-        ],
-        "additionalProperties": false
-      },
-      "CalendarSettingsDto": {
-        "type": "object",
-        "properties": {
-          "timeZone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "weekStartsOn": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 6
-          },
-          "workDayStart": {
-            "type": "string",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-          },
-          "workDayEnd": {
-            "type": "string",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-          },
-          "defaultEventDurationMinutes": {
-            "type": "integer",
-            "minimum": 5,
-            "maximum": 1440
-          },
-          "defaultReminderMinutes": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 40320,
-            "nullable": true
-          },
-          "defaultAllDayReminderMinutes": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 40320,
-            "nullable": true
-          }
-        },
-        "required": [
-          "timeZone",
-          "weekStartsOn",
-          "workDayStart",
-          "workDayEnd",
-          "defaultEventDurationMinutes",
-          "defaultReminderMinutes",
-          "defaultAllDayReminderMinutes"
         ]
       },
       "ActivityListResponseDto_Output": {
@@ -6279,6 +6180,105 @@
         },
         "required": [
           "reminders"
+        ]
+      },
+      "CalendarSettingsDto_Output": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "weekStartsOn": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "workDayStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "workDayEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "defaultEventDurationMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "defaultReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          },
+          "defaultAllDayReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          }
+        },
+        "required": [
+          "timeZone",
+          "weekStartsOn",
+          "workDayStart",
+          "workDayEnd",
+          "defaultEventDurationMinutes",
+          "defaultReminderMinutes",
+          "defaultAllDayReminderMinutes"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarSettingsDto": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "weekStartsOn": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "workDayStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "workDayEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "defaultEventDurationMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "defaultReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          },
+          "defaultAllDayReminderMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40320,
+            "nullable": true
+          }
+        },
+        "required": [
+          "timeZone",
+          "weekStartsOn",
+          "workDayStart",
+          "workDayEnd",
+          "defaultEventDurationMinutes",
+          "defaultReminderMinutes",
+          "defaultAllDayReminderMinutes"
         ]
       },
       "UpdateAccountProfileDto": {

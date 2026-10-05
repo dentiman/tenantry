@@ -79,7 +79,7 @@ flowchart TB
 Що з цього випливає для форку:
 
 - **Прибрати `calendar`, `chat` чи `ai`** — жоден модуль їх не імпортує; що лишилося звʼязаним
-  без імпорту (рядки, Prisma, секція налаштувань календаря) — §7.
+  без імпорту (рядки, Prisma, рядок у схемі bootstrap) — §7.
 - **Прибрати `customers`** — тягне `calendar`. Ребро `calendar → customers` мʼяке: прив'язка
   події до клієнта необовʼязкова (`calendar_events.customer_id` nullable, `SetNull`), тож
   можна або прибрати календар, або відрізати від нього вибір клієнта. Якщо таких «мостів»
@@ -111,24 +111,30 @@ Component)`), а `SlotsProvider` у `main.tsx` роздає внески; `<Slot
 вниз, як і належить) і реєструє свою дію; модуль нижче виконує все зареєстроване, не знаючи
 хто це:
 
-| Реєстр                                       | Що виконує                                                      | Хто реєструється                      |
-| -------------------------------------------- | --------------------------------------------------------------- | ------------------------------------- |
-| `UserLifecycleHooks` (`users`)               | хуки **в транзакції** створення юзера; кидок відкочує створення | `chat` — членство в дефолтному каналі |
-| `BootstrapFeatures` (`settings`)             | прапорці `features` у `GET /settings/bootstrap`                 | `ai` — `features.ai`                  |
-| `SettingsService.updateSection` (`settings`) | зберігання секції `Tenant.settings` JSON + журнал змін          | `ai` — секція `/settings/ai`          |
+| Реєстр                                       | Що виконує                                                      | Хто реєструється                                        |
+| -------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------- |
+| `UserLifecycleHooks` (`users`)               | хуки **в транзакції** створення юзера; кидок відкочує створення | `chat` — членство в дефолтному каналі                   |
+| `BootstrapRegistry` (`settings`)             | прапорці `features` і секції фіч у `GET /settings/bootstrap`    | `ai` — `features.ai`; `calendar` — секція `calendar`    |
+| `SettingsService.updateSection` (`settings`) | зберігання секції `Tenant.settings` JSON + журнал змін          | `ai`, `calendar` — `/settings/ai`, `/settings/calendar` |
+
+Форму bootstrap-відповіді, якій потрібні типи секцій фіч, задає composition root контрактів
+`libs/contracts/src/bootstrap.schema.ts` (ядро settings `SettingsBootstrapCoreSchema` +
+`calendar`); відповідь проходить через неї `parse`-ом, тож секція, обіцяна схемою, але не
+зареєстрована, — помилка, а не тихий `undefined` у SPA.
 
 Хук у транзакції — для того, що є **частиною** сценарію (юзер поза дефолтним каналом не
 існує як стан). Наслідок, який може статися потім і повторюватися — `publish(tx, подія)` з
 підписником у worker, а не хук (docs/backend-conventions.md §5).
 
-Ще знадобляться (§7): секція календаря в налаштуваннях і bootstrap, рендерери нотифікацій і
-активності, маршрути до сутностей (`entity-routes`), події realtime.
+Ще знадобляться (§7): рендерери нотифікацій і активності, маршрути до сутностей
+(`entity-routes`), події realtime, хуки появи тенанта.
 
 ## 5. Composition roots
 
 Знати список модулів дозволено лише файлам, що **збирають** модулі докупи: `app.module.ts`,
 `worker.module.ts`, `router.tsx`, `main.tsx`, `i18n/`, `app-shell/areas.tsx` і `paths.ts`,
-barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.ts`. Повний перелік —
+barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.ts`, схема bootstrap
+`libs/contracts/src/bootstrap.schema.ts`, наповнення слотів `apps/web/src/slot-fills.ts`. Повний перелік —
 `COMPOSITION_ROOTS` у `modules.config.ts`. Root не розгалужує логіку за модулями — лише
 перелічує. `notification-message.tsx` зі `switch` по типах календаря — **не** root, а
 порушення, що чекає на слот.
@@ -165,24 +171,24 @@ barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.t
 
 `pnpm modules:check` — **0 порушень**. Усі сім ребер, знайдених першим прогоном, закрито:
 
-| Було                              | Як закрито                                                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `users → chat`                    | `UserLifecycleHooks`: chat реєструє членство в дефолтному каналі, users його не імпортує                        |
-| `settings → ai`                   | секція `ai` переїхала в модуль `ai` (контракт, сервіс, `AiSettingsController`), прапорець — `BootstrapFeatures` |
-| `customers → calendar`            | слот `customerOverviewCards`                                                                                    |
-| `dashboard → calendar`            | агенда переїхала в `calendar` (`dashboard-agenda-widget.tsx`), слот `dashboardWidgets`                          |
-| `app → ai`                        | слоти `shellHeaderActions` / `shellSidePanels`                                                                  |
-| `auth → tenants`, `app → tenants` | `platform.schema.ts` розділено: `platform-auth.schema.ts` (auth) і `tenant.schema.ts`                           |
+| Було                                  | Як закрито                                                                                                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users → chat`                        | `UserLifecycleHooks`: chat реєструє членство в дефолтному каналі, users його не імпортує                                                                    |
+| `settings → ai`                       | секція `ai` переїхала в модуль `ai` (контракт, сервіс, `AiSettingsController`), прапорець — `BootstrapRegistry`                                             |
+| `customers → calendar`                | слот `customerOverviewCards`                                                                                                                                |
+| `dashboard → calendar`                | агенда переїхала в `calendar` (`dashboard-agenda-widget.tsx`), слот `dashboardWidgets`                                                                      |
+| `app → ai`                            | слоти `shellHeaderActions` / `shellSidePanels`                                                                                                              |
+| `auth → tenants`, `app → tenants`     | `platform.schema.ts` розділено: `platform-auth.schema.ts` (auth) і `tenant.schema.ts`                                                                       |
+| `settings` знає `calendar` (невидиме) | секція переїхала в `calendar` (контракт, `CalendarSettingsService`, `CalendarSettingsController`); bootstrap-секцію календар реєструє в `BootstrapRegistry` |
 
 Лишилися порушення, яких скрипт **не бачить** (§6) — вони наступні:
 
-| Звʼязок                                                | Де                                                                                                         | Напрям виправлення                                                         |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `settings` знає `calendar`                             | секція `calendar` у `settings.schema.ts`, `SettingsService.calendar/updateCalendar`, `bootstrap.calendar`  | як `ai`: секція в модулі календаря; bootstrap — розширюваний реєстр секцій |
-| `realtime` знає `calendar`                             | `calendar.event-changed.v1` оголошено в `realtime.schema.ts`                                               | подія — в контрактах календаря, реєстр подій збирає root                   |
-| `notifications`, `activities`, `app` знають `calendar` | гілки `calendar_event.*` у `notification-message.tsx`, `activity-message.tsx`, `entity-routes.ts`          | рендерери й маршрути як слоти                                              |
-| `tenants` знає `chat` і `ai`                           | `platform-api` `tenants.service.ts` створює дефолтний канал і читає `aiAccess`; `TenantResponse.aiAllowed` | хуки появи тенанта, як `UserLifecycleHooks`                                |
-| Prisma back-relations                                  | `Tenant`, `User`                                                                                           | прийнятий виняток (§6)                                                     |
+| Звʼязок                                                | Де                                                                                                         | Напрям виправлення                                       |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `realtime` знає `calendar`                             | `calendar.event-changed.v1` оголошено в `realtime.schema.ts`                                               | подія — в контрактах календаря, реєстр подій збирає root |
+| `notifications`, `activities`, `app` знають `calendar` | гілки `calendar_event.*` у `notification-message.tsx`, `activity-message.tsx`, `entity-routes.ts`          | рендерери й маршрути як слоти                            |
+| `tenants` знає `chat` і `ai`                           | `platform-api` `tenants.service.ts` створює дефолтний канал і читає `aiAccess`; `TenantResponse.aiAllowed` | хуки появи тенанта, як `UserLifecycleHooks`              |
+| Prisma back-relations                                  | `Tenant`, `User`                                                                                           | прийнятий виняток (§6)                                   |
 
 `modules:check --strict` входить у `pnpm lint` (і в CI `verify`): нове **видиме** порушення
 зупиняє збірку. Таблиця вище — робота, яку тримає рев'ю, не лінт.

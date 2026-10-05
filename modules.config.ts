@@ -396,6 +396,7 @@ export const COMPOSITION_ROOTS: readonly string[] = [
   'apps/platform-web/src/app-shell/paths.ts',
   'apps/web/src/components/form/index.ts',
   'libs/contracts/src/index.ts',
+  'libs/contracts/src/bootstrap.schema.ts',
   'libs/contracts/src/*/index.ts',
   'libs/shared/src/index.ts',
   'libs/shared/src/*/index.ts',

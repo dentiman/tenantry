@@ -2,7 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import type { AiSettings, AiSettingsResponse } from '@saas-skeleton/contracts';
 import { AiAvailabilityService, readAiSettings } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
-import { BootstrapFeatures } from '../settings/bootstrap-features';
+import { BootstrapRegistry } from '../settings/bootstrap-registry';
 import { SettingsService } from '../settings/settings.service';
 
 /**
@@ -20,15 +20,12 @@ export class AiSettingsService implements OnModuleInit {
   constructor(
     private readonly settings: SettingsService,
     private readonly availability: AiAvailabilityService,
-    private readonly bootstrap: BootstrapFeatures,
+    private readonly bootstrap: BootstrapRegistry,
   ) {}
 
   /** `features.ai` у bootstrap: усі чотири рівні — інсталяція, платформа, дозвіл tenant-у, Tenant Admin */
   onModuleInit(): void {
-    this.bootstrap.register(
-      'ai',
-      async () => (await this.availability.forCurrentTenant()).available,
-    );
+    this.bootstrap.flag('ai', async () => (await this.availability.forCurrentTenant()).available);
   }
 
   async get(): Promise<AiSettingsResponse> {

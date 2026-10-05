@@ -45,3 +45,5 @@ export type {
   CalendarEventListResponse,
   CalendarAgendaResponse,
 } from './calendar.types';
+export { CalendarSettingsSchema, CALENDAR_SETTINGS_DEFAULTS } from './calendar-settings.schema';
+export type { CalendarSettings } from './calendar-settings.types';
