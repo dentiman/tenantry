@@ -165,6 +165,14 @@ API оперує **секціями** (`general`, `email`, `features`, `branding
 - **Читач спільний із воркером** — `readAiSettings()` у `libs/shared`, а не приватний метод
   сервісу: «що збережено» має означати одне й те саме для редактора і для промпту.
 
+**Власник — модуль `ai`, не `settings`** (з 2026-10-05, docs/modules.md §4). Схема секції — у
+`libs/contracts/src/ai/ai-settings.schema.ts`, ендпоінти — `AiSettingsController`
+(`apps/api/src/ai/`, URL той самий `/settings/ai`), прапорець `features.ai` у bootstrap фіча
+реєструє сама (`BootstrapFeatures`). Settings лише зберігає секцію: `SettingsService.updateSection`
+— спільний read-modify-write для всіх JSON-секцій під `SELECT … FOR UPDATE` рядка тенанта (без
+блокування два паралельні PUT різних секцій затирали б одна одну). Секція `calendar` поки живе
+в settings — це відоме порушення графа модулів (docs/modules.md §7).
+
 Екран `/settings/ai` несе попередження на самому екрані, що текст їде до зовнішнього
 AI-провайдера з кожним питанням (`ai-assistant.md` §9.3).
 

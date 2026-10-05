@@ -2,22 +2,19 @@ import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type {
   ActivityListResponse,
-  AiSettingsResponse,
   CalendarSettings,
   SettingsBootstrap,
   GeneralSettingsResponse,
 } from '@saas-skeleton/contracts';
 import { Role } from '@saas-skeleton/database';
-import { AiAvailabilityService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SettingsService } from './settings.service';
+import { BootstrapFeatures } from './bootstrap-features';
 import { ActivitiesService } from '../activities/activities.service';
 import { toActivityResponse } from '../activities/activities.mapper';
 import { ActivityListResponseDto } from '../activities/dto/activity-response.dto';
 import {
-  AiSettingsDto,
-  AiSettingsResponseDto,
   SettingsBootstrapDto,
   CalendarSettingsDto,
   GeneralSettingsDto,
@@ -46,7 +43,7 @@ export class SettingsController {
   constructor(
     private readonly settings: SettingsService,
     private readonly activities: ActivitiesService,
-    private readonly availability: AiAvailabilityService,
+    private readonly features: BootstrapFeatures,
   ) {}
 
   /**
@@ -57,10 +54,12 @@ export class SettingsController {
   @ApiOkResponse({ type: SettingsBootstrapDto.Output })
   async bootstrap(): Promise<SettingsBootstrap> {
     const organization = await this.settings.current();
-    return toSettingsBootstrap(organization, this.settings.parseCalendar(organization.settings), {
-      // AI-5a: усі чотири рівні — інсталяція, платформа, дозвіл tenant-у, Tenant Admin
-      ai: (await this.availability.forCurrentTenant()).available,
-    });
+    // Прапорці реєструють самі фічі (BootstrapFeatures): settings їх не знає
+    return toSettingsBootstrap(
+      organization,
+      this.settings.parseCalendar(organization.settings),
+      await this.features.resolve(),
+    );
   }
 
   @Get('general')
@@ -103,37 +102,6 @@ export class SettingsController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<CalendarSettings> {
     return this.settings.updateCalendar(dto, actor);
-  }
-
-  /**
-   * Секція AI-асистента (AI-1c): персона й інструкції, які воркер додає до промпту
-   * ПІСЛЯ незмінних меж. На відміну від решти секцій, ADMIN-only і ЧИТАННЯ теж:
-   * жоден екран поза редактором її не потребує (воркер читає рядок тенанта сам),
-   * а адмін може писати туди внутрішні формулювання — найменші привілеї.
-   */
-  @Get('ai')
-  @Roles(Role.ADMIN)
-  @ApiOkResponse({ type: AiSettingsResponseDto.Output })
-  async ai(): Promise<AiSettingsResponse> {
-    return {
-      ...(await this.settings.ai()),
-      availability: await this.availability.forCurrentTenant(),
-    };
-  }
-
-  /**
-   * Секція разом із вмикачем Tenant Admin (AI-5a). Доступність у відповіді рахується ПІСЛЯ
-   * запису — екран одразу бачить, чи зміна щось увімкнула з урахуванням рівнів платформи
-   */
-  @Put('ai')
-  @Roles(Role.ADMIN)
-  @ApiOkResponse({ type: AiSettingsResponseDto.Output })
-  async updateAi(
-    @Body() dto: AiSettingsDto,
-    @CurrentUser() actor: JwtPayload,
-  ): Promise<AiSettingsResponse> {
-    const ai = await this.settings.updateAi(dto, actor);
-    return { ...ai, availability: await this.availability.forCurrentTenant() };
   }
 
   /**

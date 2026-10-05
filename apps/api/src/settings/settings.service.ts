@@ -1,9 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Tenant } from '@saas-skeleton/database';
-import type { AiSettings, CalendarSettings, GeneralSettings } from '@saas-skeleton/contracts';
+import type { CalendarSettings, GeneralSettings } from '@saas-skeleton/contracts';
 import { CALENDAR_SETTINGS_DEFAULTS, CalendarSettingsSchema } from '@saas-skeleton/contracts';
-import { ActivityRecorder, readAiSettings } from '@saas-skeleton/shared';
+import { ActivityRecorder } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 
 /**
@@ -50,24 +50,39 @@ export class SettingsService {
     return this.parseCalendar(organization.settings);
   }
 
-  /**
-   * Json-секція = read-modify-write у транзакції (docs/settings.md § «RLS та
-   * транзакційність»): без цього конкурентний PUT сусідньої секції затер би
-   * ключі, які ми не чіпали.
-   */
   async updateCalendar(data: CalendarSettings, actor: JwtPayload): Promise<CalendarSettings> {
+    return this.parseCalendar(await this.updateSection('calendar', data, actor));
+  }
+
+  /**
+   * Замінити одну секцію `Tenant.settings` JSON і записати це в журнал змін. Повертає
+   * весь JSON після запису — секцію з нього розбирає її власник.
+   *
+   * Сховищем секцій володіє settings, а схемою секції — модуль, якому вона належить:
+   * `ai` викликає це зі свого контролера (docs/modules.md §4), і settings не знає, що в
+   * секції. Активність несе лише назву секції: вміст — конфігурація, яку може читати
+   * вужче коло, ніж стрічку активності (так у `ai` — лише ADMIN).
+   *
+   * Read-modify-write під `SELECT … FOR UPDATE` (docs/backend-conventions.md §4): JSON
+   * переписується цілком, тож без блокування рядка два паралельні PUT різних секцій
+   * прочитали б той самий знімок, і пізніший затер би секцію раннього.
+   */
+  async updateSection(section: string, value: object, actor: JwtPayload): Promise<unknown> {
     const current = await this.current();
 
     return this.tenantTx.withTenantTx(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${current.id} FOR UPDATE`;
       const fresh = await tx.tenant.findUniqueOrThrow({
         where: { id: current.id },
         select: { settings: true },
       });
       const settings = {
-        ...(typeof fresh.settings === 'object' && fresh.settings !== null && !Array.isArray(fresh.settings)
+        ...(typeof fresh.settings === 'object' &&
+        fresh.settings !== null &&
+        !Array.isArray(fresh.settings)
           ? fresh.settings
           : {}),
-        calendar: data,
+        [section]: value,
       };
       const updated = await tx.tenant.update({
         where: { id: current.id },
@@ -77,12 +92,12 @@ export class SettingsService {
       await this.activities.record(tx, {
         type: 'settings.updated',
         actor: { type: 'user', id: actor.sub, label: actor.email },
-        payload: { section: 'calendar' },
+        payload: { section },
         links: [{ entityType: 'tenant', entityId: updated.id, role: 'subject' }],
       });
 
-      this.logger.log(`Calendar settings updated: ${updated.slug}`);
-      return this.parseCalendar(updated.settings);
+      this.logger.log(`Settings section "${section}" updated: ${updated.slug}`);
+      return updated.settings;
     });
   }
 
@@ -108,58 +123,6 @@ export class SettingsService {
     // він мусить намалюватись навіть із нечитабельним конфігом
     this.logger.warn('Calendar settings section is invalid — falling back to defaults');
     return CALENDAR_SETTINGS_DEFAULTS;
-  }
-
-  /**
-   * Секція `ai` (AI-1c) — персона й інструкції асистента. Той самий JSON-патерн,
-   * що `calendar`, але читач спільний із воркером (`readAiSettings` у libs/shared):
-   * саме воркер кладе цей текст у промпт, і «що збережено» має означати для обох
-   * одне й те саме.
-   */
-  async ai(): Promise<AiSettings> {
-    const organization = await this.current();
-    return this.parseAi(organization.settings);
-  }
-
-  async updateAi(data: AiSettings, actor: JwtPayload): Promise<AiSettings> {
-    const current = await this.current();
-
-    return this.tenantTx.withTenantTx(async (tx) => {
-      const fresh = await tx.tenant.findUniqueOrThrow({
-        where: { id: current.id },
-        select: { settings: true },
-      });
-      const settings = {
-        ...(typeof fresh.settings === 'object' && fresh.settings !== null && !Array.isArray(fresh.settings)
-          ? fresh.settings
-          : {}),
-        ai: data,
-      };
-      const updated = await tx.tenant.update({
-        where: { id: current.id },
-        data: { settings },
-      });
-
-      // Лише назва секції: сам текст — конфігурація, яку читає тільки ADMIN, і в
-      // стрічку активності (її бачать ширше) він не копіюється
-      await this.activities.record(tx, {
-        type: 'settings.updated',
-        actor: { type: 'user', id: actor.sub, label: actor.email },
-        payload: { section: 'ai' },
-        links: [{ entityType: 'tenant', entityId: updated.id, role: 'subject' }],
-      });
-
-      this.logger.log(`AI assistant settings updated: ${updated.slug}`);
-      return this.parseAi(updated.settings);
-    });
-  }
-
-  private parseAi(settings: unknown): AiSettings {
-    const { settings: ai, valid } = readAiSettings(settings);
-    if (!valid) {
-      this.logger.warn('AI settings section is invalid — falling back to defaults');
-    }
-    return ai;
   }
 
   /**

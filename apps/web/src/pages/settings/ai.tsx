@@ -24,10 +24,10 @@ import {
   type AiSettings,
 } from '@saas-skeleton/contracts';
 import {
-  getSettingsAiQueryKey,
+  getAiSettingsGetQueryKey,
   getSettingsBootstrapQueryKey,
-  useSettingsAi,
-  useSettingsUpdateAi,
+  useAiSettingsGet,
+  useAiSettingsUpdate,
 } from '../../api/generated/api';
 import { ContentSection } from '../../components/section/content-section';
 import { applyServerError, FormTextareaField } from '../../components/form';
@@ -44,8 +44,8 @@ import { applyServerError, FormTextareaField } from '../../components/form';
 export function SettingsAiPage() {
   const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
-  const { data, isLoading } = useSettingsAi();
-  const update = useSettingsUpdateAi();
+  const { data, isLoading } = useAiSettingsGet();
+  const update = useAiSettingsUpdate();
 
   const form = useForm<AiSettings>({
     resolver: zodResolver(AiSettingsSchema),
@@ -74,7 +74,7 @@ export function SettingsAiPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       await update.mutateAsync({ data: values });
-      await queryClient.invalidateQueries({ queryKey: getSettingsAiQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getAiSettingsGetQueryKey() });
       // Вмикач міняє `features.ai`: панель асистента з'являється/зникає без перезавантаження
       await queryClient.invalidateQueries({ queryKey: getSettingsBootstrapQueryKey() });
       toast.add({ type: 'success', title: t('ai.saved') });

@@ -1340,560 +1340,6 @@ export const useUsersSetStatus = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
-export const chatFindAll = (
-  params?: ChatFindAllParams,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<ConversationListResponseDtoOutput>(
-    { url: `/api/conversations`, method: 'GET', params, signal },
-    options,
-  );
-};
-
-export const getChatFindAllQueryKey = (params?: ChatFindAllParams) => {
-  return [`/api/conversations`, ...(params ? [params] : [])] as const;
-};
-
-export const getChatFindAllQueryOptions = <
-  TData = Awaited<ReturnType<typeof chatFindAll>>,
-  TError = unknown,
->(
-  params?: ChatFindAllParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getChatFindAllQueryKey(params);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatFindAll>>> = ({ signal }) =>
-    chatFindAll(params, requestOptions, signal);
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof chatFindAll>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ChatFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof chatFindAll>>>;
-export type ChatFindAllQueryError = unknown;
-
-export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
-  params: undefined | ChatFindAllParams,
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatFindAll>>,
-          TError,
-          Awaited<ReturnType<typeof chatFindAll>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
-  params?: ChatFindAllParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatFindAll>>,
-          TError,
-          Awaited<ReturnType<typeof chatFindAll>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
-  params?: ChatFindAllParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
-  params?: ChatFindAllParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getChatFindAllQueryOptions(params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const chatCreate = (
-  createConversationDto: CreateConversationDto,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<ConversationResponseDtoOutput>(
-    {
-      url: `/api/conversations`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data: createConversationDto,
-      signal,
-    },
-    options,
-  );
-};
-
-export const getChatCreateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof chatCreate>>,
-    TError,
-    { data: CreateConversationDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof chatCreate>>,
-  TError,
-  { data: CreateConversationDto },
-  TContext
-> => {
-  const mutationKey = ['chatCreate'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof chatCreate>>,
-    { data: CreateConversationDto }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return chatCreate(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ChatCreateMutationResult = NonNullable<Awaited<ReturnType<typeof chatCreate>>>;
-export type ChatCreateMutationBody = CreateConversationDto;
-export type ChatCreateMutationError = unknown;
-
-export const useChatCreate = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof chatCreate>>,
-      TError,
-      { data: CreateConversationDto },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof chatCreate>>,
-  TError,
-  { data: CreateConversationDto },
-  TContext
-> => {
-  const mutationOptions = getChatCreateMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-
-export const chatFindOne = (
-  id: string,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<ConversationResponseDtoOutput>(
-    { url: `/api/conversations/${id}`, method: 'GET', signal },
-    options,
-  );
-};
-
-export const getChatFindOneQueryKey = (id?: string) => {
-  return [`/api/conversations/${id}`] as const;
-};
-
-export const getChatFindOneQueryOptions = <
-  TData = Awaited<ReturnType<typeof chatFindOne>>,
-  TError = unknown,
->(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getChatFindOneQueryKey(id);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatFindOne>>> = ({ signal }) =>
-    chatFindOne(id, requestOptions, signal);
-
-  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof chatFindOne>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ChatFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof chatFindOne>>>;
-export type ChatFindOneQueryError = unknown;
-
-export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
-  id: string,
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatFindOne>>,
-          TError,
-          Awaited<ReturnType<typeof chatFindOne>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatFindOne>>,
-          TError,
-          Awaited<ReturnType<typeof chatFindOne>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getChatFindOneQueryOptions(id, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const chatTranscript = (
-  id: string,
-  params?: ChatTranscriptParams,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<ChatMessageListResponseDtoOutput>(
-    { url: `/api/conversations/${id}/messages`, method: 'GET', params, signal },
-    options,
-  );
-};
-
-export const getChatTranscriptQueryKey = (id?: string, params?: ChatTranscriptParams) => {
-  return [`/api/conversations/${id}/messages`, ...(params ? [params] : [])] as const;
-};
-
-export const getChatTranscriptQueryOptions = <
-  TData = Awaited<ReturnType<typeof chatTranscript>>,
-  TError = unknown,
->(
-  id: string,
-  params?: ChatTranscriptParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getChatTranscriptQueryKey(id, params);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatTranscript>>> = ({ signal }) =>
-    chatTranscript(id, params, requestOptions, signal);
-
-  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof chatTranscript>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type ChatTranscriptQueryResult = NonNullable<Awaited<ReturnType<typeof chatTranscript>>>;
-export type ChatTranscriptQueryError = unknown;
-
-export function useChatTranscript<
-  TData = Awaited<ReturnType<typeof chatTranscript>>,
-  TError = unknown,
->(
-  id: string,
-  params: undefined | ChatTranscriptParams,
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatTranscript>>,
-          TError,
-          Awaited<ReturnType<typeof chatTranscript>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatTranscript<
-  TData = Awaited<ReturnType<typeof chatTranscript>>,
-  TError = unknown,
->(
-  id: string,
-  params?: ChatTranscriptParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chatTranscript>>,
-          TError,
-          Awaited<ReturnType<typeof chatTranscript>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useChatTranscript<
-  TData = Awaited<ReturnType<typeof chatTranscript>>,
-  TError = unknown,
->(
-  id: string,
-  params?: ChatTranscriptParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function useChatTranscript<
-  TData = Awaited<ReturnType<typeof chatTranscript>>,
-  TError = unknown,
->(
-  id: string,
-  params?: ChatTranscriptParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getChatTranscriptQueryOptions(id, params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const chatPost = (
-  id: string,
-  postChatMessageDto: PostChatMessageDto,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<ChatMessageResponseDtoOutput>(
-    {
-      url: `/api/conversations/${id}/messages`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data: postChatMessageDto,
-      signal,
-    },
-    options,
-  );
-};
-
-export const getChatPostMutationOptions = <TError = unknown, TContext = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof chatPost>>,
-    TError,
-    { id: string; data: PostChatMessageDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof chatPost>>,
-  TError,
-  { id: string; data: PostChatMessageDto },
-  TContext
-> => {
-  const mutationKey = ['chatPost'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof chatPost>>,
-    { id: string; data: PostChatMessageDto }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return chatPost(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ChatPostMutationResult = NonNullable<Awaited<ReturnType<typeof chatPost>>>;
-export type ChatPostMutationBody = PostChatMessageDto;
-export type ChatPostMutationError = unknown;
-
-export const useChatPost = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof chatPost>>,
-      TError,
-      { id: string; data: PostChatMessageDto },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof chatPost>>,
-  TError,
-  { id: string; data: PostChatMessageDto },
-  TContext
-> => {
-  const mutationOptions = getChatPostMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-
-export const chatMarkRead = (
-  id: string,
-  markConversationReadDto: MarkConversationReadDto,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<void>(
-    {
-      url: `/api/conversations/${id}/read`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data: markConversationReadDto,
-      signal,
-    },
-    options,
-  );
-};
-
-export const getChatMarkReadMutationOptions = <TError = unknown, TContext = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof chatMarkRead>>,
-    TError,
-    { id: string; data: MarkConversationReadDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof chatMarkRead>>,
-  TError,
-  { id: string; data: MarkConversationReadDto },
-  TContext
-> => {
-  const mutationKey = ['chatMarkRead'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof chatMarkRead>>,
-    { id: string; data: MarkConversationReadDto }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return chatMarkRead(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ChatMarkReadMutationResult = NonNullable<Awaited<ReturnType<typeof chatMarkRead>>>;
-export type ChatMarkReadMutationBody = MarkConversationReadDto;
-export type ChatMarkReadMutationError = unknown;
-
-export const useChatMarkRead = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof chatMarkRead>>,
-      TError,
-      { id: string; data: MarkConversationReadDto },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof chatMarkRead>>,
-  TError,
-  { id: string; data: MarkConversationReadDto },
-  TContext
-> => {
-  const mutationOptions = getChatMarkReadMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-
 export const customersFindAll = (
   params?: CustomersFindAllParams,
   options?: SecondParameter<typeof customInstance>,
@@ -3134,176 +2580,6 @@ export const useSettingsUpdateCalendar = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getSettingsUpdateCalendarMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-
-export const settingsAi = (
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
-) => {
-  return customInstance<AiSettingsResponseDtoOutput>(
-    { url: `/api/settings/ai`, method: 'GET', signal },
-    options,
-  );
-};
-
-export const getSettingsAiQueryKey = () => {
-  return [`/api/settings/ai`] as const;
-};
-
-export const getSettingsAiQueryOptions = <
-  TData = Awaited<ReturnType<typeof settingsAi>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
-  request?: SecondParameter<typeof customInstance>;
-}) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getSettingsAiQueryKey();
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof settingsAi>>> = ({ signal }) =>
-    settingsAi(requestOptions, signal);
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof settingsAi>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type SettingsAiQueryResult = NonNullable<Awaited<ReturnType<typeof settingsAi>>>;
-export type SettingsAiQueryError = unknown;
-
-export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsAi>>,
-          TError,
-          Awaited<ReturnType<typeof settingsAi>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsAi>>,
-          TError,
-          Awaited<ReturnType<typeof settingsAi>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-export function useSettingsAi<TData = Awaited<ReturnType<typeof settingsAi>>, TError = unknown>(
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsAi>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getSettingsAiQueryOptions(options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const settingsUpdateAi = (
-  aiSettingsDto: AiSettingsDto,
-  options?: SecondParameter<typeof customInstance>,
-) => {
-  return customInstance<AiSettingsResponseDtoOutput>(
-    {
-      url: `/api/settings/ai`,
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      data: aiSettingsDto,
-    },
-    options,
-  );
-};
-
-export const getSettingsUpdateAiMutationOptions = <TError = unknown, TContext = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof settingsUpdateAi>>,
-    TError,
-    { data: AiSettingsDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof settingsUpdateAi>>,
-  TError,
-  { data: AiSettingsDto },
-  TContext
-> => {
-  const mutationKey = ['settingsUpdateAi'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof settingsUpdateAi>>,
-    { data: AiSettingsDto }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return settingsUpdateAi(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type SettingsUpdateAiMutationResult = NonNullable<
-  Awaited<ReturnType<typeof settingsUpdateAi>>
->;
-export type SettingsUpdateAiMutationBody = AiSettingsDto;
-export type SettingsUpdateAiMutationError = unknown;
-
-export const useSettingsUpdateAi = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof settingsUpdateAi>>,
-      TError,
-      { data: AiSettingsDto },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof settingsUpdateAi>>,
-  TError,
-  { data: AiSettingsDto },
-  TContext
-> => {
-  const mutationOptions = getSettingsUpdateAiMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -5822,6 +5098,742 @@ export const useAiDeleteAllConversations = <TError = unknown, TContext = unknown
   TContext
 > => {
   const mutationOptions = getAiDeleteAllConversationsMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiSettingsGet = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiSettingsResponseDtoOutput>(
+    { url: `/api/settings/ai`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiSettingsGetQueryKey = () => {
+  return [`/api/settings/ai`] as const;
+};
+
+export const getAiSettingsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiSettingsGetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiSettingsGet>>> = ({ signal }) =>
+    aiSettingsGet(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiSettingsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiSettingsGetQueryResult = NonNullable<Awaited<ReturnType<typeof aiSettingsGet>>>;
+export type AiSettingsGetQueryError = unknown;
+
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiSettingsGet>>,
+          TError,
+          Awaited<ReturnType<typeof aiSettingsGet>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiSettingsGet<
+  TData = Awaited<ReturnType<typeof aiSettingsGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiSettingsGet>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiSettingsGetQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiSettingsUpdate = (
+  aiSettingsDto: AiSettingsDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<AiSettingsResponseDtoOutput>(
+    {
+      url: `/api/settings/ai`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: aiSettingsDto,
+    },
+    options,
+  );
+};
+
+export const getAiSettingsUpdateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiSettingsUpdate>>,
+    TError,
+    { data: AiSettingsDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>,
+  TError,
+  { data: AiSettingsDto },
+  TContext
+> => {
+  const mutationKey = ['aiSettingsUpdate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiSettingsUpdate>>,
+    { data: AiSettingsDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiSettingsUpdate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiSettingsUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>
+>;
+export type AiSettingsUpdateMutationBody = AiSettingsDto;
+export type AiSettingsUpdateMutationError = unknown;
+
+export const useAiSettingsUpdate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiSettingsUpdate>>,
+      TError,
+      { data: AiSettingsDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof aiSettingsUpdate>>,
+  TError,
+  { data: AiSettingsDto },
+  TContext
+> => {
+  const mutationOptions = getAiSettingsUpdateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatFindAll = (
+  params?: ChatFindAllParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ConversationListResponseDtoOutput>(
+    { url: `/api/conversations`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getChatFindAllQueryKey = (params?: ChatFindAllParams) => {
+  return [`/api/conversations`, ...(params ? [params] : [])] as const;
+};
+
+export const getChatFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof chatFindAll>>,
+  TError = unknown,
+>(
+  params?: ChatFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChatFindAllQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatFindAll>>> = ({ signal }) =>
+    chatFindAll(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof chatFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChatFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof chatFindAll>>>;
+export type ChatFindAllQueryError = unknown;
+
+export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
+  params: undefined | ChatFindAllParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof chatFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
+  params?: ChatFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof chatFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
+  params?: ChatFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChatFindAll<TData = Awaited<ReturnType<typeof chatFindAll>>, TError = unknown>(
+  params?: ChatFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChatFindAllQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const chatCreate = (
+  createConversationDto: CreateConversationDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ConversationResponseDtoOutput>(
+    {
+      url: `/api/conversations`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: createConversationDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChatCreateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatCreate>>,
+    TError,
+    { data: CreateConversationDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatCreate>>,
+  TError,
+  { data: CreateConversationDto },
+  TContext
+> => {
+  const mutationKey = ['chatCreate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatCreate>>,
+    { data: CreateConversationDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return chatCreate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatCreateMutationResult = NonNullable<Awaited<ReturnType<typeof chatCreate>>>;
+export type ChatCreateMutationBody = CreateConversationDto;
+export type ChatCreateMutationError = unknown;
+
+export const useChatCreate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatCreate>>,
+      TError,
+      { data: CreateConversationDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatCreate>>,
+  TError,
+  { data: CreateConversationDto },
+  TContext
+> => {
+  const mutationOptions = getChatCreateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatFindOne = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ConversationResponseDtoOutput>(
+    { url: `/api/conversations/${id}`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getChatFindOneQueryKey = (id?: string) => {
+  return [`/api/conversations/${id}`] as const;
+};
+
+export const getChatFindOneQueryOptions = <
+  TData = Awaited<ReturnType<typeof chatFindOne>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChatFindOneQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatFindOne>>> = ({ signal }) =>
+    chatFindOne(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof chatFindOne>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChatFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof chatFindOne>>>;
+export type ChatFindOneQueryError = unknown;
+
+export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof chatFindOne>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof chatFindOne>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChatFindOne<TData = Awaited<ReturnType<typeof chatFindOne>>, TError = unknown>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatFindOne>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChatFindOneQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const chatTranscript = (
+  id: string,
+  params?: ChatTranscriptParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChatMessageListResponseDtoOutput>(
+    { url: `/api/conversations/${id}/messages`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getChatTranscriptQueryKey = (id?: string, params?: ChatTranscriptParams) => {
+  return [`/api/conversations/${id}/messages`, ...(params ? [params] : [])] as const;
+};
+
+export const getChatTranscriptQueryOptions = <
+  TData = Awaited<ReturnType<typeof chatTranscript>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: ChatTranscriptParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChatTranscriptQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof chatTranscript>>> = ({ signal }) =>
+    chatTranscript(id, params, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof chatTranscript>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChatTranscriptQueryResult = NonNullable<Awaited<ReturnType<typeof chatTranscript>>>;
+export type ChatTranscriptQueryError = unknown;
+
+export function useChatTranscript<
+  TData = Awaited<ReturnType<typeof chatTranscript>>,
+  TError = unknown,
+>(
+  id: string,
+  params: undefined | ChatTranscriptParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatTranscript>>,
+          TError,
+          Awaited<ReturnType<typeof chatTranscript>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatTranscript<
+  TData = Awaited<ReturnType<typeof chatTranscript>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: ChatTranscriptParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chatTranscript>>,
+          TError,
+          Awaited<ReturnType<typeof chatTranscript>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChatTranscript<
+  TData = Awaited<ReturnType<typeof chatTranscript>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: ChatTranscriptParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChatTranscript<
+  TData = Awaited<ReturnType<typeof chatTranscript>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: ChatTranscriptParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof chatTranscript>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChatTranscriptQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const chatPost = (
+  id: string,
+  postChatMessageDto: PostChatMessageDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChatMessageResponseDtoOutput>(
+    {
+      url: `/api/conversations/${id}/messages`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: postChatMessageDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChatPostMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatPost>>,
+    TError,
+    { id: string; data: PostChatMessageDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatPost>>,
+  TError,
+  { id: string; data: PostChatMessageDto },
+  TContext
+> => {
+  const mutationKey = ['chatPost'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatPost>>,
+    { id: string; data: PostChatMessageDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return chatPost(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatPostMutationResult = NonNullable<Awaited<ReturnType<typeof chatPost>>>;
+export type ChatPostMutationBody = PostChatMessageDto;
+export type ChatPostMutationError = unknown;
+
+export const useChatPost = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatPost>>,
+      TError,
+      { id: string; data: PostChatMessageDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatPost>>,
+  TError,
+  { id: string; data: PostChatMessageDto },
+  TContext
+> => {
+  const mutationOptions = getChatPostMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatMarkRead = (
+  id: string,
+  markConversationReadDto: MarkConversationReadDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/conversations/${id}/read`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: markConversationReadDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChatMarkReadMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatMarkRead>>,
+    TError,
+    { id: string; data: MarkConversationReadDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatMarkRead>>,
+  TError,
+  { id: string; data: MarkConversationReadDto },
+  TContext
+> => {
+  const mutationKey = ['chatMarkRead'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatMarkRead>>,
+    { id: string; data: MarkConversationReadDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return chatMarkRead(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatMarkReadMutationResult = NonNullable<Awaited<ReturnType<typeof chatMarkRead>>>;
+export type ChatMarkReadMutationBody = MarkConversationReadDto;
+export type ChatMarkReadMutationError = unknown;
+
+export const useChatMarkRead = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatMarkRead>>,
+      TError,
+      { id: string; data: MarkConversationReadDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatMarkRead>>,
+  TError,
+  { id: string; data: MarkConversationReadDto },
+  TContext
+> => {
+  const mutationOptions = getChatMarkReadMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

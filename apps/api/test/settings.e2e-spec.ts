@@ -328,4 +328,44 @@ describe('Organization settings API (e2e)', () => {
       .send({ enabled: true, persona: `${'p'.repeat(500)}   `, instructions: 'i'.repeat(4000) })
       .expect(200);
   });
+  // Секції ділять один JSON-стовпець і переписують його цілком: без `FOR UPDATE` два
+  // паралельні PUT різних секцій читали б той самий знімок, і пізніший затер би раннього
+  it('keeps both sections when two sections are replaced concurrently', async () => {
+    const headers = await login(`${Date.now()}-concurrent`, 'ADMIN');
+    const calendar = {
+      timeZone: 'Europe/Kyiv',
+      weekStartsOn: 1,
+      workDayStart: '08:00',
+      workDayEnd: '17:00',
+      defaultEventDurationMinutes: 45,
+      defaultReminderMinutes: 20,
+      defaultAllDayReminderMinutes: 900,
+    };
+
+    for (let round = 0; round < 5; round++) {
+      await prisma.tenant.update({ where: { id: DEFAULT_TENANT_ID }, data: { settings: {} } });
+      const persona = `Round ${String(round)}`;
+
+      await Promise.all([
+        request(app.getHttpServer())
+          .put('/api/settings/calendar')
+          .set(headers)
+          .send(calendar)
+          .expect(200),
+        request(app.getHttpServer())
+          .put('/api/settings/ai')
+          .set(headers)
+          .send({ enabled: true, persona, instructions: '' })
+          .expect(200),
+      ]);
+
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: DEFAULT_TENANT_ID } });
+      expect(tenant.settings).toEqual(
+        expect.objectContaining({
+          calendar: expect.objectContaining({ timeZone: 'Europe/Kyiv' }) as unknown,
+          ai: expect.objectContaining({ persona }) as unknown,
+        }),
+      );
+    }
+  });
 });
