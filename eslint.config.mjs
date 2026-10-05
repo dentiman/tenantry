@@ -2,6 +2,59 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 
+// Межі залежностей (docs/backend-conventions.md §1–§2). Flat config не зливає опції одного
+// правила між блоками — пізніший блок ЗАМІНЮЄ ранішній, — тому кожен набір файлів нижче
+// отримує свій повний список заборон, а набори не перетинаються.
+const CROSS_APP = {
+  group: [
+    '**/api/src/**',
+    '**/platform-api/src/**',
+    '**/worker/src/**',
+    '**/web/src/**',
+    '**/platform-web/src/**',
+  ],
+  message:
+    'Імпорт з іншої апки заборонений. Спільний код — у libs/* (shared/contracts/database/ui).',
+};
+const fromSiblingModule = (suffixes) =>
+  suffixes.flatMap((suffix) => [`../*/*${suffix}`, `../../*/*${suffix}`]);
+const MODULE_INTERNALS = {
+  group: fromSiblingModule([
+    '.controller',
+    '.access',
+    '-access.service',
+    '.subscriber',
+    '.gateway',
+  ]),
+  message:
+    'Внутрішній файл чужого модуля. Публічний API модуля — exports його *.module.ts, плюс mapper/dto/decorators (docs/backend-conventions.md §1).',
+};
+const BACKEND_LIBS = {
+  group: [
+    '@saas-skeleton/database',
+    '@saas-skeleton/database/*',
+    '@saas-skeleton/shared',
+    '@saas-skeleton/shared/*',
+  ],
+  message: 'Backend-бібліотека у фронтенді затягне Prisma/серверний код у браузерний бандл.',
+};
+const ANY_WORKSPACE_LIB = {
+  group: ['@saas-skeleton/*'],
+  message: 'contracts, database та i18n — листки графа бібліотек і не залежать від інших libs.',
+};
+const FRONTEND_LIBS = {
+  group: [
+    '@saas-skeleton/ui',
+    '@saas-skeleton/ui/*',
+    '@saas-skeleton/i18n',
+    '@saas-skeleton/i18n/*',
+  ],
+  message: 'libs/shared — серверний шар; UI/i18n фронтендів йому не належать.',
+};
+const restrictImports = (...patterns) => ({
+  'no-restricted-imports': ['error', { patterns }],
+});
+
 export default tseslint.config(
   {
     ignores: [
@@ -88,5 +141,29 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    files: ['apps/api/src/**/*.ts', 'apps/platform-api/src/**/*.ts'],
+    rules: restrictImports(CROSS_APP, MODULE_INTERNALS),
+  },
+  {
+    files: ['apps/worker/src/**/*.ts'],
+    rules: restrictImports(CROSS_APP),
+  },
+  {
+    files: [
+      'apps/web/**/*.{ts,tsx}',
+      'apps/platform-web/**/*.{ts,tsx}',
+      'libs/ui/src/**/*.{ts,tsx}',
+    ],
+    rules: restrictImports(CROSS_APP, BACKEND_LIBS),
+  },
+  {
+    files: ['libs/contracts/src/**/*.ts', 'libs/database/src/**/*.ts', 'libs/i18n/src/**/*.ts'],
+    rules: restrictImports(CROSS_APP, ANY_WORKSPACE_LIB),
+  },
+  {
+    files: ['libs/shared/src/**/*.ts'],
+    rules: restrictImports(CROSS_APP, FRONTEND_LIBS),
   },
 );

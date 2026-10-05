@@ -370,13 +370,31 @@ Eval відповідей (AI-5c): набір питань × файл конф�
 ### `pnpm lint` / `pnpm lint:fix`
 
 ```bash
-pnpm lint       # → ai:knowledge --check && eslint . --max-warnings 0
+pnpm lint       # → ai:knowledge --check && deps:check && eslint . --max-warnings 0
 pnpm lint:fix   # → eslint . --fix
 ```
 
 ESLint strict-type-checked, нуль попереджень допускається. Першим кроком — перевірка корпусу
 знань AI (мілісекунди, без залежностей): забутий `pnpm ai:knowledge` ловиться локально, а не
-в CI.
+в CI. ESLint також тримає межі залежностей (`no-restricted-imports`): внутрішні файли чужого
+модуля, імпорти між апками, шари бібліотек — `docs/backend-conventions.md` §1–§2.
+
+### `pnpm deps:check`
+
+```bash
+pnpm deps:check  # → madge --circular по apps/{api,platform-api,worker}/src і libs/{contracts,database,shared}/src
+```
+
+Падає на будь-якому циклі runtime-імпортів (type-only імпорти не рахуються, `.madgerc`).
+Секунди; входить у `pnpm lint`.
+
+### `bash scripts/ci-verify.sh`
+
+Повний CI-гейт локально — те саме, що GitLab-джоба `verify`: `pnpm install` → `db:generate` →
+`lint` → `typecheck` → `test` → e2e обох API. Postgres і Valkey — одноразові контейнери у
+власній docker-мережі, тож dev-стек і workspace-слоти не зачіпаються; потрібен лише Docker.
+Перший прогін довгий (холодний pnpm store), далі store береться з тому
+`saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
 
 ### `pnpm format` / `pnpm format:check`
 
