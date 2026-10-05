@@ -13,6 +13,8 @@ import { initPresenceSync } from './realtime/presence-sync';
 import { initNotificationSync } from './realtime/notification-sync';
 import { initCalendarSync } from './realtime/calendar-sync';
 import { initAiSync } from './realtime/ai-sync';
+import { SlotsProvider } from './lib/slots';
+import { SLOT_FILLS } from './slot-fills';
 import './i18n';
 import './index.css';
 
@@ -77,7 +79,10 @@ async function bootstrap(): Promise<void> {
             провайдер (атрибут data-theme). Див. docs/frontend/theming.md */}
         <UiThemeProvider storageKey="saas_theme_palette">
           <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
+            {/* Внески фіч у модулі нижче — docs/modules.md §4 */}
+            <SlotsProvider fills={SLOT_FILLS}>
+              <RouterProvider router={router} />
+            </SlotsProvider>
           </QueryClientProvider>
         </UiThemeProvider>
       </ThemeProvider>

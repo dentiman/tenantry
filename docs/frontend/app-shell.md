@@ -510,6 +510,7 @@ viewport.
 ```
 apps/web/src/app-shell/
   app-shell.tsx                  провайдери, дві колонки, SidebarInset
+  slots.ts                       слоти шела для фіч: кнопки хедера, бічні колонки (AI)
   app-rail.tsx                   перший рівень: бренд, пункти area
   area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст
   area-nav.tsx                   список пунктів (для тих area, що є меню)
@@ -526,6 +527,10 @@ apps/web/src/app-shell/
 `ContextPanelTrigger` / `ContextPanelHeader`) — там же, де `page-header-slot.tsx`:
 це generic-механізм без знання про навігацію, тому платформенний фронт зможе взяти
 його не змінюючи. Композиція (де стоїть колонка, де кнопка) лишається в `app-shell.tsx`.
+
+Фічі шел не імпортує: AI-асистент кладе свою кнопку й колонку в слоти `shellHeaderActions` /
+`shellSidePanels` (`app-shell/slots.ts`), а повʼязує їх `src/slot-fills.ts` — механізм і причина
+в docs/modules.md §4.
 
 `paths.ts` — прямий спадкоємець знятого `SectionPath`: шляхи перелічені літералами,
 бо `Link to` типізований юніоном реальних роутів, і друкарська помилка в навігації

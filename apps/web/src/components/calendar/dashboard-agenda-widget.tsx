@@ -4,15 +4,18 @@ import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from 'lucide-react';
 import { buttonVariants } from '@saas-skeleton/ui/components/ui/button';
 import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
-import { AgendaList } from '../calendar/agenda-list';
-import { EventPanel, type EventPanelTarget } from '../calendar/event-panel';
-import { useCalendarPreferences } from '../calendar/use-calendar-preferences';
-import { EventDeleteDialog, useEventIntents } from '../calendar/use-event-intents';
+import { AgendaList } from './agenda-list';
+import { EventPanel, type EventPanelTarget } from './event-panel';
+import { useCalendarPreferences } from './use-calendar-preferences';
+import { EventDeleteDialog, useEventIntents } from './use-event-intents';
 import { defaultCreateStart, todayKey } from '../../lib/calendar-date';
-import { DashboardWidget } from './widget';
+import { DashboardWidget } from '../dashboard/widget';
 
 /**
- * «Найближчі події» на дашборді — ТОЙ САМИЙ `AgendaList`, що малює перегляд
+ * «Найближчі події» на дашборді — внесок календаря в слот `dashboardWidgets`
+ * (`slot-fills.ts`): дашборд календаря не імпортує (docs/modules.md §4).
+ *
+ * ТОЙ САМИЙ `AgendaList`, що малює перегляд
  * Agenda в календарі, лише в межах картки.
  *
  * Другого списку подій у застосунку не заводимо: рядок агенди вже несе час,
@@ -25,7 +28,7 @@ import { DashboardWidget } from './widget';
  * відкритий поруч календар і дашборд не роблять двох запитів.
  */
 export function DashboardAgendaWidget() {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation('calendar');
   const preferences = useCalendarPreferences();
   const timeZone = preferences.viewerTimeZone;
   const [target, setTarget] = useState<EventPanelTarget | null>(null);
@@ -54,7 +57,7 @@ export function DashboardAgendaWidget() {
 
   return (
     <DashboardWidget
-      title={t('widgets.agenda.title')}
+      title={t('dashboardWidget.title')}
       action={
         /* Посилання, а не кнопка з `navigate`: це перехід, тож він мусить
            відкриватись у новій вкладці середнім кліком і показувати URL у
@@ -66,7 +69,7 @@ export function DashboardAgendaWidget() {
           search={{}}
           className={buttonVariants({ variant: 'ghost', size: 'sm' })}
         >
-          {t('widgets.agenda.openCalendar')}
+          {t('dashboardWidget.openCalendar')}
           <ArrowRightIcon data-icon="inline-end" />
         </Link>
       }

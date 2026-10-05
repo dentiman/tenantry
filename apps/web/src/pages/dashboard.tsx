@@ -4,8 +4,9 @@ import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { useAuthMe } from '../api/generated/api';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { formatDate } from '@saas-skeleton/ui/lib/format';
-import { DashboardAgendaWidget } from '../components/dashboard/agenda-widget';
 import { DashboardWidgetPlaceholder } from '../components/dashboard/widget';
+import { dashboardWidgets } from '../components/dashboard/slots';
+import { SlotOutlet } from '../lib/slots';
 
 /**
  * Дашборд — ДОСКА ВІДЖИТІВ: кожен блок картка, кожна картка володіє своїми
@@ -15,6 +16,9 @@ import { DashboardWidgetPlaceholder } from '../components/dashboard/widget';
  * на `GET /auth/me` і тримав порожнім віджит агенди, якому цей запит не
  * потрібен узагалі. Ідентичність показує скелет на своєму місці, решта доски
  * малюється одразу.
+ *
+ * Віджети приходять від фіч через слот `dashboardWidgets` (агенда — від
+ * календаря, `slot-fills.ts`); дашборд не знає, хто їх поклав.
  *
  * Конфігурації доски (склад, порядок, розміри) поки немає: доки справжній
  * віджит один, «дашборд-двигун» був би каркасом без споживача. Порожні місця
@@ -60,7 +64,7 @@ export function DashboardPage() {
           рівновисокі самі — рядок гріда тягнеться по найвищій (агенді), а
           плейсхолдери до неї дотягуються */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <DashboardAgendaWidget />
+        <SlotOutlet slot={dashboardWidgets} props={{}} />
         <DashboardWidgetPlaceholder />
         <DashboardWidgetPlaceholder />
         {/* Широке місце окремим рядком: майбутні віджити не всі однакові за

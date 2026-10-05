@@ -48,7 +48,8 @@ import {
 } from '../api/generated/api';
 import type { CustomerDetailResponseDtoOutputContactsItem } from '../api/generated/model/customerDetailResponseDtoOutputContactsItem';
 import { ActivityPanel } from '../components/activity/activity-panel';
-import { CustomerEventsCard } from '../components/calendar/customer-events-card';
+import { customerOverviewCards } from '../components/customer-detail-slots';
+import { SlotOutlet } from '../lib/slots';
 import { CustomerContactModal } from '../components/customer-contact-modal';
 import { CustomerIdentity } from '../components/customer-identity';
 import { EditCustomerModal } from '../components/edit-customer-modal';
@@ -223,8 +224,12 @@ export function CustomerDetailPage() {
           </TabsList>
 
           <TabsContent value="overview" className="flex flex-col gap-4">
-            {/* Найближчі зустрічі — перше, що питають на картці клієнта */}
-            <CustomerEventsCard customerId={customer.id} customerName={customer.name} />
+            {/* Картки фіч — першими: найближчі зустрічі (календар) — перше, що
+                питають на картці клієнта. Слот, а не імпорт (docs/modules.md §4) */}
+            <SlotOutlet
+              slot={customerOverviewCards}
+              props={{ customerId: customer.id, customerName: customer.name }}
+            />
 
             <Card>
               <CardHeader>

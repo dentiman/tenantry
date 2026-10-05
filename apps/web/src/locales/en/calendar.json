@@ -161,5 +161,9 @@
   },
   "presence": {
     "online": "Online now"
+  },
+  "dashboardWidget": {
+    "title": "Upcoming Events",
+    "openCalendar": "Open calendar"
   }
 }

@@ -3,12 +3,6 @@
   "signedInAs": "Signed in as",
   "role": "Role",
   "memberSince": "Member since",
-  "widgets": {
-    "agenda": {
-      "title": "Upcoming Events",
-      "openCalendar": "Open calendar"
-    }
-  },
   "placeholder": {
     "title": "Coming soon",
     "hint": "Another widget will take this spot."
