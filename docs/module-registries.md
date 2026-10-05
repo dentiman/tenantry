@@ -113,7 +113,7 @@ messaging, сокет), а `socket-events` одразу каже про тран
 | `realtime.emitter.ts`: `calendarEventChanged()`, `aiConversationChanged()`       | generic `toUser(tenantId, userId, event, payload)`; виклики — у сервісах фіч |
 | `worker-realtime.emitter.ts`: `aiDelta()`, `aiCompleted()`                       | те саме                                                                      |
 
-### R6. Дефолтний канал чату при появі тенанта
+### R6. Дефолтний канал чату при появі тенанта — **зроблено 2026-10-05**
 
 Логіку чату пишуть три місця: `platform-api` `tenants.service.create()` (канал, членство адміна,
 системні записи — прямо в таблиці чату, порушення `docs/backend-conventions.md` §1), сід і
@@ -121,7 +121,7 @@ messaging, сокет), а `socket-events` одразу каже про тран
 
 | Звідки                                                                             | Куди                                                                     |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| створення каналу й членства з `tenants.service.create()`, сіду, `ensureMembership` | один провізіонер `libs/shared/src/chat/default-channel.ts` (модуль chat) |
+| створення каналу й членства з `tenants.service.create()`, сіду, `ensureMembership` | один провізіонер `libs/shared/src/chat/default-channel.ts` (модуль chat): `ensureDefaultChannel`, `joinDefaultChannel` |
 | _(нове)_ `TenantLifecycleHooks` (in-tx, як `UserLifecycleHooks`)                   | `apps/platform-api/src/tenants/tenant-lifecycle.hooks.ts`                |
 | _(нове)_ реєстрація хука                                                           | модуль chat у control plane `apps/platform-api/src/chat/`                |
 | сід                                                                                | кличе той самий провізіонер                                              |

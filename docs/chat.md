@@ -1007,14 +1007,18 @@ POST /conversations/:id/read        { seq }
 
 **Дефолтний канал.** Рядок `conversations` з `is_default = true` на тенант; усі його юзери —
 учасники. Народжується канал у **трьох** місцях, і кожне — всередині транзакції, що створює
-свій субʼєкт, тож стану «тенант без каналу» або «юзер поза каналом» не існує:
+свій субʼєкт, тож стану «тенант без каналу» або «юзер поза каналом» не існує. Код один —
+провізіонер модуля chat `libs/shared/src/chat/default-channel.ts` (`ensureDefaultChannel`,
+`joinDefaultChannel`, з явним `tenantId`, бо два з трьох місць ідуть під BYPASSRLS); модулі, що
+створюють тенанта чи юзера, чату не імпортують — chat реєструє хуки сам
+(docs/module-registries.md R6):
 
 | Де | Що робить |
 | --- | --- |
-| міграція `chat_conversations` | backfill для тенантів, які вже є |
-| `apps/platform-api` → `tenants.service` | канал і членство першого адміна в тій самій `$transaction`, що й тенант |
+| міграція `chat_conversations` | backfill для тенантів, які вже є (SQL, поза провізіонером) |
+| `apps/platform-api` → хук `TenantLifecycleHooks` (реєструє `chat/chat-provisioning.module.ts`) | канал і членство першого адміна в тій самій `$transaction`, що й тенант |
 | `libs/database/prisma/seed.ts` | канал і членство — **двома незалежно ідемпотентними кроками** |
-| `apps/api` → `DefaultChannelService.ensureMembership` | вводить нового юзера в тій самій `withTenantTx`, що його створює, і пише `member.added` у стрічку. Users чат не імпортує: chat реєструє хук `UserLifecycleHooks.onCreated` (docs/modules.md §4), а `users.service` виконує всі хуки в своїй транзакції |
+| `apps/api` → хук `UserLifecycleHooks` (реєструє `DefaultChannelService`) | вводить нового юзера в тій самій `withTenantTx`, що його створює, і пише `member.added` у стрічку |
 
 Два кроки в сіді — не педантизм: на свіжій БД канал для дефолтного тенанта створює **backfill
 міграції** (тенант там уже є, юзерів ще немає), і «створити канал разом із членством» тихо

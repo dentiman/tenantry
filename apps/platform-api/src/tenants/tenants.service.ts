@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemPrismaService } from '@saas-skeleton/database';
 import type { TenantWithAiAccess } from './tenants.mapper';
+import { TenantLifecycleHooks } from './tenant-lifecycle.hooks';
 import type { CreateTenant, TenantQuery, UpdateTenant } from '@saas-skeleton/contracts/platform';
 import { fieldConflictException } from '@saas-skeleton/shared/errors';
 import * as argon2 from 'argon2';
 
 /** Назва дефолтного каналу чату (docs/chat.md §7.4) */
-const DEFAULT_CHANNEL_TITLE = 'General';
 
 /** Дозвіл AI-асистента поруч із tenant-ом у кожній відповіді (AI-5a) */
 const AI_ACCESS = { aiAccess: { select: { allowed: true } } } as const;
@@ -21,7 +21,10 @@ const AI_ACCESS = { aiAccess: { select: { allowed: true } } } as const;
 export class TenantsService {
   private readonly logger = new Logger(TenantsService.name);
 
-  constructor(private readonly prisma: SystemPrismaService) {}
+  constructor(
+    private readonly prisma: SystemPrismaService,
+    private readonly lifecycle: TenantLifecycleHooks,
+  ) {}
 
   async findAll(query: TenantQuery): Promise<{
     items: TenantWithAiAccess[];
@@ -97,58 +100,9 @@ export class TenantsService {
         },
       });
 
-      // Дефолтний канал чату народжується РАЗОМ із тенантом (design.md D3):
-      // інакше тенант, створений оператором, лишився б єдиним без нього, а
-      // tenant-api його не полагодить — там канал уже вважається інваріантом.
-      // tenantId скрізь явний: system-клієнт BYPASSRLS, DB-default (current_setting)
-      // тут дав би NULL
-      const channel = await tx.conversation.create({
-        data: {
-          tenantId: created.id,
-          kind: 'INTERNAL',
-          access: 'private',
-          isDefault: true,
-          title: DEFAULT_CHANNEL_TITLE,
-          lastSeq: 2,
-          lastMessageAt: new Date(),
-        },
-      });
-      await tx.conversationParticipant.create({
-        data: {
-          tenantId: created.id,
-          conversationId: channel.id,
-          userId: admin.id,
-          role: 'member',
-          // Приєднання не створює непрочитаних
-          joinSeq: 2,
-          lastReadSeq: 2,
-        },
-      });
-      // Стрічка непорожня з першої секунди. Текст не зберігається: type + params,
-      // рендер через i18next (docs/chat.md §4.7)
-      await tx.chatMessage.createMany({
-        data: [
-          {
-            tenantId: created.id,
-            conversationId: channel.id,
-            seq: 1,
-            kind: 'SYSTEM',
-            senderType: 'system',
-            payload: { type: 'conversation.created' },
-          },
-          {
-            tenantId: created.id,
-            conversationId: channel.id,
-            seq: 2,
-            kind: 'SYSTEM',
-            senderType: 'system',
-            payload: {
-              type: 'member.added',
-              member: { id: admin.id, label: admin.name ?? admin.email },
-            },
-          },
-        ],
-      });
+      // Те, що є частиною появи тенанта (дефолтний канал чату), реєструють самі
+      // модулі-фічі — у цій же транзакції, тож «тенант без каналу» не існує як стан
+      await this.lifecycle.runCreated(tx, { id: created.id, admin });
 
       return created;
     });

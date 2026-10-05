@@ -5,6 +5,7 @@ import { SystemPrismaModule } from '@saas-skeleton/database';
 import { HealthController } from './health.controller';
 import { PlatformAuthModule } from './auth/platform-auth.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { ChatProvisioningModule } from './chat/chat-provisioning.module';
 import { JobsMonitorModule } from './jobs/jobs.module';
 import { AiCostsModule } from './ai-costs/ai-costs.module';
 import { AiSettingsModule } from './ai-settings/ai-settings.module';
@@ -37,6 +38,8 @@ import { validatePlatformEnv } from './config/env.schema';
     AppThrottlerModule,
     PlatformAuthModule,
     TenantsModule,
+    // Дефолтний канал чату при появі тенанта (docs/module-registries.md R6)
+    ChatProvisioningModule,
     JobsMonitorModule,
     AiSettingsModule,
     // AI-5b: журнал витрат і тарифи

@@ -310,10 +310,12 @@ export const MODULES = {
   },
   chat: {
     tier: 'feature',
-    dependsOn: ['auth', 'files', 'users'],
+    dependsOn: ['auth', 'files', 'tenants', 'users'],
     summary: 'Розмови між людьми (REST-зріз, docs/chat.md). Опційний.',
     paths: [
       'libs/contracts/src/chat/',
+      'libs/shared/src/chat/',
+      'apps/platform-api/src/chat/',
       'apps/api/src/chat/',
       'apps/web/src/pages/chat.tsx',
       'apps/web/src/pages/chat-conversation.tsx',
@@ -401,6 +403,7 @@ export const COMPOSITION_ROOTS: readonly string[] = [
   'libs/contracts/src/activity-types.ts',
   'libs/contracts/src/notification-types.ts',
   'libs/contracts/src/socket-events.ts',
+  'libs/database/prisma/seed.ts',
   'libs/contracts/src/*/index.ts',
   'libs/shared/src/index.ts',
   'libs/shared/src/*/index.ts',

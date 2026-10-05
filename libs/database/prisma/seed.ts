@@ -2,6 +2,9 @@ import '../load-root-env';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
 import { PrismaClient } from '../src/generated/prisma/client';
+// Сід — composition root демо-даних модулів: чат провізіонить себе сам (docs/module-registries.md R6).
+// Шлях до файлу, а не barrel `@saas-skeleton/shared`: той тягне Nest і pg-boss, сіду не потрібні
+import { ensureDefaultChannel, joinDefaultChannel } from '../../shared/src/chat/default-channel';
 
 // MT-2: сід — ОПЕРАТОРСЬКА дія (створення tenant-а) → роль saas_platform (BYPASSRLS).
 // Під saas_app упав би на політиках: upsert tenant-а поза власним контекстом заборонений.
@@ -115,85 +118,11 @@ async function main(): Promise<void> {
   // Причина конкретна: на свіжій БД канал для цього тенанта створює backfill у
   // міграції (тенант там уже є, юзерів ще немає), і «створити канал разом із
   // членством» просто не спрацювало б — канал уже є, а адмін щойно зʼявився і
-  // лишився б поза ним. Тому окремо канал, окремо членство.
-  //
-  // Ідемпотентність тримає не назва, а частковий унікальний індекс
-  // `(tenant_id) WHERE is_default` (design.md D3): шукаємо по ньому — назву
-  // колись перейменують, і пошук по 'General' почав би створювати другий канал.
-  //
-  // tenantId скрізь явний: сід іде під saas_platform (BYPASSRLS), і DB-default
-  // (current_setting) дав би NULL
-  const channel =
-    (await prisma.conversation.findFirst({
-      where: { tenantId: tenant.id, isDefault: true },
-      select: { id: true },
-    })) ??
-    (await prisma.$transaction(async (tx) => {
-      const created = await tx.conversation.create({
-        data: {
-          tenantId: tenant.id,
-          kind: 'INTERNAL',
-          access: 'private',
-          isDefault: true,
-          title: 'General',
-          lastSeq: 1,
-          lastMessageAt: new Date(),
-        },
-        select: { id: true },
-      });
-      // Стрічка непорожня з першої секунди. Текст не зберігається: type + params,
-      // рендер через i18next (docs/chat.md §4.7)
-      await tx.chatMessage.create({
-        data: {
-          tenantId: tenant.id,
-          conversationId: created.id,
-          seq: 1,
-          kind: 'SYSTEM',
-          senderType: 'system',
-          payload: { type: 'conversation.created' },
-        },
-      });
-      return created;
-    }));
-
-  const membership = await prisma.conversationParticipant.findUnique({
-    where: { conversationId_userId: { conversationId: channel.id, userId: admin.id } },
-    select: { userId: true },
-  });
-
-  if (!membership) {
-    await prisma.$transaction(async (tx) => {
-      const { lastSeq } = await tx.conversation.update({
-        where: { id: channel.id },
-        data: { lastSeq: { increment: 1 }, lastMessageAt: new Date() },
-        select: { lastSeq: true },
-      });
-      await tx.chatMessage.create({
-        data: {
-          tenantId: tenant.id,
-          conversationId: channel.id,
-          seq: lastSeq,
-          kind: 'SYSTEM',
-          senderType: 'system',
-          payload: {
-            type: 'member.added',
-            member: { id: admin.id, label: admin.name ?? admin.email },
-          },
-        },
-      });
-      await tx.conversationParticipant.create({
-        data: {
-          tenantId: tenant.id,
-          conversationId: channel.id,
-          userId: admin.id,
-          role: 'member',
-          // Приєднання не створює непрочитаних
-          joinSeq: lastSeq,
-          lastReadSeq: lastSeq,
-        },
-      });
-    });
-  }
+  // лишився б поза ним. Тому окремо канал, окремо членство. Обидва кроки — той самий
+  // провізіонер, що в control plane і api (docs/module-registries.md R6); tenantId
+  // скрізь явний: сід іде під saas_platform (BYPASSRLS)
+  await prisma.$transaction((tx) => ensureDefaultChannel(tx, tenant.id));
+  await prisma.$transaction((tx) => joinDefaultChannel(tx, tenant.id, admin));
 
   console.log(
     `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`,
