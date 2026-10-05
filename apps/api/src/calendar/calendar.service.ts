@@ -16,7 +16,7 @@ import type {
   SetCalendarRsvp,
   UpdateCalendarEvent,
 } from '@saas-skeleton/contracts';
-import { MAX_CALENDAR_WINDOW_DAYS } from '@saas-skeleton/contracts';
+import { MAX_CALENDAR_WINDOW_DAYS, REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import {
   ActivityRecorder,
   NotificationRecorder,
@@ -855,7 +855,7 @@ export class CalendarService {
 
     const occurredAt = new Date().toISOString();
     this.tenantTx.onCommit(tx, () => {
-      this.realtime.calendarEventChanged(tenantId, recipients, {
+      this.realtime.toUsers(tenantId, recipients, REALTIME_EVENTS.calendarEventChanged, {
         eventId: event.id,
         change,
         startsAt: event.startsAt.toISOString(),
@@ -863,7 +863,7 @@ export class CalendarService {
         occurredAt,
       });
       if (previous) {
-        this.realtime.calendarEventChanged(tenantId, recipients, {
+        this.realtime.toUsers(tenantId, recipients, REALTIME_EVENTS.calendarEventChanged, {
           eventId: event.id,
           change,
           startsAt: previous.startsAt.toISOString(),

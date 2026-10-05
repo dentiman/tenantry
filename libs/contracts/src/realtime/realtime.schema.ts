@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { defineSocketEvent } from './socket-event';
 import { NotificationResponseSchema } from '../notification/notification.schema';
 
 /**
@@ -47,23 +48,6 @@ export const sessionRoom = (tenantId: string, sid: string): string =>
 export const REALTIME_DEFAULT_KEY_PREFIX = 'saas:rt';
 export const realtimeStreamName = (keyPrefix: string): string => `${keyPrefix}:sio:stream`;
 export const realtimeSessionKeyPrefix = (keyPrefix: string): string => `${keyPrefix}:sio:session:`;
-
-/**
- * Імена подій із версією в суфіксі — та сама доктрина, що в messaging (`defineEvent`):
- * зміна форми payload-у = нове імʼя, а не тихо інша структура під старим.
- */
-export const REALTIME_EVENTS = {
-  presenceChanged: 'presence.changed.v1',
-  authExpiring: 'auth.expiring.v1',
-  authUpdate: 'auth.update.v1',
-  resyncRequired: 'realtime.resync-required.v1',
-  notificationCreated: 'notification.created.v1',
-  notificationChanged: 'notification.changed.v1',
-  calendarEventChanged: 'calendar.event-changed.v1',
-  aiMessageDelta: 'ai.message-delta.v1',
-  aiMessageCompleted: 'ai.message-completed.v1',
-  aiConversationChanged: 'ai.conversation-changed.v1',
-} as const;
 
 // ---------------------------------------------------------------- presence
 
@@ -140,95 +124,6 @@ export const NotificationChangedSchema = z.object({
   occurredAt: z.iso.datetime(),
 });
 
-// ---------------------------------------------------------------- calendar
-
-/**
- * Зміна події календаря (docs/calendar.md §9.3). Летить в особисті room-и ВСІХ
- * учасників, включно з тим, хто дію зробив: у нього можуть бути інші вкладки, і
- * правило «стан не живе тільки в сокеті» вимагає, щоб усі вони зійшлися на тому
- * самому REST-джерелі.
- *
- * Чотири поля, а НЕ повний рядок події (на відміну від `notification.created.v1`):
- * клієнту достатньо вирішити, чи потрапляє зміна у ВІДКРИТЕ вікно, а саме вікно
- * він однак перечитує цілком — зсув однієї події міняє розкладку сусідніх.
- * Плюс так у сокет не їде ні назва приватної події, ні склад учасників.
- */
-export const CalendarEventChangeSchema = z.enum(['created', 'updated', 'deleted']);
-
-export const CalendarEventChangedSchema = z.object({
-  eventId: z.uuid(),
-  change: CalendarEventChangeSchema,
-  /**
-   * Межі ПІСЛЯ зміни (для `deleted` — ті, що були): по них клієнт розуміє, чи
-   * перетинає подія його вікно. Для перенесеної події старе вікно теж мусить
-   * перемалюватись, тому сервер шле дві дельти — див. §9.3.
-   */
-  startsAt: z.iso.datetime(),
-  endsAt: z.iso.datetime(),
-  occurredAt: z.iso.datetime(),
-});
-
-// ------------------------------------------------------------- ai assistant
-
-/**
- * ПЕРШИЙ У ЦЬОМУ РЕПОЗИТОРІЇ випадок, коли socket-подія несе САМ ВМІСТ, а не сигнал
- * «перечитай» (docs/realtime.md § «Межа з event-driven шаром», правило 2). Це
- * свідомий виняток, і він тримається на двох страховках — копіювати патерн без них
- * не можна:
- *
- * 1. `chunkSeq` монотонний у межах ОДНІЄЇ відповіді. Дірка в нумерації означає, що
- *    дельту загублено, і клієнт іде за `GET /ai/conversation` — там лежить той самий
- *    текст із Postgres. Тобто втрата дельти сповільнює рендер, але нічого не втрачає.
- * 2. `chunkSeq === 0` для відповіді, у якій уже є текст, означає ПЕРЕЗАПУСК генерації
- *    (автоматичний ретрай після тимчасової відмови провайдера): клієнт викидає
- *    накопичене і починає спочатку, інакше дві спроби склеїлись би в одну відповідь.
- *
- * Джерелом правди лишається БД; сокет — лише прискорення.
- */
-export const AiMessageDeltaSchema = z.object({
-  conversationId: z.uuid(),
-  messageId: z.uuid(),
-  /**
-   * Номер спроби генерації, якій належить ця дельта (AI-0.1, design.md D1/D6).
-   * Фенсинг-токен: дельта нижчої спроби за ту, що клієнт уже показує, — застаріла
-   * і відкидається; вища спроба означає перезапуск. Це замінює стару ознаку
-   * перезапуску `chunkSeq === 0` — вона сама по собі не відрізняла б перезапуск
-   * від дельти застарілої спроби з тим самим номером кадру.
-   */
-  attempt: z.number().int().nonnegative(),
-  chunkSeq: z.number().int().nonnegative(),
-  /** Приріст тексту, а не весь текст: чанки конкатенуються в порядку `chunkSeq` */
-  text: z.string(),
-});
-
-/**
- * Термінальний стан відповіді. `status` тут ніколи не `PENDING`/`STREAMING`.
- * Подія надходить ПІСЛЯ комміту рядка (after-commit хук), тому клієнт, який у
- * відповідь на неї перечитає стрічку, гарантовано побачить фінальний текст.
- */
-export const AiMessageCompletedSchema = z.object({
-  conversationId: z.uuid(),
-  messageId: z.uuid(),
-  status: z.enum(['COMPLETE', 'FAILED', 'CANCELLED']),
-  errorCode: z.enum(['PROVIDER_UNAVAILABLE', 'TIMEOUT', 'INTERNAL']).nullable(),
-  occurredAt: z.iso.datetime(),
-});
-
-/**
- * Сигнал «розмова змінилась», без даних (AI-0.1, design.md D7). Єдина причина
- * її існування — інші вкладки того самого юзера: `ai.message-delta.v1` доходить
- * лише туди, де повідомлення вже в кеші, а перше питання ходу та `reset()`
- * жодної дельти не мають. Реакція клієнта — одне дедупліковане перечитування
- * стрічки; сам факт лишається джерелом правди, як і решта realtime (docs/realtime.md).
- */
-export const AiConversationChangedSchema = z.object({
-  // ai-1e: null для 'deleted' — «видалити мої розмови» прибирає ВСІ розмови юзера
-  // одразу, тож жодна конкретна не є «тією, що змінилась»
-  conversationId: z.uuid().nullable(),
-  reason: z.enum(['turn-created', 'reply-closed', 'reset', 'deleted']),
-  occurredAt: z.iso.datetime(),
-});
-
 // ---------------------------------------------------------------- auth cycle
 
 /**
@@ -284,3 +179,22 @@ export const RealtimeErrorSchema = z.object({
   code: RealtimeErrorCodeSchema,
   message: z.string(),
 });
+
+// ---------------------------------------------------------------- події платформи
+
+/**
+ * Події server → client, якими володіє сама платформа. Події фіч (календар, AI) живуть у
+ * їхніх контрактах (`*.socket-events.ts`), а повний перелік `REALTIME_EVENTS` і тип
+ * протоколу `ServerToClientEvents` збирає root `libs/contracts/src/socket-events.ts`
+ * (docs/module-registries.md R2).
+ */
+export const PLATFORM_SOCKET_EVENTS = {
+  presenceChanged: defineSocketEvent('presence.changed.v1', PresenceChangedSchema),
+  authExpiring: defineSocketEvent('auth.expiring.v1', AuthExpiringSchema),
+  resyncRequired: defineSocketEvent('realtime.resync-required.v1', ResyncRequiredSchema),
+  notificationCreated: defineSocketEvent('notification.created.v1', NotificationCreatedSchema),
+  notificationChanged: defineSocketEvent('notification.changed.v1', NotificationChangedSchema),
+};
+
+/** Єдина подія client → server: оновлення токена в живому зʼєднанні */
+export const AUTH_UPDATE_EVENT = 'auth.update.v1';

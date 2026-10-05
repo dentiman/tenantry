@@ -650,7 +650,7 @@ Payload — `{ eventId, change: 'created' | 'updated' | 'deleted', startsAt, end
 
 **Реалізовано 2026-09-07** (перша частина CAL-2). Чотири рішення, які уточнюють ескіз вище:
 
-1. **Адресат — перелік особистих room-ів, а не tenant-room.** `RealtimeEmitter.calendarEventChanged(tenantId, recipientIds, payload)`
+1. **Адресат — перелік особистих room-ів, а не tenant-room.** `RealtimeEmitter.toUsers(tenantId, recipientIds, REALTIME_EVENTS.calendarEventChanged, payload)` (до 2026-10-05 — окремий метод `calendarEventChanged`; подія оголошена в `calendar/calendar.socket-events.ts`, docs/module-registries.md R2)
    робить по одному `emit` на учасника. Broadcast розсилав би всьому тенанту сам факт
    існування чужої зустрічі разом із її часом.
 2. **Перенесення шле ДВІ дельти** — на нову межу і на стару. Клієнт бачить лише свій

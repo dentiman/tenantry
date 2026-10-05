@@ -7,7 +7,7 @@
 
 | Що                                | Де                                                                                                              |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Контракти подій і snapshot-у      | `libs/contracts/src/realtime/` — Zod-схеми + typed event maps (`ServerToClientEvents` / `ClientToServerEvents`) |
+| Контракти подій і snapshot-у      | `libs/contracts/src/realtime/` — механізм `defineSocketEvent`, платформні події, `ClientToServerEvents`; події фіч — у їхніх `*.socket-events.ts`; `REALTIME_EVENTS` і `ServerToClientEvents` збирає root `libs/contracts/src/socket-events.ts` |
 | Гейтвей                           | `apps/api/src/realtime/realtime.gateway.ts` — namespace, rooms, цикл auth, обробка розривів                     |
 | Автентифікація сокета             | `apps/api/src/realtime/socket-auth.service.ts`                                                                  |
 | Перевірка токена (спільна з HTTP) | `apps/api/src/auth/access-token.service.ts`                                                                     |

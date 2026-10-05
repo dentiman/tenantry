@@ -22,6 +22,7 @@ import {
 } from '@saas-skeleton/shared';
 import {
   AI_QUOTA_EXCEEDED_CODE,
+  REALTIME_EVENTS,
   type AiCitationContentResponse,
   type AiConversationChanged,
 } from '@saas-skeleton/contracts';
@@ -396,7 +397,9 @@ export class AiService {
     conversationId: string | null,
     reason: AiConversationChanged['reason'],
   ): void {
-    this.realtime.aiConversationChanged(tenantId, userId, {
+    // Сигнал без даних: реакція клієнта — одне дедупліковане перечитування стрічки.
+    // Долітає в УСІ вкладки юзера, включно з тією, що ініціювала дію (design.md D7)
+    this.realtime.toUsers(tenantId, [userId], REALTIME_EVENTS.aiConversationChanged, {
       conversationId,
       reason,
       occurredAt: new Date().toISOString(),

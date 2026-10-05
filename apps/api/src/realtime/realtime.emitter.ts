@@ -2,18 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TenantContextService } from '@saas-skeleton/database';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type {
-  AiConversationChanged,
-  CalendarEventChanged,
   NotificationChanged,
   NotificationCreated,
   PresenceChanged,
   ResyncReason,
   ServerToClientEvents,
 } from '@saas-skeleton/contracts';
-import {
-  NotificationDispatcherRegistry,
-  type NotificationDispatcher,
-} from '@saas-skeleton/shared';
+import { NotificationDispatcherRegistry, type NotificationDispatcher } from '@saas-skeleton/shared';
 import { sessionRoom, tenantRoom, userRoom } from './realtime.constants';
 import type { TenantNamespace } from './realtime.types';
 
@@ -78,32 +73,26 @@ export class RealtimeEmitter implements NotificationDispatcher {
     this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationChanged, payload);
   }
 
-  // ---- календар: в особисті room-и учасників (docs/calendar.md §9.3) ----
+  // ---- події фіч: в особисті room-и (docs/module-registries.md R2) ----
 
   /**
-   * Один виклик на КОЖНОГО учасника, а не broadcast у tenant-room: подію бачать
-   * лише її учасники, тож і дельта не має долітати до сторонніх — інакше сам
-   * факт існування чужої зустрічі (з часом!) розсилався б усьому тенанту.
+   * Подія в особисті room-и юзерів — для фіч, що оголосили свої події в контрактах
+   * (`calendar.event-changed.v1`, `ai.conversation-changed.v1`). Realtime не знає, що це
+   * за події: тип payload-у береться з протоколу `ServerToClientEvents`, який збирає root.
+   *
+   * Один emit на КОЖНОГО отримувача, а не broadcast у tenant-room: подію бачать лише ті,
+   * кому вона адресована, — інакше сам факт існування чужої зустрічі (з часом!)
+   * розсилався б усьому тенанту.
    */
-  calendarEventChanged(
+  toUsers<E extends keyof ServerToClientEvents>(
     tenantId: string,
-    recipientIds: readonly string[],
-    payload: CalendarEventChanged,
+    userIds: readonly string[],
+    event: E,
+    ...payload: Parameters<ServerToClientEvents[E]>
   ): void {
-    for (const recipientId of recipientIds) {
-      this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.calendarEventChanged, payload);
+    for (const userId of userIds) {
+      this.emit(userRoom(tenantId, userId), event, ...payload);
     }
-  }
-
-  // ---- AI-0.1: «розмова змінилась», в особистий room юзера (design.md D7) ----
-
-  /**
-   * Сигнал без даних: реакція клієнта — одне дедупліковане перечитування
-   * стрічки. Долітає в УСІ вкладки юзера, включно з тією, що ініціювала дію —
-   * виключати її окремим socket id дорожче, ніж зайве (дедупліковане) перечитування.
-   */
-  aiConversationChanged(tenantId: string, userId: string, payload: AiConversationChanged): void {
-    this.emit(userRoom(tenantId, userId), REALTIME_EVENTS.aiConversationChanged, payload);
   }
 
   // ---- AUTH-1: примусовий розрив зʼєднань відкликаної сесії ----

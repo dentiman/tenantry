@@ -32,7 +32,7 @@ import {
   type UsageEntry,
   type UsageOutcome,
 } from '@saas-skeleton/shared';
-import type { AiMessageErrorCode } from '@saas-skeleton/contracts';
+import { REALTIME_EVENTS, type AiMessageErrorCode } from '@saas-skeleton/contracts';
 import { WorkerRealtimeEmitter } from '../realtime/worker-realtime.emitter';
 import { ChunkCoalescer, type CoalescedFrame } from '../ai/chunk-coalescer';
 
@@ -501,7 +501,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
         return;
       }
       this.transactions.onCommit(tx, () => {
-        this.realtime.aiCompleted(context.tenantId, context.userId, {
+        this.realtime.toUser(context.tenantId, context.userId, REALTIME_EVENTS.aiMessageCompleted, {
           conversationId: data.conversationId,
           messageId: data.messageId,
           status: 'CANCELLED',
@@ -742,7 +742,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
       // побачить фінальний текст, а не той, що був до запису
       this.transactions.onCommit(tx, () => {
         this.logUsage(input.messageId, input.status, input.usage);
-        this.realtime.aiCompleted(input.tenantId, input.userId, {
+        this.realtime.toUser(input.tenantId, input.userId, REALTIME_EVENTS.aiMessageCompleted, {
           conversationId: input.conversationId,
           messageId: input.messageId,
           status: input.status,
@@ -783,7 +783,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
     attempt: number,
     frame: CoalescedFrame,
   ): void {
-    this.realtime.aiDelta(tenantId, userId, {
+    this.realtime.toUser(tenantId, userId, REALTIME_EVENTS.aiMessageDelta, {
       conversationId: data.conversationId,
       messageId: data.messageId,
       attempt,

@@ -22,7 +22,11 @@ import {
   type LlmChunk,
   type LlmRequest,
 } from '@saas-skeleton/shared';
-import type { AiMessageCompleted, AiMessageDelta } from '@saas-skeleton/contracts';
+import {
+  REALTIME_EVENTS,
+  type AiMessageCompleted,
+  type AiMessageDelta,
+} from '@saas-skeleton/contracts';
 import { AiGenerateReplySubscriber } from './ai-generate-reply.subscriber';
 
 /**
@@ -475,10 +479,23 @@ function makeSubscriber(
     ...cancel,
   } as unknown as AiCancelChannel;
 
+  // Емітер воркера generic (`toUser(…, подія, payload)`, docs/module-registries.md R2), а
+  // сценарії нижче підміняють `world.realtime.aiDelta/aiCompleted` — адаптер читає їх у
+  // момент виклику, тож підміни діють
+  const realtime = {
+    toUser: (tenantId: string, userId: string, event: string, payload: unknown): void => {
+      if (event === REALTIME_EVENTS.aiMessageDelta) {
+        world.realtime.aiDelta(tenantId, userId, payload as AiMessageDelta);
+      } else if (event === REALTIME_EVENTS.aiMessageCompleted) {
+        world.realtime.aiCompleted(tenantId, userId, payload as AiMessageCompleted);
+      }
+    },
+  };
+
   return new AiGenerateReplySubscriber(
     world.transactions as never,
     new AiMessageStateService(),
-    world.realtime as never,
+    realtime as never,
     cancelChannel,
     {
       // AI-5a: доступність і провайдер — на кожну генерацію; тут статичні

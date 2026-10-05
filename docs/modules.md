@@ -166,9 +166,9 @@ barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.t
 
 Чого скрипт **не бачить** (тримається на рев'ю):
 
-- **Визначення не в тому модулі.** Секції `calendar` і `ai` оголошені прямо в
-  `libs/contracts/src/settings/settings.schema.ts`, подія `calendar.event-changed.v1` — у
-  `libs/contracts/src/realtime/realtime.schema.ts`. Імпорту немає — ребра теж.
+- **Визначення не в тому модулі.** Якщо схему фічі оголосити прямо у файлі платформного
+  модуля (так колись жили секції налаштувань, типи сповіщень і події сокета календаря),
+  імпорту немає — ребра теж. Такі місця шукає аудит `docs/module-registries.md`.
 - **Рядкові звʼязки:** i18n-ключі (`t('calendar:…')`), типи нотифікацій
   (`'calendar_event.invited'`), шляхи маршрутів рядком.
 - **Згенерований orval-клієнт** — один файл на всі теги, належить `app`; хуки календаря з
@@ -195,6 +195,7 @@ barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.t
 | `auth → tenants`, `app → tenants`                    | `platform.schema.ts` розділено: `platform-auth.schema.ts` (auth) і `tenant.schema.ts`                                                                                                                                              |
 | `settings` знає `calendar` (невидиме)                | секція переїхала в `calendar` (контракт, `CalendarSettingsService`, `CalendarSettingsController`); bootstrap-секцію календар реєструє в `BootstrapRegistry`                                                                        |
 | `notifications`, `activities` знають фічі (невидиме) | R1: типи, payload-схеми, дефолти й тексти — у контрактах і неймспейсах власників (`*.notifications.ts`, `*.activities.ts`), root-и `notification-types.ts` / `activity-types.ts`; `KNOWN_TYPES` прибрано; `registry-texts.test.ts` |
+| `realtime` знає `calendar` і `ai` (невидиме)         | R2: схеми подій — у `calendar.socket-events.ts` / `ai.socket-events.ts`, root `socket-events.ts` збирає `REALTIME_EVENTS` і `ServerToClientEvents`; емітери generic (`toUsers` / `toUser`)                                         |
 
 Лишилися звʼязки, яких скрипт **не бачить** (§6): спільні реєстри нижчих модулів, у які
 фічі дописують свої типи сповіщень і активностей, події realtime, маршрути й навігацію,

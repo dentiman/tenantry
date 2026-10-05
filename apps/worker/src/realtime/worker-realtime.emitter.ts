@@ -10,8 +10,6 @@ import {
   realtimeStreamName,
   userRoom,
   type ClientToServerEvents,
-  type AiMessageCompleted,
-  type AiMessageDelta,
   type NotificationChanged,
   type NotificationCreated,
   type ServerToClientEvents,
@@ -75,31 +73,19 @@ export class WorkerRealtimeEmitter
   }
 
   created(tenantId: string, recipientId: string, payload: NotificationCreated): void {
-    this.emit(tenantId, recipientId, REALTIME_EVENTS.notificationCreated, payload);
+    this.toUser(tenantId, recipientId, REALTIME_EVENTS.notificationCreated, payload);
   }
 
   changed(tenantId: string, recipientId: string, payload: NotificationChanged): void {
-    this.emit(tenantId, recipientId, REALTIME_EVENTS.notificationChanged, payload);
+    this.toUser(tenantId, recipientId, REALTIME_EVENTS.notificationChanged, payload);
   }
 
   /**
-   * AI-0. Тут socket уперше несе САМ ВМІСТ, а не сигнал «перечитай» — свідомий
-   * виняток із правила docs/realtime.md, і тримається він на `chunkSeq` у payload-і
-   * плюс на тому, що `GET /ai/conversation` завжди авторитетний. Втрата дельти
-   * сповільнює рендер, але нічого не втрачає.
-   *
-   * Room — особистий: розмова належить одній людині, а всі її вкладки мусять
-   * бачити один і той самий потік.
+   * Подія в особистий room юзера — для фіч, що оголосили свої події в контрактах
+   * (`ai.message-delta.v1`, `ai.message-completed.v1`; docs/module-registries.md R2).
+   * Realtime не знає, що це за події: тип payload-у — з протоколу `ServerToClientEvents`.
    */
-  aiDelta(tenantId: string, userId: string, payload: AiMessageDelta): void {
-    this.emit(tenantId, userId, REALTIME_EVENTS.aiMessageDelta, payload);
-  }
-
-  aiCompleted(tenantId: string, userId: string, payload: AiMessageCompleted): void {
-    this.emit(tenantId, userId, REALTIME_EVENTS.aiMessageCompleted, payload);
-  }
-
-  private emit<E extends keyof ServerToClientEvents>(
+  toUser<E extends keyof ServerToClientEvents>(
     tenantId: string,
     recipientId: string,
     event: E,

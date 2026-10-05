@@ -20,3 +20,4 @@ export * from './chat';
 export * from './bootstrap.schema';
 export * from './activity-types';
 export * from './notification-types';
+export * from './socket-events';

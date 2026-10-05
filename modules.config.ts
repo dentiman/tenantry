@@ -400,6 +400,7 @@ export const COMPOSITION_ROOTS: readonly string[] = [
   'libs/contracts/src/bootstrap.schema.ts',
   'libs/contracts/src/activity-types.ts',
   'libs/contracts/src/notification-types.ts',
+  'libs/contracts/src/socket-events.ts',
   'libs/contracts/src/*/index.ts',
   'libs/shared/src/index.ts',
   'libs/shared/src/*/index.ts',
