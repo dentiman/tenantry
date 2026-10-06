@@ -4,3 +4,10 @@ import { defineSlot } from '../../lib/slots';
 export const customerOverviewCards = defineSlot<{ customerId: string; customerName: string }>(
   'customers.overview-cards',
 );
+
+/**
+ * Вкладки картки кастомера від фіч — `TabsTrigger` із `Link` на власний дочірній маршрут фічі
+ * під `customerDetailRoute` (календар → `events`). Значення `value` вкладки = сегмент шляху:
+ * за ним лейаут підсвічує активну (docs/module-registries.md R3)
+ */
+export const customerDetailTabs = defineSlot<{ customerId: string }>('customers.detail-tabs');

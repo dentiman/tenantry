@@ -1,7 +1,9 @@
 import { createRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { appRoute } from '../../app-shell/app.routes';
+import { customerDetailRoute } from '../customers/customers.routes';
 import { settingsRoute } from '../settings/settings.routes';
+import { CustomerEventsTab } from './components/customer-events-tab';
 import { isCalendarView } from './lib/calendar-date';
 import { CalendarPage } from './pages/calendar';
 import { SettingsCalendarPage } from './pages/calendar-settings';
@@ -68,4 +70,15 @@ export const settingsCalendarRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'calendar',
   component: SettingsCalendarPage,
+});
+
+/**
+ * Вкладка «Події» на картці кастомера: маршрут календаря під лейаутом модуля нижче
+ * (`customerDetailRoute`). Customers про нього не знає — дерево складає `router.tsx`, а
+ * вкладку в рядку дає внесок у слот `customerDetailTabs` (docs/module-registries.md R3)
+ */
+export const customerEventsRoute = createRoute({
+  getParentRoute: () => customerDetailRoute,
+  path: 'events',
+  component: CustomerEventsTab,
 });

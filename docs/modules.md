@@ -104,12 +104,13 @@ flowchart TB
 Component)`), а `SlotsProvider` у `main.tsx` роздає внески; `<SlotOutlet slot props />` малює
 їх на місці. Тип пропсів звіряється на `fillSlot`. Наявні слоти:
 
-| Слот                    | Хто рендерить                                  | Хто заповнює                 |
-| ----------------------- | ---------------------------------------------- | ---------------------------- |
-| `shellHeaderActions`    | `app-shell.tsx` (хедер)                        | `ai` — кнопка асистента      |
-| `shellSidePanels`       | `app-shell.tsx` (права колонка)                | `ai` — панель асистента      |
-| `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`       | `calendar` — агенда          |
-| `customerOverviewCards` | `features/customers/pages/customer-detail.tsx` | `calendar` — найближчі події |
+| Слот                    | Хто рендерить                                                  | Хто заповнює                                                    |
+| ----------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
+| `shellHeaderActions`    | `app-shell.tsx` (хедер)                                        | `ai` — кнопка асистента                                         |
+| `shellSidePanels`       | `app-shell.tsx` (права колонка)                                | `ai` — панель асистента                                         |
+| `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`                       | `calendar` — агенда                                             |
+| `customerOverviewCards` | `features/customers/pages/customer-detail.tsx`                 | `calendar` — найближчі події                                    |
+| `customerDetailTabs`    | `features/customers/pages/customer-detail.tsx` (лейаут картки) | `calendar` — вкладка «Events» (+ маршрут `customerEventsRoute`) |
 
 **Бекенд — реєстри, у які фіча пише з `onModuleInit`.** Фіча імпортує модуль нижче (ребро
 вниз, як і належить) і реєструє свою дію; модуль нижче виконує все зареєстроване, не знаючи
@@ -204,6 +205,7 @@ barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.t
 | `notifications`, `activities` знають фічі (невидиме)     | R1: типи, payload-схеми, дефолти й тексти — у контрактах і неймспейсах власників (`*.notifications.ts`, `*.activities.ts`), root-и `notification-types.ts` / `activity-types.ts`; `KNOWN_TYPES` прибрано; `registry-texts.test.ts` |
 | `realtime` знає `calendar` і `ai` (невидиме)             | R2: схеми подій — у `calendar.socket-events.ts` / `ai.socket-events.ts`, root `socket-events.ts` збирає `REALTIME_EVENTS` і `ServerToClientEvents`; емітери generic (`toUsers` / `toUser`)                                         |
 | `tenants` (control plane) пише таблиці `chat` (невидиме) | R6: провізіонер `libs/shared/src/chat/default-channel.ts`, хук `TenantLifecycleHooks`, модуль `apps/platform-api/src/chat/`; сід кличе той самий провізіонер                                                                       |
+| `router.tsx` визначав маршрути всіх модулів (невидиме)   | R3: маршрути — у `features/<модуль>/<модуль>.routes.tsx`, root лише збирає дерево; фічі чіпляються під лейаути модулів нижче (вкладка «Events» на картці клієнта)                                                                  |
 
 Лишилися звʼязки, яких скрипт **не бачить** (§6): спільні реєстри нижчих модулів, у які
 фічі дописують свої типи сповіщень і активностей, події realtime, маршрути й навігацію,

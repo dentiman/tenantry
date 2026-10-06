@@ -88,11 +88,14 @@ function groupByDay(events: CalendarEventResponse[], timeZone: string): AgendaDa
 
 export function AgendaList({
   timeZone,
+  customerId,
   onSelect,
   onCreate,
   onIntent,
 }: {
   timeZone: string;
+  /** Лише події цього кастомера — вкладка «Події» на його картці */
+  customerId?: string;
   onSelect: (event: CalendarEventResponse) => void;
   /** Порожній фід пропонує єдину осмислену дію — завести подію */
   onCreate: () => void;
@@ -104,7 +107,11 @@ export function AgendaList({
   const [items, setItems] = useState<CalendarEventResponse[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const { data, isFetching, isError } = useCalendarAgenda({ cursor, limit: 30 });
+  const { data, isFetching, isError } = useCalendarAgenda({
+    cursor,
+    limit: 30,
+    ...(customerId ? { customerId } : {}),
+  });
 
   useEffect(() => {
     if (!data) {
@@ -356,9 +363,7 @@ function AgendaRow({
             рядок замість обрізання. Той самий патерн, що в `ContextPanelHeader`
             (`libs/ui/.../context-panel-slot.tsx`): `min-w-0` на весь шлях до
             `truncate`-елемента, `w-full` замість `w-fit` */}
-        <ItemTitle
-          className={cn('w-full min-w-0', 'text-[13px]', isCancelled && 'line-through')}
-        >
+        <ItemTitle className={cn('w-full min-w-0', 'text-[13px]', isCancelled && 'line-through')}>
           {event.visibility === 'PRIVATE' && (
             <LockIcon className="size-3 shrink-0 text-muted-foreground" />
           )}

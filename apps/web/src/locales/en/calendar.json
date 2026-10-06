@@ -117,7 +117,8 @@
   "customer": {
     "upcoming": "Upcoming",
     "empty": "No meetings scheduled",
-    "create": "Schedule a meeting"
+    "create": "Schedule a meeting",
+    "tab": "Events"
   },
   "hotkeys": {
     "title": "Keyboard shortcuts",

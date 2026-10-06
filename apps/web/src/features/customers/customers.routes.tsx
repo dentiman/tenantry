@@ -2,7 +2,9 @@ import { CustomerQuerySchema } from '@saas-skeleton/contracts';
 import { createRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { workspaceRoute } from '../../app-shell/app.routes';
-import { CustomerDetailPage } from './pages/customer-detail';
+import { CustomerContactsTab } from './pages/customer-contacts';
+import { CustomerDetailLayout } from './pages/customer-detail';
+import { CustomerOverviewTab } from './pages/customer-overview';
 import { CustomersPage } from './pages/customers';
 
 // Той самий контракт, що в /users: стан списку живе в URL, невалідні значення
@@ -28,9 +30,25 @@ export const customersRoute = createRoute({
   staticData: { layout: 'bleed' },
 });
 
-/** Картка кастомера: окремий роут — на неї дають посилання в листі й у тікеті */
+/**
+ * Картка кастомера: окремий роут — на неї дають посилання в листі й у тікеті. Це ЛЕЙАУТ
+ * (шапка + вкладки + `<Outlet/>`): вкладки — дочірні маршрути, і фічі чіпляють сюди свої
+ * (`customerEventsRoute` календаря) — дерево складає `router.tsx` (docs/module-registries.md R3)
+ */
 export const customerDetailRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: 'customers/$customerId',
-  component: CustomerDetailPage,
+  component: CustomerDetailLayout,
+});
+
+export const customerOverviewRoute = createRoute({
+  getParentRoute: () => customerDetailRoute,
+  path: '/',
+  component: CustomerOverviewTab,
+});
+
+export const customerContactsRoute = createRoute({
+  getParentRoute: () => customerDetailRoute,
+  path: 'contacts',
+  component: CustomerContactsTab,
 });

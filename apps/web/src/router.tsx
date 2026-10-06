@@ -27,9 +27,15 @@ import {
   calendarViewRoute,
   calendarEventRoute,
   settingsCalendarRoute,
+  customerEventsRoute,
 } from './features/calendar/calendar.routes';
 import { chatRoute, chatIndexRoute, chatConversationRoute } from './features/chat/chat.routes';
-import { customersRoute, customerDetailRoute } from './features/customers/customers.routes';
+import {
+  customersRoute,
+  customerDetailRoute,
+  customerOverviewRoute,
+  customerContactsRoute,
+} from './features/customers/customers.routes';
 import { dashboardRoute } from './features/dashboard/dashboard.routes';
 import { guideRoute } from './features/guide/guide.routes';
 import { userSettingsNotificationsRoute } from './features/notifications/notifications.routes';
@@ -71,7 +77,12 @@ const routeTree = rootRoute.addChildren([
       usersRoute,
       userDetailRoute,
       customersRoute,
-      customerDetailRoute,
+      // Картка кастомера — лейаут: власні вкладки + вкладки фіч (docs/module-registries.md R3)
+      customerDetailRoute.addChildren([
+        customerOverviewRoute,
+        customerContactsRoute,
+        customerEventsRoute, // calendar
+      ]),
     ]),
     calendarRoute.addChildren([calendarIndexRoute, calendarViewRoute, calendarEventRoute]),
     chatRoute.addChildren([chatIndexRoute, chatConversationRoute]),

@@ -699,6 +699,11 @@ workDayEnd }` — сітка мусить намалюватись першим 
 - `customerId` на події (§5) + фільтр `GET /calendar/events?customerId=…`;
 - на картці кастомера — блок «Upcoming» (найближчі 3 події) у лівій колонці; історія вже є в
   наявній стрічці подій (§9.1);
+- **вкладка «Events» на картці кастомера** (з 2026-10-06): маршрут календаря
+  `/workspace/customers/$customerId/events` під лейаутом картки (`customerEventsRoute`) — той
+  самий `AgendaList`, відфільтрований за `customerId`; нова подія заводиться з цим кастомером.
+  Customers про неї не знає: вкладку дає внесок у слот `customerDetailTabs`, маршрут чіпляє
+  `router.tsx` (docs/module-registries.md R3);
 - видалення кастомера — `SetNull`: подія «зустріч, яка була» не має зникати разом із карткою.
 
 ### 9.7. Presence, files, numbering, DataGrid — що НЕ використовується
