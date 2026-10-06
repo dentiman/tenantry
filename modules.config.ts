@@ -128,7 +128,16 @@ export const MODULES = {
   },
   users: {
     tier: 'platform',
-    dependsOn: ['account', 'activities', 'auth', 'files', 'messaging', 'notifications', 'realtime'],
+    dependsOn: [
+      'account',
+      'activities',
+      'app',
+      'auth',
+      'files',
+      'messaging',
+      'notifications',
+      'realtime',
+    ],
     summary: 'Користувачі тенанта: адмінське CRUD, вибір користувача в UI.',
     paths: [
       'apps/web/src/features/users/',
@@ -164,7 +173,7 @@ export const MODULES = {
   },
   notifications: {
     tier: 'platform',
-    dependsOn: ['activities', 'auth', 'messaging', 'realtime'],
+    dependsOn: ['account', 'activities', 'auth', 'messaging', 'realtime'],
     summary: 'In-app інбокс, тости, відкладені нагадування (scheduled_notifications).',
     paths: [
       'apps/web/src/features/notifications/',
@@ -177,7 +186,7 @@ export const MODULES = {
   },
   activities: {
     tier: 'platform',
-    dependsOn: [],
+    dependsOn: ['settings'],
     summary: 'Стрічка активності (activities / activity_links) і її рендеринг.',
     paths: [
       'apps/web/src/features/activities/',
@@ -214,7 +223,7 @@ export const MODULES = {
   },
   numbering: {
     tier: 'platform',
-    dependsOn: [],
+    dependsOn: ['settings'],
     summary: 'Людські номери записів (лічильник на тенант).',
     paths: [
       'apps/web/src/features/numbering/',
@@ -239,7 +248,7 @@ export const MODULES = {
   },
   dashboard: {
     tier: 'platform',
-    dependsOn: [],
+    dependsOn: ['app'],
     summary: 'Стартовий екран із віджетами.',
     paths: ['apps/web/src/features/dashboard/'],
   },
@@ -247,7 +256,7 @@ export const MODULES = {
   // ------------------------------------------------------------------- core
   customers: {
     tier: 'core',
-    dependsOn: ['activities', 'auth', 'notifications', 'numbering', 'settings', 'users'],
+    dependsOn: ['activities', 'app', 'auth', 'notifications', 'numbering', 'settings', 'users'],
     summary: 'Клієнти та їхні контакти — еталонний домен, є в кожному форку за замовчуванням.',
     paths: [
       'apps/web/src/features/dashboard/',
@@ -262,6 +271,7 @@ export const MODULES = {
     tier: 'feature',
     dependsOn: [
       'activities',
+      'app',
       'auth',
       'customers',
       'dashboard',
@@ -279,7 +289,7 @@ export const MODULES = {
   },
   chat: {
     tier: 'feature',
-    dependsOn: ['auth', 'files', 'tenants', 'users'],
+    dependsOn: ['app', 'auth', 'files', 'tenants', 'users'],
     summary: 'Розмови між людьми (REST-зріз, docs/chat.md). Опційний.',
     paths: [
       'apps/web/src/features/chat/',
@@ -311,7 +321,7 @@ export const MODULES = {
   },
   guide: {
     tier: 'feature',
-    dependsOn: [],
+    dependsOn: ['app'],
     summary: 'Внутрішній гайд по UI-кіту (демо, не продукт).',
     paths: ['apps/web/src/features/guide/'],
   },

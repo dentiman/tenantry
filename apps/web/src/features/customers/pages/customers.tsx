@@ -17,7 +17,7 @@ import { PhoneNumber } from '../../../components/phone-number';
 import { CustomerIdentity } from '../components/customer-identity';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
-import type { CustomersSearch } from '../../../router';
+import type { CustomersSearch } from '../customers.routes';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridField,

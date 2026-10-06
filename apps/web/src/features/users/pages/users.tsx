@@ -27,7 +27,7 @@ import { usePresence } from '../../realtime/use-presence';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { PhoneNumber } from '../../../components/phone-number';
-import type { UsersSearch } from '../../../router';
+import type { UsersSearch } from '../users.routes';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridField,
