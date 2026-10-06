@@ -103,7 +103,7 @@
 - `apps/api/src/notifications/` — DTO → Service → Mapper → Controller;
 - `apps/api/src/realtime/realtime.emitter.ts` — дві нові емісії;
 - `apps/worker/src/realtime/` — headless-емітер + `REDIS_URL` у конфігу воркера;
-- `apps/web/src/components/notifications/` + `apps/web/src/lib/entity-routes.ts` +
+- `apps/web/src/features/notifications/components/` + `apps/web/src/lib/entity-routes.ts` +
   namespace `notifications` у `libs/i18n`.
 
 ## Модель даних

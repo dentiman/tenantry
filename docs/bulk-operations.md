@@ -353,7 +353,7 @@ API 2.0, Stripe `report_runs`) роблять асинхронну роботу 
 ### Точка входу вже існує
 
 `Grid.Toolbar` має слот `selectionActions` (`libs/ui/src/components/data-grid/create-data-grid.tsx:78`),
-зараз із заглушеною кнопкою в `apps/web/src/pages/users.tsx:310`. Він отримує
+зараз із заглушеною кнопкою в `apps/web/src/features/users/pages/users.tsx:310`. Він отримує
 `DataGridSelectionState` — тобто і `selectedItems` (повні снапшоти рядків), і
 `selectedIds`, і `clear`.
 

@@ -100,7 +100,7 @@
 
 ### Зона C — календар, найдорожча
 
-5681 рядок у `apps/web/src/components/calendar/` з абсолютним позиціюванням і drag&drop:
+5681 рядок у `apps/web/src/features/calendar/components/` з абсолютним позиціюванням і drag&drop:
 
 | Файл | Що ламається |
 | --- | --- |

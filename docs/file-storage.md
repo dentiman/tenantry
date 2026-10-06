@@ -59,7 +59,7 @@ NestJS** — браузер вантажить і читає їх напряму
 - `libs/shared/src/messaging/definitions/files.messages.ts` — визначення обох команд
   (після EDA-1; до неї — `jobs/definitions/files.jobs.ts`).
 - `apps/worker/src/subscribers/generate-thumbnail.subscriber.ts`, `cleanup-orphan-files.subscriber.ts`.
-- `apps/web/src/components/file-upload/` — хук і dropzone; `change-avatar-modal.tsx` — демо.
+- `apps/web/src/features/files/components/file-upload/` — хук і dropzone; `change-avatar-modal.tsx` — демо.
 
 ## Модель даних
 

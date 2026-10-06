@@ -518,8 +518,9 @@ apps/web/src/app-shell/
   paths.ts                       NavPath / AreaPrefix (літерали) + isUnder
   account-footer.tsx             нижня смуга шела: AppFooterBar + дропдаун профілю
   areas/
-    workspace-sidebar.tsx  chat-sidebar.tsx  settings-sidebar.tsx
-    playground-sidebar.tsx  user-settings-sidebar.tsx
+    workspace-sidebar.tsx          колонка area workspace (сама оболонка)
+features/<модуль>/<модуль>-sidebar.tsx   колонки решти area — у теках своїх модулів
+                                         (calendar, chat, settings, playground, guide, account)
 ```
 
 Механізм контекстної панелі живе в `libs/ui/src/components/context-panel-slot.tsx`

@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import type { AuthTokens } from '@saas-skeleton/contracts';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../features/auth/stores/auth.store';
 
 // AUTH-2: withCredentials — без нього браузер не покладе httpOnly refresh-cookie
 // в запит до /api/auth/refresh (same-origin через dev-проксі/nginx, CORS тут не

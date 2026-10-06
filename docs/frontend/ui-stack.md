@@ -175,7 +175,7 @@ vite не читає tsconfig paths.
 | Небезпека: текст / суцільна заливка / мʼяка  | `text-destructive` / `bg-destructive text-destructive-foreground` / `Badge variant="destructive"` |
 | Успіх, попередження                          | наше розширення `--success` / `--warning`                                                         |
 | Попередження, яке НЕ помилка                 | `Alert variant="warning" accent="left"` + `TriangleAlertIcon` (банер зони календаря, накладання подій) |
-| Подія календаря (заливка / смужка типу / текст) | палітра подій Notion: `bg-event-<колір>-bg` / `bg-event-<колір>-line` / `text-event-<колір>` — **не semantic-роль**, а іменований колір; мапінг «тип події → колір» живе в `apps/web/src/components/calendar/event-kind.ts` |
+| Подія календаря (заливка / смужка типу / текст) | палітра подій Notion: `bg-event-<колір>-bg` / `bg-event-<колір>-line` / `text-event-<колір>` — **не semantic-роль**, а іменований колір; мапінг «тип події → колір» живе в `apps/web/src/features/calendar/components/event-kind.ts` |
 | Вихідні в сітці календаря                    | `bg-calendar-weekend`                                                                             |
 | Період, відкритий у сітці (у міні-календарі) | `bg-calendar-in-view`; наведення на день — `bg-calendar-day-hover`                                |
 | Бренд                                        | `text-primary`                                                                                    |
@@ -255,7 +255,7 @@ vite не читає tsconfig paths.
 `03-04-2026` не має однієї відповіді, ISO має сталу ширину в будь-якій мові, і побачене на екрані
 збігається з тим, що поїде в експорт, лог і URL. **Перевизначає це КОД конкретного екрана**
 (`DatePicker format="long"` там, де дата — головний зміст), а не юзер у налаштуваннях: формат дати
-не стає перемикачем в адмінці. Виняток — **календар**: `apps/web/src/lib/calendar-date.ts` лишається
+не стає перемикачем в адмінці. Виняток — **календар**: `apps/web/src/features/calendar/lib/calendar-date.ts` лишається
 на своїх людських формах («Wednesday, September 9», «5 minutes ago»), бо там дата не дані, а зміст
 екрана.
 

@@ -394,7 +394,7 @@ elevated, `Int` interactive, `Str` strong, `Foc` focus, `Hov` hover.
 | `libs/ui/src/components/theme-select.tsx`             | Дропдаун вибору палітри: `DropdownMenuRadioGroup` зі свотчами.                                                                                                 |
 | `apps/web/index.html`                                 | Блокувальний скрипт: виставляє атрибут ДО першого малювання (дзеркало того, що `next-themes` робить для класу). Значення просіюється регуляркою, бо йде в DOM. |
 | `apps/web/src/main.tsx`                               | `<UiThemeProvider storageKey="saas_theme_palette">` усередині `ThemeProvider` next-themes.                                                                     |
-| `apps/web/src/pages/user-settings/appearance.tsx`     | Другий рядок розділу: **Color theme** + `ThemeSelect` (перший лишається Theme + `ThemeSwitcher`).                                                              |
+| `apps/web/src/features/account/pages/appearance.tsx`     | Другий рядок розділу: **Color theme** + `ThemeSelect` (перший лишається Theme + `ThemeSwitcher`).                                                              |
 | `apps/web/src/locales/en/{layout,user-settings}.json` | Ключі `theme.paletteLabel`, `theme.palettes.*`, `appearance.palette*`.                                                                                         |
 
 Два контроли, а не один список: режим перемикають щодня (він у хедері), палітру обирають раз

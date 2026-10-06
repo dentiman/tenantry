@@ -496,7 +496,7 @@ model AuthSession {
 
 ## 2.6. Фронт (`apps/web`)
 
-- [x] `apps/web/src/pages/user-settings/security.tsx` — секція `SessionsSection`
+- [x] `apps/web/src/features/account/pages/security.tsx` — секція `SessionsSection`
       замість абзацу-пояснення: список пристроїв (`Item*` з `libs/ui`, **не** кустарна
       розмітка), рядок = `deviceLabel` · IP · відносний час `lastUsedAt`, бейдж
       «This device» для `isCurrent`, кнопка revoke на кожному + «Sign out everywhere» знизу.
@@ -631,7 +631,7 @@ refresh; повний цикл (логін → F5 → refresh → logout) пра
       `apps/web/src/api/http-client.ts`.
 - [x] `refreshTokens()` більше не читає токен зі сховища — просто
       `POST /api/auth/refresh` з порожнім тілом; single-flight лишається як є.
-- [x] `apps/web/src/stores/auth.store.ts`: прибрати `REFRESH_TOKEN_KEY`,
+- [x] `apps/web/src/features/auth/stores/auth.store.ts`: прибрати `REFRESH_TOKEN_KEY`,
       `getStoredRefreshToken()`, запис у `localStorage`. Стор тримає **тільки**
       `user` + `accessToken` (обидва в пам'яті).
 - [x] `init-auth.ts`: умову «є токен у localStorage» замінити на безумовну спробу

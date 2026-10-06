@@ -274,7 +274,7 @@ rootRoute            beforeLoad: legacy /jobs → /operations/jobs (href + searc
 ### Крок 5 — `/tenants` на `DataGrid`
 
 `apps/platform-web/src/pages/tenants.tsx` — переписати за еталоном
-`apps/web/src/pages/users.tsx`:
+`apps/web/src/features/users/pages/users.tsx`:
 
 - `const Grid = createDataGrid<TenantsSearch, TenantResponseDtoOutput>()` на рівні
   модуля.

@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@saas-skeleton/ui/components/ui/sidebar';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../features/auth/stores/auth.store';
 import { APP_AREAS, type AppArea, resolveArea } from './areas';
 
 /**

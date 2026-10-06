@@ -40,5 +40,5 @@ node "<skill>/seed-canvas.mjs" \
 
 ## Що з цього стало кодом
 
-`apps/web/src/components/user-multi-select/` — див. `docs/frontend/multi-user-select.md`.
+`apps/web/src/features/users/components/user-multi-select/` — див. `docs/frontend/multi-user-select.md`.
 Живий стенд обох варіантів: `/playground/multi-user-select`.

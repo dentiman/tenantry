@@ -20,9 +20,9 @@
 | Presence: логіка ноди             | `apps/api/src/realtime/presence/presence.service.ts`                                                            |
 | Presence: REST                    | `apps/api/src/realtime/presence/presence.controller.ts`                                                         |
 | Last seen: запис у БД             | `apps/api/src/realtime/presence/last-seen.writer.ts`                                                            |
-| Фронт: socket                     | `apps/web/src/realtime/socket.ts`                                                                               |
-| Фронт: delta → кеш                | `apps/web/src/realtime/presence-sync.ts`, `apps/web/src/realtime/last-seen.store.ts`                            |
-| Фронт: читання                    | `apps/web/src/realtime/use-presence.ts`, `apps/web/src/components/{presence-dot,last-seen}.tsx`                 |
+| Фронт: socket                     | `apps/web/src/features/realtime/socket.ts`                                                                               |
+| Фронт: delta → кеш                | `apps/web/src/features/realtime/presence-sync.ts`, `apps/web/src/features/realtime/last-seen.store.ts`                            |
+| Фронт: читання                    | `apps/web/src/features/realtime/use-presence.ts`, `apps/web/src/components/{presence-dot,last-seen}.tsx`                 |
 | Тести                             | `apps/api/test/realtime.e2e-spec.ts`                                                                            |
 
 ## Протокол

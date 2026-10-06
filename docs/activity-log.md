@@ -73,7 +73,7 @@
 - `apps/api/src/activities/` — DTO → Service → Mapper → Controller (стандартні шари).
 - `apps/worker/src/subscribers/welcome-email.subscriber.ts` (на момент написання —
   `handlers/welcome-email.handler.ts`) — доповнюється записом `email.sent`.
-- `apps/web/src/components/activity/` + `libs/i18n` namespace `activities`.
+- `apps/web/src/features/activities/components/` + `libs/i18n` namespace `activities`.
 
 ## Модель даних
 

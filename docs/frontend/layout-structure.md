@@ -64,7 +64,7 @@
 | **`AppFooterBar`**                                                                    | нижня смуга `AppRail`                         | `.../app-shell/account-footer.tsx`                     | аватар + дропдаун (профіль/logout)                                          |
 | **`PageHeaderSlot`** / **`PageHeaderPortal`**                                         | хедер контенту (`h-14`)                       | `libs/ui/src/components/page-header-slot.tsx`          | generic портал — та сама механіка, що в `ContextPanel`                       |
 | **`ContextPanel`** (`ContextPanelSlot`/`Portal`/`Trigger`/`Header`)                   | 3-тя колонка праворуч від контенту            | `libs/ui/src/components/context-panel-slot.tsx`        | generic слот: сторінка кладе туди ЩО ЗАВГОДНО, типів між шелом і вмістом нема |
-| **`Sheet`** (`ActivityDrawer`, панель сповіщень)                                      | НЕ колонка шела — тимчасовий модальний оверлей | `apps/web/src/components/activity/activity-drawer.tsx` | накриває сторінку, а не стискає; для самодостатніх рішень                    |
+| **`Sheet`** (`ActivityDrawer`, панель сповіщень)                                      | НЕ колонка шела — тимчасовий модальний оверлей | `apps/web/src/features/activities/components/activity-drawer.tsx` | накриває сторінку, а не стискає; для самодостатніх рішень                    |
 | **`ScrollArea`**                                                                      | скрол сторінки й панелей                       | `libs/ui/src/components/ui/scroll-area.tsx`             | завжди замість нативного `overflow-y-auto`                                   |
 
 ## 3. `apps/platform-web` — що інакше

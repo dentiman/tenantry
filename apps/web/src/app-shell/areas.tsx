@@ -11,12 +11,12 @@ import {
 } from 'lucide-react';
 import type { UserResponse } from '@saas-skeleton/contracts';
 import { isUnder, type AreaPrefix } from './paths';
-import { CalendarSidebar } from './areas/calendar-sidebar';
-import { ChatSidebar } from './areas/chat-sidebar';
-import { GuideSidebar } from './areas/guide-sidebar';
-import { PlaygroundSidebar } from './areas/playground-sidebar';
-import { SettingsSidebar } from './areas/settings-sidebar';
-import { UserSettingsSidebar } from './areas/user-settings-sidebar';
+import { CalendarSidebar } from '../features/calendar/calendar-sidebar';
+import { ChatSidebar } from '../features/chat/chat-sidebar';
+import { GuideSidebar } from '../features/guide/guide-sidebar';
+import { PlaygroundSidebar } from '../features/playground/playground-sidebar';
+import { SettingsSidebar } from '../features/settings/settings-sidebar';
+import { UserSettingsSidebar } from '../features/account/user-settings-sidebar';
 import { WorkspaceSidebar } from './areas/workspace-sidebar';
 
 export type AreaId =

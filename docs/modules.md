@@ -11,12 +11,16 @@
 справді показує його події. Ціль інша: **кожна залежність задекларована, має напрямок і не
 утворює циклу**. Тоді видалення фічі — це читання графа, а не археологія.
 
-Модуль — це **домен, а не тека**. Календар живе в `libs/contracts/src/calendar`,
-`apps/api/src/calendar`, `apps/web/src/components/calendar`, `apps/web/src/pages/calendar.tsx`
-і ще кількох місцях; усі вони — модуль `calendar`. Фізичне розташування файлів (окремі пакети
-`features/x` тощо) свідомо не змінювали: граф працює з поточною структурою, а пакетування фіч
-вимагало б винести в `libs` інфраструктуру застосунків (HTTP-клієнт, form-обгортки, auth-
-декоратори) — ціна без вигоди, поки фічі не ставляться як плагіни.
+Модуль — це **домен, а не тека**: календар живе в `libs/contracts/src/calendar`,
+`apps/api/src/calendar`, `libs/database/prisma/schema/calendar.prisma` і `apps/web/src/features/calendar/`;
+усі вони — модуль `calendar`. Усередині кожного застосунку файли модуля зібрані в одну теку:
+бекенд — Nest-модуль (`apps/api/src/<модуль>/`), фронтенд — `apps/web/src/features/<модуль>/`
+(з 2026-10-06; `pages/`, `components/`, `stores/`, `realtime/`, `lib/` усередині — за потребою).
+Поза `features/` лишається лише спільне без домену: `app-shell/`, `components/` (форми, секції),
+`lib/`, `api/`, `i18n/` і composition roots (`router.tsx`, `slot-fills.ts`, `main.tsx`). Окремими
+пакетами (`packages/feature-x`) фічі свідомо не стали: це вимагало б винести в `libs`
+інфраструктуру застосунків (HTTP-клієнт, form-обгортки, auth-декоратори) — ціна без вигоди, поки
+фічі не ставляться як плагіни.
 
 ## 2. Рівні
 
@@ -100,12 +104,12 @@ flowchart TB
 Component)`), а `SlotsProvider` у `main.tsx` роздає внески; `<SlotOutlet slot props />` малює
 їх на місці. Тип пропсів звіряється на `fillSlot`. Наявні слоти:
 
-| Слот                    | Хто рендерить                   | Хто заповнює                 |
-| ----------------------- | ------------------------------- | ---------------------------- |
-| `shellHeaderActions`    | `app-shell.tsx` (хедер)         | `ai` — кнопка асистента      |
-| `shellSidePanels`       | `app-shell.tsx` (права колонка) | `ai` — панель асистента      |
-| `dashboardWidgets`      | `pages/dashboard.tsx`           | `calendar` — агенда          |
-| `customerOverviewCards` | `pages/customer-detail.tsx`     | `calendar` — найближчі події |
+| Слот                    | Хто рендерить                                  | Хто заповнює                 |
+| ----------------------- | ---------------------------------------------- | ---------------------------- |
+| `shellHeaderActions`    | `app-shell.tsx` (хедер)                        | `ai` — кнопка асистента      |
+| `shellSidePanels`       | `app-shell.tsx` (права колонка)                | `ai` — панель асистента      |
+| `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`       | `calendar` — агенда          |
+| `customerOverviewCards` | `features/customers/pages/customer-detail.tsx` | `calendar` — найближчі події |
 
 **Бекенд — реєстри, у які фіча пише з `onModuleInit`.** Фіча імпортує модуль нижче (ребро
 вниз, як і належить) і реєструє свою дію; модуль нижче виконує все зареєстроване, не знаючи

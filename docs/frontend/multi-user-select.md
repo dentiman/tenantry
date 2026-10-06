@@ -3,7 +3,7 @@
 **Статус:** реалізовано і перевірено 2026-09-07 (браузерний прогін проти dev-API).
 **Дизайн-джерело:** `docs/frontend/design/multi-user-select/` (канва з клікабельними артбордами).
 **Живий стенд:** `/playground/multi-user-select` в `apps/web`.
-**Код:** `apps/web/src/components/user-multi-select/`.
+**Код:** `apps/web/src/features/users/components/user-multi-select/`.
 
 ---
 

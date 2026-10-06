@@ -197,7 +197,10 @@ apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zus
                      Tailwind 4, react-hook-form, shadcn/ui on Base UI, react-i18next.
                      Two-level nav shell (`AppRail` + `AreaSidebar`, docs/frontend/app-shell.md):
                      areas Workspace / Calendar / Chat / Settings (ADMIN) / Playground / Guide,
-                     plus User settings (entry via avatar menu). Context panel (third column,
+                     plus User settings (entry via avatar menu). Code is grouped by module in
+                     `src/features/<module>/` (pages, components, stores…); outside it only the
+                     shell, shared components/lib, api client, i18n and composition roots
+                     (`router.tsx`, `slot-fills.ts`). Context panel (third column,
                      `libs/ui`) is the default surface for record detail — prefer it over
                      `Sheet` unless the interaction is a dismiss-and-forget overlay.
 apps/platform-web    Same stack/shell pattern as apps/web (:5174, proxy → :3002). Areas:

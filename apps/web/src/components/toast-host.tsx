@@ -5,8 +5,8 @@ import {
   ToastProvider,
   ToastViewport,
 } from '@saas-skeleton/ui/components/ui/toast';
-import { notificationManager } from '../realtime/notification-toast';
-import { NotificationToastList } from './notifications/notification-toast-item';
+import { notificationManager } from '../features/notifications/realtime/notification-toast';
+import { NotificationToastList } from '../features/notifications/components/notification-toast-item';
 
 const GUEST_PATHS = ['/login'];
 

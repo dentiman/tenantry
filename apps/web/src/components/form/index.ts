@@ -18,4 +18,4 @@ export {
 } from '@saas-skeleton/ui/components/form';
 export type { FormSelectOption } from '@saas-skeleton/ui/components/form';
 export { FormPhoneField } from './form-phone-field';
-export { FormUserSelect } from './form-user-select';
+export { FormUserSelect } from '../../features/users/components/form-user-select';

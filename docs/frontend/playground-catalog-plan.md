@@ -16,16 +16,16 @@
 
 Живі файли — джерело істини для патерну, точніше за будь-який опис нижче:
 
-- `apps/web/src/pages/playground-tabs.tsx` — **еталонна сторінка**, писана саме як шаблон для
+- `apps/web/src/features/playground/pages/playground-tabs.tsx` — **еталонна сторінка**, писана саме як шаблон для
   решти каталогу (варіанти/розміри через пропси, секція «Real usage» з посиланням на реальні
   місця застосування, API-таблиця, origin-бейдж).
-- `apps/web/src/pages/playground.tsx` — сторінка Buttons (перенесена в
+- `apps/web/src/features/playground/pages/playground.tsx` — сторінка Buttons (перенесена в
   `/playground/components/buttons`, була раніше індексом усього Playground).
-- `apps/web/src/pages/playground-user-select.tsx` — сторінка User select
+- `apps/web/src/features/playground/pages/playground-user-select.tsx` — сторінка User select
   (`/playground/components/user-select`), Platform Component.
-- `apps/web/src/components/playground/showcase.tsx` — спільні `ShowcaseCard`, `ExampleTile`,
+- `apps/web/src/features/playground/components/showcase.tsx` — спільні `ShowcaseCard`, `ExampleTile`,
   `ValueReadout`. Використовуйте їх, не пишіть свій каркас картки.
-- `apps/web/src/app-shell/areas/playground-sidebar.tsx` — навігація: `Collapsible` (Base UI,
+- `apps/web/src/features/playground/playground-sidebar.tsx` — навігація: `Collapsible` (Base UI,
   **не Radix** — дивіться коментарі в файлі й нижче) + дві `SidebarMenuSub` із підписами
   `ComponentsSubgroupLabel` між ними.
 - `apps/web/src/router.tsx` — роути `playgroundRoute` і нижче: `playgroundIndexRoute`
@@ -69,10 +69,10 @@
    `Playground*` імпортів) + `createRoute({ getParentRoute: () => playgroundComponentsRoute,
 path: '<slug>', component: <PageComponent> })` + додати змінну в масив
    `playgroundComponentsRoute.addChildren([...])`.
-3. **`apps/web/src/app-shell/areas/playground-sidebar.tsx`** — `SidebarMenuSubItem` із
+3. **`apps/web/src/features/playground/playground-sidebar.tsx`** — `SidebarMenuSubItem` із
    `SidebarMenuSubButton render={<Link to="/playground/components/<slug>" />}` у потрібній
    підгрупі (`General`/`Platform`), `isActive={pathname === '/playground/components/<slug>'}`.
-4. **Новий файл `apps/web/src/pages/playground-<slug>.tsx`** — див. розділ 4 нижче за
+4. **Новий файл `apps/web/src/features/playground/pages/playground-<slug>.tsx`** — див. розділ 4 нижче за
    структуру вмісту. Заголовок сторінки завжди `t('title')` (загальний «Component
    playground», НЕ назва компонента — так усі стенди залишаються однією «книгою»), origin- і
    eyebrow-бейджі поруч, `PageBreadcrumbs` триrівневі:
@@ -189,7 +189,7 @@ Origin визначено перевіркою `grep -rl "ЛОКАЛЬНА ПР�
 
 | Стенд                    | Компоненти                                                                                                                           | Slug                | Origin | Нотатка                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ~~User select~~          | `user-multi-select/*`                                                                                                                | `user-select`       | custom | **Частково зроблено** — Inline/Stacked multi-select уже є. **Розширити** (не нова сторінка): додати третій `Stand` для одиночного `UserSelect` (`apps/web/src/components/user-select.tsx`) — той самий `Combobox`-фундамент, лише `value: string \| null`. Оновіть `userSelect.description` в локалі, щоб згадати всі три форми.                                                                                                                                                                                         |
+| ~~User select~~          | `user-multi-select/*`                                                                                                                | `user-select`       | custom | **Частково зроблено** — Inline/Stacked multi-select уже є. **Розширити** (не нова сторінка): додати третій `Stand` для одиночного `UserSelect` (`apps/web/src/features/users/components/user-select.tsx`) — той самий `Combobox`-фундамент, лише `value: string \| null`. Оновіть `userSelect.description` в локалі, щоб згадати всі три форми.                                                                                                                                                                                         |
 | **Presence & last seen** | `presence-dot.tsx` (`PresenceDot`/`UserPresenceBadge`), `last-seen.tsx`                                                              | `presence`          | custom | Обидва — тонкі споживачі `usePresence()`/realtime; документовані разом і в `docs/realtime.md`/`docs/realtime-internals.md` (розділ «Last seen»). Стенд: crapка на аватарі (online/offline/unknown — БЕЗ крапки для offline, це свідоме правило з CLAUDE.md), рядок `LastSeen` з форматами (`Online` / `Last seen 5 minutes ago` з тултипом абсолютної дати / `Never signed in`). Живих даних presence у Playground не буде (немає сокета в стенді) — зробіть контрольовані пропси/фейкові значення, поясніть це в описі. |
 | **Phone number**         | `phone-number.tsx`, `form/form-phone-field.tsx` (+ `form/phone/country-select.tsx`)                                                  | `phone-number`      | custom | `libphonenumber-js` + `country-flag-icons` (єдине місце в продукті, де це є — див. `ui-stack.md`: «Власного components/ui немає; локальним лишилось телефонне поле»). Стенд: голе відображення (`PhoneNumber`) + форма-поле з вибором країни.                                                                                                                                                                                                                                                                            |
 | **Notification Center**  | `notifications/notification-bell.tsx`, `-card.tsx`, `-item.tsx`, `-message.tsx`, `-panel.tsx`, `-toast-item.tsx`, `-preferences.tsx` | `notifications`     | custom | Ціла фіча-родина (`docs/notifications.md`) — ОДНА сторінка, кілька `ShowcaseCard`: дзвінок+бейдж, `NotificationCard` у трьох станах (непрочитане/прочитане/згорнута група), `NotificationPanel` із табами (дивіться `tabs.tsx` `size="sm"` — той самий стенд можна прямо процитувати як «ще один реальний usage Tabs»), тост-варіант, форма преференцій. Дані — фейковий масив у стенді, не реальний сокет.                                                                                                              |

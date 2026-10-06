@@ -1,10 +1,10 @@
 import { fillSlot, type SlotFill } from './lib/slots';
 import { shellHeaderActions, shellSidePanels } from './app-shell/slots';
-import { dashboardWidgets } from './components/dashboard/slots';
-import { customerOverviewCards } from './components/customer-detail-slots';
-import { AiHeaderAction, AiSidePanel } from './components/ai/ai-shell-fills';
-import { DashboardAgendaWidget } from './components/calendar/dashboard-agenda-widget';
-import { CustomerEventsCard } from './components/calendar/customer-events-card';
+import { dashboardWidgets } from './features/dashboard/components/slots';
+import { customerOverviewCards } from './features/customers/customer-detail-slots';
+import { AiHeaderAction, AiSidePanel } from './features/ai/components/ai-shell-fills';
+import { DashboardAgendaWidget } from './features/calendar/components/dashboard-agenda-widget';
+import { CustomerEventsCard } from './features/calendar/components/customer-events-card';
 
 /**
  * Composition root слотів (docs/modules.md §4–§5): ЄДИНЕ місце, що знає, яка фіча
