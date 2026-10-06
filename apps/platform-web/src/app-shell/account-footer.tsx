@@ -13,7 +13,7 @@ import {
 import { SidebarMenuButton, useSidebar } from '@saas-skeleton/ui/components/ui/sidebar';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { platformAuthLogout } from '../api/generated/api';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../features/auth/stores/auth.store';
 
 /** Плейсхолдер — версія самого застосунку, `package.json` кореня монорепо */
 const APP_VERSION = '0.0.1';

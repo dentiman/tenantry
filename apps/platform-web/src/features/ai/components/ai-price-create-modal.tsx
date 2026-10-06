@@ -19,7 +19,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/dialog';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
-import { getAiCostsListPricesQueryKey, useAiCostsCreatePrice } from '../api/generated/api';
+import { getAiCostsListPricesQueryKey, useAiCostsCreatePrice } from '../../../api/generated/api';
 
 /**
  * Форма — рядки, як їх друкує людина: порожнє поле кешу означає «окремої ціни немає», а

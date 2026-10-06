@@ -43,8 +43,8 @@ import {
   useAiSettingsGet,
   useAiSettingsReveal,
   useAiSettingsUpdate,
-} from '../api/generated/api';
-import { ContentSection } from '../components/section/content-section';
+} from '../../../api/generated/api';
+import { ContentSection } from '../../../components/section/content-section';
 
 /**
  * Форма — не контракт напряму: «з env» тут окреме значення селекта, а порожній рядок

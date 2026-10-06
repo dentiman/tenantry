@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { ThemeSelect } from '@saas-skeleton/ui/components/theme-select';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
-import { ContentSection } from '../../components/section/content-section';
+import { ContentSection } from '../../../components/section/content-section';
 
 /** Дзеркало `apps/web/src/pages/user-settings/appearance.tsx` — тема живе в localStorage, у БД її немає */
 export function UserSettingsAppearancePage() {

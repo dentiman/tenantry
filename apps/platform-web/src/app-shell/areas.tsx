@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
 import { Activity, Bot, Building2, UserCog, type LucideIcon } from 'lucide-react';
 import { isUnder, type AreaPrefix } from './paths';
-import { OperationsSidebar } from './areas/operations-sidebar';
-import { AiSidebar } from './areas/ai-sidebar';
-import { TenantsSidebar } from './areas/tenants-sidebar';
-import { UserSettingsSidebar } from './areas/user-settings-sidebar';
+import { OperationsSidebar } from '../features/messaging/operations-sidebar';
+import { AiSidebar } from '../features/ai/ai-sidebar';
+import { TenantsSidebar } from '../features/tenants/tenants-sidebar';
+import { UserSettingsSidebar } from '../features/account/user-settings-sidebar';
 
 export type AreaId = 'tenants' | 'operations' | 'ai' | 'user-settings';
 

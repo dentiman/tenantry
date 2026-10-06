@@ -4,8 +4,8 @@ import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { formatDateTime } from '@saas-skeleton/ui/lib/format';
-import { usePlatformAuthMe } from '../../api/generated/api';
-import { ContentSection } from '../../components/section/content-section';
+import { usePlatformAuthMe } from '../../../api/generated/api';
+import { ContentSection } from '../../../components/section/content-section';
 
 /** Рядок «підпис → значення» — та сама форма, що на картці тенанта */
 function Fact({ label, value }: { label: string; value: string }) {

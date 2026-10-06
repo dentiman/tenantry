@@ -205,7 +205,7 @@ apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zus
                      `Sheet` unless the interaction is a dismiss-and-forget overlay.
 apps/platform-web    Same stack/shell pattern as apps/web (:5174, proxy → :3002). Areas:
                      Tenants, Operations (Jobs/Queues), AI (settings, costs, prices), User
-                     settings. No org-level Settings — the platform itself is the subject.
+                     settings. No org-level Settings — the platform itself is the subject. Same `src/features/<module>/` grouping, one `<module>.routes.tsx` per module.
 libs/contracts       Zod 4 schemas + z.infer types — the only source of truth for API types.
                      Platform contracts live under the `/platform` subpath, not re-exported
                      from the root (needs an explicit `exports` entry in package.json — Vite/

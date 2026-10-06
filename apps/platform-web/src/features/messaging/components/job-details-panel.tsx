@@ -9,7 +9,7 @@ import {
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
-import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
+import type { JobListResponseDtoOutputItemsItem } from '../../../api/generated/model/jobListResponseDtoOutputItemsItem';
 
 const stateVariant: Record<
   JobState,

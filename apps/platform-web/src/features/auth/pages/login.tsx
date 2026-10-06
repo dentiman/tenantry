@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PlatformLoginSchema, type PlatformLogin } from '@saas-skeleton/contracts/platform';
-import { usePlatformAuthLogin } from '../api/generated/api';
+import { usePlatformAuthLogin } from '../../../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 import {
   applyServerError,

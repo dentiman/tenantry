@@ -1,5 +1,5 @@
 import type { PlatformUserResponse } from '@saas-skeleton/contracts/platform';
-import { axiosInstance, refreshTokens } from '../api/http-client';
+import { axiosInstance, refreshTokens } from '../../../api/http-client';
 import { useAuthStore } from '../stores/auth.store';
 
 /** Ключ попередньої схеми (MVP MT-3, до AUTH-2) — access-токен у cookie/пам'яті тепер */

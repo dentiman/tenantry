@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { CreateTenantSchema, type CreateTenant } from '@saas-skeleton/contracts/platform';
-import { getTenantsFindAllQueryKey, useTenantsCreate } from '../api/generated/api';
+import { getTenantsFindAllQueryKey, useTenantsCreate } from '../../../api/generated/api';
 import {
   applyServerError,
   FormPasswordField,

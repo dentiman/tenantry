@@ -37,7 +37,7 @@ import {
   getTenantsFindOneQueryKey,
   useTenantsFindOne,
   useTenantsUpdate,
-} from '../api/generated/api';
+} from '../../../api/generated/api';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 

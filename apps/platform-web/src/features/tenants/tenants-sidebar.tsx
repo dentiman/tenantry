@@ -1,6 +1,6 @@
 import { Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AreaNav } from '../area-nav';
+import { AreaNav } from '../../app-shell/area-nav';
 
 /**
  * Друга колонка area «Tenants» — клієнти платформи.

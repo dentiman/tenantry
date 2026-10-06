@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { JobState } from '@saas-skeleton/contracts';
-import { useJobsFindAll, useJobsQueues } from '../api/generated/api';
-import type { JobListResponseDtoOutputItemsItem } from '../api/generated/model/jobListResponseDtoOutputItemsItem';
+import { useJobsFindAll, useJobsQueues } from '../../../api/generated/api';
+import type { JobListResponseDtoOutputItemsItem } from '../../../api/generated/model/jobListResponseDtoOutputItemsItem';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
-import type { JobsSearch } from '../router';
+import type { JobsSearch } from '../messaging.routes';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridColumn,

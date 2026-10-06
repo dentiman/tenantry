@@ -9,7 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
-import { useJobsQueues } from '../api/generated/api';
+import { useJobsQueues } from '../../../api/generated/api';
 
 // Той самий інтервал, що на /operations/jobs — сторінки моніторингу оновлюються самі
 const REFETCH_INTERVAL_MS = 5000;

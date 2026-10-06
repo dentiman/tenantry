@@ -8,9 +8,9 @@ import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
-import { useAiCostsPriceHistory } from '../api/generated/api';
-import type { AiModelPriceListResponseDtoOutputItemsItem } from '../api/generated/model/aiModelPriceListResponseDtoOutputItemsItem';
-import { formatPrice, formatTokens } from '../lib/money';
+import { useAiCostsPriceHistory } from '../../../api/generated/api';
+import type { AiModelPriceListResponseDtoOutputItemsItem } from '../../../api/generated/model/aiModelPriceListResponseDtoOutputItemsItem';
+import { formatPrice, formatTokens } from '../../../lib/money';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (

@@ -18,12 +18,12 @@ import {
   getAiCostsListPricesQueryKey,
   useAiCostsListPrices,
   useAiCostsSyncPrices,
-} from '../api/generated/api';
-import type { AiModelPriceListResponseDtoOutputItemsItem } from '../api/generated/model/aiModelPriceListResponseDtoOutputItemsItem';
+} from '../../../api/generated/api';
+import type { AiModelPriceListResponseDtoOutputItemsItem } from '../../../api/generated/model/aiModelPriceListResponseDtoOutputItemsItem';
 import { AiPriceCreateModal } from '../components/ai-price-create-modal';
 import { AiPriceHistoryPanel } from '../components/ai-price-history-panel';
-import { formatPrice } from '../lib/money';
-import type { AiPricesSearch } from '../router';
+import { formatPrice } from '../../../lib/money';
+import type { AiPricesSearch } from '../ai.routes';
 
 type Price = AiModelPriceListResponseDtoOutputItemsItem;
 

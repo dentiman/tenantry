@@ -32,13 +32,13 @@ import {
 } from '@saas-skeleton/ui/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@saas-skeleton/ui/components/ui/tooltip';
-import { useAiCostsBreakdown, useAiCostsEvents, useAiCostsSummary } from '../api/generated/api';
-import { AiUsageEventListResponseDtoOutputItemsItemCostStatus as CostStatus } from '../api/generated/model/aiUsageEventListResponseDtoOutputItemsItemCostStatus';
-import { AiUsageEventListResponseDtoOutputItemsItemKind as UsageKind } from '../api/generated/model/aiUsageEventListResponseDtoOutputItemsItemKind';
-import type { AiUsageEventListResponseDtoOutputItemsItem } from '../api/generated/model/aiUsageEventListResponseDtoOutputItemsItem';
-import type { PlatformAiCostsBreakdownResponseDtoOutputItemsItem } from '../api/generated/model/platformAiCostsBreakdownResponseDtoOutputItemsItem';
-import { formatTokens, formatUsd } from '../lib/money';
-import { AI_COST_DIMENSIONS, AI_COST_PERIODS, AI_COST_VIEWS, type AiCostsSearch } from '../router';
+import { useAiCostsBreakdown, useAiCostsEvents, useAiCostsSummary } from '../../../api/generated/api';
+import { AiUsageEventListResponseDtoOutputItemsItemCostStatus as CostStatus } from '../../../api/generated/model/aiUsageEventListResponseDtoOutputItemsItemCostStatus';
+import { AiUsageEventListResponseDtoOutputItemsItemKind as UsageKind } from '../../../api/generated/model/aiUsageEventListResponseDtoOutputItemsItemKind';
+import type { AiUsageEventListResponseDtoOutputItemsItem } from '../../../api/generated/model/aiUsageEventListResponseDtoOutputItemsItem';
+import type { PlatformAiCostsBreakdownResponseDtoOutputItemsItem } from '../../../api/generated/model/platformAiCostsBreakdownResponseDtoOutputItemsItem';
+import { formatTokens, formatUsd } from '../../../lib/money';
+import { AI_COST_DIMENSIONS, AI_COST_PERIODS, AI_COST_VIEWS, type AiCostsSearch } from '../ai.routes';
 
 type Period = (typeof AI_COST_PERIODS)[number];
 type Dimension = (typeof AI_COST_DIMENSIONS)[number];

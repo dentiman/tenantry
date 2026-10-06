@@ -1,6 +1,6 @@
 import { Coins, Settings2, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AreaNav } from '../area-nav';
+import { AreaNav } from '../../app-shell/area-nav';
 
 /**
  * Друга колонка area «AI» — керування асистентом платформи (AI-5,

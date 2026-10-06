@@ -1,6 +1,6 @@
 import { LayoutGrid, ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AreaNav } from '../area-nav';
+import { AreaNav } from '../../app-shell/area-nav';
 
 /**
  * Друга колонка area «Operations» — машинерія системи (моніторинг черг).

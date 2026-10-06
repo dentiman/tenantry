@@ -5,14 +5,14 @@ import {
   getTenantsFindAllQueryKey,
   useTenantsFindAll,
   useTenantsUpdate,
-} from '../api/generated/api';
-import type { TenantListResponseDtoOutputItemsItem } from '../api/generated/model/tenantListResponseDtoOutputItemsItem';
+} from '../../../api/generated/api';
+import type { TenantListResponseDtoOutputItemsItem } from '../../../api/generated/model/tenantListResponseDtoOutputItemsItem';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { CreateTenantModal } from '../components/create-tenant-modal';
 import { TenantIdentity } from '../components/tenant-identity';
-import type { TenantsSearch } from '../router';
+import type { TenantsSearch } from '../tenants.routes';
 import { createDataGrid } from '@saas-skeleton/ui/components/data-grid';
 import type {
   DataGridColumn,

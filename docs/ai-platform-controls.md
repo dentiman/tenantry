@@ -230,7 +230,7 @@ cache_write + output × output + за_запит` (reasoning уже в output).
 | Embedding ingest | `knowledge/ingest/knowledge-ingestor.ts` (`result.inputTokens`), `ingest/postgres-ingest-store.ts` (`write()` у tenant-транзакції) | сума в CLI-виводі, у БД нічого |
 | Налаштування/модель | `ai-llm.module.ts` (`PlatformAiRuntime`, `AI_RUNTIME`), `platform/platform-ai-settings*.ts` | провайдер і модель на кожну генерацію — звідси ж провайдер для рядка журналу |
 | System-scope cron | `libs/shared/src/messaging/topology.ts` (`cron:`), `definitions/ai.messages.ts` (`scope: 'system'`), `apps/worker/src/subscribers/ai-purge-conversations.subscriber.ts` | патерн для добору вартості й синхронізації цін |
-| Control plane | `apps/platform-api/src/ai-settings/`, `apps/platform-web/src/pages/ai-settings.tsx`, area «AI» (`app-shell/areas/ai-sidebar.tsx`) | сюди — `Costs` і `Prices` |
+| Control plane | `apps/platform-api/src/ai-settings/`, `apps/platform-web/src/features/ai/pages/ai-settings.tsx`, area «AI» (`features/ai/ai-sidebar.tsx`) | сюди — `Costs` і `Prices` |
 | Ролі БД | `libs/database/scripts/ensure-roles.ts` (`CONTROL_PLANE_TABLES`) | нові таблиці control plane **треба** внести в список, інакше `db:roles` скасує REVOKE міграції |
 
 ### 6.2. Порядок робіт (пропозиція)
