@@ -126,11 +126,69 @@ messaging, сокет), а `socket-events` одразу каже про тран
 | _(нове)_ реєстрація хука                                                           | модуль chat у control plane `apps/platform-api/src/chat/`                |
 | сід                                                                                | кличе той самий провізіонер                                              |
 
-### Пізніше: маршрути
+### R3. Маршрути й вкладені лейаути — у роботі
 
-`apps/web/src/router.tsx` містить **визначення** 47 маршрутів, а не лише збирання дерева.
-Розбивати його окремо мало сенсу, а типізація TanStack Router при збиранні з частин — ризик.
-Робиться разом із переходом фронтенду на `features/<модуль>/`, щоб файли переїхали один раз.
+`apps/web/src/router.tsx` містить **визначення** 47 маршрутів, а не лише збирання дерева. Робиться
+разом із переходом фронтенду на `features/<модуль>/`, щоб файли переїхали один раз.
+
+**Як працює ієрархія.** Маршрут = компонент; дочірній маршрут рендериться в `<Outlet/>` батька
+(той самий механізм, що `<router-outlet>` в Angular). Маршрут без `component` прозорий — лише
+групує URL і тримає `beforeLoad` / `staticData`. Сусіди замінюють одне одного, діти вкладаються.
+Іменованих outlet-ів у TanStack Router немає: те, що сторінка кладе поза центральну область
+(хедер, права панель), іде порталами — `PageHeaderSlot`, `ContextPanelPortal`.
+
+**Правило розкладки.**
+
+1. **Маршрути модуля — у його теці**: `features/<модуль>/<модуль>.routes.tsx` — визначення
+   (`createRoute`, `validateSearch`, `beforeLoad`, `staticData`, search-схеми й їхні типи).
+2. **Дочірній маршрут імпортує батьківський з модуля нижче** — це звичайне ребро вниз за графом.
+   Маршрут фічі може висіти під чужим лейаутом: `settingsCalendarRoute` (календар) — під
+   `settingsRoute` (settings); білінг — під карткою клієнта.
+3. **Збирає дерево лише root `router.tsx`**: `addChildren` по всіх модулях — рядок на модуль.
+   Модуль нижче не знає, хто до нього причепився: про вкладку фічі на його екрані він дізнається
+   зі слота, а про маршрут — нічого.
+4. Типи (`Link to`, `useParams({ from })`, `useSearch`) TanStack Router виводить із зібраного
+   дерева — так само, як зараз в одному файлі: імпорт батьківського маршруту дає точний тип
+   батька. Фабрика `routes(parent)` потрібна лише там, де імпорт батька дав би цикл.
+
+**Приклад — фіча на картці клієнта** (білінг; першою за цим патерном іде вкладка подій календаря):
+
+```
+appRoute (AppShell)
+└─ /workspace
+   └─ customers/$customerId     CustomerDetailLayout: шапка + вкладки + <Outlet/>   ← customers
+      ├─ /                      огляд                                             ← customers
+      ├─ contacts               контакти                                          ← customers
+      └─ billing                CustomerBilling + <Outlet/>                       ← billing
+         ├─ /                   рахунки клієнта                                   ← billing
+         └─ invoices/$invoiceId рахунок усередині картки клієнта                  ← billing
+```
+
+```tsx
+// features/customers/customers.routes.tsx — модуль нижче, про білінг не знає
+export const customerDetailRoute = createRoute({
+  getParentRoute: () => workspaceRoute,
+  path: 'customers/$customerId',
+  component: CustomerDetailLayout, // <CustomerHeader/> <SlotOutlet slot={customerDetailTabs}/> <Outlet/>
+});
+// features/customers/customer-detail-slots.ts
+export const customerDetailTabs = defineSlot<{ customerId: string }>('customers.detail-tabs');
+
+// features/billing/billing.routes.tsx — фіча, ребро billing → customers
+export const customerBillingRoute = createRoute({
+  getParentRoute: () => customerDetailRoute,
+  path: 'billing',
+  component: CustomerBilling,
+});
+
+// router.tsx — composition root
+customerDetailRoute.addChildren([customerOverviewRoute, customerContactsRoute, customerBillingRoute]);
+// slot-fills.ts
+fillSlot(customerDetailTabs, 'billing', BillingTab);
+```
+
+Прибрати фічу з форку = прибрати її рядок у `router.tsx` і `slot-fills.ts`; вкладка зникає, URL
+перестає існувати, а забуте типізоване посилання ламає компіляцію.
 
 ## 3. Свідомо лишаємо центральними
 
@@ -152,7 +210,7 @@ messaging, сокет), а `socket-events` одразу каже про тран
 1. **R1** — сповіщення й активності + тексти екранів фіч.
 2. **R2** — події сокета.
 3. **R6** — провізіонер дефолтного каналу.
-4. **Маршрути** — разом із переходом на `features/` (не зараз).
+4. **R3 Маршрути** — разом із переходом фронтенду на `features/` (у роботі з 2026-10-06).
 
 Кожен крок — окремий коміт; `pnpm lint`, `pnpm typecheck` і `bash scripts/ci-verify.sh` зелені;
 після кроку рядок переїжджає в `docs/modules.md` §7 «закрито».
