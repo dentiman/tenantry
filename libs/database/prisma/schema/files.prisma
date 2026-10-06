@@ -1,0 +1,56 @@
+// Файлова підсистема (Files v1): метадані об'єктів S3-сховища.
+// Байти живуть у S3 (dev: SeaweedFS), тут — тільки метадані і статус двофазного upload-у:
+// PENDING (виданий presigned PUT, байтів може ще не бути) → READY (complete підтвердив HeadObject).
+// PENDING старші за поріг прибирає cron files.cleanup-orphans (S3-об'єкт + рядок).
+model File {
+  id           String     @id @default(uuid())
+  tenantId     String     @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  // Ключ у бакеті: {tenantId}/{yyyy}/{mm}/{uuid}[.ext] — НЕ оригінальна назва (MT-1: tenant-префікс)
+  key          String     @unique
+  filename     String
+  mimeType     String     @map("mime_type")
+  size         Int
+  status       FileStatus @default(PENDING)
+  // Мініатюра зображення (worker, sharp); для не-зображень завжди null
+  thumbnailKey String?    @map("thumbnail_key")
+  uploadedById String?    @map("uploaded_by_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // FK не композитний: onDelete SetNull (див. коментар у User.avatarFile)
+  uploadedBy  User?        @relation("UploadedFiles", fields: [uploadedById], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  avatarOf    User[]       @relation("UserAvatar")
+
+  // Опора для композитних FK (attachments)
+  @@unique([tenantId, id])
+  @@index([tenantId, status, createdAt])
+  // Глобальний індекс для системного cron-у cleanup-orphans (BYPASSRLS, шукає PENDING по всіх тенантах)
+  @@index([status, createdAt])
+  @@map("files")
+}
+
+enum FileStatus {
+  PENDING
+  READY
+}
+
+// Універсальна прив'язка файлу до доменної сутності (customers/tickets у майбутніх фазах).
+// Полиморфний (entityType — рядок), тому без FK на сутність; цілісність — відповідальність домену.
+model Attachment {
+  id         String   @id @default(uuid())
+  tenantId   String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  fileId     String   @map("file_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: attachment не може вказати на файл чужого tenant-а
+  file   File   @relation(fields: [tenantId, fileId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, fileId, entityType, entityId])
+  @@index([tenantId, entityType, entityId])
+  @@map("attachments")
+}

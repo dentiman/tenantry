@@ -207,7 +207,8 @@ libs/contracts       Zod 4 schemas + z.infer types — the only source of truth 
                      Platform contracts live under the `/platform` subpath, not re-exported
                      from the root (needs an explicit `exports` entry in package.json — Vite/
                      Rollup resolves workspace subpaths through `exports`, not tsconfig paths).
-libs/database        Prisma 7 (adapter-pg): schema, migrations, seed. `src/tenant/` —
+libs/database        Prisma 7 (adapter-pg): schema (one file per module in `prisma/schema/`), migrations,
+                     seed. `src/tenant/` —
                      TenancyModule, TenantContextService (CLS), TenantTransactions.withTenantTx,
                      the tenant Prisma extension (set_config). SystemPrismaService = BYPASSRLS,
                      for control-plane and system-scope cron only.
@@ -395,7 +396,8 @@ The rules most easily broken:
     the target DB **and** `template1` (Prisma's shadow DB); the migration only checks for it and
     `saas_migrator` is never elevated. Migrations cannot `UPDATE` tenant rows (FORCE RLS applies
     to the owner too) — backfill through `ADD COLUMN … DEFAULT` or a STORED generated column,
-    and mirror a generated expression in `schema.prisma` as `@default(dbgenerated(...))`, or
+    and mirror a generated expression in the Prisma schema (`prisma/schema/<module>.prisma`) as
+    `@default(dbgenerated(...))`, or
     `migrate diff` proposes dropping it.
 18. Embedding calls follow the model rule: never inside a DB transaction. The worker's
     `prepare()` is read → knowledge selection → `claim()`, three separate steps (§18 of

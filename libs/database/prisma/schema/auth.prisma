@@ -1,0 +1,139 @@
+/// AUTH-1: сесія = ПРИСТРІЙ, а не рядок refresh-токена. Раніше ротація робила
+/// delete+create з новим id, тож «сесія» як сутність, яку можна показати в списку
+/// і вибірково вбити, у моделі просто не існувала. Тепер id стабільний (він же
+/// `sid` у access-токені й середній сегмент refresh-токена), а ротація міняє лише
+/// секрет — список пристроїв і точковий revoke стають можливими.
+model AuthSession {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+
+  /// `sha256:<hex>` — секрет має 256 біт ентропії, розтягувати його argon2 нічого не
+  /// дає (перебір неможливий за побудовою), а ротація на кожен refresh робила б
+  /// ~100 мс CPU на запит. `argon2:<phc>` — рядки, перенесені міграцією зі старої
+  /// таблиці; перша ж успішна ротація переписує їх на `sha256:`.
+  tokenHash String @map("token_hash")
+
+  /// Попереднє покоління секрету. Живе вікном (константа в AuthSessionService) від
+  /// `prevRotatedAt`: два паралельні запити з однієї вкладки (або обірваний на
+  /// пів-дорозі refresh) не мусять виглядати як крадіжка токена.
+  prevTokenHash String?   @map("prev_token_hash")
+  prevRotatedAt DateTime? @map("prev_rotated_at")
+  generation    Int       @default(0)
+
+  issuedAt          DateTime @default(now()) @map("issued_at")
+  lastUsedAt        DateTime @default(now()) @map("last_used_at")
+  /// Посувається кожною ротацією — «сесія жива, поки нею користуються»
+  idleExpiresAt     DateTime @map("idle_expires_at")
+  /// Рахується від `issuedAt` і НЕ посувається: стеля життя пристрою
+  absoluteExpiresAt DateTime @map("absolute_expires_at")
+
+  /// Рядок лишається після відкликання (на відміну від старого `delete`): без нього
+  /// неможливо відрізнити «сесії ніколи не було» від «її щойно вбили» — а саме на
+  /// цій різниці стоїть reuse-detection
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason")
+
+  userAgent   String? @map("user_agent")
+  ip          String?
+  /// parseUserAgent(userAgent) — ключ, за яким вхід визначається як «новий пристрій»
+  deviceLabel String? @map("device_label")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: сесія не може вказати на юзера чужого tenant-а (FK-перевірки обходять RLS)
+  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([tenantId, idleExpiresAt])
+  @@map("auth_sessions")
+}
+
+/// AUTH-3: одноразові посилання (скидання пароля, зміна email). Одна таблиця на всі
+/// призначення (`purpose`) замість окремої на кожне — стани й механіка споживання
+/// (атомарний умовний UPDATE) однакові, різниться лише payload.
+model VerificationToken {
+  id       String              @id @default(uuid())
+  tenantId String              @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String              @map("user_id")
+  purpose  VerificationPurpose
+
+  /// `sha256:<hex>` — секрет 256 біт ентропії, той самий протокол, що в auth_sessions
+  tokenHash String @map("token_hash")
+
+  /// `EMAIL_CHANGE` → `{ newEmail }`; інші purpose payload не потребують
+  payload Json @default("{}")
+
+  /// `now + 60 хв` (константа VerificationTokenService)
+  expiresAt DateTime  @map("expires_at")
+  /// ≠ null → використано; атомарний умовний UPDATE ставить це поле
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  createdIp String?   @map("created_ip")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, userId, purpose])
+  @@map("verification_tokens")
+}
+
+enum VerificationPurpose {
+  PASSWORD_RESET
+  EMAIL_CHANGE
+  /// Флоу немає в цій фазі — резерв на інвайти майбутнього MT-4
+  INVITE
+}
+
+// MT-3: identity CONTROL PLANE (apps/platform-api) — оператори платформи.
+// СВІДОМО окрема від users: інший login-флоу, інший JWT-secret, без tenant_id.
+// Доступ ТІЛЬКИ ролі saas_platform (міграція робить REVOKE від saas_app —
+// tenant-api цю таблицю навіть прочитати не може).
+model PlatformUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String   @map("password_hash")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  authSessions PlatformAuthSession[]
+
+  @@map("platform_users")
+}
+
+/// AUTH-2: дзеркало `AuthSession` у control plane (план §3.4) — «чесна копія», а не
+/// спільне ядро: різні Prisma-моделі й формат токена (без tenant-префікса), третього
+/// споживача механіки немає (конституція VIII). БЕЗ `tenant_id` і БЕЗ RLS —
+/// `platform_users` живуть поза tenant-ізоляцією, як і сама таблиця; міграція робить
+/// `REVOKE ALL … FROM saas_app`, як для `platform_users`.
+model PlatformAuthSession {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// `sha256:<hex>` — той самий протокол ротації, що в tenant-плані; тут перенесення
+  /// зі старих `argon2:`-рядків не потрібне (control plane refresh-механіки не мав)
+  tokenHash String @map("token_hash")
+
+  prevTokenHash String?   @map("prev_token_hash")
+  prevRotatedAt DateTime? @map("prev_rotated_at")
+  generation    Int       @default(0)
+
+  issuedAt          DateTime @default(now()) @map("issued_at")
+  lastUsedAt        DateTime @default(now()) @map("last_used_at")
+  idleExpiresAt     DateTime @map("idle_expires_at")
+  absoluteExpiresAt DateTime @map("absolute_expires_at")
+
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason")
+
+  userAgent   String? @map("user_agent")
+  ip          String?
+  deviceLabel String? @map("device_label")
+
+  user PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([idleExpiresAt])
+  @@map("platform_auth_sessions")
+}

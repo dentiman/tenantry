@@ -1,0 +1,123 @@
+// Кастомер (контрагент) — базова доменна сутність скелетона (docs/customers.md).
+// Одна сутність із дискримінатором kind замість party-моделі (SAP BP / Odoo res.partner):
+// party правильна для ERP із кількома типами контрагентів, і Customer → Party мігрується
+// перейменуванням, коли зʼявиться другий тип. Наперед — рівень непрямості без споживача.
+model Customer {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  // Людський ідентифікатор — ЦІЛЕ число, своє в кожного тенанта. Видає сервер
+  // із number_sequences, НЕ змінюється і не перевикористовується. Префікс і нулі
+  // (`C-000123`) — presentation з number_series, а не частина ідентичності:
+  // інакше зміна формату вимагала б переписати всі рядки
+  number Int
+  kind   CustomerKind   @default(ORGANIZATION)
+  // ARCHIVED замість soft delete: «коли і хто» — питання до activities, тому
+  // окремої колонки archived_at немає (вона б розійшлася зі status)
+  status CustomerStatus @default(ACTIVE)
+
+  // Робоча назва (те, що в гріді). НЕ унікальна: жорсткий констрейнт дає
+  // «ТОВ Ромашка 2» замість правильного запису; дублікати ловить merge (беклог)
+  name      String
+  legalName String? @map("legal_name")
+
+  // Канали рівня організації; персональні — у контактних осіб
+  email        String?
+  phone        String?
+  phoneCountry String? @map("phone_country") @db.Char(2)
+  website      String?
+
+  // VAT / ЄДРПОУ / EIN — рядок як прийшов: формати і контрольні суми різні в кожній
+  // країні і змінюються, валідація тут = відхилений валідний номер клієнта
+  taxId String? @map("tax_id")
+
+  // Валюта розрахунків (ISO 4217) — потрібна ДО білінгу: без неї не показати суми
+  currency String @default("USD") @db.Char(3)
+  // Мова листів ДО КАСТОМЕРА (аналог SPRAS у SAP KNA1), не локаль співробітника
+  locale   String @default("en")
+
+  // Відповідальний менеджер. NULL — «нічий», легальний стан.
+  // FK НЕ композитний — та сама причина, що в User.avatarFile: Prisma не вміє
+  // SET NULL з переліком колонок і занулила б заодно tenant_id. Захист — RLS
+  ownerId String? @map("owner_id")
+
+  // Id у системі-джерелі: ключ ідемпотентності імпорту (повторний запуск оновлює,
+  // а не дублює) і зчеплення з інтеграцією
+  externalId String? @map("external_id")
+
+  tags  String[] @default([])
+  notes String?
+
+  // Адреса V1 — колонки, не окрема таблиця (docs/customers.md §4.3).
+  // Коли зʼявляться документи, вони копіюють адресу В СЕБЕ на момент виставлення:
+  // рахунок не має мінятися від того, що клієнт переїхав
+  addressLine1 String? @map("address_line1")
+  addressLine2 String? @map("address_line2")
+  city         String?
+  region       String?
+  postalCode   String? @map("postal_code")
+  country      String? @db.Char(2)
+
+  // Снапшот автора; без FK — юзера можуть видалити, запис лишається
+  createdById String? @map("created_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner          User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts       CustomerContact[]
+
+  // calendar — зворотний звʼязок фічі (docs/modules.md): зустрічі й дзвінки з цим
+  // контрагентом, блок «Upcoming» на картці + стрічка
+  calendarEvents CalendarEvent[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, externalId])
+  // Опора під композитні FK майбутніх модулів (tickets/invoices → customer)
+  @@unique([tenantId, id])
+  @@index([tenantId, status, createdAt(sort: Desc), id])
+  @@index([tenantId, ownerId])
+  @@map("customers")
+}
+
+enum CustomerKind {
+  ORGANIZATION
+  PERSON
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+// Контактна особа кастомера. Вкладена сутність (не самостійний Contact, як у
+// Salesforce): не існує без кастомера, і доступ до неї = доступ до нього.
+model CustomerContact {
+  id         String @id @default(uuid())
+  tenantId   String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  customerId String @map("customer_id")
+
+  name         String
+  position     String?
+  email        String?
+  phone        String?
+  phoneCountry String? @map("phone_country") @db.Char(2)
+  // Рівно один основний на кастомера — гарантує ЧАСТКОВИЙ унікальний індекс
+  // (сирим SQL у міграції: Prisma часткові індекси не вміє). Перевірка в сервісі
+  // програла б гонці двох вкладок
+  isPrimary    Boolean @default(false) @map("is_primary")
+  notes        String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: контакт не може вказати на кастомера чужого тенанта
+  customer Customer @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, customerId])
+  @@map("customer_contacts")
+}

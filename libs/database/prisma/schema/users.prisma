@@ -1,0 +1,76 @@
+// Base user model for the CRM template
+model User {
+  id           String    @id @default(uuid())
+  // MT-1: заповнюється DB-default-ом current_setting('app.tenant_id') — доменний код його НЕ передає
+  tenantId     String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  email        String
+  name         String?
+  passwordHash String?   @map("password_hash")
+  role         Role      @default(USER)
+  isActive     Boolean   @default(true) @map("is_active")
+  // I18N-3: локаль для server-rendered тексту (email); UI-перемикач мови — I18N-4
+  locale       String    @default("en")
+  // Календар: IANA-зона юзера (docs/calendar.md §6.1). NULL = «як в організації»
+  // (settings.calendar.timeZone). Окремо від locale свідомо: локаль задає ФОРМАТ,
+  // зона — який саме це момент; людина в Берліні з англійським UI — норма
+  timeZone     String?   @map("time_zone")
+  // Телефон завжди в E.164 (валідує PhoneNumberSchema в contracts). phoneCountry потрібен
+  // окремо, бо за кодом країни номер не відновлюється однозначно: +1 — це US, CA і десяток
+  // карибських країн, і без збереженого вибору UI показав би не той прапор при редагуванні
+  phone        String?
+  phoneCountry String?   @map("phone_country") @db.Char(2)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  // Демо-споживач файлової підсистеми (Files v1)
+  avatarFileId String?   @map("avatar_file_id")
+  // RT-3: найпізніший момент, коли система ТОЧНО знала про живе socket-зʼєднання юзера
+  // (high-water mark, а НЕ «момент дисконекту»: у режимах відмов дисконект не настає
+  // взагалі). NULL — жодного разу не підключався. Пишеться ТІЛЬКИ presence-шаром
+  // (LastSeenWriter) сирим UPDATE-ом — Prisma-update підняв би @updatedAt і сесія
+  // виглядала б як редагування профілю. З доменного коду не чіпати.
+  lastSeenAt   DateTime? @map("last_seen_at")
+
+  tenant                  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  authSessions            AuthSession[]
+  verificationTokens      VerificationToken[]
+  // Персональний інбокс (docs/notifications.md): іде разом із юзером — це його
+  // особисті дані, а не журнал (журнал — activities, він переживає видалення)
+  notifications           Notification[]            @relation("NotificationRecipient")
+  notificationState       NotificationState?        @relation("NotificationState")
+  notificationPreferences NotificationPreference[]  @relation("NotificationPreference")
+  // FK НЕ композитний свідомо: onDelete SetNull з композитним FK занулив би і tenant_id
+  // (Prisma не вміє SET NULL з переліком колонок). Крос-tenant захист — RLS на обох таблицях.
+  avatarFile              File?                     @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  uploadedFiles           File[]                    @relation("UploadedFiles")
+  scheduledNotifications  ScheduledNotification[]   @relation("ScheduledNotificationRecipient")
+
+  // Зворотні звʼязки модулів-фіч (docs/modules.md) — згруповані, щоб видалення фічі з
+  // форку прибирало одну групу; `prisma validate` покаже, чого бракує
+  // customers
+  ownedCustomers          Customer[]                @relation("CustomerOwner")
+
+  // calendar
+  organizedEvents         CalendarEvent[]           @relation("CalendarEventOwner")
+  eventAttendances        CalendarEventAttendee[]
+  calendarReminders       CalendarReminder[]
+
+  // chat
+  conversationMemberships ConversationParticipant[]
+  chatMessages            ChatMessage[]             @relation("ChatMessageSender")
+
+  // ai
+  aiConversations         AiConversation[]          @relation("AiConversationOwner")
+  aiUsageCounters         AiUsageCounter[]          @relation("AiUsageCounterOwner")
+
+  // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
+  @@unique([tenantId, email])
+  // Опора для композитних FK з інших таблиць
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt])
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  USER
+}

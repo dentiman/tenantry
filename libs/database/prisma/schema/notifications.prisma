@@ -1,0 +1,125 @@
+// Персональний інбокс користувача (docs/notifications.md). На відміну від Activity —
+// рядок МУТАБЕЛЬНИЙ: read_at/archived_at/колапс. Текст не зберігається: type + payload,
+// рендерить фронт через i18next (та сама i18n-доктрина, що в activities).
+model Notification {
+  id          String    @id @default(uuid())
+  tenantId    String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  // Кому. NOT NULL завжди: broadcast без отримувача — поза скопом V1
+  recipientId String    @map("recipient_id")
+  // Закритий enum у контрактах (NOTIFICATION_TYPES); у БД — рядок (нові типи без міграції)
+  type        String
+  payload     Json
+  // Одна канонічна ціль кліку (на відміну від activity_links, яких буває N).
+  // Nullable: буває сповіщення без переходу (welcome)
+  targetKind  String?   @map("target_kind")
+  targetId    String?   @map("target_id")
+  // Ключ колапсу: N однотипних подій зливаються в один НЕПРОЧИТАНИЙ рядок
+  groupKey    String?   @map("group_key")
+  groupCount  Int       @default(1) @map("group_count")
+  // Актор — та сама форма, що в activities (снапшот, без FK на users)
+  actorType   String    @map("actor_type")
+  actorId     String?   @map("actor_id")
+  actorLabel  String?   @map("actor_label")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  // Час ОСТАННЬОЇ появи: по ньому сортується фід, його ж рухає колапс
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  readAt      DateTime? @map("read_at")
+  archivedAt  DateTime? @map("archived_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: сповіщення не може вказати на юзера чужого тенанта
+  recipient User   @relation("NotificationRecipient", fields: [tenantId, recipientId], references: [tenantId, id], onDelete: Cascade)
+
+  // Головний запит: інбокс юзера. Сортування updatedAt DESC + tie-breaker по id.
+  // Часткові індекси (лічильник непрочитаних і унікальність групи) — сирим SQL
+  // у міграції: Prisma їх не вміє
+  @@index([tenantId, recipientId, updatedAt(sort: Desc), id])
+  @@map("notifications")
+}
+
+// Стан інбокса юзера: коли востаннє відкривав панель + лічильник ревізій для realtime.
+// Один рядок на юзера, upsert при першій зміні.
+model NotificationState {
+  tenantId  String    @map("tenant_id")
+  userId    String    @map("user_id")
+  // Момент останнього відкриття панелі — від нього рахується newCount для бейджа
+  seenAt    DateTime? @map("seen_at")
+  // Монотонний лічильник змін інбокса. У Postgres, а НЕ у Valkey (як presence):
+  // інбокс мусить переживати рестарт брокера, присутність — ні
+  revision  Int       @default(0)
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("NotificationState", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@map("notification_states")
+}
+
+// Преференси: рядок існує ТІЛЬКИ для явного вибору юзера; дефолт живе в коді
+// (NOTIFICATION_TYPE_META) — новий тип не потребує бекфілу для наявних юзерів.
+model NotificationPreference {
+  tenantId String  @map("tenant_id")
+  userId   String  @map("user_id")
+  type     String
+  // 'in_app' у V1; email/push додаються рядком, не міграцією семантики
+  channel  String
+  enabled  Boolean
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("NotificationPreference", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, userId, type, channel])
+  @@map("notification_preferences")
+}
+
+// ============================================================================
+// Відкладені сповіщення — СПІЛЬНА інфраструктура (docs/notifications.md
+// § «Обмеження V1 / беклог», roadmap §2.1), а не частина календаря: жодного
+// calendar_ у назвах. Календар — її перший споживач.
+//
+// Чому не pg-boss із startAfter (docs/calendar.md §8.2): pgboss.* поза RLS —
+// тенант не має права читати таблицю черги, тож ні показати «мої нагадування»,
+// ні скасувати їх із доменного коду було б неможливо. Плюс ретеншн черги,
+// скасування як друге джерело правди і гонки при перепрануванні.
+// ============================================================================
+
+model ScheduledNotification {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  // Коли доставити. Сканер бере рядки з fire_at <= now() атомарним claim-ом
+  fireAt    DateTime @map("fire_at")
+  // Ключ ідемпотентності МАТЕРІАЛІЗАЦІЇ: 'calendar_reminder:{id}:{occurrenceStart}'.
+  // Повторна матеріалізація (ретрай, дві вкладки) не плодить дублів
+  dedupeKey String   @map("dedupe_key")
+
+  // Форма рядка дзеркалить notifications: сканер просто передає це в recorder
+  recipientId String  @map("recipient_id")
+  type        String
+  payload     Json
+  targetKind  String? @map("target_kind")
+  targetId    String? @map("target_id")
+  groupKey    String? @map("group_key")
+  actorType   String  @default("system") @map("actor_type")
+  actorId     String? @map("actor_id")
+  actorLabel  String? @map("actor_label")
+
+  // Захоплено сканером. Окремо від delivered_at: захоплений рядок уже в роботі,
+  // і перепланування його НЕ видаляє (доставка — правда про минуле)
+  claimedAt     DateTime? @map("claimed_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  // 'stale' — дозріло більш ніж grace тому (воркер лежав). Нагадування «зустріч
+  // за 30 хв», отримане через годину після початку, гірше за мовчання
+  skippedReason String?   @map("skipped_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient User   @relation("ScheduledNotificationRecipient", fields: [tenantId, recipientId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, recipientId, fireAt])
+  // Частковий індекс сканера (WHERE ще не доставлено) — сирим SQL у міграції
+  @@map("scheduled_notifications")
+}

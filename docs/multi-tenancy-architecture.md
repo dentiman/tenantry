@@ -112,7 +112,8 @@ refresh-токена, це і є auth-специфічна робота). Якщ
 
 ## 3. Схема БД
 
-Джерело правди: [libs/database/prisma/schema.prisma](../libs/database/prisma/schema.prisma).
+Джерело правди: [libs/database/prisma/schema/](../libs/database/prisma/schema/) — файл на модуль
+(`tenant.prisma`, `users.prisma`, `calendar.prisma`, …; генератор і datasource — у `schema.prisma`).
 
 | Таблиця          | `tenant_id`       | RLS                         | Що це                                                                 |
 | ---------------- | ----------------- | --------------------------- | --------------------------------------------------------------------- |

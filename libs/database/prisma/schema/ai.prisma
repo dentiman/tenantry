@@ -1,0 +1,356 @@
+// ============================================================================
+// AI-асистент (docs/ai-assistant-plan.md, фаза AI-0).
+//
+// Розмова ОСОБИСТА: RLS тут дає межу ТЕНАНТА, а межу людини тримає сервіс —
+// той самий поділ, що для приватних каналів чату і приватних подій календаря
+// («RLS — межа тенанта, а не учасника»). Тому композитний FK на users є, а
+// жодної ролі в схемі немає: ADMIN не отримує доступу за побудовою.
+// ============================================================================
+
+model AiConversation {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+
+  // RETIRED замість видалення: «нова розмова» скидає КОНТЕКСТ, а не історію.
+  // Активна рівно одна на юзера — це частковий унікальний індекс у міграції
+  // (Prisma їх не вміє), він же арбітр гонки двох вкладок на першому повідомленні
+  status AiConversationStatus @default(ACTIVE)
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastMessageAt DateTime? @map("last_message_at")
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK + Cascade: розмова належить людині, і разом із нею й зникає.
+  // SetNull тут був би безглуздим — безхазяйна особиста розмова нікому не видима
+  user     User        @relation("AiConversationOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+  messages AiMessage[]
+
+  // Опора під композитний FK повідомлень
+  @@unique([tenantId, id])
+  @@index([tenantId, userId, status])
+  @@map("ai_conversations")
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  RETIRED
+}
+
+model AiMessage {
+  id             String @id @default(uuid())
+  tenantId       String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  conversationId String @map("conversation_id")
+
+  // Серверний порядок у межах розмови. НЕ created_at: порядок, курсор і детектор
+  // дірок — це одне рішення, і мітка часу не дає жодного з них (docs/chat.md §4.3)
+  seq Int
+
+  role   AiMessageRole
+  // Статус відповіді — він же ЯКІР ІДЕМПОТЕНТНОСТІ генерації: воркер працює лише
+  // над PENDING/STREAMING і мовчки виходить на COMPLETE. Саме тому тут НЕ
+  // використовується MessageInboxService.runOnce — він заблокував би легальний
+  // ретрай після тимчасової відмови провайдера (design.md)
+  status AiMessageStatus
+
+  // Порожній рядок, а не null: відповідь у роботі вже має вміст, просто неповний
+  content   String  @default("")
+  // Код із контракту ApiError (AI_PROVIDER_UNAVAILABLE тощо) — текст рендерить фронт
+  errorCode String? @map("error_code")
+
+  // Резерв під AI-1 (облік токенів). Nullable-колонки зараз коштують нічого і
+  // економлять міграцію на таблиці, у якої на той час уже будуть рядки
+  model            String?
+  promptTokens     Int?    @map("prompt_tokens")
+  completionTokens Int?    @map("completion_tokens")
+  // Підмножина promptTokens (не додається зверху) — скільки токенів промпту прочитано
+  // з кешу провайдера. Раніше лише в лозі воркера (ai-1a); ai-1d зберігає окремою
+  // колонкою й рахує в ai_usage_counters — єдиний спосіб побачити, чи працює кеш
+  cachedPromptTokens Int? @map("cached_prompt_tokens")
+
+  // Версія корпусу знань, якою відповідали (ai-1b, design.md D7): хеш артефакту
+  // `pnpm ai:knowledge`. Повний промпт НЕ зберігається — він відтворюється з цієї
+  // версії (git), коду інструкції, збереженої історії й питання (ai-assistant.md
+  // §11.6). Пише `claim()` у тому ж фенсингованому UPDATE, що й `model`; NULL —
+  // питання юзера або відповідь, згенерована до ai-1b
+  knowledgeVersion String? @map("knowledge_version")
+  // Фрагменти retrieval, РЕАЛЬНО надіслані моделі в цій спробі (AI-2a.3, design.md D6):
+  // лише метадані (n, chunk/document id, джерело, ревізія, назва, шлях, розділ), без
+  // тексту. З них API рахує перевірені цитати; NULL — статичний корпус або до AI-2a.3
+  knowledgeChunks Json? @map("knowledge_chunks")
+
+  // ВЛАСНІСТЬ ГЕНЕРАЦІЇ (AI-0.1, design.md D1). Захоплюється умовним UPDATE, що
+  // збільшує `attempt` і виставляє оренду; кожен наступний запис — теж умовний
+  // UPDATE з `WHERE attempt = <моя спроба>`. Нуль оновлених рядків = спробу
+  // випереджено — генерація припиняється мовчки, нічого не фіналізується
+  attempt Int @default(0)
+  // Оренда власності: PENDING отримує її при створенні (design.md D3), STREAMING —
+  // при захопленні. NULL або минула — відповідь "покинута", закривається на
+  // наступному читанні розмови, а не сканером-кроном
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  // Стрічка знає позицію потоку: скільки кадрів дельт уже увійшло в `content`.
+  // Разом з `attempt` це дає клієнту точку, з якої продовжувати після одного
+  // перечитування, без вгадування по `chunkSeq === 0` (design.md D6)
+  chunkCount Int @default(0) @map("chunk_count")
+  // Факт Stop, записаний у БД РАНІШЕ за pub/sub-сигнал (design.md D4): доставляє
+  // скасування, навіть якщо сигнал загублено або надійшов до підписки воркера
+  cancelRequestedAt DateTime? @map("cancel_requested_at")
+  // Id запиту поточної спроби в провайдера (`gen-…`, AI-5b design.md R3) — пишеться разом із
+  // частковим текстом. Не вартість: потрібен, щоб спробу впалого воркера можна було
+  // дооцінити через добір, коли наступна доставка перезахопить рядок
+  providerRequestId String? @map("provider_request_id")
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation AiConversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+
+  // Арбітр порядку: він же індекс під читання стрічки розмови
+  @@unique([tenantId, conversationId, seq])
+  @@map("ai_messages")
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+// ============================================================================
+// Квоти токенів асистента (ai-1d, docs/ai-assistant.md §8, design.md D1/D2).
+//
+// Рівно один рядок на (tenant, user, period) — période = початок доби UTC.
+// Тенантний підсумок НЕ окремий рядок: рахується агрегатом SUM по рядках
+// тенанта за період у момент перевірки — другий писаний рядок означав би
+// другий шлях запису, який мусив би довіку не розійтись із першим (design.md D1).
+// ============================================================================
+
+model AiUsageCounter {
+  id          String   @id @default(uuid())
+  tenantId    String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId      String   @map("user_id")
+  // Початок доби UTC, якій належить рядок (design.md D2)
+  periodStart DateTime @map("period_start")
+
+  promptTokens Int @default(0) @map("prompt_tokens")
+  // Підмножина promptTokens, НЕ додається зверху (design.md D5) — лише видимість кеша
+  cachedPromptTokens Int @default(0) @map("cached_prompt_tokens")
+  completionTokens   Int @default(0) @map("completion_tokens")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("AiUsageCounterOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  // Арбітр атомарного інкременту (upsert ... ON CONFLICT) і водночас індекс під
+  // перевірку/агрегат тенанта за період (design.md D4)
+  @@unique([tenantId, userId, periodStart])
+  @@index([tenantId, periodStart])
+  @@map("ai_usage_counters")
+}
+
+enum AiMessageStatus {
+  PENDING
+  STREAMING
+  COMPLETE
+  FAILED
+  CANCELLED
+}
+
+// AI-2a foundation: tenant-owned retrieval index. Global publishing is a later
+// control-plane step; tenant_id stays required, with the standard RLS boundary.
+model AiKnowledgeSource {
+  id             String   @id @default(uuid())
+  tenantId       String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  key            String
+  product        String
+  isEnabled      Boolean  @default(false) @map("is_enabled")
+  // Ingest stages a complete revision, then atomically switches this pointer.
+  // Null means unpublished. No automatic publication on document/chunk insert.
+  activeRevision String?  @map("active_revision")
+  ingestRunId String? @map("ingest_run_id")
+  ingestStatus String @default("idle") @map("ingest_status")
+  ingestStartedAt DateTime? @map("ingest_started_at")
+  manifestHash String? @map("manifest_hash") @db.Char(64)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents AiKnowledgeDocument[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, product, key])
+  @@map("ai_knowledge_sources")
+}
+
+model AiKnowledgeDocument {
+  id          String   @id @default(uuid())
+  tenantId    String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  sourceId    String   @map("source_id")
+  revision    String
+  canonicalId String   @map("canonical_id")
+  path        String
+  title       String
+  language    String
+  // Application roles after source-specific audience mapping; empty denies all.
+  audience    Role[]   @default([])
+  contentHash String   @map("content_hash") @db.Char(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source AiKnowledgeSource  @relation(fields: [tenantId, sourceId], references: [tenantId, id], onDelete: Cascade)
+  chunks AiKnowledgeChunk[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, sourceId, revision, canonicalId, language], map: "ai_knowledge_documents_identity_key")
+  @@map("ai_knowledge_documents")
+}
+
+model AiKnowledgeChunk {
+  id             String                      @id @default(uuid())
+  tenantId       String                      @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  documentId     String                      @map("document_id")
+  ordinal        Int
+  heading        String
+  content        String
+  contentHash    String                      @map("content_hash") @db.Char(64)
+  tokenCount     Int                         @map("token_count")
+  // v1 profile is fixed in SQL too. Changing models requires a new index version.
+  embeddingModel String                      @default("text-embedding-3-small") @map("embedding_model")
+  embedding      Unsupported("vector(1536)")
+  // AI-2a.4: FTS. Конфігурацію ставить ingest за мовою документа; `search_vector` —
+  // STORED generated `to_tsvector(fts_config, heading || ' ' || content)` (міграція
+  // ai_knowledge_fts), Prisma його не пише і не читає
+  ftsConfig      Unsupported("regconfig")    @default(dbgenerated("'simple'::regconfig")) @map("fts_config")
+  searchVector   Unsupported("tsvector")?    @default(dbgenerated("to_tsvector(fts_config, ((heading || ' '::text) || content))")) @map("search_vector")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document AiKnowledgeDocument @relation(fields: [tenantId, documentId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, documentId, ordinal])
+  @@index([tenantId, contentHash, embeddingModel], map: "ai_knowledge_chunks_tenant_hash_idx")
+  @@index([searchVector], map: "ai_knowledge_chunks_search_vector_idx", type: Gin)
+  @@map("ai_knowledge_chunks")
+}
+
+// AI-5a (docs/ai-platform-controls.md): налаштування асистента, якими керує оператор
+// платформи. Один рядок; NULL-поля беруться з env. Пише лише platform-api, saas_app —
+// тільки SELECT (міграція ai_platform_settings). Ключ — лише зашифрований.
+model PlatformAiSettings {
+  id              String   @id @default("default")
+  enabled         Boolean  @default(true)
+  provider        String?
+  baseUrl         String?  @map("base_url")
+  model           String?
+  // v1:<iv>:<tag>:<ciphertext> (AES-256-GCM, AI_SECRETS_KEY); підказка — для маски
+  apiKeyEncrypted String?  @map("api_key_encrypted")
+  apiKeyHint      String?  @map("api_key_hint")
+  updatedBy       String?  @map("updated_by")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("platform_ai_settings")
+}
+
+// Append-only журнал змін налаштувань і розкриттів ключа. saas_app доступу не має
+model PlatformAiSettingsEvent {
+  id         String   @id @default(uuid())
+  type       String
+  actorId    String?  @map("actor_id")
+  actorLabel String?  @map("actor_label")
+  changes    Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("platform_ai_settings_events")
+}
+
+// Дозвіл платформи для tenant-а. Немає рядка — дозволено. saas_app читає лише свій
+// рядок (RLS FOR SELECT), пише лише platform-api
+model TenantAiAccess {
+  tenantId  String   @id @map("tenant_id")
+  allowed   Boolean
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_ai_access")
+}
+
+// ============================================================================
+// Журнал витрат AI (AI-5b, docs/ai-platform-controls.md §3, design.md R1–R6).
+// ============================================================================
+
+// Тарифи моделей — control plane, append-only: зміна ціни — новий рядок, тариф на момент T —
+// останній рядок з valid_from ≤ T (без valid_to, design.md R6). Ціни — USD за 1M токенів.
+// saas_app лише читає (розрахункова вартість у момент запису журналу), пишуть platform-api
+// і system-cron синхронізації (saas_platform)
+model AiModelPrice {
+  id                   String   @id @default(uuid())
+  // Білінговий ключ провайдера: `openrouter` | `fake` | хост base URL
+  provider             String
+  model                String
+  inputPerMillion      Decimal  @map("input_per_million") @db.Decimal(18, 10)
+  // NULL — провайдер не тарифікує кеш окремо (кешовані токени йдуть за ціною input)
+  cacheReadPerMillion  Decimal? @map("cache_read_per_million") @db.Decimal(18, 10)
+  cacheWritePerMillion Decimal? @map("cache_write_per_million") @db.Decimal(18, 10)
+  outputPerMillion     Decimal  @map("output_per_million") @db.Decimal(18, 10)
+  requestPrice         Decimal  @default(0) @map("request_price") @db.Decimal(18, 10)
+  // Ступінчасті ціни (OpenRouter `pricing.overrides`): [{minPromptTokens, inputPerMillion?, …}]
+  tiers                Json?
+  currency             String   @default("USD")
+  validFrom            DateTime @map("valid_from")
+  // `openrouter-sync` | `manual`
+  source               String
+  createdBy            String?  @map("created_by")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, model, validFrom])
+  @@map("ai_model_prices")
+}
+
+// Один рядок на платний виклик провайдера. Tenant-scoped (RLS), append-only для saas_app
+// (SELECT + INSERT); UPDATE лише добору вартості через saas_platform. Без FK на users,
+// розмови й повідомлення і без тексту: переживає «видалити мої розмови» і ретенцію
+model AiUsageEvent {
+  id                String    @id @default(uuid())
+  tenantId          String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  occurredAt        DateTime  @default(now()) @map("occurred_at")
+  // generation | query_embedding | ingest_embedding | eval
+  kind              String
+  // complete | failed | cancelled | timeout | retried | superseded | abandoned
+  outcome           String
+  userId            String?   @map("user_id")
+  messageId         String?   @map("message_id")
+  sourceId          String?   @map("source_id")
+  attempt           Int?
+  provider          String
+  model             String
+  // NULL — невідомо (провайдер usage не повідомив), а не нуль
+  inputTokens       Int?      @map("input_tokens")
+  cachedReadTokens  Int?      @map("cached_read_tokens")
+  cacheWriteTokens  Int?      @map("cache_write_tokens")
+  outputTokens      Int?      @map("output_tokens")
+  reasoningTokens   Int?      @map("reasoning_tokens")
+  reportedCost      Decimal?  @map("reported_cost") @db.Decimal(18, 10)
+  providerRequestId String?   @map("provider_request_id")
+  // Заморожена в момент запису; NULL — тарифу не було, ніколи не 0
+  estimatedCost     Decimal?  @map("estimated_cost") @db.Decimal(18, 10)
+  priceId           String?   @map("price_id")
+  // reported | estimated | pending | unknown
+  costStatus        String    @map("cost_status")
+  reconcileAttempts Int       @default(0) @map("reconcile_attempts")
+  reconcileAfter    DateTime? @map("reconcile_after")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([occurredAt])
+  @@index([tenantId, messageId])
+  @@index([costStatus, reconcileAfter])
+  @@map("ai_usage_events")
+}

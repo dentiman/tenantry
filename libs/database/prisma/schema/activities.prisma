@@ -1,0 +1,46 @@
+// Журнал бізнес-подій (docs/activity-log.md). Append-only: без updatedAt,
+// без UPDATE/DELETE через API. Текст НЕ зберігається — type + payload,
+// рендерить фронт (i18n-доктрина: бекенд — коди).
+model Activity {
+  id         String   @id @default(uuid())
+  tenantId   String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  // Закритий enum у контрактах (ACTIVITY_TYPES); у БД — рядок (нові типи без міграції)
+  type       String
+  actorType  String   @map("actor_type") // 'user' | 'system'
+  // БЕЗ FK на users свідомо: снапшот — юзера можуть видалити, фід мусить жити
+  actorId    String?  @map("actor_id")
+  actorLabel String?  @map("actor_label") // снапшот (email/ім'я) на момент події
+  // Параметри для рендеру: снапшот-label-и + {kind, id}-референси (схема — по типу)
+  payload    Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  links  ActivityLink[]
+
+  // Опора для композитного FK з activity_links
+  @@unique([tenantId, id])
+  // Tenant-wide фід + tie-breaker курсора
+  @@index([tenantId, createdAt(sort: Desc), id])
+  @@map("activities")
+}
+
+// Прив'язка події до сутностей, яких вона стосується (1 подія → N сутностей).
+// Поліморфний (entityType — рядок), без FK на сутність — як attachments.
+model ActivityLink {
+  activityId String  @map("activity_id")
+  tenantId   String  @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  entityType String  @map("entity_type") // 'user' | 'customer' | 'ticket' …
+  entityId   String  @map("entity_id")
+  // Семантика зв'язку: 'subject' | 'target' | 'source' | 'context'; NULL коли
+  // неоднозначності немає. Словник валідує Zod-схема типу події, не БД
+  role       String?
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Композитний FK: лінк не може вказати на активність чужого tenant-а
+  activity Activity @relation(fields: [tenantId, activityId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([activityId, entityType, entityId])
+  // Головний запит: фід сутності
+  @@index([tenantId, entityType, entityId])
+  @@map("activity_links")
+}

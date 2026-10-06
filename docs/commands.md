@@ -128,7 +128,7 @@ pnpm db:generate
 ```
 
 Генерує Prisma Client у `libs/database/src/generated` (у git ігнорується). Потрібно
-перезапускати після кожної зміни `schema.prisma`.
+перезапускати після кожної зміни схеми (`libs/database/prisma/schema/*.prisma` — файл на модуль).
 
 ### `pnpm db:roles`
 

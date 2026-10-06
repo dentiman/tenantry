@@ -1,0 +1,65 @@
+// MT-1: tenant (перейменовано з Organization 2026-07-16 — «організація» лишається вільним
+// доменним словом для споживачів скелетона). Single-tenant = рівно один рядок (N=1).
+// Політика RLS (MT-2): tenant бачить ЛИШЕ власний рядок (id = current_setting).
+model Tenant {
+  id        String   @id @default(uuid())
+  slug      String   @unique // під логін по slug (MT-3) і піддомени (MT-4)
+  name      String
+  // suspend/resume тенанта: login відмовляє всім юзерам неактивного tenant-а
+  isActive  Boolean  @default(true) @map("is_active")
+  // Дефолтна локаль для нових юзерів тенанта
+  locale    String   @default("en")
+  // Валюта розрахунків воркспейсу (ISO 4217) — дефолт для нових кастомерів і
+  // для будь-якого показу сум. КОЛОНКА, а не settings Json: закритий формат,
+  // і платформа колись питатиме «усі тенанти з currency=EUR» (docs/workspace-settings.md)
+  currency  String   @default("USD") @db.Char(3)
+  // Гнучкі налаштування (feature-flags, UI-преференси); типізовані — окремими колонками
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Зворотні звʼязки: на кожну таблицю з tenant_id — сторона, яку вимагає Prisma.
+  // Згруповано за модулями (docs/modules.md): прибираючи фічу з форку, прибери її групу
+  // разом із файлом prisma/schema/<модуль>.prisma — `prisma validate` покаже, чого бракує.
+  //
+  // платформа
+  users                    User[]
+  authSessions             AuthSession[]
+  verificationTokens       VerificationToken[]
+  files                    File[]
+  attachments              Attachment[]
+  activities               Activity[]
+  activityLinks            ActivityLink[]
+  notifications            Notification[]
+  notificationStates       NotificationState[]
+  notificationPreferences  NotificationPreference[]
+  scheduledNotifications   ScheduledNotification[]
+  numberSequences          NumberSequence[]
+  numberSeries             NumberSeries[]
+
+  // customers
+  customers                Customer[]
+  customerContacts         CustomerContact[]
+
+  // calendar
+  calendarEvents           CalendarEvent[]
+  calendarEventAttendees   CalendarEventAttendee[]
+  calendarReminders        CalendarReminder[]
+
+  // chat
+  conversations            Conversation[]
+  conversationParticipants ConversationParticipant[]
+  chatMessages             ChatMessage[]
+
+  // ai
+  aiAccess                 TenantAiAccess?
+  aiConversations          AiConversation[]
+  aiMessages               AiMessage[]
+  aiUsageCounters          AiUsageCounter[]
+  aiUsageEvents            AiUsageEvent[]
+  aiKnowledgeSources       AiKnowledgeSource[]
+  aiKnowledgeDocuments     AiKnowledgeDocument[]
+  aiKnowledgeChunks        AiKnowledgeChunk[]
+
+  @@map("tenants")
+}

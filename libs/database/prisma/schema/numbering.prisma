@@ -1,0 +1,53 @@
+// Лічильник людських номерів — СПІЛЬНИЙ на всі майбутні нумерації
+// (name: 'customer', далі 'invoice', 'ticket'), не таблиця кастомерів.
+//
+// Чому не CREATE SEQUENCE: послідовність одна на БД (номери скачуть між тенантами,
+// витікає обсяг сусіда), вона поза RLS, і головне — nextval НЕ відкочується, тобто
+// дає дірки в нумерації. Тут інкремент живе в тій самій транзакції, що й сам рядок,
+// тому відкат забирає і номер. Ціна — блокування рядка до коміту (створення
+// серіалізується в межах тенанта); для документів, де пропуск номера — питання від
+// податкової, це саме те, що потрібно.
+model NumberSequence {
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  name     String
+  // Бакет скидання: '' — наскрізна нумерація (майстер-дані), '2026' / '2026-09' —
+  // документи з YEARLY/MONTHLY. У ключі з першого дня: додати колонку в PK згодом
+  // дорожче, ніж завести її порожньою зараз
+  scope    String @default("")
+
+  lastValue Int @default(0) @map("last_value")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, name, scope])
+  @@map("number_sequences")
+}
+
+// Конфіг нумерації тенанта. Окремо від лічильника свідомо: у них різні життєві
+// цикли — конфіг редагує людина раз на рік, лічильник блокується на КОЖНІЙ
+// видачі. Рядок існує тільки коли тенант змінив дефолт (NUMBER_SERIES_DEFAULTS
+// у контрактах) — той самий патерн, що в notification_preferences.
+model NumberSeries {
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  name     String
+
+  prefix      String            @default("")
+  padding     Int               @default(0)
+  // Перший номер у КОЖНОМУ новому періоді. На вже початий лічильник не впливає —
+  // для нього є окрема монотонна операція «наступний номер = N»
+  startValue  Int               @default(1) @map("start_value")
+  resetPeriod NumberResetPeriod @default(NONE) @map("reset_period")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, name])
+  @@map("number_series")
+}
+
+enum NumberResetPeriod {
+  NONE
+  YEARLY
+  MONTHLY
+}

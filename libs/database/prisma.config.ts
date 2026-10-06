@@ -7,7 +7,7 @@ import { defineConfig } from 'prisma/config';
 const DEFAULT_MIGRATE_URL = 'postgresql://saas_migrator:saas_migrator@localhost:5432/saas_skeleton';
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  schema: 'prisma/schema',
   migrations: {
     path: 'prisma/migrations',
   },
