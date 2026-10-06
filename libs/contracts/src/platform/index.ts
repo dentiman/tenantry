@@ -8,3 +8,5 @@ export * from './ai-settings.schema';
 export * from './ai-settings.types';
 export * from './ai-costs.schema';
 export * from './ai-costs.types';
+export * from './tenant-user.schema';
+export * from './tenant-user.types';

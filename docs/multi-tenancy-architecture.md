@@ -308,6 +308,26 @@ tenant-застосунках. `apps/platform-api` під цю заборону 
 нема — та сама відповідь `401 Invalid email or password`, що й для невірного пароля: немає
 способу через різницю в помилці визначити, чи tenant узагалі існує.
 
+### 7.1. Аварійне керування юзерами tenant-а (platform-api)
+
+`/tenants/:tenantId/users` (`apps/platform-api/src/tenants/tenant-users.*`, UI —
+`/tenants/$tenantId/users` у platform-web): список, новий пароль, вимкнути/увімкнути,
+«вийти звідусіль». Потрібне, коли tenant-адмін сам собі допомогти не може (забутий пароль
+єдиного адміна). Правила:
+
+- Клієнт — `SystemPrismaService` (BYPASSRLS) без tenant-контексту, тож DB-default
+  `tenant_id` = NULL: `tenantId` передається **явно** в кожен `create`, а юзер шукається
+  парою `(id, tenantId)` — чужий юзер дає 404.
+- Кожна дія в одній транзакції пише два сліди: `platform_audit_events` (журнал оператора,
+  без FK, `saas_app` доступу не має) і tenant-ову `Activity` з актором `system`
+  (`ActivityRecorder.record({ tenantId })` — опція лише для control plane). Tenant-адмін
+  бачить дію у стрічці юзера. Паролів і хешів у слідах немає.
+- Межа: realtime-gateway є лише в tenant-api, тому access JWT (15 хв) і відкриті socket-и
+  живуть до закінчення; refresh-сесії відкликаються одразу. Негайний розрив потребував би
+  події через Valkey — свідомо не робимо.
+- Сповіщення юзеру про зміну пароля не шлеться (tenant-api шле; тут потрібен би явний `tenantId`
+  в notification recorder).
+
 ## 8. Черги: tenant-scope і system-scope
 
 > Оновлено після **EDA-1** (2026-08-04): шар черг переїхав із `libs/shared/src/jobs/` у

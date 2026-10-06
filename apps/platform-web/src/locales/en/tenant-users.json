@@ -1,0 +1,69 @@
+{
+  "title": "Users",
+  "subtitle": "Emergency access management for the users of this tenant. Every action is logged for the platform and shown to the tenant admin as a system action.",
+  "searchLabel": "Search users",
+  "searchPlaceholder": "Search by email or name…",
+  "filters": {
+    "statusLabel": "Status",
+    "statusAll": "All statuses"
+  },
+  "toolbar": {
+    "total": "Total",
+    "selected": "Selected"
+  },
+  "table": {
+    "ariaLabel": "Tenant users",
+    "user": "User",
+    "role": "Role",
+    "status": "Status",
+    "lastSeen": "Last seen",
+    "created": "Created"
+  },
+  "roles": {
+    "ADMIN": "Admin",
+    "USER": "User"
+  },
+  "status": {
+    "active": "Active",
+    "disabled": "Disabled"
+  },
+  "neverSeen": "Never",
+  "loadingLabel": "Loading users",
+  "empty": "No users found",
+  "actions": {
+    "setPassword": "Set new password",
+    "revokeSessions": "Sign out everywhere",
+    "disable": "Disable",
+    "enable": "Enable",
+    "revokeConfirm": {
+      "heading": "Sign the user out everywhere?",
+      "body": "All refresh sessions of \"{{name}}\" will be revoked. The current access token stays valid for up to 15 minutes.",
+      "confirmLabel": "Sign out",
+      "cancelLabel": "Cancel"
+    },
+    "disableConfirm": {
+      "heading": "Disable user?",
+      "body": "\"{{name}}\" will lose access and all their sessions will be revoked.",
+      "confirmLabel": "Disable",
+      "cancelLabel": "Cancel"
+    },
+    "enableConfirm": {
+      "heading": "Enable user?",
+      "body": "\"{{name}}\" will be able to sign in again.",
+      "confirmLabel": "Enable",
+      "cancelLabel": "Cancel"
+    },
+    "revoked": "Signed out of {{count}} session(s)"
+  },
+  "password": {
+    "heading": "Set new password",
+    "description": "All sessions of this user are revoked. Share the new password with them through a trusted channel — it is not shown again.",
+    "new": "New password",
+    "confirm": "Confirm password",
+    "mismatch": "Passwords do not match",
+    "cancel": "Cancel",
+    "submit": "Set password",
+    "submitting": "Saving…",
+    "done": "Password updated"
+  }
+}

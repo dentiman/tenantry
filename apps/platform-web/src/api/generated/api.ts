@@ -46,8 +46,14 @@ import type {
   PlatformLoginDto,
   PlatformUserResponseDtoOutput,
   QueueStatsResponseDtoOutput,
+  SetTenantUserPasswordDto,
+  SetTenantUserStatusDto,
   TenantListResponseDtoOutput,
   TenantResponseDtoOutput,
+  TenantUserListResponseDtoOutput,
+  TenantUserResponseDtoOutput,
+  TenantUserSessionsRevokedResponseDtoOutput,
+  TenantUsersFindAllParams,
   TenantsFindAllParams,
   UpdatePlatformAiSettingsDto,
   UpdateTenantDto,
@@ -828,6 +834,373 @@ export const useTenantsUpdate = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getTenantsUpdateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const tenantUsersFindAll = (
+  tenantId: string,
+  params?: TenantUsersFindAllParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<TenantUserListResponseDtoOutput>(
+    { url: `/api/tenants/${tenantId}/users`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getTenantUsersFindAllQueryKey = (
+  tenantId?: string,
+  params?: TenantUsersFindAllParams,
+) => {
+  return [`/api/tenants/${tenantId}/users`, ...(params ? [params] : [])] as const;
+};
+
+export const getTenantUsersFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof tenantUsersFindAll>>,
+  TError = unknown,
+>(
+  tenantId: string,
+  params?: TenantUsersFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantUsersFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getTenantUsersFindAllQueryKey(tenantId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof tenantUsersFindAll>>> = ({ signal }) =>
+    tenantUsersFindAll(tenantId, params, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!tenantId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof tenantUsersFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type TenantUsersFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof tenantUsersFindAll>>
+>;
+export type TenantUsersFindAllQueryError = unknown;
+
+export function useTenantUsersFindAll<
+  TData = Awaited<ReturnType<typeof tenantUsersFindAll>>,
+  TError = unknown,
+>(
+  tenantId: string,
+  params: undefined | TenantUsersFindAllParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantUsersFindAll>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof tenantUsersFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof tenantUsersFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useTenantUsersFindAll<
+  TData = Awaited<ReturnType<typeof tenantUsersFindAll>>,
+  TError = unknown,
+>(
+  tenantId: string,
+  params?: TenantUsersFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof tenantUsersFindAll>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof tenantUsersFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof tenantUsersFindAll>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useTenantUsersFindAll<
+  TData = Awaited<ReturnType<typeof tenantUsersFindAll>>,
+  TError = unknown,
+>(
+  tenantId: string,
+  params?: TenantUsersFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantUsersFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useTenantUsersFindAll<
+  TData = Awaited<ReturnType<typeof tenantUsersFindAll>>,
+  TError = unknown,
+>(
+  tenantId: string,
+  params?: TenantUsersFindAllParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof tenantUsersFindAll>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getTenantUsersFindAllQueryOptions(tenantId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const tenantUsersSetPassword = (
+  tenantId: string,
+  userId: string,
+  setTenantUserPasswordDto: SetTenantUserPasswordDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/tenants/${tenantId}/users/${userId}/password`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: setTenantUserPasswordDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getTenantUsersSetPasswordMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof tenantUsersSetPassword>>,
+    TError,
+    { tenantId: string; userId: string; data: SetTenantUserPasswordDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof tenantUsersSetPassword>>,
+  TError,
+  { tenantId: string; userId: string; data: SetTenantUserPasswordDto },
+  TContext
+> => {
+  const mutationKey = ['tenantUsersSetPassword'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof tenantUsersSetPassword>>,
+    { tenantId: string; userId: string; data: SetTenantUserPasswordDto }
+  > = (props) => {
+    const { tenantId, userId, data } = props ?? {};
+
+    return tenantUsersSetPassword(tenantId, userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TenantUsersSetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof tenantUsersSetPassword>>
+>;
+export type TenantUsersSetPasswordMutationBody = SetTenantUserPasswordDto;
+export type TenantUsersSetPasswordMutationError = unknown;
+
+export const useTenantUsersSetPassword = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof tenantUsersSetPassword>>,
+      TError,
+      { tenantId: string; userId: string; data: SetTenantUserPasswordDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof tenantUsersSetPassword>>,
+  TError,
+  { tenantId: string; userId: string; data: SetTenantUserPasswordDto },
+  TContext
+> => {
+  const mutationOptions = getTenantUsersSetPasswordMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const tenantUsersSetStatus = (
+  tenantId: string,
+  userId: string,
+  setTenantUserStatusDto: SetTenantUserStatusDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<TenantUserResponseDtoOutput>(
+    {
+      url: `/api/tenants/${tenantId}/users/${userId}/status`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: setTenantUserStatusDto,
+    },
+    options,
+  );
+};
+
+export const getTenantUsersSetStatusMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof tenantUsersSetStatus>>,
+    TError,
+    { tenantId: string; userId: string; data: SetTenantUserStatusDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof tenantUsersSetStatus>>,
+  TError,
+  { tenantId: string; userId: string; data: SetTenantUserStatusDto },
+  TContext
+> => {
+  const mutationKey = ['tenantUsersSetStatus'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof tenantUsersSetStatus>>,
+    { tenantId: string; userId: string; data: SetTenantUserStatusDto }
+  > = (props) => {
+    const { tenantId, userId, data } = props ?? {};
+
+    return tenantUsersSetStatus(tenantId, userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TenantUsersSetStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof tenantUsersSetStatus>>
+>;
+export type TenantUsersSetStatusMutationBody = SetTenantUserStatusDto;
+export type TenantUsersSetStatusMutationError = unknown;
+
+export const useTenantUsersSetStatus = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof tenantUsersSetStatus>>,
+      TError,
+      { tenantId: string; userId: string; data: SetTenantUserStatusDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof tenantUsersSetStatus>>,
+  TError,
+  { tenantId: string; userId: string; data: SetTenantUserStatusDto },
+  TContext
+> => {
+  const mutationOptions = getTenantUsersSetStatusMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const tenantUsersRevokeSessions = (
+  tenantId: string,
+  userId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<TenantUserSessionsRevokedResponseDtoOutput>(
+    { url: `/api/tenants/${tenantId}/users/${userId}/sessions/revoke`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getTenantUsersRevokeSessionsMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof tenantUsersRevokeSessions>>,
+    TError,
+    { tenantId: string; userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof tenantUsersRevokeSessions>>,
+  TError,
+  { tenantId: string; userId: string },
+  TContext
+> => {
+  const mutationKey = ['tenantUsersRevokeSessions'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof tenantUsersRevokeSessions>>,
+    { tenantId: string; userId: string }
+  > = (props) => {
+    const { tenantId, userId } = props ?? {};
+
+    return tenantUsersRevokeSessions(tenantId, userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TenantUsersRevokeSessionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof tenantUsersRevokeSessions>>
+>;
+
+export type TenantUsersRevokeSessionsMutationError = unknown;
+
+export const useTenantUsersRevokeSessions = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof tenantUsersRevokeSessions>>,
+      TError,
+      { tenantId: string; userId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof tenantUsersRevokeSessions>>,
+  TError,
+  { tenantId: string; userId: string },
+  TContext
+> => {
+  const mutationOptions = getTenantUsersRevokeSessionsMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

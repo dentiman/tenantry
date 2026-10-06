@@ -227,11 +227,13 @@ export const MODULES = {
   },
   tenants: {
     tier: 'platform',
-    dependsOn: ['app', 'users'],
-    summary: 'Control plane: тенанти та їхній перший адмін.',
+    dependsOn: ['activities', 'app', 'auth', 'users'],
+    summary: 'Control plane: тенанти, їхній перший адмін і аварійне керування юзерами tenant-а.',
     paths: [
       'libs/contracts/src/platform/tenant.schema.ts',
       'libs/contracts/src/platform/tenant.types.ts',
+      'libs/contracts/src/platform/tenant-user.schema.ts',
+      'libs/contracts/src/platform/tenant-user.types.ts',
       'apps/platform-api/src/tenants/',
       'apps/platform-web/src/features/tenants/',
     ],

@@ -16,6 +16,11 @@ export interface RecordActivityInput {
   actor: ActivityActor;
   payload: Record<string, unknown>;
   links: { entityType: string; entityId: string; role?: ActivityLinkRole }[];
+  /**
+   * Лише для control plane: platform-api працює без tenant-контексту (DB-default = NULL),
+   * тож явно називає tenant, у чий журнал пише. У tenant-застосунках не передається
+   */
+  tenantId?: string;
 }
 
 @Injectable()
@@ -35,10 +40,15 @@ export class ActivityRecorder {
         actorId: input.actor.type === 'user' ? input.actor.id : null,
         actorLabel: input.actor.type === 'user' ? input.actor.label : null,
         payload,
+        ...(input.tenantId && { tenantId: input.tenantId }),
       },
     });
     await tx.activityLink.createMany({
-      data: input.links.map((l) => ({ activityId: activity.id, ...l })),
+      data: input.links.map((l) => ({
+        activityId: activity.id,
+        ...(input.tenantId && { tenantId: input.tenantId }),
+        ...l,
+      })),
     });
   }
 }

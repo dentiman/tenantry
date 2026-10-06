@@ -63,3 +63,21 @@ model Tenant {
 
   @@map("tenants")
 }
+
+// Append-only журнал дій оператора платформи над даними tenant-а (скидання пароля юзеру тощо).
+// Без FK на tenants/users: слід має пережити видалення обох. saas_app доступу не має
+model PlatformAuditEvent {
+  id          String   @id @default(uuid())
+  action      String
+  tenantId    String   @map("tenant_id")
+  targetType  String   @map("target_type")
+  targetId    String   @map("target_id")
+  targetLabel String?  @map("target_label")
+  actorId     String?  @map("actor_id")
+  actorLabel  String?  @map("actor_label")
+  details     Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@map("platform_audit_events")
+}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import {
   Field,
   FieldContent,
@@ -7,7 +7,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/field';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { TriangleAlert } from 'lucide-react';
-import { useParams } from '@tanstack/react-router';
+import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -31,7 +31,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import {
   getTenantsFindAllQueryKey,
   getTenantsFindOneQueryKey,
@@ -39,43 +39,31 @@ import {
   useTenantsUpdate,
 } from '../../../api/generated/api';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
-import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
-
-/** Рядок «підпис → значення»: та сама форма, що на картці юзера в apps/web */
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-1.5">
-      <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right text-sm text-foreground">{children}</span>
-    </div>
-  );
-}
-
-/** Пояснювальний блок вкладки Access: підпис, значення і чому це важливо */
-function Note({ title, value, hint }: { title: string; value?: ReactNode; hint: string }) {
-  return (
-    <div className="flex flex-col gap-1 py-2">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-sm font-medium text-foreground">{title}</span>
-        {value}
-      </div>
-      <p className="text-sm text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
+import { formatDate } from '@saas-skeleton/ui/lib/format';
+import { Fact } from '../components/fact';
 
 /**
- * Картка тенанта — та сама розкладка, що `/users/$userId` у tenant-адмінці:
- * шапка з ідентичністю, статусом і діями, під нею вкладки і вузька колонка стану.
+ * Картка тенанта — ЛЕЙАУТ маршруту `tenants/$tenantId` (той самий патерн, що картка
+ * кастомера в tenant-web): шапка з ідентичністю, статусом і діями, рядок вкладок і
+ * `<Outlet/>`. Вкладки — дочірні маршрути: «Overview» (`/`), «Access» (`access`) і
+ * «Users» (`users`, аварійне керування юзерами tenant-а); справа — колонка стану
+ *.
  *
  * Показуємо рівно те, що є в control plane: сам рядок тенанта і його наслідки для
  * входу. Стрічки подій тут НЕМАЄ навмисно — activities живуть у tenant-плані під
  * RLS, і платформа їх не читає; так само немає лічильника юзерів і джоб тенанта,
  * бо відповідних ендпоінтів у platform-api не існує.
  */
-export function TenantDetailPage() {
+export function TenantDetailLayout() {
   const { t } = useTranslation('tenants');
   const { tenantId } = useParams({ from: '/app/tenants/$tenantId' });
+  // Активна вкладка — перший сегмент шляху після картки (`/access`, `/users`); порожньо — огляд
+  const activeTab = useRouterState({
+    select: (state) => {
+      const segment = state.location.pathname.split(`/tenants/${tenantId}`)[1]?.split('/')[1];
+      return segment === undefined || segment === '' ? 'overview' : segment;
+    },
+  });
   const queryClient = useQueryClient();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -126,77 +114,48 @@ export function TenantDetailPage() {
           </Badge>
         </div>
 
-        <Button
-          variant={tenant.isActive ? 'destructive' : 'default'}
-          onClick={() => {
-            setIsConfirmOpen(true);
-          }}
-        >
-          {tenant.isActive ? t('actions.suspend') : t('actions.resume')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={tenant.isActive ? 'destructive' : 'default'}
+            onClick={() => {
+              setIsConfirmOpen(true);
+            }}
+          >
+            {tenant.isActive ? t('actions.suspend') : t('actions.resume')}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Tabs defaultValue="overview" className="lg:col-span-2">
-          <TabsList>
-            <TabsTrigger value="overview">{t('detail.tabs.overview')}</TabsTrigger>
-            <TabsTrigger value="access">{t('detail.tabs.access')}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="flex flex-col gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.identity.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Fact label={t('detail.identity.name')}>{tenant.name}</Fact>
-                <Separator />
-                <Fact label={t('detail.identity.slug')}>
-                  <code className="font-mono text-xs">{tenant.slug}</code>
-                </Fact>
-                <Separator />
-                <Fact label={t('detail.identity.locale')}>{tenant.locale}</Fact>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.record.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Fact label={t('detail.record.created')}>{formatDateTime(tenant.createdAt)}</Fact>
-                <Separator />
-                <Fact label={t('detail.record.updated')}>{formatDateTime(tenant.updatedAt)}</Fact>
-                <Separator />
-                <Fact label={t('detail.record.id')}>
-                  <code className="font-mono text-xs break-all">{tenant.id}</code>
-                </Fact>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="access">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('detail.access.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Note
-                  title={t('detail.access.organization')}
-                  value={<code className="font-mono text-xs">{tenant.slug}</code>}
-                  hint={t('detail.access.organizationHint')}
-                />
-                <Separator />
-                <Note
-                  title={t('detail.access.suspended')}
-                  hint={t('detail.access.suspendedHint')}
-                />
-                <Separator />
-                <Note title={t('detail.access.admin')} hint={t('detail.access.adminHint')} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+          {/* Вкладки — дочірні маршрути: у кожної своя адреса, шапка не перемонтовується */}
+          <Tabs value={activeTab}>
+            <TabsList>
+              <TabsTrigger
+                value="overview"
+                nativeButton={false}
+                render={<Link to="/tenants/$tenantId" params={{ tenantId }} />}
+              >
+                {t('detail.tabs.overview')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="access"
+                nativeButton={false}
+                render={<Link to="/tenants/$tenantId/access" params={{ tenantId }} />}
+              >
+                {t('detail.tabs.access')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="users"
+                nativeButton={false}
+                render={<Link to="/tenants/$tenantId/users" params={{ tenantId }} />}
+              >
+                {t('detail.tabs.users')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Outlet />
+        </div>
 
         <Card className="self-start">
           <CardHeader>

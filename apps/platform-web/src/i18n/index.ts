@@ -12,6 +12,7 @@ import {
 import authEn from '../locales/en/auth.json';
 import layoutEn from '../locales/en/layout.json';
 import tenantsEn from '../locales/en/tenants.json';
+import tenantUsersEn from '../locales/en/tenant-users.json';
 import jobsEn from '../locales/en/jobs.json';
 import userSettingsEn from '../locales/en/user-settings.json';
 import aiEn from '../locales/en/ai.json';
@@ -44,6 +45,7 @@ void i18n.use(initReactI18next).init({
       auth: authEn,
       layout: layoutEn,
       tenants: tenantsEn,
+      'tenant-users': tenantUsersEn,
       jobs: jobsEn,
       'user-settings': userSettingsEn,
       ai: aiEn,

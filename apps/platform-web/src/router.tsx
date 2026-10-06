@@ -2,7 +2,10 @@ import { createRouter } from '@tanstack/react-router';
 import { appIndexRoute, appRoute, notFoundRoute, rootRoute } from './app-shell/app.routes';
 import { loginRoute } from './features/auth/auth.routes';
 import {
+  tenantAccessRoute,
   tenantDetailRoute,
+  tenantOverviewRoute,
+  tenantUsersRoute,
   tenantsIndexRoute,
   tenantsRoute,
 } from './features/tenants/tenants.routes';
@@ -34,7 +37,10 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
     appIndexRoute,
-    tenantsRoute.addChildren([tenantsIndexRoute, tenantDetailRoute]),
+    tenantsRoute.addChildren([
+      tenantsIndexRoute,
+      tenantDetailRoute.addChildren([tenantOverviewRoute, tenantAccessRoute, tenantUsersRoute]),
+    ]),
     operationsRoute.addChildren([operationsIndexRoute, operationsJobsRoute, operationsQueuesRoute]),
     aiRoute.addChildren([aiIndexRoute, aiSettingsRoute, aiCostsRoute, aiPricesRoute]),
     userSettingsRoute.addChildren([userSettingsProfileRoute, userSettingsAppearanceRoute]),

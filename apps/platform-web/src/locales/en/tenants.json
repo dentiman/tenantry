@@ -66,7 +66,8 @@
     "notFoundHint": "It may have been removed, or the link is wrong.",
     "tabs": {
       "overview": "Overview",
-      "access": "Access"
+      "access": "Access",
+      "users": "Users"
     },
     "identity": {
       "title": "Identity",
