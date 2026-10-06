@@ -26,7 +26,7 @@ export interface NotificationTypeDef {
 }
 
 /**
- * Типи сповіщень модуля-власника (docs/module-registries.md R1). Модуль `notifications`
+ * Типи сповіщень модуля-власника (docs/modules.md §7.1). Модуль `notifications`
  * дає лише механізм; визначення живуть у контрактах власника
  * (`calendar/calendar.notifications.ts`), збирає їх root `libs/contracts/src/notification-types.ts`.
  *

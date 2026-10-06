@@ -500,7 +500,7 @@ Controller, як вимагає CLAUDE.md. `phone`/`phoneCountry` беруть �
 
 ## 9. Активності і сповіщення
 
-*(З 2026-10-05 типи модуля живуть у його контрактах — `*.activities.ts` / `*.notifications.ts`, тексти — у його неймспейсі; docs/module-registries.md R1.)*
+*(З 2026-10-05 типи модуля живуть у його контрактах — `*.activities.ts` / `*.notifications.ts`, тексти — у його неймспейсі; docs/modules.md §7.1.)*
 
 Нові типи в `ACTIVITY_TYPES` (закритий enum + payload-схема на тип):
 
@@ -540,7 +540,7 @@ Controller, як вимагає CLAUDE.md. `phone`/`phoneCountry` беруть �
   `/` (Overview), `contacts`, і вкладки фіч, що чіпляються сюди своїм маршрутом і внеском у слот
   `customerDetailTabs` (календар → `events`). Шапку, дії й стрічку тримає лейаут
   (`features/customers/pages/customer-detail.tsx`), вміст вкладок — `customer-overview.tsx` /
-  `customer-contacts.tsx`; docs/module-registries.md R3.
+  `customer-contacts.tsx`; docs/modules.md §7.4.
 - **`/settings/numbering`** — формат (префікс, кількість нулів), початковий номер і зсув
   лічильника. Живе в налаштуваннях КОМПАНІЇ, не в особистих: зсув лічильника незворотний і
   діє на всіх (docs/settings.md). Дві окремі форми на одній сторінці, бо це різні

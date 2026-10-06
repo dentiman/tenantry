@@ -186,7 +186,7 @@ export const RealtimeErrorSchema = z.object({
  * Події server → client, якими володіє сама платформа. Події фіч (календар, AI) живуть у
  * їхніх контрактах (`*.socket-events.ts`), а повний перелік `REALTIME_EVENTS` і тип
  * протоколу `ServerToClientEvents` збирає root `libs/contracts/src/socket-events.ts`
- * (docs/module-registries.md R2).
+ * (docs/modules.md §7.2).
  */
 export const PLATFORM_SOCKET_EVENTS = {
   presenceChanged: defineSocketEvent('presence.changed.v1', PresenceChangedSchema),

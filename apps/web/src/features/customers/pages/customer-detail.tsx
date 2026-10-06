@@ -41,7 +41,7 @@ import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
  * Картка кастомера — ЛЕЙАУТ маршруту `customers/$customerId`: шапка з ідентичністю і діями,
  * рядок вкладок і `<Outlet/>` для них, справа — стрічка подій. Вкладки — дочірні маршрути:
  * «Огляд» (`/`), «Контакти» (`contacts`) і вкладки фіч, що чіпляються сюди своїми маршрутами
- * та внеском у слот `customerDetailTabs` (календар → `events`; docs/module-registries.md R3).
+ * та внеском у слот `customerDetailTabs` (календар → `events`; docs/modules.md §7.4).
  * Форк, який додає свою сутність, копіює цей лейаут, а не вигадує розкладку.
  */
 export function CustomerDetailLayout() {
@@ -178,7 +178,7 @@ export function CustomerDetailLayout() {
           Вкладки лишились, бо контактні особи — окремий розділ, а не блок */}
       <div className="grid items-start gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-          {/* Вкладки — дочірні маршрути (docs/module-registries.md R3): у кожної своя
+          {/* Вкладки — дочірні маршрути (docs/modules.md §7.4): у кожної своя
               адреса, шапка не перемонтовується. Власні вкладки кастомера — тут, вкладки
               фіч (календар → «Події») — внески в слот `customerDetailTabs` */}
           <Tabs value={activeTab}>

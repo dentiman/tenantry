@@ -4,7 +4,7 @@ import { CALENDAR_SOCKET_EVENTS } from './calendar/calendar.socket-events';
 import { AI_SOCKET_EVENTS } from './ai/ai.socket-events';
 
 /**
- * Composition root протоколу сокета (docs/module-registries.md R2): усі події server → client
+ * Composition root протоколу сокета (docs/modules.md §7.2): усі події server → client
  * в одному переліку — огляд протоколу лишається одним місцем, а схеми живуть у модулях-
  * власниках. Прибираючи фічу з форку, прибери її рядок тут.
  */

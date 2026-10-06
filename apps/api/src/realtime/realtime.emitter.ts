@@ -73,7 +73,7 @@ export class RealtimeEmitter implements NotificationDispatcher {
     this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationChanged, payload);
   }
 
-  // ---- події фіч: в особисті room-и (docs/module-registries.md R2) ----
+  // ---- події фіч: в особисті room-и (docs/modules.md §7.2) ----
 
   /**
    * Подія в особисті room-и юзерів — для фіч, що оголосили свої події в контрактах

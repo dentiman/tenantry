@@ -479,7 +479,7 @@ function makeSubscriber(
     ...cancel,
   } as unknown as AiCancelChannel;
 
-  // Емітер воркера generic (`toUser(…, подія, payload)`, docs/module-registries.md R2), а
+  // Емітер воркера generic (`toUser(…, подія, payload)`, docs/modules.md §7.2), а
   // сценарії нижче підміняють `world.realtime.aiDelta/aiCompleted` — адаптер читає їх у
   // момент виклику, тож підміни діють
   const realtime = {

@@ -8,7 +8,7 @@ import { TenantsModule } from '../tenants/tenants.module';
  * інакше тенант, створений оператором, лишився б єдиним без нього, а tenant-api його не
  * полагодить: там канал уже вважається інваріантом. Логіка — спільний провізіонер
  * `libs/shared/src/chat/default-channel.ts`; тут лише реєстрація в хуку появи тенанта,
- * тож `tenants` чату не знає (docs/module-registries.md R6).
+ * тож `tenants` чату не знає (docs/modules.md §7.3).
  */
 @Injectable()
 class DefaultChannelProvisioner implements OnModuleInit {

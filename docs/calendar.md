@@ -591,7 +591,7 @@ notifications                 доставлений рядок інбокса (
 
 ### 9.1. Activity Log
 
-*(З 2026-10-05 типи модуля живуть у його контрактах — `*.activities.ts` / `*.notifications.ts`, тексти — у його неймспейсі; docs/module-registries.md R1.)*
+*(З 2026-10-05 типи модуля живуть у його контрактах — `*.activities.ts` / `*.notifications.ts`, тексти — у його неймспейсі; docs/modules.md §7.1.)*
 
 Нові типи в `ACTIVITY_TYPES` (окремі типи замість одного `updated` із діффом — та сама
 доктрина, що в юзерах і кастомерах: журнал читають люди):
@@ -650,7 +650,7 @@ Payload — `{ eventId, change: 'created' | 'updated' | 'deleted', startsAt, end
 
 **Реалізовано 2026-09-07** (перша частина CAL-2). Чотири рішення, які уточнюють ескіз вище:
 
-1. **Адресат — перелік особистих room-ів, а не tenant-room.** `RealtimeEmitter.toUsers(tenantId, recipientIds, REALTIME_EVENTS.calendarEventChanged, payload)` (до 2026-10-05 — окремий метод `calendarEventChanged`; подія оголошена в `calendar/calendar.socket-events.ts`, docs/module-registries.md R2)
+1. **Адресат — перелік особистих room-ів, а не tenant-room.** `RealtimeEmitter.toUsers(tenantId, recipientIds, REALTIME_EVENTS.calendarEventChanged, payload)` (до 2026-10-05 — окремий метод `calendarEventChanged`; подія оголошена в `calendar/calendar.socket-events.ts`, docs/modules.md §7.2)
    робить по одному `emit` на учасника. Broadcast розсилав би всьому тенанту сам факт
    існування чужої зустрічі разом із її часом.
 2. **Перенесення шле ДВІ дельти** — на нову межу і на стару. Клієнт бачить лише свій
@@ -703,7 +703,7 @@ workDayEnd }` — сітка мусить намалюватись першим 
   `/workspace/customers/$customerId/events` під лейаутом картки (`customerEventsRoute`) — той
   самий `AgendaList`, відфільтрований за `customerId`; нова подія заводиться з цим кастомером.
   Customers про неї не знає: вкладку дає внесок у слот `customerDetailTabs`, маршрут чіпляє
-  `router.tsx` (docs/module-registries.md R3);
+  `router.tsx` (docs/modules.md §7.4);
 - видалення кастомера — `SetNull`: подія «зустріч, яка була» не має зникати разом із карткою.
 
 ### 9.7. Presence, files, numbering, DataGrid — що НЕ використовується

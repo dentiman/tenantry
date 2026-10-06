@@ -9,7 +9,7 @@ export interface CreatedTenant {
 
 /**
  * Що модуль-фіча робить, коли в control plane зʼявляється тенант (docs/modules.md §4,
- * docs/module-registries.md R6). Той самий патерн, що `UserLifecycleHooks` у tenant-api:
+ * docs/modules.md §7.3). Той самий патерн, що `UserLifecycleHooks` у tenant-api:
  * хук виконується В ТІЙ САМІЙ транзакції, що створює тенанта і його першого адміна, — помилка
  * хука відкочує створення. Для того, що є частиною появи тенанта (дефолтний канал чату), а не
  * наслідком після неї.

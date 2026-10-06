@@ -1011,7 +1011,7 @@ POST /conversations/:id/read        { seq }
 провізіонер модуля chat `libs/shared/src/chat/default-channel.ts` (`ensureDefaultChannel`,
 `joinDefaultChannel`, з явним `tenantId`, бо два з трьох місць ідуть під BYPASSRLS); модулі, що
 створюють тенанта чи юзера, чату не імпортують — chat реєструє хуки сам
-(docs/module-registries.md R6):
+(docs/modules.md §7.3):
 
 | Де | Що робить |
 | --- | --- |

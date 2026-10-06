@@ -133,7 +133,7 @@ Prisma на зміну типу колонки генерує `DROP + ADD` — �
   отримувач» і поважає преференси (немутабельні типи — виняток).
 - Нові типи реєструються в контрактах модуля-власника: `auth/auth.notifications.ts`,
   `user/user.activities.ts` тощо (`defineNotificationTypes` / `defineActivityTypes`; з
-  2026-10-05 — docs/module-registries.md R1). Root-и `notification-types.ts` /
+  2026-10-05 — docs/modules.md §7.1). Root-и `notification-types.ts` /
   `activity-types.ts` збирають їх у закритий enum, payload-схеми і `NOTIFICATION_TYPE_META`.
 - **Рутинні події auth в activities НЕ пишемо** (успішний логін кожні 15 хв засмітить
   фід). Туди йдуть лише аномалії і свідомі дії: `sessions_revoked`, `password_changed`,

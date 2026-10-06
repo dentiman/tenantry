@@ -7,7 +7,7 @@ import { TenantLifecycleHooks } from './tenant-lifecycle.hooks';
   controllers: [TenantsController],
   providers: [TenantsService, TenantLifecycleHooks],
   // Фічі (chat) реєструють свої дії в транзакції появи тенанта, а tenants їх не
-  // імпортує (docs/module-registries.md R6)
+  // імпортує (docs/modules.md §7.3)
   exports: [TenantLifecycleHooks],
 })
 export class TenantsModule {}

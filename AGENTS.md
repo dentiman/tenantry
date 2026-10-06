@@ -22,13 +22,12 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   API, transaction ownership, read-modify-write guards, after-commit effects, async guarantees,
   record-level access), each with a reference implementation in code and how it is enforced.
   The procedure is the `backend-change` skill (`.agents/skills/backend-change/`)
-- `docs/modules.md` — the module graph across all apps and libs: tiers (infra → platform →
-  core → feature), declared `dependsOn` edges, slots for upward links, known violations.
-  Source of truth is `modules.config.ts`; checked by `pnpm modules:check`
-- `docs/module-registries.md` — central files that hold feature knowledge the checker can't see:
-  the rule (wiring and operational settings stay central — `topology.ts`, rate limits, menus;
-  feature definitions — schemas, texts, defaults — move to their owner), what moves (R1
-  notification/activity types, R2 socket events, R6 default chat channel) and what stays on purpose
+- `docs/modules.md` — **the** reference for decoupling by module, across all apps and libs: tiers
+  (infra → platform → core → feature), declared `dependsOn` edges, slots/hooks/registries for
+  upward links, the rule "wiring and operational settings stay central, feature definitions
+  (schemas, texts, defaults, routes) live with the owner", what stays central on purpose, and a
+  checklist for a new module. Source of truth for the graph is `modules.config.ts`; checked by
+  `pnpm modules:check`
 - `docs/auth-hardening-plan.md` — current auth/session state and the AUTH-0…4 roadmap
   (rate limiting, session-as-entity, cookie migration, password recovery, 2FA)
 - `docs/event-driven-architecture.md` — messaging (events/commands), topology, DLQ

@@ -11,7 +11,7 @@ import { SETTINGS_ACTIVITIES } from './settings/settings.activities';
 import { CALENDAR_ACTIVITIES } from './calendar/calendar.activities';
 
 /**
- * Composition root типів активності (docs/module-registries.md R1): єдине місце, що знає,
+ * Composition root типів активності (docs/modules.md §7.1): єдине місце, що знає,
  * які модулі пишуть у журнал. Визначення — у контрактах власників; прибираючи фічу з форку,
  * прибери її рядок тут. Порядок груп — порядок значень enum-а в OpenAPI.
  */

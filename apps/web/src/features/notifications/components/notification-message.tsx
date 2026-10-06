@@ -49,7 +49,7 @@ export function NotificationMessage({
 }) {
   const { t } = useTranslation('notifications');
   const payload = notification.payload;
-  // Визначення типу — з реєстру контрактів (docs/module-registries.md R1): там же,
+  // Визначення типу — з реєстру контрактів (docs/modules.md §7.1): там же,
   // у якому неймспейсі тексти і на яку сутність веде посилання. Невідомий тип — не
   // помилка: фронт може бути старіший за бекенд
   const definition = notificationDefinition(notification.type);

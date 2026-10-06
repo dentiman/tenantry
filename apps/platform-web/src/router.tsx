@@ -26,7 +26,7 @@ import {
 } from './features/account/account.routes';
 
 /**
- * Composition root маршрутів (docs/module-registries.md R3): визначення живуть у теках модулів
+ * Composition root маршрутів (docs/modules.md §7.4): визначення живуть у теках модулів
  * (`features/<модуль>/<модуль>.routes.tsx`, оболонка — `app-shell/app.routes.tsx`), а тут лише
  * збирається дерево — рядок на модуль.
  */

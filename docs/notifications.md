@@ -219,7 +219,7 @@ CREATE UNIQUE INDEX "notifications_group_unread_uq"
 > `calendar_event.cancelled` — НЕмутабельний тип (як `user.password_changed`): скасування
 > мусить дійти навіть до того, хто вимкнув усе інше. Деталі — `docs/calendar.md` §9.2.
 
-> **Оновлено 2026-10-05 (docs/module-registries.md R1).** Типи більше не перелічуються в
+> **Оновлено 2026-10-05 (docs/modules.md §7.1).** Типи більше не перелічуються в
 > `notification.schema.ts`. Кожен модуль оголошує свої в контрактах
 > (`calendar/calendar.notifications.ts`: `defineNotificationTypes({ ns, prefix }, { тип: {
 > payload, category, defaultEnabled, muteable, subject } })`), root

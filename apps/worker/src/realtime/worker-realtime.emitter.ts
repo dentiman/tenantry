@@ -82,7 +82,7 @@ export class WorkerRealtimeEmitter
 
   /**
    * Подія в особистий room юзера — для фіч, що оголосили свої події в контрактах
-   * (`ai.message-delta.v1`, `ai.message-completed.v1`; docs/module-registries.md R2).
+   * (`ai.message-delta.v1`, `ai.message-completed.v1`; docs/modules.md §7.2).
    * Realtime не знає, що це за події: тип payload-у — з протоколу `ServerToClientEvents`.
    */
   toUser<E extends keyof ServerToClientEvents>(

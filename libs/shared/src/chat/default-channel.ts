@@ -5,7 +5,7 @@ import type { Prisma } from '@saas-skeleton/database';
  * (docs/chat.md §7.4, design.md D3). Модуль chat; єдина реалізація для трьох місць, де
  * канал народжується або поповнюється: поява тенанта в control plane (хук `tenants`),
  * поява юзера в api (хук `users`) і сід. Раніше кожне писало таблиці чату саме
- * (docs/module-registries.md R6).
+ * (docs/modules.md §7.3).
  *
  * `tenantId` — явний аргумент, а не tenant-контекст: control plane і сід ідуть під
  * BYPASSRLS-роллю, де DB-default (`current_setting`) дав би NULL. У tenant-транзакції api

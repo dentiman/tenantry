@@ -7,7 +7,7 @@ import type { z } from 'zod';
  *
  * Подію оголошує модуль, якому вона належить (`calendar/calendar.socket-events.ts`); модуль
  * realtime дає лише механізм і транспорт, а root `libs/contracts/src/socket-events.ts`
- * збирає всі події в типізований протокол (docs/module-registries.md R2).
+ * збирає всі події в типізований протокол (docs/modules.md §7.2).
  */
 export interface SocketEventDef<N extends string = string, S extends z.ZodType = z.ZodType> {
   readonly name: N;

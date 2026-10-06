@@ -60,7 +60,7 @@ import { settingsRoute, settingsGeneralRoute } from './features/settings/setting
 import { usersRoute, userDetailRoute } from './features/users/users.routes';
 
 /**
- * Composition root маршрутів (docs/module-registries.md R3): визначення живуть у теках модулів
+ * Composition root маршрутів (docs/modules.md §7.4): визначення живуть у теках модулів
  * (`features/<модуль>/<модуль>.routes.tsx`, оболонка — `app-shell/app.routes.tsx`), а тут лише
  * збирається дерево — рядок на модуль. Маршрут фічі може висіти під лейаутом модуля нижче
  * (`settingsCalendarRoute` — під `settingsRoute`): він імпортує батька сам, а дерево складає root.
@@ -77,7 +77,7 @@ const routeTree = rootRoute.addChildren([
       usersRoute,
       userDetailRoute,
       customersRoute,
-      // Картка кастомера — лейаут: власні вкладки + вкладки фіч (docs/module-registries.md R3)
+      // Картка кастомера — лейаут: власні вкладки + вкладки фіч (docs/modules.md §7.4)
       customerDetailRoute.addChildren([
         customerOverviewRoute,
         customerContactsRoute,

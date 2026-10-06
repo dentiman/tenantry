@@ -45,7 +45,7 @@ const WEEK_STARTS = [1, 0, 6] as const;
  * фолбек для тих, хто свою не задав.
  */
 export function SettingsCalendarPage() {
-  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/module-registries.md R1);
+  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/modules.md §7.1);
   // з `settings` береться лише назва розділу для крихт
   const { t } = useTranslation('calendar');
   const { t: tSettings } = useTranslation('settings');

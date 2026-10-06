@@ -42,7 +42,7 @@ import { applyServerError, FormTextareaField } from '../../../components/form';
  * бачити, що вони їдуть до зовнішнього LLM-провайдера з кожним питанням.
  */
 export function SettingsAiPage() {
-  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/module-registries.md R1);
+  // Тексти сторінки — у неймспейсі фічі, що нею володіє (docs/modules.md §7.1);
   // з `settings` береться лише назва розділу для крихт
   const { t } = useTranslation('ai');
   const { t: tSettings } = useTranslation('settings');

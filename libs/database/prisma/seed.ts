@@ -2,7 +2,7 @@ import '../load-root-env';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
 import { PrismaClient } from '../src/generated/prisma/client';
-// Сід — composition root демо-даних модулів: чат провізіонить себе сам (docs/module-registries.md R6).
+// Сід — composition root демо-даних модулів: чат провізіонить себе сам (docs/modules.md §7.3).
 // Шлях до файлу, а не barrel `@saas-skeleton/shared`: той тягне Nest і pg-boss, сіду не потрібні
 import { ensureDefaultChannel, joinDefaultChannel } from '../../shared/src/chat/default-channel';
 
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
   // міграції (тенант там уже є, юзерів ще немає), і «створити канал разом із
   // членством» просто не спрацювало б — канал уже є, а адмін щойно зʼявився і
   // лишився б поза ним. Тому окремо канал, окремо членство. Обидва кроки — той самий
-  // провізіонер, що в control plane і api (docs/module-registries.md R6); tenantId
+  // провізіонер, що в control plane і api (docs/modules.md §7.3); tenantId
   // скрізь явний: сід іде під saas_platform (BYPASSRLS)
   await prisma.$transaction((tx) => ensureDefaultChannel(tx, tenant.id));
   await prisma.$transaction((tx) => joinDefaultChannel(tx, tenant.id, admin));

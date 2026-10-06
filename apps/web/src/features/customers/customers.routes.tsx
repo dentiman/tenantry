@@ -33,7 +33,7 @@ export const customersRoute = createRoute({
 /**
  * Картка кастомера: окремий роут — на неї дають посилання в листі й у тікеті. Це ЛЕЙАУТ
  * (шапка + вкладки + `<Outlet/>`): вкладки — дочірні маршрути, і фічі чіпляють сюди свої
- * (`customerEventsRoute` календаря) — дерево складає `router.tsx` (docs/module-registries.md R3)
+ * (`customerEventsRoute` календаря) — дерево складає `router.tsx` (docs/modules.md §7.4)
  */
 export const customerDetailRoute = createRoute({
   getParentRoute: () => workspaceRoute,

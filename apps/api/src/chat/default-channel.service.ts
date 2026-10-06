@@ -10,8 +10,7 @@ import { UserLifecycleHooks } from '../users/user-lifecycle.hooks';
  * сам (docs/modules.md §4).
  *
  * Сама логіка каналу — спільний провізіонер `libs/shared/src/chat/default-channel.ts`: той
- * самий код створює канал разом із тенантом у control plane і в сіді (docs/module-registries.md
- * R6).
+ * самий код створює канал разом із тенантом у control plane і в сіді (docs/modules.md §7.3).
  */
 @Injectable()
 export class DefaultChannelService implements OnModuleInit {

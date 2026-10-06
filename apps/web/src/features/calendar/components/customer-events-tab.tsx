@@ -13,7 +13,7 @@ import { defaultCreateStart, todayKey } from '../lib/calendar-date';
 
 /**
  * Вкладка «Події» на картці кастомера — маршрут календаря `events` під лейаутом
- * `customerDetailRoute` (docs/module-registries.md R3). Той самий `AgendaList`, що в
+ * `customerDetailRoute` (docs/modules.md §7.4). Той самий `AgendaList`, що в
  * перегляді Agenda і у віджеті дашборда, лише відфільтрований за кастомером: окремого
  * «списку подій клієнта» не заводимо, бо він розійшовся б з агендою з першою ж зміною.
  *

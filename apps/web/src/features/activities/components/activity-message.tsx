@@ -11,7 +11,7 @@ type Activity = ActivityListResponseDtoOutputItemsItem;
  * Дата НІКОЛИ не інтерполюється в повідомлення — вона окремо в ActivityDrawer (Intl).
  *
  * Що це за тип, де його тексти і чи має він інший варіант фрази — з визначення в
- * контрактах власника (docs/module-registries.md R1): тексти календаря живуть у
+ * контрактах власника (docs/modules.md §7.1): тексти календаря живуть у
  * `calendar.json`, платформні — у `activities.json`. Невідомий тип — generic-ключ
  * `unknown`: фронт може бути старіший за бекенд, і фід не падає.
  */

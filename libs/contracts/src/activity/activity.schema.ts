@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
-// Перелік типів збирає root із визначень модулів-власників (docs/module-registries.md R1)
+// Перелік типів збирає root із визначень модулів-власників (docs/modules.md §7.1)
 import { ActivityTypeSchema } from '../activity-types';
 
 /**

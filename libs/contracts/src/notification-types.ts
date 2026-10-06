@@ -7,7 +7,7 @@ import { CALENDAR_NOTIFICATIONS } from './calendar/calendar.notifications';
 import { AUTH_NOTIFICATIONS } from './auth/auth.notifications';
 
 /**
- * Composition root типів сповіщень (docs/module-registries.md R1): єдине місце, що знає,
+ * Composition root типів сповіщень (docs/modules.md §7.1): єдине місце, що знає,
  * які модулі шлють сповіщення. Визначення — у контрактах власників; прибираючи фічу з
  * форку, прибери її рядок тут. Порядок груп — порядок рядків на екрані налаштувань.
  */

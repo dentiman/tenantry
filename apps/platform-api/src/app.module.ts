@@ -38,7 +38,7 @@ import { validatePlatformEnv } from './config/env.schema';
     AppThrottlerModule,
     PlatformAuthModule,
     TenantsModule,
-    // Дефолтний канал чату при появі тенанта (docs/module-registries.md R6)
+    // Дефолтний канал чату при появі тенанта (docs/modules.md §7.3)
     ChatProvisioningModule,
     JobsMonitorModule,
     AiSettingsModule,
