@@ -3,6 +3,7 @@
   "toggle": "Toggle assistant",
   "close": "Close assistant",
   "newConversation": "New conversation",
+  "openPage": "Open the assistant page",
   "deleteAll": {
     "trigger": "Delete my conversations",
     "confirmTitle": "Delete all your conversations?",
@@ -57,5 +58,37 @@
     "enabledHint": "When off, nobody in the organization sees the assistant. The persona and instructions below are kept.",
     "blockedTitle": "Turned off by the platform",
     "blocked": "The platform operator has disabled the assistant or not enabled it for your organization. You can still edit the persona and instructions; they apply once the assistant is available."
+  },
+  "history": {
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Previous 7 days",
+      "older": "Older"
+    },
+    "current": "Current",
+    "untitled": "Untitled conversation",
+    "loadMore": "Load more",
+    "loadError": "Couldn't load your conversations",
+    "retry": "Try again",
+    "empty": {
+      "title": "No conversations yet",
+      "description": "Your conversations with the assistant will appear here."
+    }
+  },
+  "page": {
+    "loading": "Loading the conversation",
+    "newTitle": "New conversation",
+    "pastSubtitle": "Past conversation",
+    "pastNotice": "This is a past conversation. Continue it to ask new questions here.",
+    "continue": "Continue this conversation",
+    "unavailable": {
+      "title": "Conversation not found",
+      "description": "It may have been deleted, or it isn't yours."
+    },
+    "disabled": {
+      "title": "The assistant is turned off",
+      "description": "The AI assistant isn't available for your organization right now."
+    }
   }
 }

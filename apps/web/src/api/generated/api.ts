@@ -25,7 +25,9 @@ import type {
   ActivitiesFindAllParams,
   ActivityListResponseDtoOutput,
   AiCitationContentResponseDtoOutput,
+  AiConversationListResponseDtoOutput,
   AiConversationResponseDtoOutput,
+  AiListConversationsParams,
   AiSettingsDto,
   AiSettingsResponseDtoOutput,
   AskAiRequestDto,
@@ -5046,6 +5048,132 @@ export const useAiCancel = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
+export const aiListConversations = (
+  params?: AiListConversationsParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiConversationListResponseDtoOutput>(
+    { url: `/api/ai/conversations`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getAiListConversationsQueryKey = (params?: AiListConversationsParams) => {
+  return [`/api/ai/conversations`, ...(params ? [params] : [])] as const;
+};
+
+export const getAiListConversationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiListConversations>>,
+  TError = unknown,
+>(
+  params?: AiListConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiListConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiListConversationsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiListConversations>>> = ({ signal }) =>
+    aiListConversations(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiListConversations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiListConversationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof aiListConversations>>
+>;
+export type AiListConversationsQueryError = unknown;
+
+export function useAiListConversations<
+  TData = Awaited<ReturnType<typeof aiListConversations>>,
+  TError = unknown,
+>(
+  params: undefined | AiListConversationsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiListConversations>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiListConversations>>,
+          TError,
+          Awaited<ReturnType<typeof aiListConversations>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiListConversations<
+  TData = Awaited<ReturnType<typeof aiListConversations>>,
+  TError = unknown,
+>(
+  params?: AiListConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiListConversations>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiListConversations>>,
+          TError,
+          Awaited<ReturnType<typeof aiListConversations>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiListConversations<
+  TData = Awaited<ReturnType<typeof aiListConversations>>,
+  TError = unknown,
+>(
+  params?: AiListConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiListConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiListConversations<
+  TData = Awaited<ReturnType<typeof aiListConversations>>,
+  TError = unknown,
+>(
+  params?: AiListConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiListConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiListConversationsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 export const aiDeleteAllConversations = (options?: SecondParameter<typeof customInstance>) => {
   return customInstance<void>({ url: `/api/ai/conversations`, method: 'DELETE' }, options);
 };
@@ -5108,6 +5236,188 @@ export const useAiDeleteAllConversations = <TError = unknown, TContext = unknown
   TContext
 > => {
   const mutationOptions = getAiDeleteAllConversationsMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const aiConversationById = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiConversationResponseDtoOutput>(
+    { url: `/api/ai/conversations/${id}`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getAiConversationByIdQueryKey = (id?: string) => {
+  return [`/api/ai/conversations/${id}`] as const;
+};
+
+export const getAiConversationByIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof aiConversationById>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversationById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAiConversationByIdQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof aiConversationById>>> = ({ signal }) =>
+    aiConversationById(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof aiConversationById>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AiConversationByIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof aiConversationById>>
+>;
+export type AiConversationByIdQueryError = void;
+
+export function useAiConversationById<
+  TData = Awaited<ReturnType<typeof aiConversationById>>,
+  TError = void,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversationById>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiConversationById>>,
+          TError,
+          Awaited<ReturnType<typeof aiConversationById>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiConversationById<
+  TData = Awaited<ReturnType<typeof aiConversationById>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof aiConversationById>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof aiConversationById>>,
+          TError,
+          Awaited<ReturnType<typeof aiConversationById>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAiConversationById<
+  TData = Awaited<ReturnType<typeof aiConversationById>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversationById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useAiConversationById<
+  TData = Awaited<ReturnType<typeof aiConversationById>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof aiConversationById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAiConversationByIdQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const aiActivate = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AiConversationResponseDtoOutput>(
+    { url: `/api/ai/conversations/${id}/activate`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getAiActivateMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiActivate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiActivate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['aiActivate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiActivate>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return aiActivate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiActivateMutationResult = NonNullable<Awaited<ReturnType<typeof aiActivate>>>;
+
+export type AiActivateMutationError = void;
+
+export const useAiActivate = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof aiActivate>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof aiActivate>>, TError, { id: string }, TContext> => {
+  const mutationOptions = getAiActivateMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
@@ -20,23 +21,31 @@ import {
 import { RATE_LIMITS, RateLimit } from '@saas-skeleton/shared';
 import type {
   AiCitationContentResponse,
+  AiConversationListResponse,
   AiConversationResponse,
   AskAiResponse,
 } from '@saas-skeleton/contracts';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { AiService } from './ai.service';
-import { toAiConversationResponse, toAiMessageResponse } from './ai.mapper';
+import {
+  toAiConversationResponse,
+  toAiConversationSummary,
+  toAiMessageResponse,
+} from './ai.mapper';
 import {
   AiCitationContentResponseDto,
+  AiConversationListQueryDto,
+  AiConversationListResponseDto,
   AiConversationResponseDto,
   AskAiRequestDto,
   AskAiResponseDto,
 } from './dto/ai.dto';
 
 /**
- * AI-асистент. Жоден роут не приймає id розмови — суб'єкт завжди з токена, як в
- * `/account` і `/settings`. Єдиний id у шляху — id ВІДПОВІДІ (у `cancel` і
- * `citations`), і він звіряється з власником.
+ * AI-асистент. Поточна розмова (`/ai/conversation…`) адресується без id — суб'єкт
+ * завжди з токена, як в `/account` і `/settings`. Id у шляху є лише там, де без нього
+ * не обійтись: id ВІДПОВІДІ (`cancel`, `citations`) і id розмови з історії
+ * (`/ai/conversations/:id`). Кожен звіряється з власником; чуже — 404.
  */
 @ApiTags('ai')
 @ApiBearerAuth()
@@ -111,6 +120,51 @@ export class AiController {
   async cancel(@Param('id') id: string, @CurrentUser() actor: JwtPayload): Promise<void> {
     await this.ai.assertEnabled();
     await this.ai.cancel(actor, id);
+  }
+
+  /** Історія розмов для сторінки асистента — курсорний фід, свіжі згори */
+  @Get('conversations')
+  @ApiOkResponse({ type: AiConversationListResponseDto.Output })
+  async listConversations(
+    @Query() query: AiConversationListQueryDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<AiConversationListResponse> {
+    await this.ai.assertEnabled();
+    const { items, nextCursor } = await this.ai.listConversations(actor, query);
+    return {
+      items: items.map((item) => toAiConversationSummary(item, item.firstQuestion)),
+      nextCursor,
+    };
+  }
+
+  /** Розмова з історії — активна або RETIRED (лише для читання) */
+  @Get('conversations/:id')
+  @ApiOkResponse({ type: AiConversationResponseDto.Output })
+  @ApiNotFoundResponse()
+  async conversationById(
+    @Param('id') id: string,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<AiConversationResponse> {
+    await this.ai.assertEnabled();
+    const { conversation, messages } = await this.ai.conversationById(actor, id);
+    return toAiConversationResponse(conversation, messages);
+  }
+
+  /**
+   * «Продовжити розмову»: вона стає активною, поточна — RETIRED. 200 з її стрічкою, як
+   * у `reset` — нового ресурсу не створюється
+   */
+  @Post('conversations/:id/activate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AiConversationResponseDto.Output })
+  @ApiNotFoundResponse()
+  async activate(
+    @Param('id') id: string,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<AiConversationResponse> {
+    await this.ai.assertEnabled();
+    const { conversation, messages } = await this.ai.activate(actor, id);
+    return toAiConversationResponse(conversation, messages);
   }
 
   /**

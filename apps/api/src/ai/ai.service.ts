@@ -25,12 +25,40 @@ import {
   REALTIME_EVENTS,
   type AiCitationContentResponse,
   type AiConversationChanged,
+  type AiConversationListQuery,
 } from '@saas-skeleton/contracts';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
 
 /** Скільки останніх повідомлень віддавати панелі за один раз */
 const TRANSCRIPT_LIMIT = 100;
+
+/**
+ * Курсор історії — непрозорий base64url("{lastMessageAt ISO}|{id}"), той самий keyset,
+ * що в списку розмов чату: клієнт його не розбирає.
+ */
+function encodeHistoryCursor(lastMessageAt: Date, id: string): string {
+  return Buffer.from(`${lastMessageAt.toISOString()}|${id}`).toString('base64url');
+}
+
+function decodeHistoryCursor(cursor: string | undefined): { at: Date; id: string } | null {
+  if (!cursor) {
+    return null;
+  }
+  const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
+  const sep = decoded.lastIndexOf('|');
+  const at = new Date(decoded.slice(0, sep));
+  const id = decoded.slice(sep + 1);
+  if (sep === -1 || Number.isNaN(at.getTime()) || !id) {
+    throw new BadRequestException('Invalid cursor');
+  }
+  return { at, id };
+}
+
+export type AiConversationWithTitle = AiConversation & {
+  lastMessageAt: Date;
+  firstQuestion: string | undefined;
+};
 
 /**
  * Розмова з асистентом. Дві межі, і вони РІЗНІ:
@@ -95,6 +123,146 @@ export class AiService {
           );
         });
       }
+    });
+
+    return { conversation, messages: await this.transcript(conversation.id) };
+  }
+
+  /**
+   * Історія розмов юзера, свіжі згори. Лише розмови з хоч одним питанням: `reset()`
+   * заводить порожню ACTIVE щоразу, і без цього фільтра історія наповнювалась би
+   * «New conversation» без змісту. Межа людини — явний `userId`, як і скрізь у сервісі.
+   */
+  async listConversations(
+    actor: JwtPayload,
+    query: AiConversationListQuery,
+  ): Promise<{ items: AiConversationWithTitle[]; nextCursor: string | null }> {
+    const cursor = decodeHistoryCursor(query.cursor);
+    const rows = await this.prisma.aiConversation.findMany({
+      where: {
+        userId: actor.sub,
+        lastMessageAt: { not: null },
+        ...(cursor && {
+          OR: [
+            { lastMessageAt: { lt: cursor.at } },
+            { lastMessageAt: cursor.at, id: { lt: cursor.id } },
+          ],
+        }),
+      },
+      orderBy: [{ lastMessageAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      include: {
+        messages: {
+          where: { role: 'USER' },
+          orderBy: { seq: 'asc' },
+          take: 1,
+          select: { content: true },
+        },
+      },
+    });
+
+    const hasMore = rows.length > query.limit;
+    const items = (hasMore ? rows.slice(0, query.limit) : rows).flatMap(
+      ({ messages, ...conversation }) =>
+        conversation.lastMessageAt
+          ? [
+              {
+                ...conversation,
+                lastMessageAt: conversation.lastMessageAt,
+                firstQuestion: messages[0]?.content,
+              },
+            ]
+          : [],
+    );
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor: hasMore && last ? encodeHistoryCursor(last.lastMessageAt, last.id) : null,
+    };
+  }
+
+  /**
+   * Розмова з історії за id — активна чи RETIRED. Чужа або неіснуюча — 404, як і в
+   * `cancel`/`citation`: існування чужої розмови не розкривається. Покинуті відповіді
+   * закриваються так само, як у `currentConversation()`, — інакше RETIRED-розмова, чию
+   * відповідь воркер уже не візьме, показувала б «у роботі» до наступного читання.
+   */
+  async conversationById(
+    actor: JwtPayload,
+    id: string,
+  ): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
+    const conversation = await this.prisma.aiConversation.findFirst({
+      where: { id, userId: actor.sub },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    await this.transactions.withTenantTx(async (tx) => {
+      const closed = await this.state.closeAbandoned(tx, conversation.id);
+      if (closed > 0) {
+        this.transactions.onCommit(tx, () => {
+          this.emitConversationChanged(
+            conversation.tenantId,
+            actor.sub,
+            conversation.id,
+            'reply-closed',
+          );
+        });
+      }
+    });
+
+    return { conversation, messages: await this.transcript(conversation.id) };
+  }
+
+  /**
+   * «Продовжити розмову» з історії: вона стає ACTIVE, поточна — RETIRED. Правило «одна
+   * активна на юзера» не змінюється, тож `ask()`, `reset()` і воркер працюють як були.
+   *
+   * Обидва кроки в одній транзакції (частковий унікальний індекс не дає двом ACTIVE
+   * співіснувати навіть на мить), порядок — спершу прибрати поточну. Порожня поточна
+   * (щойно після `reset()`) видаляється, а не ховається в RETIRED: в історії її однаково
+   * не видно, а рядок лише чекав би на ретенцію. `ask()` бере лок рядка розмови, тож
+   * питання, що встигло раніше, робить `lastMessageAt` не-null, і DELETE її пропускає.
+   *
+   * Перевірка «ціль RETIRED і моя» — умовний `updateMany` + `count`, а не попереднє
+   * читання. Дві конкурентні активації РІЗНИХ розмов: друга або побачить уже нову
+   * ACTIVE і прибере її, або вріжеться в частковий унікальний індекс → P2002 → 409.
+   * В обох випадках активна рівно одна.
+   */
+  async activate(
+    actor: JwtPayload,
+    id: string,
+  ): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
+    const conversation = await this.transactions.withTenantTx(async (tx) => {
+      const target = await tx.aiConversation.findFirst({ where: { id, userId: actor.sub } });
+      if (!target) {
+        throw new NotFoundException('Conversation not found');
+      }
+      if (target.status === 'ACTIVE') {
+        return target; // уже активна — no-op, а не помилка
+      }
+
+      await tx.aiConversation.deleteMany({
+        where: { userId: actor.sub, status: 'ACTIVE', lastMessageAt: null },
+      });
+      await tx.aiConversation.updateMany({
+        where: { userId: actor.sub, status: 'ACTIVE' },
+        data: { status: 'RETIRED' },
+      });
+      const { count } = await tx.aiConversation.updateMany({
+        where: { id, userId: actor.sub, status: 'RETIRED' },
+        data: { status: 'ACTIVE' },
+      });
+      if (count === 0) {
+        // Ціль зникла між читанням і записом (паралельне «видалити мої розмови»)
+        throw new NotFoundException('Conversation not found');
+      }
+
+      this.transactions.onCommit(tx, () => {
+        this.emitConversationChanged(target.tenantId, actor.sub, target.id, 'activated');
+      });
+      return { ...target, status: 'ACTIVE' as const };
     });
 
     return { conversation, messages: await this.transcript(conversation.id) };

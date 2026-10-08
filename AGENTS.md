@@ -180,7 +180,8 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      sessions — no id in any path, subject is always the JWT), customers,
                      settings (org-level), files, activities, notifications, realtime
                      (Socket.IO gateway), calendar, ai (assistant conversation + citation
-                     read; no id in any path but the reply id), chat (CHAT-0.1: internal conversations, server-assigned
+                     read; the current conversation has no id in its path — only reply ids
+                     and history `/ai/conversations/:id` do), chat (CHAT-0.1: internal conversations, server-assigned
                      `seq`, one access service, no queue/socket seams yet). Pino logging,
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
@@ -195,7 +196,8 @@ apps/worker         NestJS application context, no HTTP. Message subscribers
 apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zustand,
                      Tailwind 4, react-hook-form, shadcn/ui on Base UI, react-i18next.
                      Two-level nav shell (`AppRail` + `AreaSidebar`, docs/frontend/app-shell.md):
-                     areas Workspace / Calendar / Chat / Settings (ADMIN) / Playground / Guide,
+                     areas Workspace / Calendar / Chat / Assistant (`features.ai`) /
+                     Settings (ADMIN) / Playground / Guide,
                      plus User settings (entry via avatar menu). Code is grouped by module in
                      `src/features/<module>/` (pages, components, stores…); outside it only the
                      shell, shared components/lib, api client, i18n and composition roots

@@ -13,6 +13,7 @@ import { initPresenceSync } from './features/realtime/presence-sync';
 import { initNotificationSync } from './features/notifications/realtime/notification-sync';
 import { initCalendarSync } from './features/calendar/realtime/calendar-sync';
 import { initAiSync } from './features/ai/realtime/ai-sync';
+import { useSettingsBootstrap } from './api/generated/api';
 import { NavProvider } from '@saas-skeleton/ui/navigation';
 import { isAllowed } from './features/auth/auth.access';
 import { useAuthStore } from './features/auth/stores/auth.store';
@@ -51,10 +52,22 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Стабільне посилання: новий `{}` на кожен рендер перебудовував би предикат і всю навігацію */
+const NO_FEATURES: Readonly<Record<string, boolean>> = {};
+
 /** Реєстр навігації + предикат доступу, привʼязаний до поточного юзера (docs/modules.md §4) */
 function AppNavProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
-  const allow = useCallback((access: unknown) => isAllowed(access, user), [user]);
+  // Прапорці фіч ховають розділи вимкнених фіч (`staticData.access.feature`). Той самий
+  // кеш bootstrap, що в `useAiEnabled`; без сесії запиту немає
+  const { data: bootstrap } = useSettingsBootstrap({
+    query: { enabled: user !== null, staleTime: Number.POSITIVE_INFINITY },
+  });
+  const features = user ? (bootstrap?.features ?? NO_FEATURES) : undefined;
+  const allow = useCallback(
+    (access: unknown) => isAllowed(access, user, features),
+    [user, features],
+  );
   return (
     <NavProvider navigation={NAVIGATION} allow={allow}>
       {children}

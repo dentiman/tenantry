@@ -16,9 +16,12 @@ import { router } from './router';
  * розкиданих `*.nav.ts`, тож тут він видно одним поглядом — зміна порядку чи загублений пункт
  * зʼявляється як diff у рев'ю (docs/modules.md §4).
  */
-function describeNav(role: UserResponse['role']): string[] {
+function describeNav(
+  role: UserResponse['role'],
+  features: Record<string, boolean> = { ai: true },
+): string[] {
   const user = { role } as UserResponse;
-  const allow = (access: unknown) => isAllowed(access, user);
+  const allow = (access: unknown) => isAllowed(access, user, features);
   const lookup = router as unknown as RouteLookup;
   const rail = visibleRailAreas(NAVIGATION, lookup, allow);
   const lines = [`rail: ${rail.map((area) => area.id).join(', ')}`];
@@ -38,7 +41,7 @@ describe('navigation snapshot', () => {
   it('ADMIN', () => {
     expect(describeNav('ADMIN')).toMatchInlineSnapshot(`
       [
-        "rail: workspace, calendar, chat, settings, playground, guide",
+        "rail: workspace, calendar, chat, assistant, settings, playground, guide",
         "workspace: dashboard, users, customers",
         "settings: settings.general, settings.calendar, settings.numbering, settings.ai, settings.activity",
         "playground: playground.vertical-form, playground.inline-form, playground.dialog",
@@ -51,12 +54,16 @@ describe('navigation snapshot', () => {
   it('USER не бачить налаштувань організації', () => {
     expect(describeNav('USER')).toMatchInlineSnapshot(`
       [
-        "rail: workspace, calendar, chat, playground, guide",
+        "rail: workspace, calendar, chat, assistant, playground, guide",
         "workspace: dashboard, users, customers",
         "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
         "customers.detail: customers.overview, customers.contacts, calendar.customer-events",
       ]
     `);
+  });
+
+  it('вимкнений асистент (features.ai) ховає його розділ', () => {
+    expect(describeNav('USER', {})[0]).toBe('rail: workspace, calendar, chat, playground, guide');
   });
 });

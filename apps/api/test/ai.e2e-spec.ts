@@ -356,6 +356,203 @@ describe('AI assistant API (e2e)', () => {
     });
   });
 
+  describe('history (assistant page)', () => {
+    interface SummaryBody {
+      id: string;
+      status: 'ACTIVE' | 'RETIRED';
+      title: string;
+    }
+    interface ListBody {
+      items: SummaryBody[];
+      nextCursor: string | null;
+    }
+
+    /** Дві розмови з питаннями: стара RETIRED і нова ACTIVE; порядок у часі — явний */
+    const twoConversations = async (
+      headers: { Authorization: string },
+    ): Promise<{ oldId: string; currentId: string }> => {
+      const first = await ask(headers, '  How do   I add a customer?  ').expect(202);
+      const oldId = (first.body as AskBody).conversationId;
+      await prisma.aiMessage.updateMany({ data: { status: 'COMPLETE' } });
+      await request(app.getHttpServer()).post('/api/ai/conversation/reset').set(headers).expect(200);
+      const second = await ask(headers, 'Where are the calendar settings?').expect(202);
+      const currentId = (second.body as AskBody).conversationId;
+      await prisma.aiMessage.updateMany({ data: { status: 'COMPLETE' } });
+      await prisma.aiConversation.update({
+        where: { id: oldId },
+        data: { lastMessageAt: new Date(Date.now() - 60_000) },
+      });
+      return { oldId, currentId };
+    };
+
+    it('lists only conversations with a question, newest first, titled by the first question', async () => {
+      const headers = await login(`${Date.now()}-history`);
+      const { oldId, currentId } = await twoConversations(headers);
+
+      const response = await request(app.getHttpServer())
+        .get('/api/ai/conversations')
+        .set(headers)
+        .expect(200);
+
+      const body = response.body as ListBody;
+      expect(body.items.map((item) => [item.id, item.status, item.title])).toEqual([
+        [currentId, 'ACTIVE', 'Where are the calendar settings?'],
+        [oldId, 'RETIRED', 'How do I add a customer?'],
+      ]);
+      expect(body.nextCursor).toBeNull();
+
+      // Порожня ACTIVE після reset() в історію не потрапляє
+      await request(app.getHttpServer()).post('/api/ai/conversation/reset').set(headers).expect(200);
+      const afterReset = await request(app.getHttpServer())
+        .get('/api/ai/conversations')
+        .set(headers)
+        .expect(200);
+      expect((afterReset.body as ListBody).items.map((item) => item.id)).toEqual([
+        currentId,
+        oldId,
+      ]);
+    });
+
+    it('pages with an opaque cursor and rejects a malformed one', async () => {
+      const headers = await login(`${Date.now()}-history-cursor`);
+      const { oldId, currentId } = await twoConversations(headers);
+
+      const first = await request(app.getHttpServer())
+        .get('/api/ai/conversations?limit=1')
+        .set(headers)
+        .expect(200);
+      const firstBody = first.body as ListBody;
+      expect(firstBody.items.map((item) => item.id)).toEqual([currentId]);
+      expect(firstBody.nextCursor).not.toBeNull();
+
+      const second = await request(app.getHttpServer())
+        .get(`/api/ai/conversations?limit=1&cursor=${String(firstBody.nextCursor)}`)
+        .set(headers)
+        .expect(200);
+      expect((second.body as ListBody).items.map((item) => item.id)).toEqual([oldId]);
+      expect((second.body as ListBody).nextCursor).toBeNull();
+
+      await request(app.getHttpServer())
+        .get('/api/ai/conversations?cursor=garbage')
+        .set(headers)
+        .expect(400);
+    });
+
+    it('reads a RETIRED conversation by id, but never another user’s — not even for an ADMIN', async () => {
+      const headers = await login(`${Date.now()}-history-read`);
+      const admin = await login(`${Date.now()}-history-admin`, 'ADMIN');
+      const { oldId } = await twoConversations(headers);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/ai/conversations/${oldId}`)
+        .set(headers)
+        .expect(200);
+      const body = response.body as ConversationBody & { status: string };
+      expect(body.status).toBe('RETIRED');
+      expect(body.messages.map((message) => message.role)).toEqual(['USER', 'ASSISTANT']);
+
+      await request(app.getHttpServer()).get(`/api/ai/conversations/${oldId}`).set(admin).expect(404);
+      const adminList = await request(app.getHttpServer())
+        .get('/api/ai/conversations')
+        .set(admin)
+        .expect(200);
+      expect((adminList.body as ListBody).items).toEqual([]);
+    });
+
+    it('activate makes a past conversation the current one and retires the previous', async () => {
+      const headers = await login(`${Date.now()}-history-activate`);
+      const { oldId, currentId } = await twoConversations(headers);
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/ai/conversations/${oldId}/activate`)
+        .set(headers)
+        .expect(200);
+      expect((response.body as ConversationBody & { status: string }).status).toBe('ACTIVE');
+
+      expect((await prisma.aiConversation.findUnique({ where: { id: currentId } }))?.status).toBe(
+        'RETIRED',
+      );
+      const current = await request(app.getHttpServer())
+        .get('/api/ai/conversation')
+        .set(headers)
+        .expect(200);
+      expect((current.body as ConversationBody).id).toBe(oldId);
+
+      // Наступне питання йде в активовану розмову
+      const asked = await ask(headers, 'follow-up').expect(202);
+      expect((asked.body as AskBody).conversationId).toBe(oldId);
+      expect((asked.body as AskBody).question.seq).toBe(2);
+
+      // Повторна активація вже активної — no-op
+      await request(app.getHttpServer())
+        .post(`/api/ai/conversations/${oldId}/activate`)
+        .set(headers)
+        .expect(200);
+    });
+
+    it('activate drops an empty current conversation instead of keeping it as RETIRED', async () => {
+      const headers = await login(`${Date.now()}-history-empty`);
+      const { oldId } = await twoConversations(headers);
+      const reset = await request(app.getHttpServer())
+        .post('/api/ai/conversation/reset')
+        .set(headers)
+        .expect(200);
+      const emptyId = (reset.body as ConversationBody).id;
+
+      await request(app.getHttpServer())
+        .post(`/api/ai/conversations/${oldId}/activate`)
+        .set(headers)
+        .expect(200);
+
+      expect(await prisma.aiConversation.findUnique({ where: { id: emptyId } })).toBeNull();
+    });
+
+    it('does not let another user activate someone else’s conversation', async () => {
+      const owner = await login(`${Date.now()}-history-owner`);
+      const other = await login(`${Date.now()}-history-other`, 'ADMIN');
+      const { oldId } = await twoConversations(owner);
+      await ask(other, 'my own question').expect(202);
+
+      await request(app.getHttpServer())
+        .post(`/api/ai/conversations/${oldId}/activate`)
+        .set(other)
+        .expect(404);
+      expect((await prisma.aiConversation.findUnique({ where: { id: oldId } }))?.status).toBe(
+        'RETIRED',
+      );
+    });
+
+    it('two concurrent activations of different conversations never 5xx and leave exactly one active', async () => {
+      const { user, tokens } = await createAndLoginTestUser(app, prisma, {
+        email: `ai-history-race-${String(Date.now())}@example.com`,
+        password: 'SecurePass123',
+      });
+      const headers = { Authorization: `Bearer ${tokens.accessToken}` };
+      const { oldId } = await twoConversations(headers);
+      await request(app.getHttpServer()).post('/api/ai/conversation/reset').set(headers).expect(200);
+      await ask(headers, 'third').expect(202);
+      await prisma.aiMessage.updateMany({ data: { status: 'COMPLETE' } });
+      const retired = await prisma.aiConversation.findMany({
+        where: { userId: user.id, status: 'RETIRED' },
+        select: { id: true },
+      });
+      expect(retired.map((row) => row.id)).toContain(oldId);
+      expect(retired).toHaveLength(2);
+
+      const results = await Promise.all(
+        retired.map(({ id }) =>
+          request(app.getHttpServer()).post(`/api/ai/conversations/${id}/activate`).set(headers),
+        ),
+      );
+      for (const result of results) {
+        expect([200, 409]).toContain(result.status);
+      }
+      expect(
+        await prisma.aiConversation.count({ where: { userId: user.id, status: 'ACTIVE' } }),
+      ).toBe(1);
+    });
+  });
+
   describe('ownership', () => {
     it('gives each user their own conversation, never another user’s', async () => {
       const alice = await login(`${Date.now()}-alice`);

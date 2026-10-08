@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { BotIcon } from 'lucide-react';
+import { SparklesIcon } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { useAiPanelStore } from '../stores/ai-panel.store';
 
@@ -22,7 +22,7 @@ export function AiPanelTrigger() {
       title={t('toggle')}
       onClick={toggle}
     >
-      <BotIcon />
+      <SparklesIcon />
     </Button>
   );
 }

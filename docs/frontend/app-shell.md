@@ -114,6 +114,7 @@ export default defineNavigation({
 | **Workspace**     | `/workspace`     | так                          | Dashboard · Users · Customers                             |
 | **Calendar**      | `/calendar`      | так                          | міні-місяць (НЕ меню — контейнер вигляду)                 |
 | **Chat**          | `/chat`          | так                          | список розмов (поки порожній стан)                        |
+| **Assistant**     | `/assistant`     | так, якщо `features.ai`      | історія розмов з AI-асистентом, згрупована за датою       |
 | **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · AI assistant · Activity  |
 | **Playground**    | `/playground`    | так                          | Buttons (далі — стенди інших примітивів)                  |
 | **Guide**         | `/guide`         | так                          | зміст путівника: параграфи ОДНІЄЇ сторінки, scroll-spy    |

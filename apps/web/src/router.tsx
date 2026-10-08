@@ -15,7 +15,12 @@ import {
   userSettingsAppearanceRoute,
 } from './features/account/account.routes';
 import { settingsActivityRoute } from './features/activities/activities.routes';
-import { settingsAiRoute } from './features/ai/ai.routes';
+import {
+  assistantRoute,
+  assistantIndexRoute,
+  assistantConversationRoute,
+  settingsAiRoute,
+} from './features/ai/ai.routes';
 import {
   loginRoute,
   resetPasswordRoute,
@@ -87,6 +92,7 @@ const routeTree = rootRoute.addChildren([
     ]),
     calendarRoute.addChildren([calendarIndexRoute, calendarViewRoute, calendarEventRoute]),
     chatRoute.addChildren([chatIndexRoute, chatConversationRoute]),
+    assistantRoute.addChildren([assistantIndexRoute, assistantConversationRoute]),
     settingsRoute.addChildren([
       settingsGeneralRoute,
       settingsCalendarRoute,

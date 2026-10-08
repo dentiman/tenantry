@@ -64,7 +64,13 @@ function makeMessage(overrides: Partial<AiConversationResponse['messages'][numbe
 function makeConversation(
   messages: AiConversationResponse['messages'] = [],
 ): AiConversationResponse {
-  return { id: CONVERSATION, createdAt: '2026-01-01T00:00:00.000Z', lastMessageAt: null, messages };
+  return {
+    id: CONVERSATION,
+    status: 'ACTIVE',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    lastMessageAt: null,
+    messages,
+  };
 }
 
 function delta(overrides: { attempt: number; chunkSeq: number; text: string; messageId?: string }) {
@@ -287,7 +293,7 @@ describe('initAiSync', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('ai.conversation-changed.v1: перечитує стрічку (сигнал без даних, design.md D7)', () => {
+  it('ai.conversation-changed.v1: перечитує стрічку й історію (сигнал без даних, design.md D7)', () => {
     const { socket, fire } = createFakeSocket();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     initAiSync(queryClient, socket);
@@ -298,7 +304,8 @@ describe('initAiSync', () => {
       occurredAt: '2026-01-01T00:00:00.000Z',
     });
 
-    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    // Поточна розмова + префікс історії (`/api/ai/conversations…`)
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
   });
 
   it('reconnect БЕЗ recovered: чистить буфер і перечитує', () => {

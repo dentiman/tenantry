@@ -7,6 +7,7 @@ import {
 } from '@saas-skeleton/contracts';
 import { getAiConversationQueryKey } from '../../../api/generated/api';
 import { getSocket, type AppSocket } from '../../realtime/socket';
+import { invalidateAiHistory } from '../ai-queries';
 
 /**
  * Міст socket → TanStack Query для асистента (AI-0.1, design.md D6/D7, фікс §6.3).
@@ -182,8 +183,13 @@ export function initAiSync(queryClient: QueryClient, socket: AppSocket = getSock
   // Сигнал без даних (design.md D7): перше питання ходу і reset() дельти не
   // мають узагалі — без цієї події сусідня вкладка того самого юзера дізналась
   // би про них лише на власному наступному запиті
+  //
+  // Історія (сторінка асистента) — теж тут: нове питання змінює порядок і заголовок
+  // списку, reset/активація — статус, видалення — сам список. Дельти й завершення
+  // історії не змінюють, тому на них вона не перечитується
   socket.on(REALTIME_EVENTS.aiConversationChanged, () => {
     invalidate();
+    void invalidateAiHistory(queryClient);
   });
 
   socket.on('connect', () => {

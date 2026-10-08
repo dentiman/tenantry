@@ -56,7 +56,7 @@ export const AiConversationChangedSchema = z.object({
   // ai-1e: null для 'deleted' — «видалити мої розмови» прибирає ВСІ розмови юзера
   // одразу, тож жодна конкретна не є «тією, що змінилась»
   conversationId: z.uuid().nullable(),
-  reason: z.enum(['turn-created', 'reply-closed', 'reset', 'deleted']),
+  reason: z.enum(['turn-created', 'reply-closed', 'reset', 'deleted', 'activated']),
   occurredAt: z.iso.datetime(),
 });
 

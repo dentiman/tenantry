@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
 
 /**
  * Контракти AI-асистента (docs/ai-assistant-plan.md, фаза AI-0).
  *
- * Суб'єкт усюди береться з токена, тому в шляхах немає ні id юзера, ні id розмови —
- * та сама доктрина, що в `/account` і `/settings`: відсутність id і Є твердженням
- * «чужа розмова через цей ендпоінт недосяжна», і воно не залежить від уважності
- * в сервісі.
+ * Суб'єкт усюди береться з токена, тому в шляхах немає id юзера. Поточна розмова
+ * (`/ai/conversation…`) адресується без id — та сама доктрина, що в `/account` і
+ * `/settings`. Id розмови з'являється лише в історії (`/ai/conversations/:id`), і там
+ * чужа або неіснуюча розмова однаково дає 404 — межу людини тримає сервіс.
  */
 
 /**
@@ -91,16 +92,43 @@ export const AiMessageResponseSchema = z.object({
 });
 
 /**
+ * `ACTIVE` — та, куди йде наступне питання (рівно одна на юзера, частковий унікальний
+ * індекс); `RETIRED` — минула, лише для читання, доки її не активують знову.
+ */
+export const AiConversationStatusSchema = z.enum(['ACTIVE', 'RETIRED']);
+
+/**
  * Активна розмова зі стрічкою. Це і є ДЖЕРЕЛО ПРАВДИ для клієнта: socket-дельти
  * лише прискорюють рендер, а при дірці в `chunkSeq` або реконекті клієнт
  * перечитує саме цю відповідь (docs/realtime.md, правило «подія — не доставка»).
  */
 export const AiConversationResponseSchema = z.object({
   id: z.uuid(),
+  status: AiConversationStatusSchema,
   createdAt: z.iso.datetime(),
   lastMessageAt: z.iso.datetime().nullable(),
   messages: z.array(AiMessageResponseSchema),
 });
+
+/** Довжина заголовка розмови в історії — зріз першого питання */
+export const AI_CONVERSATION_TITLE_CHARS = 80;
+
+/**
+ * Рядок історії розмов (сторінка асистента). Заголовок — зріз ПЕРШОГО питання, а не
+ * згенерований моделлю: окремий виклик LLM заради назви коштував би грошей на кожну
+ * розмову. Розмови без жодного питання в історію не потрапляють.
+ */
+export const AiConversationSummarySchema = z.object({
+  id: z.uuid(),
+  status: AiConversationStatusSchema,
+  title: z.string(),
+  createdAt: z.iso.datetime(),
+  lastMessageAt: z.iso.datetime(),
+});
+
+export const AiConversationListQuerySchema = CursorQuerySchema;
+
+export const AiConversationListResponseSchema = cursorResponseSchema(AiConversationSummarySchema);
 
 export const AskAiRequestSchema = z.object({
   text: z.string().trim().min(1).max(AI_MAX_INPUT_CHARS),
