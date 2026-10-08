@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Sidebar,
@@ -12,8 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@saas-skeleton/ui/components/ui/sidebar';
-import { useAuthStore } from '../features/auth/stores/auth.store';
-import { APP_AREAS, type AppArea, resolveArea } from './areas';
+import { useActiveArea, useRailAreas, type Area } from '@saas-skeleton/ui/navigation';
 
 /**
  * Кнопка ПУНКТУ рейлу: 32px зі стоковим `p-2` (8px) і піктограмою 16px — тобто
@@ -77,13 +76,8 @@ const RAIL_ANCHOR_BUTTON =
  * розгорнутому, і в згорнутому стані.
  */
 export function AppRail() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const user = useAuthStore((s) => s.user);
-  const activeAreaId = resolveArea(pathname)?.id;
-
-  const areas = APP_AREAS.filter(
-    (area) => !area.hiddenFromRail && (!area.canSee || (user ? area.canSee(user) : false)),
-  );
+  const activeAreaId = useActiveArea()?.id;
+  const areas = useRailAreas();
 
   return (
     <Sidebar
@@ -166,11 +160,11 @@ function AppBrand() {
  * обробників між `useRender` і `Link` не гарантований, тож «не навігувати»
  * трималось би на випадковості.
  */
-function AppRailItem({ area, isActive }: { area: AppArea; isActive: boolean }) {
+function AppRailItem({ area, isActive }: { area: Area; isActive: boolean }) {
   const { t } = useTranslation('layout');
   const { isMobile, setOpen, setOpenMobile, toggleSidebar } = useSidebar();
   const Icon = area.icon;
-  const label = t(area.labelKey);
+  const label = t(area.label);
 
   // hidden: false — інакше tooltip-а не буде НІКОЛИ: реєстровий SidebarMenuButton
   // показує його лише при `state === 'collapsed'`, а `useSidebar()` віддає стан

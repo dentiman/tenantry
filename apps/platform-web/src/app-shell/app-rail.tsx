@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Sidebar,
@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@saas-skeleton/ui/components/ui/sidebar';
-import { APP_AREAS, type AppArea, resolveArea } from './areas';
+import { useActiveArea, useRailAreas, type Area } from '@saas-skeleton/ui/navigation';
 
 /**
  * Кнопка ПУНКТУ рейлу — дослівна копія `apps/web/src/app-shell/app-rail.tsx`
@@ -31,13 +31,11 @@ const RAIL_ANCHOR_BUTTON =
  * декорація — Tenants і Operations дають дві реальні (`docs/frontend/app-shell.md`
  * §«Шел apps/platform-web»).
  *
- * `canSee` тут немає: у `PlatformUserResponse` немає ролі, усі оператори рівні.
+ * Доступ до розділів рейл бере з роутів (`staticData.access`), як у web; ролей оператора поки немає.
  */
 export function AppRail() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const activeAreaId = resolveArea(pathname)?.id;
-
-  const areas = APP_AREAS.filter((area) => !area.hiddenFromRail);
+  const activeAreaId = useActiveArea()?.id;
+  const areas = useRailAreas();
 
   return (
     <Sidebar
@@ -96,11 +94,11 @@ function AppBrand() {
 }
 
 /** Пункт рейлу. Активний — `button`, неактивний — `Link` (див. `apps/web` для обґрунтування). */
-function AppRailItem({ area, isActive }: { area: AppArea; isActive: boolean }) {
+function AppRailItem({ area, isActive }: { area: Area; isActive: boolean }) {
   const { t } = useTranslation('layout');
   const { isMobile, setOpen, setOpenMobile, toggleSidebar } = useSidebar();
   const Icon = area.icon;
-  const label = t(area.labelKey);
+  const label = t(area.label);
   const tooltip = { children: label, hidden: isMobile };
 
   if (isActive) {

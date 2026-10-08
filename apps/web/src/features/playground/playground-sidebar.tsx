@@ -1,10 +1,4 @@
-import {
-  AlignLeftIcon,
-  ChevronRightIcon,
-  ComponentIcon,
-  PanelTopIcon,
-  RectangleHorizontalIcon,
-} from 'lucide-react';
+import { ChevronRightIcon, ComponentIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
@@ -22,8 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@saas-skeleton/ui/components/ui/sidebar';
-import { AreaNav } from '../../app-shell/area-nav';
-import { isUnder } from '../../app-shell/paths';
+import { AreaNav, isUnder } from '@saas-skeleton/ui/navigation';
 
 /**
  * Мітка підгрупи всередині розкритого «Components». НЕ колапсовна — просто
@@ -152,28 +145,8 @@ export function PlaygroundSidebar() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <AreaNav
-        items={[
-          {
-            to: '/playground/vertical-form',
-            label: t('nav.verticalForm'),
-            icon: <AlignLeftIcon />,
-            match: 'exact',
-          },
-          {
-            to: '/playground/inline-form',
-            label: t('nav.inlineForm'),
-            icon: <RectangleHorizontalIcon />,
-            match: 'exact',
-          },
-          {
-            to: '/playground/dialog',
-            label: t('nav.dialog'),
-            icon: <PanelTopIcon />,
-            match: 'exact',
-          },
-        ]}
-      />
+      {/* Плоскі стенди — пункти area з `playground.nav.ts`; Components вище — окремий акордеон */}
+      <AreaNav areaId="playground" />
     </>
   );
 }

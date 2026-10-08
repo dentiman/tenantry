@@ -159,6 +159,16 @@ export default tseslint.config(
     rules: restrictImports(CROSS_APP, BACKEND_LIBS),
   },
   {
+    // `*.nav.ts` збирає `import.meta.glob(…, { eager: true })` у головний чанк: сторінки й
+    // важкі компоненти сюди не тягнемо. Панель area — це `*-sidebar.tsx` у корені модуля
+    files: ['apps/web/src/**/*.nav.ts', 'apps/platform-web/src/**/*.nav.ts'],
+    rules: restrictImports(CROSS_APP, BACKEND_LIBS, {
+      group: ['**/pages/**', '**/components/**'],
+      message:
+        'Файл навігації (*.nav.ts) збирається eager у головний чанк — не імпортуй сторінки й компоненти; панель area — *-sidebar.tsx у корені модуля.',
+    }),
+  },
+  {
     files: ['libs/contracts/src/**/*.ts', 'libs/database/src/**/*.ts', 'libs/i18n/src/**/*.ts'],
     rules: restrictImports(CROSS_APP, ANY_WORKSPACE_LIB),
   },

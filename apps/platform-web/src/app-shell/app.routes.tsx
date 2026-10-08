@@ -3,7 +3,7 @@ import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
 import { requireAuth } from '../features/auth/auth.guards';
 import { ToastHost } from '../components/toast-host';
 import { AppShell } from './app-shell';
-import { isUnder } from './paths';
+import { isUnder } from '@saas-skeleton/ui/navigation';
 
 /**
  * `/jobs` жив у корені до появи area-навігації, тепер живе під `/operations`.
@@ -45,7 +45,10 @@ export const rootRoute = createRootRoute({
 export const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
-  beforeLoad: requireAuth,
+  // Лямбда, а не `beforeLoad: requireAuth`: прямий референс замикає вивід типів
+  beforeLoad: (ctx) => {
+    requireAuth(ctx);
+  },
   component: AppShell,
   notFoundComponent: () => <NotFoundPage homeTo="/tenants" />,
 });

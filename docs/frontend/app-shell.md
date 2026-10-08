@@ -29,40 +29,103 @@
 | ------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **`AppShell`**                 | контейнер усього (замінив `AppLayout`) | це вже не «layout», а шел із власною навігаційною моделлю                                                                                                                                  |
 | **`AppRail`**                  | перший рівень                          | «Activity Bar» відпадає — `Activity` зайняте журналом подій; слово «rail» уживаємо тільки з префіксом, щоб не плутати з реєстровим `SidebarRail` (смужка-хапалка, ми її не використовуємо) |
-| **area** (`AppArea`, `AreaId`) | одиниця першого рівня                  | `Section` зайняте `components/section/`, `Module` — модулями NestJS, `Workspace` — назвою однієї з area                                                                                    |
+| **area** (`Area`)              | одиниця першого рівня                  | `Section` зайняте `components/section/`, `Module` — модулями NestJS, `Workspace` — назвою однієї з area                                                                                    |
 | **`AreaSidebar`**              | другий рівень                          | `Panel` зайняте `ActivityPanel` / `NotificationPanel`                                                                                                                                      |
 | **`ContextPanel`**             | третя колонка праворуч від контенту    | ім'я з Notion Calendar; голе `Panel` зайняте `ActivityPanel` / `NotificationPanel`, тому кваліфікатор обов'язковий                                                                          |
 
+### Два види навігації: Area і Item
+
+У шелі лише **два види записів навігації**, і їх легко сплутати:
+
+| Вид      | Де видно                                   | Що це                                                              | Хто додає                                    |
+| -------- | ------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------- |
+| **Area** | рейл (`AppRail`) — смуга іконок            | розділ застосунку: володіє префіксом URL і вмістом другої колонки  | лише модуль-власник розділу                  |
+| **Item** | меню в сайдбарі розділу (`AreaSidebar`)    | один пункт-посилання на сторінку всередині розділу                 | будь-який модуль, що залежить від розділу    |
+
+```
+AppRail (Area)        AreaSidebar (Items розділу Settings)
+┌────┐                ┌──────────────────────┐
+│ ▣  │ Workspace      │ General              │ ← Item (settings)
+│ ▣  │ Calendar       │ Calendar             │ ← Item (calendar)
+│ ▣  │ Chat           │ Numbering            │ ← Item (numbering)
+│[▣] │ Settings  ←──── │ AI assistant         │ ← Item (ai)
+│ ▣  │ Playground     │ Activity             │ ← Item (activities)
+│ ▣  │ Guide          └──────────────────────┘
+└────┘
+```
+
+- **Area не є пунктом меню.** Клік по ній веде на «домівку» розділу, а що показати у другій
+  колонці, вирішує сама area: своє меню з Items (`panel: 'menu'`) або власний компонент
+  (чат, календар, зміст путівника).
+- **Item завжди належить рівно одній area** і лежить у її меню; пункт може бути оголошений в
+  іншому модулі, ніж area (календар додає Item у Settings).
+- Обидва види оголошуються однаково — у `<модуль>.nav.ts` (`defineNavigation({ areas, items })`)
+  і збираються автопошуком; доступ до обох виводиться з `staticData.access` роутів (§2).
+
 ## 2. Area
 
+Навігація — **два рівні однієї моделі**, обидва оголошують модулі-власники (механізм —
+`libs/ui/src/navigation`, збирання — `apps/*/src/nav.ts`, docs/modules.md §4):
+
+| Рівень | UI                 | У коді    | Оголошує                         | Що це                                          |
+| ------ | ------------------ | --------- | -------------------------------- | ---------------------------------------------- |
+| 1      | `AppRail`          | `Area`    | модуль, який володіє префіксом   | розділ: префікс URL, назва, іконка, `order`    |
+| 2      | `AreaSidebar`      | `panel`   | сам розділ                       | або його меню (`'menu'`), або власний компонент |
+| 2      | пункт меню         | `NavItem` | будь-який модуль, що залежить від розділу | типізоване посилання в меню розділу   |
+
+У шелі меню належить розділу: `NavItem` називає `Area`, окремого токена для меню area немає.
+Локальна навігація всередині сторінки має `NavMenu` (`defineMenu`) і внески `menuItems`
+у тих самих `*.nav.ts`. Вона не створює area: наприклад, `customerDetailMenu` рендериться
+через `<NavigationTabs menu={customerDetailMenu} params={{ customerId }} />` на картці
+клієнта. Власні Overview / Contacts і Events календаря — рівноправні записи реєстру.
+Доступ береться з маршрутів, активність — із URL. Деталі — `docs/modules.md` §4.1.1.
+
 ```ts
-// apps/web/src/app-shell/areas.tsx
-interface AppArea {
-  id: AreaId;
-  prefix: AreaPrefix; // префікс URL, він же «домівка» area
-  labelKey: string; // namespace `layout`, ключі areas.*
-  icon: LucideIcon;
-  hiddenFromRail?: true;
-  canSee?: (user: UserResponse) => boolean;
-  Sidebar: () => ReactElement; // вміст ДРУГОЇ колонки
-}
+// apps/web/src/features/settings/settings.nav.ts — власник розділу
+export const settingsArea = defineArea({
+  id: 'settings',
+  prefix: linkOptions({ to: '/settings' }).to, // префікс URL, він же «домівка» area
+  label: 'layout:areas.settings', // `namespace:key`
+  icon: Settings,
+  order: 40, // позиція в рейлі; рівні — за id
+  rail: false, // (необовʼязково) без пункту в рейлі
+  panel: 'menu', // або компонент — вміст ДРУГОЇ колонки
+});
+export default defineNavigation({ areas: [settingsArea], items: [/* … */] });
+
+// apps/web/src/features/calendar/calendar.nav.ts — модуль кладе пункт у ЧУЖЕ меню
+export default defineNavigation({
+  areas: [calendarArea],
+  items: [{ id: 'settings.calendar', area: settingsArea, order: 20,
+            link: linkOptions({ to: '/settings/calendar' }),
+            label: 'settings:nav.calendar', icon: CalendarCog }],
+});
 ```
+
+**Як додати розділ чи пункт.** Додати `<модуль>.nav.ts` у теку модуля — і все: `nav.ts`
+(`import.meta.glob`, eager) підхопить його сам, список ніде не ведеться. Прибрав теку —
+зник розділ і його пункти. Дублі id, вкладені префікси й пункт у нереєстрованому розділі
+валять старт у dev. Файл `*.nav.ts` лишається легким: сторінки й `components/` сюди не
+імпортуємо (ESLint) — він іде в головний чанк. Порядок усіх меню видно в `src/nav.test.ts`
+(знімок для ADMIN і USER).
 
 | Area              | Префікс          | У рейлі                      | Друга колонка                                             |
 | ----------------- | ---------------- | ---------------------------- | --------------------------------------------------------- |
 | **Workspace**     | `/workspace`     | так                          | Dashboard · Users · Customers                             |
 | **Calendar**      | `/calendar`      | так                          | міні-місяць (НЕ меню — контейнер вигляду)                 |
 | **Chat**          | `/chat`          | так                          | список розмов (поки порожній стан)                        |
-| **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · Activity                 |
+| **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · AI assistant · Activity  |
 | **Playground**    | `/playground`    | так                          | Buttons (далі — стенди інших примітивів)                  |
 | **Guide**         | `/guide`         | так                          | зміст путівника: параграфи ОДНІЄЇ сторінки, scroll-spy    |
 | **User settings** | `/user-settings` | **ні** — з дропдауна аватара | Profile · Account · Security · Notifications · Appearance |
 
 Чотири рішення, які тут не косметичні:
 
-**`Sidebar` — компонент, а не `items: NavItem[]`.** Якби контракт був «масив
-пунктів меню», чат не влазив би вже на першому кроці: у нього там список розмов із
-пошуком і непрочитаними. Area, що справді є меню, беруть спільний `AreaNav`.
+**`panel` — `'menu'` або компонент, а не лише `items`.** Якби друга колонка завжди була
+масивом пунктів, чат не влазив би вже на першому кроці: у нього там список розмов із
+пошуком і непрочитаними. Area, що справді є меню (`panel: 'menu'`), отримують спільний
+`AreaNav` із пунктів, які оголосили модулі; решта (Calendar, Chat, Guide, Playground)
+віддають свій компонент.
 
 **Settings — окрема area, а не розділ усередині Workspace.** Її під-розділи —
 повноцінне меню, і йому місце в навігаційній колонці шела. До цього розділ малював
@@ -75,8 +138,20 @@ interface AppArea {
 модель у нього та сама, що в Settings, — інакше вийшло б два різні візуальні
 патерни для однієї ментальної моделі, чого `docs/settings.md` прямо не хоче.
 
-**`canSee` — гейт ВИДИМОСТІ, не доступу.** Доступ enforce-ить `beforeLoad` роуту
-(`requireAdmin`) і бекенд (`@Roles(ADMIN)`).
+**Доступ оголошує роут, видимість із нього виводиться.** Роут задає
+`staticData.access` (зараз `{ roles: ['ADMIN'] }` на `/settings`; лейаут → усі діти).
+Одне джерело править трьом речам: гейт `requireAuth` на `appRoute` (редірект на
+`/workspace`), видимість пункту меню (роут його сторінки пустить юзера) і видимість area
+в рейлі (її домівка доступна й, для `panel: 'menu'`, лишився хоч один пункт). Тому «пункт
+є, а клік повертає назад» неможливий. Це зручність, а не захист: enforce-ить бекенд
+(`@Roles(ADMIN)`). Дозволи (RBAC) і entitlements тенанта розширюють `RouteAccess` та
+`isAllowed` (`features/auth/auth.access.ts`), а не меню й роути.
+
+**Прецеденти.** Той самий шлях «оголошує власник, збирає автопошук, видимість — за
+правом» у Shopware 6 Administration (`import.meta.glob` по `module/*/index.js`, `navigation`
+з `position`/`parent`/`privilege`), Filament (`$navigationSort`, `$navigationGroup`,
+авторегістрація ресурсів), Medusa admin (`defineRouteConfig({ rank })`) і Magento
+(`menu.xml` модуля: `sortOrder`, ACL `resource`).
 
 ## 3. Прив'язка до роутингу
 
@@ -84,18 +159,15 @@ interface AppArea {
 area вибрана» в застосунку немає, тому F5, back/forward і зовнішнє посилання
 дають той самий рейл, що й клік.
 
-```ts
-export function resolveArea(pathname: string): AppArea | undefined {
-  return APP_AREAS.find((area) => isUnder(pathname, area.prefix));
-}
-```
+`useActiveArea()` (`libs/ui/src/navigation`) шукає в реєстрі area, чий префікс містить
+pathname; префікси не можуть вкладатися одне в одне (перевіряє `collectNavigation`).
 
 `isUnder(p, prefix)` = `p === prefix || p.startsWith(prefix + '/')` — саме так, а не
 `startsWith`: інакше `/chatbot` потрапив би в `/chat`, а `/settings-old` у
 `/settings`.
 
 `undefined` — легальний результат (шлях поза всіма area, напр. 404): рейл не
-підсвічує нічого, а панель показує `DEFAULT_AREA`, щоб юзеру був вихід.
+підсвічує нічого, а панель показує `defaultArea` (її називає `nav.ts`), щоб юзеру був вихід.
 
 ### Дерево роутів
 
@@ -114,7 +186,7 @@ rootRoute                     beforeLoad: нормалізатор legacy-URL (�
   │ └ events/$eventId         CalendarPage з відкритою панеллю події (deep link)
   ├ /chat                     layout
   │ └ /                       ChatPage
-  ├ /settings                 layout, beforeLoad: requireAdmin
+  ├ /settings                 layout, staticData.access: ADMIN
   │ └ /  calendar  numbering  activity
   ├ /playground               layout
   │ └ /                       PlaygroundPage (стенд кнопок)
@@ -125,8 +197,8 @@ rootRoute                     beforeLoad: нормалізатор legacy-URL (�
 ```
 
 - **Layout-роут area без `component`**: TanStack Router рендерить `Outlet` сам, а
-  навігація area живе в шелі. Layout потрібен саме як вузол — на ньому сидить гейт
-  (`requireAdmin` для settings) і до нього дописуються дочірні роути.
+  навігація area живе в шелі. Layout потрібен саме як вузол — на ньому сидить доступ
+  (`staticData.access` для settings) і до нього дописуються дочірні роути.
 - **Календар — другий випадок «колонка ≠ меню»** (перший був чат): у другій колонці
   живуть міні-місяць (`react-day-picker` рівно як date-picker) і перелік переглядів, а не
   `AreaNav`. Перегляд лежить у ШЛЯХУ (`/calendar/week`), період — у search (`?date=`):
@@ -513,14 +585,14 @@ apps/web/src/app-shell/
   slots.ts                       слоти шела для фіч: кнопки хедера, бічні колонки (AI)
   app-rail.tsx                   перший рівень: бренд, пункти area
   area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст
-  area-nav.tsx                   список пунктів (для тих area, що є меню)
-  areas.tsx                      реєстр area, resolveArea, DEFAULT_AREA
-  paths.ts                       NavPath / AreaPrefix (літерали) + isUnder
+  workspace.nav.ts               area Workspace (сама оболонка); пункти — у модулів
   account-footer.tsx             нижня смуга шела: AppFooterBar + дропдаун профілю
-  areas/
-    workspace-sidebar.tsx          колонка area workspace (сама оболонка)
-features/<модуль>/<модуль>-sidebar.tsx   колонки решти area — у теках своїх модулів
-                                         (calendar, chat, settings, playground, guide, account)
+apps/web/src/nav.ts              composition root: glob по `*.nav.ts` → реєстр навігації
+features/<модуль>/<модуль>.nav.ts        area й/або пункти меню модуля
+features/<модуль>/<модуль>-sidebar.tsx   власна панель area, що не є меню
+                                         (calendar, chat, playground, guide)
+libs/ui/src/navigation/          механізм: defineArea/defineNavigation, collectNavigation,
+                                 NavProvider, useRailAreas/useActiveArea, AreaNav, доступ
 ```
 
 Механізм контекстної панелі живе в `libs/ui/src/components/context-panel-slot.tsx`
@@ -533,9 +605,9 @@ features/<модуль>/<модуль>-sidebar.tsx   колонки решти a
 `shellSidePanels` (`app-shell/slots.ts`), а повʼязує їх `src/slot-fills.ts` — механізм і причина
 в docs/modules.md §4.
 
-`paths.ts` — прямий спадкоємець знятого `SectionPath`: шляхи перелічені літералами,
-бо `Link to` типізований юніоном реальних роутів, і друкарська помилка в навігації
-ловиться компіляцією, а не кліком.
+Шляхи пунктів типізує `linkOptions({ to })` — `Link to` типізований юніоном реальних
+роутів, тож друкарська помилка в навігації ловиться компіляцією, а не кліком. Ручних
+списків шляхів (`NavPath`, `AreaPrefix`) більше немає.
 
 Знято разом із міграцією: `components/app-layout.tsx`,
 `components/section/section-nav.tsx`, `pages/settings/layout.tsx`,
@@ -657,7 +729,7 @@ features/<модуль>/<модуль>-sidebar.tsx   колонки решти a
 Рейл вимагає ≥2 area, інакше він декорація (саме тому в platform-web його довго
 не було) — Tenants (клієнти платформи) і Operations (машинерія системи) дають
 природну межу. Колонка Tenants має рівно один пункт — легально: контракт
-`AppArea.Sidebar` — компонент-контейнер area, а не підменю (те саме
+`Area.panel` — компонент або меню, а не обовʼязково підменю (те саме
 підтверджував порожній `ChatSidebar` у web); тут вона наповнюється на MT-4
 (оператори, сегменти тенантів). «Черги» переїхали з карток над таблицею джоб на
 власну сторінку `/operations/queues` — інакше `/operations/jobs` не могла стати
@@ -674,13 +746,13 @@ platform-web НЕМАЄ: суб'єкт контрол-плейну — сама 
 ### 9.3 Копіюємо, а не витягуємо в `libs/ui`
 
 Файли шела platform-web (`src/app-shell/…`) — СКОПІЙОВАНІ з `apps/web`, не
-екстраговані в пакет: реєстр area, бренд (`ShieldCheck` замість `Layers`),
+екстраговані в пакет: бренд (`ShieldCheck` замість `Layers`),
 футер (свій `useAuthStore` з `operator` замість `user`, logout без виклику API —
 `POST /auth/logout` у platform-api не існує), шапка колонки (тут немає
 `GET /settings/bootstrap`, тож бренд статичний, без фолбека на назву тенанта).
 Так само народжувався сам `libs/ui` (UI-0): спершу два побайтово однакові
-набори, потім екстракція. Кандидати на екстракцію після цієї ітерації —
-`area-nav.tsx` (generic по `NavPath`), `RAIL_*`-константи, композиція
+набори, потім екстракція. Механізм навігації (реєстр area/пунктів, `AreaNav`, доступ) уже
+в `libs/ui/src/navigation`; кандидати на екстракцію — `RAIL_*`-константи, композиція
 `app-shell.tsx` з інжекцією «рейл/колонка/футер/хедерні кнопки» — робити третім
 ходом, коли зʼявиться третій споживач або коли файли справді зійдуться
 побайтово (сценарій UI-0).

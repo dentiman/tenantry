@@ -110,7 +110,31 @@ flowchart TB
 | `shellSidePanels`       | `app-shell.tsx` (права колонка)                                | `ai` — панель асистента                                         |
 | `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`                       | `calendar` — агенда                                             |
 | `customerOverviewCards` | `features/customers/pages/customer-overview.tsx`               | `calendar` — найближчі події                                    |
-| `customerDetailTabs`    | `features/customers/pages/customer-detail.tsx` (лейаут картки) | `calendar` — вкладка «Events» (+ маршрут `customerEventsRoute`) |
+
+### 4.1.1. Фронтенд: навігація — розділи рейлу й пункти меню
+
+Той самий принцип для навігації шела (`docs/frontend/app-shell.md` §2): **area** (розділ
+рейлу) і **пункт меню** оголошує модуль-власник у `features/<модуль>/<модуль>.nav.ts`
+(`defineArea`, `defineNavigation`), а пункт у чужому розділі імпортує його `Area` — звичайне
+ребро вниз (`calendar → settings`). Збирає їх `import.meta.glob` у `apps/*/src/nav.ts`
+(composition root, без списку фіч): додав файл — з'явився розділ чи пункт, прибрав теку —
+зникли. Порядок — `order` у записі, знімок усіх меню — `apps/web/src/nav.test.ts`. Видимість
+виводиться з `staticData.access` роуту (той самий предикат, що гейт). Механізм — `libs/ui/src/navigation`.
+
+**Локальні меню сторінок** (вкладки картки клієнта) використовують той самий реєстр:
+власник оголошує `defineMenu({ id })`, а модулі додають `menuItems` у своїх `*.nav.ts`.
+Меню реєструється в `menus` власника. Це не `Area`: воно не додає пункт у рейл, не
+володіє префіксом чи другою колонкою. `NavigationTabs` — спільний рендерер меню у вигляді
+вкладок; сторінка передає `menu` та параметри сутності (`{ customerId }`). Порядок і
+видимість працюють як у меню шела: `order`, потім `id`, доступ із `staticData.access`
+маршруту та його батьків. Доступ перевіряється за шаблоном (`$customerId`), а посилання
+будує роутер із фактичними параметрами. Активність — із URL, `match: 'exact'` для огляду,
+найдовший префікс для решти; кінцевий `/` не змінює вкладку.
+
+`customers.nav.ts` володіє `customerDetailMenu` і пунктами Overview / Contacts;
+`calendar.nav.ts` імпортує цей токен (наявне ребро `calendar → customers`) й додає Events.
+`customers` не імпортує календар. Компонентного слота для вкладок більше немає: внесок —
+дані навігації, а не власний UI фічі. Маршрути й далі збирає `router.tsx`.
 
 Слот — для **компонента** фічі в чужому екрані. Коли фіча лише постачає **дані** generic-
 механізму (типи сповіщень, тексти, події сокета, маршрути) — потрібен не слот, а реєстр
@@ -145,10 +169,10 @@ flowchart TB
 ## 5. Composition roots і правило «проводка / визначення»
 
 Знати список модулів дозволено лише файлам, що **збирають** модулі докупи: `app.module.ts`,
-`worker.module.ts`, `router.tsx`, `main.tsx`, `i18n/`, `app-shell/areas.tsx` і `paths.ts`,
+`worker.module.ts`, `router.tsx`, `main.tsx`, `i18n/`, `nav.ts`,
 barrel-и `libs/*/src/index.ts`, маніфест черг `messaging/topology.ts`, схеми й реєстри
 контрактів (`bootstrap.schema.ts`, `notification-types.ts`, `activity-types.ts`,
-`socket-events.ts`), наповнення слотів `apps/web/src/slot-fills.ts`. Повний перелік —
+`socket-events.ts`), наповнення слотів `apps/web/src/slot-fills.ts`, збирання навігації `apps/*/src/nav.ts`. Повний перелік —
 `COMPOSITION_ROOTS` у `modules.config.ts`.
 
 | Може — проводка                                                                                         | Не може — визначення фічі                                 |
@@ -279,7 +303,7 @@ messaging, сокет), а `socket-events` одразу каже про тран
    `settingsRoute` (settings); вкладка «Events» календаря — під карткою клієнта.
 3. **Збирає дерево лише root `router.tsx`**: `addChildren` по всіх модулях — рядок на модуль.
    Модуль нижче не знає, хто до нього причепився: про вкладку фічі на його екрані він дізнається
-   зі слота, а про маршрут — нічого.
+   з реєстру навігації, а про маршрут — нічого.
 4. Типи (`Link to`, `useParams({ from })`, `useSearch`) TanStack Router виводить із зібраного
    дерева; імпорт батьківського маршруту дає точний тип батька.
 
@@ -301,10 +325,10 @@ appRoute (AppShell)
 export const customerDetailRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: 'customers/$customerId',
-  component: CustomerDetailLayout, // шапка, <SlotOutlet slot={customerDetailTabs}/>, <Outlet/>
+  component: CustomerDetailLayout, // шапка, <NavigationTabs menu={customerDetailMenu} params={{ customerId }}/>, <Outlet/>
 });
-// features/customers/customer-detail-slots.ts
-export const customerDetailTabs = defineSlot<{ customerId: string }>('customers.detail-tabs');
+// features/customers/customers.nav.ts (і menus: [customerDetailMenu] у default export)
+export const customerDetailMenu = defineMenu({ id: 'customers.detail' });
 
 // features/billing/billing.routes.tsx — фіча, ребро billing → customers
 export const customerBillingRoute = createRoute({
@@ -319,11 +343,21 @@ customerDetailRoute.addChildren([
   customerContactsRoute,
   customerBillingRoute,
 ]);
-// slot-fills.ts
-fillSlot(customerDetailTabs, 'billing', BillingTab);
+// features/billing/billing.nav.ts — імпортує customerDetailMenu з customers.nav.ts
+export default defineNavigation({
+  menuItems: [{
+    id: 'billing.customer', menu: customerDetailMenu, order: 40,
+    label: 'billing:customer.tab',
+    link: linkOptions({
+      from: '/workspace/customers/$customerId',
+      to: '/workspace/customers/$customerId/billing', params: true,
+    }),
+  }],
+});
 ```
 
-Прибрати фічу з форку = прибрати її рядок у `router.tsx` і `slot-fills.ts`; вкладка зникає, URL
+Прибрати фічу з форку = прибрати її маршрути з `router.tsx` і теку з `*.nav.ts`
+(та внески компонентів із `slot-fills.ts`, якщо є); вкладка зникає, URL
 перестає існувати, а забуте типізоване посилання ламає компіляцію.
 
 ### 7.5. Свідомо лишаємо центральними
@@ -332,7 +366,7 @@ fillSlot(customerDetailTabs, 'billing', BillingTab);
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `libs/shared/src/messaging/topology.ts`                        | єдиний маніфест черг: усі споживачі, налаштування й cron в одному місці; продюсер мусить знати споживачів у момент `publish`; розсинхрон валить воркер на старті. Визначення повідомлень уже у власників (`*.messages.ts`) |
 | ліміти запитів (`throttle.config.ts`, `RATE_LIMITS`)           | рев'ю безпеки бачить усі пороги разом; AI — рядок конфігу, не логіка                                                                                                                                                       |
-| `areas.tsx`, меню settings, `entity-routes.ts`, `paths.ts`     | меню й мапи: порядок — рішення UX; шляхи типізовані — забута фіча ламає компіляцію                                                                                                                                         |
+| `entity-routes.ts`                                             | мапа сутність → шлях: типізована, забута фіча ламає компіляцію                                                                                                                                                             |
 | нумерація (`NUMBER_SERIES_NAMES = ['customer']`)               | закрита таблиця конфігу з одним рядком; повернутися, коли серій стане 3+                                                                                                                                                   |
 | сід як один скрипт                                             | розбивати нема сенсу; чат провізіонить себе сам через спільний провізіонер                                                                                                                                                 |
 | `aiAllowed` на тенанті (control plane)                         | платформне керування фічею (AI-5); коли зʼявиться друга фіча з дозволом на тенант — загальні entitlements «тенант × фіча»                                                                                                  |

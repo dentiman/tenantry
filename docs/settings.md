@@ -98,7 +98,7 @@ Enforcement — `@Roles(Role.ADMIN)` + глобальний `RolesGuard` (дру
 Повний RBAC (`permissions`-рядки + `@RequirePermissions('settings:write')`) **замінить**
 `@Roles`.
 
-Фронт дублює гейт роутом (`beforeLoad: requireAdmin` на `/settings`) — не «замість»
+Фронт дублює гейт роутом (`staticData.access: { roles: ['ADMIN'] }` на `/settings`) — не «замість»
 серверного, а щоб USER не дивився на форми, які однаково не збережуться.
 
 ## Головна абстракція: секція — це вигляд, а не сховище

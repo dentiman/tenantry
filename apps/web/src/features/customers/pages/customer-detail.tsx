@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Outlet, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
+import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -21,7 +21,7 @@ import {
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
-import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
+import { NavigationTabs } from '@saas-skeleton/ui/navigation';
 import { TriangleAlert } from 'lucide-react';
 import {
   getCustomersFindAllQueryKey,
@@ -31,8 +31,7 @@ import {
   useCustomersSetStatus,
 } from '../../../api/generated/api';
 import { ActivityPanel } from '../../activities/components/activity-panel';
-import { customerDetailTabs } from '../customer-detail-slots';
-import { SlotOutlet } from '../../../lib/slots';
+import { customerDetailMenu } from '../customers.nav';
 import { CustomerIdentity } from '../components/customer-identity';
 import { EditCustomerModal } from '../components/edit-customer-modal';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
@@ -41,19 +40,12 @@ import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
  * Картка кастомера — ЛЕЙАУТ маршруту `customers/$customerId`: шапка з ідентичністю і діями,
  * рядок вкладок і `<Outlet/>` для них, справа — стрічка подій. Вкладки — дочірні маршрути:
  * «Огляд» (`/`), «Контакти» (`contacts`) і вкладки фіч, що чіпляються сюди своїми маршрутами
- * та внеском у слот `customerDetailTabs` (календар → `events`; docs/modules.md §7.4).
+ * та внеском у меню `customerDetailMenu` (календар → `events`; docs/modules.md §7.4).
  * Форк, який додає свою сутність, копіює цей лейаут, а не вигадує розкладку.
  */
 export function CustomerDetailLayout() {
   const { t } = useTranslation(['customers']);
   const { customerId } = useParams({ from: '/app/workspace/customers/$customerId' });
-  // Активна вкладка — перший сегмент шляху після картки (`/contacts`, `/events`); порожньо — огляд
-  const activeTab = useRouterState({
-    select: (state) => {
-      const segment = state.location.pathname.split(`/customers/${customerId}`)[1]?.split('/')[1];
-      return segment === undefined || segment === '' ? 'overview' : segment;
-    },
-  });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -178,30 +170,7 @@ export function CustomerDetailLayout() {
           Вкладки лишились, бо контактні особи — окремий розділ, а не блок */}
       <div className="grid items-start gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-          {/* Вкладки — дочірні маршрути (docs/modules.md §7.4): у кожної своя
-              адреса, шапка не перемонтовується. Власні вкладки кастомера — тут, вкладки
-              фіч (календар → «Події») — внески в слот `customerDetailTabs` */}
-          <Tabs value={activeTab}>
-            <TabsList>
-              <TabsTrigger
-                value="overview"
-                nativeButton={false}
-                render={<Link to="/workspace/customers/$customerId" params={{ customerId }} />}
-              >
-                {t('detail.tabs.overview')}
-              </TabsTrigger>
-              <TabsTrigger
-                value="contacts"
-                nativeButton={false}
-                render={
-                  <Link to="/workspace/customers/$customerId/contacts" params={{ customerId }} />
-                }
-              >
-                {t('detail.tabs.contacts')}
-              </TabsTrigger>
-              <SlotOutlet slot={customerDetailTabs} props={{ customerId }} />
-            </TabsList>
-          </Tabs>
+          <NavigationTabs menu={customerDetailMenu} params={{ customerId }} />
           <Outlet />
         </div>
 

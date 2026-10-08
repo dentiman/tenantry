@@ -20,7 +20,7 @@ import { useCalendarPreferences } from './components/use-calendar-preferences';
 
 /**
  * Друга колонка area «Calendar» — той самий випадок, що чат: це КОНТЕЙНЕР
- * ВИГЛЯДУ, а не меню (`AppArea.Sidebar` віддає компонент, docs/frontend/app-shell.md).
+ * ВИГЛЯДУ, а не меню (`Area.panel` — компонент, docs/frontend/app-shell.md).
  * Тут живе міні-місяць для навігації по датах — і тільки він.
  *
  * Переліку переглядів (Day/Week/Month/Agenda) тут НЕМАЄ свідомо: той самий
@@ -41,7 +41,7 @@ export function CalendarSidebar() {
   const { t } = useTranslation('calendar');
   const { viewerTimeZone, weekStartsOn, isDeviceZoneDifferent } = useCalendarPreferences();
 
-  // Активний перегляд читається з ШЛЯХУ — та сама доктрина, що `resolveArea`:
+  // Активний перегляд читається з ШЛЯХУ — та сама доктрина, що `useActiveArea`:
   // дубльованого стану «який перегляд відкрито» в застосунку немає
   const activeView = CALENDAR_VIEWS.find((view) => pathname.endsWith(`/${view}`)) ?? 'week';
   const selectedKey = search.date ?? todayKey(viewerTimeZone);

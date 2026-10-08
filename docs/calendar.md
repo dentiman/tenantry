@@ -702,7 +702,7 @@ workDayEnd }` — сітка мусить намалюватись першим 
 - **вкладка «Events» на картці кастомера** (з 2026-10-06): маршрут календаря
   `/workspace/customers/$customerId/events` під лейаутом картки (`customerEventsRoute`) — той
   самий `AgendaList`, відфільтрований за `customerId`; нова подія заводиться з цим кастомером.
-  Customers про неї не знає: вкладку дає внесок у слот `customerDetailTabs`, маршрут чіпляє
+  Customers про неї не знає: пункт вкладки оголошує `calendar.nav.ts` у меню `customerDetailMenu`, маршрут чіпляє
   `router.tsx` (docs/modules.md §7.4);
 - видалення кастомера — `SetNull`: подія «зустріч, яка була» не має зникати разом із карткою.
 

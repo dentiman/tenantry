@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useCallback, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
@@ -13,7 +13,11 @@ import { initPresenceSync } from './features/realtime/presence-sync';
 import { initNotificationSync } from './features/notifications/realtime/notification-sync';
 import { initCalendarSync } from './features/calendar/realtime/calendar-sync';
 import { initAiSync } from './features/ai/realtime/ai-sync';
+import { NavProvider } from '@saas-skeleton/ui/navigation';
+import { isAllowed } from './features/auth/auth.access';
+import { useAuthStore } from './features/auth/stores/auth.store';
 import { SlotsProvider } from './lib/slots';
+import { NAVIGATION } from './nav';
 import { SLOT_FILLS } from './slot-fills';
 import './i18n';
 import './index.css';
@@ -46,6 +50,17 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/** Реєстр навігації + предикат доступу, привʼязаний до поточного юзера (docs/modules.md §4) */
+function AppNavProvider({ children }: { children: ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  const allow = useCallback((access: unknown) => isAllowed(access, user), [user]);
+  return (
+    <NavProvider navigation={NAVIGATION} allow={allow}>
+      {children}
+    </NavProvider>
+  );
+}
 
 async function bootstrap(): Promise<void> {
   // Сесія відновлюється до першого рендера — guards бачать актуальний стан
@@ -81,7 +96,9 @@ async function bootstrap(): Promise<void> {
           <QueryClientProvider client={queryClient}>
             {/* Внески фіч у модулі нижче — docs/modules.md §4 */}
             <SlotsProvider fills={SLOT_FILLS}>
-              <RouterProvider router={router} />
+              <AppNavProvider>
+                <RouterProvider router={router} />
+              </AppNavProvider>
             </SlotsProvider>
           </QueryClientProvider>
         </UiThemeProvider>

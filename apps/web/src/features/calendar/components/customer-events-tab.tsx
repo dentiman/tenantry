@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from '@tanstack/react-router';
+import { useParams } from '@tanstack/react-router';
 import { CalendarPlusIcon } from 'lucide-react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
 import { AgendaList } from './agenda-list';
 import { EventPanel, type EventPanelTarget } from './event-panel';
@@ -91,22 +90,5 @@ export function CustomerEventsTab() {
         </ContextPanelPortal>
       )}
     </div>
-  );
-}
-
-/**
- * Внесок у слот `customerDetailTabs` (`slot-fills.ts`): вкладка-посилання на маршрут вище.
- * `value` = сегмент шляху `events` — за ним лейаут підсвічує активну вкладку.
- */
-export function CustomerEventsTabTrigger({ customerId }: { customerId: string }) {
-  const { t } = useTranslation('calendar');
-  return (
-    <TabsTrigger
-      value="events"
-      nativeButton={false}
-      render={<Link to="/workspace/customers/$customerId/events" params={{ customerId }} />}
-    >
-      {t('customer.tab')}
-    </TabsTrigger>
   );
 }

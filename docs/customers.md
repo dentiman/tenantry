@@ -537,8 +537,8 @@ Controller, як вимагає CLAUDE.md. `phone`/`phoneCountry` беруть �
   (власна висота + свій скрол + `sticky` з `lg`; всередині — той самий `ActivityFeed`).
   Історію видно одночасно з даними, тому вона супровід у колонці, а не окремий розділ.
   З 2026-10-06 картка — **лейаут** маршруту, а вкладки — дочірні маршрути зі своєю адресою:
-  `/` (Overview), `contacts`, і вкладки фіч, що чіпляються сюди своїм маршрутом і внеском у слот
-  `customerDetailTabs` (календар → `events`). Шапку, дії й стрічку тримає лейаут
+  `/` (Overview), `contacts`, і вкладки фіч, що чіпляються сюди своїм маршрутом і внеском у меню
+  `customerDetailMenu` через `*.nav.ts` (календар → `events`). Шапку, дії й стрічку тримає лейаут
   (`features/customers/pages/customer-detail.tsx`), вміст вкладок — `customer-overview.tsx` /
   `customer-contacts.tsx`; docs/modules.md §7.4.
 - **`/settings/numbering`** — формат (префікс, кількість нулів), початковий номер і зсув

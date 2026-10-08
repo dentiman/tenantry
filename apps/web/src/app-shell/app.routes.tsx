@@ -3,7 +3,7 @@ import { Outlet, createRootRoute, createRoute, redirect } from '@tanstack/react-
 import { ToastHost } from '../components/toast-host';
 import { requireAuth } from '../features/auth/auth.guards';
 import { AppShell } from './app-shell';
-import { isUnder } from './paths';
+import { isUnder } from '@saas-skeleton/ui/navigation';
 
 /**
  * Шляхи, які до появи area-навігації лежали в корені, а тепер живуть під
@@ -51,7 +51,11 @@ export const rootRoute = createRootRoute({
 export const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
-  beforeLoad: requireAuth,
+  // Лямбда, а не `beforeLoad: requireAuth`: прямий референс замикає вивід типів (`matches`
+  // залежить від routeTree, а той — від цього роута)
+  beforeLoad: (ctx) => {
+    requireAuth(ctx);
+  },
   component: AppShell,
   notFoundComponent: () => <NotFoundPage homeTo="/workspace" />,
 });
@@ -69,7 +73,7 @@ export const appIndexRoute = createRoute({
 /**
  * Area «Workspace» — робоча частина застосунку. Layout-роут без компонента:
  * TanStack Router рендерить `Outlet` сам, а вся навігація area живе в шелі
- * (`app-shell/areas/workspace-sidebar.tsx`).
+ * (`app-shell/workspace.nav.ts` і `*.nav.ts` модулів).
  */
 export const workspaceRoute = createRoute({
   getParentRoute: () => appRoute,

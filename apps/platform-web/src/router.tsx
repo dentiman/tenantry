@@ -1,4 +1,5 @@
 import { createRouter } from '@tanstack/react-router';
+import type { RouteAccess } from './features/auth/auth.access';
 import { appIndexRoute, appRoute, notFoundRoute, rootRoute } from './app-shell/app.routes';
 import { loginRoute } from './features/auth/auth.routes';
 import {
@@ -61,5 +62,7 @@ declare module '@tanstack/react-router' {
    */
   interface StaticDataRouteOption {
     layout?: 'padded' | 'bleed';
+    /** Хто може відкрити сторінку — дзеркало `apps/web/src/router.tsx` */
+    access?: RouteAccess;
   }
 }

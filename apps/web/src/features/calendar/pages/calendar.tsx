@@ -44,7 +44,7 @@ import {
 /**
  * Календар (docs/calendar.md §11). Перегляд і період живуть в URL, а не в стані:
  * F5, «назад» і надіслане колезі посилання дають ту саму картинку — та сама
- * доктрина, що в DataGrid і в `resolveArea`.
+ * доктрина, що в DataGrid і в `useActiveArea`.
  */
 export function CalendarPage() {
   const { t } = useTranslation('calendar');

@@ -1,17 +1,16 @@
-import { useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import { useSettingsBootstrap } from '../api/generated/api';
-import { DEFAULT_AREA, resolveArea } from './areas';
+import { AreaNav, useDisplayedArea } from '@saas-skeleton/ui/navigation';
 
 /**
  * Другий рівень навігації — колонка активної area (Side Bar у VS Code,
  * Tool Window у JetBrains).
  *
- * Це НЕ «підменю»: area віддає сюди довільний компонент, тож у чаті тут буде
- * список розмов із пошуком, а не пункти. Ті area, що справді є меню, беруть
- * спільний `AreaNav`.
+ * Це НЕ «підменю»: area віддає сюди довільний компонент (`panel`), тож у чаті тут
+ * список розмов із пошуком, а не пункти. Ті area, що справді є меню (`panel: 'menu'`),
+ * отримують спільний `AreaNav` з пунктів, які оголосили модулі (`*.nav.ts`).
  *
  * Ширина — `style={{width: 'var(--area-sidebar-width, 14rem)'}}`, свідоме
  * перевизначення: `collapsible="none"` рендерить `w-(--sidebar-width)` (ширину
@@ -47,10 +46,8 @@ import { DEFAULT_AREA, resolveArea } from './areas';
  */
 export function AreaSidebar() {
   const { t } = useTranslation('layout');
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Шлях поза всіма area (404) — навігацію все одно показуємо, щоб був вихід
-  const area = resolveArea(pathname) ?? DEFAULT_AREA;
-  const AreaContent = area.Sidebar;
+  // Шлях поза всіма area (404) — показуємо `defaultArea`, щоб був вихід
+  const area = useDisplayedArea();
   const { data: bootstrap } = useSettingsBootstrap({
     query: { staleTime: Number.POSITIVE_INFINITY },
   });
@@ -77,11 +74,11 @@ export function AreaSidebar() {
             переїхав у смугу, тому тут лишився самий текст */}
         <div className="grid leading-tight">
           <span className="truncate font-semibold">{tenantName}</span>
-          <span className="truncate text-xs text-muted-foreground">{t(area.labelKey)}</span>
+          <span className="truncate text-xs text-muted-foreground">{t(area.label)}</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <AreaContent />
+        {area.panel === 'menu' ? <AreaNav areaId={area.id} /> : <area.panel />}
       </SidebarContent>
     </Sidebar>
   );

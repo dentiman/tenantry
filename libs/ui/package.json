@@ -23,6 +23,7 @@
     "./components/user-identity": "./src/components/user-identity.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
+    "./navigation": "./src/navigation/index.ts",
     "./styles.css": "./src/styles.css",
     "./themes": "./src/themes/index.ts"
   },

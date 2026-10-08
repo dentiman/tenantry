@@ -31,7 +31,7 @@
 - `apps/web/src/router.tsx` — роути `playgroundRoute` і нижче: `playgroundIndexRoute`
   (редірект на `/playground/components/buttons`), `playgroundComponentsRoute` (контейнер
   шляху `components`, без власної сторінки), і три листові роути під ним.
-- `apps/web/src/app-shell/paths.ts` — `NavPath` містить усі адресовані шляхи літералами.
+- ~~`apps/web/src/app-shell/paths.ts` (`NavPath`)~~ — знято: шляхи типізує `linkOptions` у `*.nav.ts` (docs/frontend/app-shell.md §2).
 - `apps/web/src/locales/en/playground.json` — `nav.*`, `origin.*` (native/changed/custom) і
   контент-блоки `button.*`, `tabs.*`, `userSelect.*`.
 
@@ -62,9 +62,8 @@
 Точно відтворює те, що зроблено для Tabs. Не пропускайте кроки навіть для «дрібного»
 компонента — саме ці шість місць тримають маршрутизацію й навігацію в консистентному стані.
 
-1. **`apps/web/src/app-shell/paths.ts`** — додати рядок у `NavPath`
-   (`'/playground/components/<slug>'`), у тому самому алфавітному/логічному місці, де вже
-   стоять `buttons`/`tabs`/`user-select`.
+1. ~~`paths.ts` / `NavPath`~~ — крок знято: компоненти каталогу лишаються в `PlaygroundSidebar`,
+   а типізація шляху — це `Link to` у самому сайдбарі.
 2. **`apps/web/src/router.tsx`** — імпорт нового компонента сторінки вгорі файлу (група
    `Playground*` імпортів) + `createRoute({ getParentRoute: () => playgroundComponentsRoute,
 path: '<slug>', component: <PageComponent> })` + додати змінну в масив

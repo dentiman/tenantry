@@ -1,8 +1,7 @@
-import { useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
-import { DEFAULT_AREA, resolveArea } from './areas';
+import { AreaNav, useDisplayedArea } from '@saas-skeleton/ui/navigation';
 
 /**
  * Другий рівень навігації — колонка активної area (Side Bar у VS Code,
@@ -15,10 +14,8 @@ import { DEFAULT_AREA, resolveArea } from './areas';
  */
 export function AreaSidebar() {
   const { t } = useTranslation('layout');
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Шлях поза всіма area (404) — навігацію все одно показуємо, щоб був вихід
-  const area = resolveArea(pathname) ?? DEFAULT_AREA;
-  const AreaContent = area.Sidebar;
+  // Шлях поза всіма area (404) — показуємо `defaultArea`, щоб був вихід
+  const area = useDisplayedArea();
 
   return (
     <Sidebar
@@ -40,11 +37,11 @@ export function AreaSidebar() {
             сірим — активний розділ. Знак живе в рейлі, тут лишився самий текст */}
         <div className="grid leading-tight">
           <span className="truncate font-semibold">{t('brand')}</span>
-          <span className="truncate text-xs text-muted-foreground">{t(area.labelKey)}</span>
+          <span className="truncate text-xs text-muted-foreground">{t(area.label)}</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <AreaContent />
+        {area.panel === 'menu' ? <AreaNav areaId={area.id} /> : <area.panel />}
       </SidebarContent>
     </Sidebar>
   );

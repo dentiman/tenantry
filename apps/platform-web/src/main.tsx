@@ -4,6 +4,9 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { UiThemeProvider } from '@saas-skeleton/ui/themes';
+import { NavProvider } from '@saas-skeleton/ui/navigation';
+import { isAllowed } from './features/auth/auth.access';
+import { NAVIGATION } from './nav';
 import { router } from './router';
 import { initAuth } from './features/auth/lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
@@ -54,7 +57,9 @@ async function bootstrap(): Promise<void> {
             провайдер (атрибут data-theme). Див. docs/frontend/theming.md */}
         <UiThemeProvider storageKey="saas_platform_theme_palette">
           <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
+            <NavProvider navigation={NAVIGATION} allow={isAllowed}>
+              <RouterProvider router={router} />
+            </NavProvider>
           </QueryClientProvider>
         </UiThemeProvider>
       </ThemeProvider>

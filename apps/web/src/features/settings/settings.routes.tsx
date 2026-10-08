@@ -1,6 +1,5 @@
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
-import { requireAdmin } from '../auth/auth.guards';
 import { SettingsGeneralPage } from './pages/general';
 
 /**
@@ -11,7 +10,7 @@ import { SettingsGeneralPage } from './pages/general';
 export const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/settings',
-  beforeLoad: requireAdmin,
+  staticData: { access: { roles: ['ADMIN'] } },
 });
 
 export const settingsGeneralRoute = createRoute({

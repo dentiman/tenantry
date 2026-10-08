@@ -75,7 +75,7 @@ export const settingsCalendarRoute = createRoute({
 /**
  * Вкладка «Події» на картці кастомера: маршрут календаря під лейаутом модуля нижче
  * (`customerDetailRoute`). Customers про нього не знає — дерево складає `router.tsx`, а
- * вкладку в рядку дає внесок у слот `customerDetailTabs` (docs/modules.md §7.4)
+ * вкладку в рядку дає внесок `calendar.nav.ts` у меню `customerDetailMenu` (docs/modules.md §7.4)
  */
 export const customerEventsRoute = createRoute({
   getParentRoute: () => customerDetailRoute,

@@ -1,4 +1,5 @@
 import { createRouter } from '@tanstack/react-router';
+import type { RouteAccess } from './features/auth/auth.access';
 import {
   rootRoute,
   appRoute,
@@ -152,5 +153,11 @@ declare module '@tanstack/react-router' {
      * даних. Стилі — `libs/ui/src/brand-backdrop.css`.
      */
     backdrop?: 'brand';
+    /**
+     * Хто може відкрити сторінку (лейаут → усі діти). ЄДИНЕ джерело: гейт `requireAuth` на
+     * `appRoute` відсікає за ним перехід, а меню й рейл (`libs/ui/src/navigation`) ховають
+     * пункти, чия сторінка юзера не пустила б. Бекенд (`@Roles`) лишається справжнім захистом.
+     */
+    access?: RouteAccess;
   }
 }

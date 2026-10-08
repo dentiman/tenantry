@@ -1,5 +1,9 @@
 # План: підтягнути `apps/platform-web` під шел і патерни `apps/web`
 
+> **Історичний план.** Згадані тут `areas.tsx`, `paths.ts` (`NavPath`/`AreaPrefix`), `area-nav.tsx`,
+> `canSee` і `AppArea.Sidebar` пізніше замінила спільна навігація `libs/ui/src/navigation` із
+> `*.nav.ts` у модулях — актуальна модель у `docs/frontend/app-shell.md` §2.
+
 **Одна ітерація для агента.** Скоуп: `apps/platform-web` отримує ту саму
 структуру, що вже прийнята в tenant-порталі — два рівні навігації (рейл + колонка
 area), нижня смуга акаунта, контекстна панель, `ScrollArea`-скрол сторінки,
