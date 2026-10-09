@@ -1,8 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from '@tanstack/react-router';
-import { RotateCw } from 'lucide-react';
-import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Empty,
   EmptyDescription,
@@ -20,13 +18,13 @@ import { ChatComposer } from '../components/chat-composer';
 import { ChatTranscript } from '../components/chat-transcript';
 import { NewConversationDialog } from '../components/new-conversation-dialog';
 import { conversationLabel } from '../components/chat-labels';
-import { useRefreshChat, useSendMessage } from '../components/use-chat';
+import { useSendMessage } from '../components/use-chat';
 import { randomUUID } from '../../../lib/uuid';
 
 /**
- * Відкрита розмова. Свіжість без realtime: перечитування на фокус вікна і після
- * надсилання плюс явна кнопка оновлення — фаза CHAT-0.1 свідомо не тримає
- * живого зʼєднання (docs/chat.md §7.4).
+ * Відкрита розмова. Свіжість — з сокета (`realtime/chat-sync.ts`, docs/chat.md §4.8):
+ * чужа репліка, склад учасників і рух курсора з іншої вкладки приходять самі. Перечитування
+ * на фокус вікна лишилось страховкою, а не механізмом; кнопки «Оновити» немає.
  */
 export function ChatConversationPage() {
   const { t } = useTranslation('chat');
@@ -35,11 +33,8 @@ export function ChatConversationPage() {
   const { conversationId = '' } = useParams({ strict: false });
   const viewerId = useAuthStore((state) => state.user?.id ?? '');
 
-  const query = useChatFindOne(conversationId, {
-    query: { staleTime: 5_000, meta: { silentError: true } },
-  });
+  const query = useChatFindOne(conversationId, { query: { meta: { silentError: true } } });
   const { send, retry } = useSendMessage(conversationId);
-  const refresh = useRefreshChat(conversationId);
   const discard = useChatOutboxStore((state) => state.discard);
 
   const onSend = useCallback(
@@ -90,28 +85,12 @@ export function ChatConversationPage() {
           Власна смуга заголовка всередині сторінки прибрана: вона повторювала
           крихти, коштувала ще один рядок вертикалі над стрічкою і давала другу
           лінію одразу під лінією хедера. Кількість учасників стала
-          підзаголовком, оновлення й створення розмови — діями хедера */}
+          підзаголовком, створення розмови — дією хедера */}
       <PageHeader
         label="ChatConversationPage"
         breadcrumbs={[{ label: t('title'), to: '/chat' }, { label }]}
         subtitle={t('page.participants', { count: conversation.participants.length })}
-        actions={
-          <>
-            {/* Явне оновлення: без realtime екран мусить давати спосіб спитати
-                сервер, а не робити вигляд, що він живий */}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('actions.refresh')}
-              onClick={() => {
-                void refresh();
-              }}
-            >
-              <RotateCw />
-            </Button>
-            <NewConversationDialog />
-          </>
-        }
+        actions={<NewConversationDialog />}
       />
       {/* `h-[calc(100vh-3.5rem)]` компенсує `h-14` хедера шела — той самий
           прийом, що в календарі. Без нього сторінка

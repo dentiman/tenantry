@@ -61,7 +61,6 @@
     "create": "Create",
     "cancel": "Cancel",
     "retry": "Retry",
-    "discard": "Discard",
-    "refresh": "Refresh"
+    "discard": "Discard"
   }
 }

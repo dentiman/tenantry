@@ -74,7 +74,7 @@ flowchart TB
   end
   calendar --> customers
   calendar --> users & settings & notifications & activities & realtime & auth
-  chat --> users & files & auth
+  chat --> users & files & realtime & auth
   ai --> settings & realtime & messaging & auth & app
   playground --> users & app
   customers --> users & settings & notifications & activities & numbering & auth
@@ -269,7 +269,8 @@ messaging, сокет), а `socket-events` одразу каже про тран
 
 Механізм: `defineSocketEvent(name, schema)` (`libs/contracts/src/realtime/socket-event.ts`).
 
-- **Визначення** — `calendar/calendar.socket-events.ts`, `ai/ai.socket-events.ts`; платформні
+- **Визначення** — `calendar/calendar.socket-events.ts`, `ai/ai.socket-events.ts`,
+  `chat/chat.socket-events.ts`; платформні
   (`presence.*`, `auth.*`, `realtime.resync-required`, `notification.*`) лишаються в `realtime/`.
 - **Збірка** — root `libs/contracts/src/socket-events.ts`: `SERVER_SOCKET_EVENTS`,
   `REALTIME_EVENTS`, `ServerToClientEvents`. Перелік подій як огляд протоколу лишається.

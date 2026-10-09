@@ -281,8 +281,8 @@ export const MODULES = {
   },
   chat: {
     tier: 'feature',
-    dependsOn: ['app', 'auth', 'files', 'tenants', 'users'],
-    summary: 'Розмови між людьми (REST-зріз, docs/chat.md). Опційний.',
+    dependsOn: ['app', 'auth', 'files', 'realtime', 'tenants', 'users'],
+    summary: 'Розмови між людьми (docs/chat.md): REST + живі зміни через сокет. Опційний.',
     paths: [
       'apps/web/src/features/chat/',
       'libs/contracts/src/chat/',

@@ -386,13 +386,16 @@ The rules most easily broken:
     them — check the effective `baseUrl` whenever a subpath import behaves differently in an
     app than at the repo root.
 15. A socket event normally says "re-read" and never carries the payload itself
-    (`docs/realtime.md`). The AI assistant's `ai.message-delta.v1` is the **one** exception,
-    and it is safe only because of guards that must be copied together with the pattern: a
-    monotonic `chunkSeq` within one generation attempt (a gap sends the client back to the
-    REST transcript), a higher `attempt` meaning "discard and restart" (AI-0.1 replaced the
-    earlier `chunkSeq === 0` rule — that guard also mistook a stale attempt's first frame for
-    a restart), and `chunkCount` on the transcript so a client resumes live deltas after one
-    re-read instead of re-reading again. Postgres stays the source of truth.
+    (`docs/realtime.md`). Three events carry state, and each is safe only because of the
+    guards that must be copied together with the pattern — **a payload is allowed only with a
+    monotonic counter and a REST resync**: the AI assistant's `ai.message-delta.v1` (a
+    monotonic `chunkSeq` within one generation attempt, a gap sends the client back to the
+    REST transcript; a higher `attempt` meaning "discard and restart" — AI-0.1 replaced the
+    earlier `chunkSeq === 0` rule, which also mistook a stale attempt's first frame for a
+    restart; `chunkCount` on the transcript so a client resumes live deltas after one re-read
+    instead of re-reading again), `notification.created.v1` (`revision`), and
+    `chat.message-created.v1` (the conversation's `seq`: next → apply, not newer → ignore, gap
+    → re-read the transcript). Postgres stays the source of truth.
 16. `$executeRaw` bypasses the tenant Prisma extension — a raw update outside
     `runWith`/`withTenantTx` silently affects zero rows under RLS instead of erroring.
 17. Every Postgres image is `pgvector/pgvector:0.8.6-pg17-bookworm` (pinned digest) — dev, CI,

@@ -44,7 +44,7 @@ interface ChatTranscriptProps {
 }
 
 /** Рядок стрічки: або серверне повідомлення, або ще ненадіслане з черги */
-type Row =
+export type Row =
   | { kind: 'day'; key: string; label: string }
   | { kind: 'message'; key: string; message: ChatMessage; groupedWithPrevious: boolean }
   | { kind: 'outbox'; key: string; entry: OutboxMessage };
@@ -433,8 +433,13 @@ function MessageTime({ iso }: { iso: string }) {
  *
  * Групування рветься не лише зміною автора, а й системним записом і зміною дати —
  * інакше «X додав Y» опинився б усередині групи, підписаної одним іменем.
+ *
+ * Ненадіслана репліка, чий `clientMessageId` уже є серед повідомлень стрічки, не
+ * малюється: сервер її підтвердив (відповіддю або відлунням сокета), а запис у черзі
+ * вихідних знімається окремим кроком і може відстати від перечитаної стрічки на
+ * кілька мілісекунд. Без цього в цей проміжок вона стояла б у стрічці двічі.
  */
-function buildRows(messages: ChatMessage[], pending: OutboxMessage[]): Row[] {
+export function buildRows(messages: ChatMessage[], pending: OutboxMessage[]): Row[] {
   const rows: Row[] = [];
   let previousDay: string | null = null;
   let previousSender: string | null = null;
@@ -457,7 +462,11 @@ function buildRows(messages: ChatMessage[], pending: OutboxMessage[]): Row[] {
     previousSender = sender;
   }
 
+  const confirmed = new Set(messages.map((message) => message.clientMessageId));
   for (const entry of pending) {
+    if (confirmed.has(entry.clientMessageId)) {
+      continue;
+    }
     rows.push({ kind: 'outbox', key: `outbox-${entry.clientMessageId}`, entry });
   }
 

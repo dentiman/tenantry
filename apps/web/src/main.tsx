@@ -13,6 +13,7 @@ import { initPresenceSync } from './features/realtime/presence-sync';
 import { initNotificationSync } from './features/notifications/realtime/notification-sync';
 import { initCalendarSync } from './features/calendar/realtime/calendar-sync';
 import { initAiSync } from './features/ai/realtime/ai-sync';
+import { initChatSync } from './features/chat/realtime/chat-sync';
 import { useSettingsBootstrap } from './api/generated/api';
 import { NavProvider } from '@saas-skeleton/ui/navigation';
 import { isAllowed } from './features/auth/auth.access';
@@ -87,6 +88,7 @@ async function bootstrap(): Promise<void> {
   initNotificationSync(queryClient);
   initCalendarSync(queryClient);
   initAiSync(queryClient);
+  initChatSync(queryClient);
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {

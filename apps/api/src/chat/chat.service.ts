@@ -8,6 +8,7 @@ import {
   type PostChatMessage,
 } from '@saas-skeleton/contracts';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+import { ChatRealtime } from './chat-realtime';
 import { ConversationAccessService } from './conversation-access.service';
 
 /** Що віддається як розмова — і в списку, і в картці (форма спільна) */
@@ -85,11 +86,11 @@ function toPreview(body: string): string {
 }
 
 /**
- * Чат, фаза CHAT-0.1 (docs/chat.md §7.4): INTERNAL-розмови, текст, REST.
+ * Чат (docs/chat.md §7): INTERNAL-розмови, текст, REST + живі зміни через сокет (CHAT-0.2a).
  *
- * Жодного асинхронного шару: ні черг, ні сокетів, ні сповіщень. Місця, куди їх
- * додасть `0.2`, позначені коментарями в `post()` — і саме позначені, а не
- * заготовлені кодом.
+ * Сокет — лише прискорення: кожна зміна, що змінює стрічку чи курсор, реєструє емісію
+ * після коміту тієї ж транзакції (`ChatRealtime`), а джерелом правди лишається Postgres.
+ * Черг і сповіщень тут ще немає: місце під `publish` позначено коментарем у `insert()`.
  */
 @Injectable()
 export class ChatService {
@@ -99,6 +100,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly transactions: TenantTransactions,
     private readonly access: ConversationAccessService,
+    private readonly chatRealtime: ChatRealtime,
   ) {}
 
   /**
@@ -230,6 +232,10 @@ export class ChatService {
         data: { joinSeq: lastSeq, lastReadSeq: lastSeq },
       });
 
+      // Склад відомий — це `memberIds`; системні записи 1..n окремою подією не летять:
+      // стрічки ніхто ще не тримає, тож досить сигналу про появу розмови
+      await this.chatRealtime.conversationChanged(tx, conversation.id, 'created', memberIds);
+
       return conversation.id;
     });
 
@@ -324,10 +330,17 @@ export class ChatService {
         },
       });
 
-      await tx.conversationParticipant.updateMany({
+      const { count } = await tx.conversationParticipant.updateMany({
         where: { conversationId, userId: actor.sub, leftAt: null, lastReadSeq: { lt: seq } },
         data: { lastReadSeq: seq, lastReadAt: new Date(), unreadCount },
       });
+
+      // Курсор справді зрушився — кажемо його власнику, в УСІ його вкладки. Застарілий чи
+      // повторний запит (`count = 0`) мовчить: інакше дві вкладки, що читають одне й те саме,
+      // гойдали б одна одну подіями (design.md D2). Чужі позиції прочитаного нікому не шлемо
+      if (count > 0) {
+        await this.chatRealtime.conversationChanged(tx, conversationId, 'read', [actor.sub]);
+      }
     });
   }
 
@@ -383,12 +396,15 @@ export class ChatService {
         data: { unreadCount: { increment: 1 } },
       });
 
-      // --- шви під CHAT-0.2, свідомо порожні (design.md, Goals) ---
-      // Тут стане `publish(tx, chatMessagePostedEvent, …)` — подія для майбутніх
-      // підписників (auto-assign, SLA, AI-чернетка), і
-      // `this.transactions.onCommit(tx, () => emit chat.message.created.v1)` —
-      // емісія в room розмови та в user-room учасників (docs/chat.md §4.8, §4.11).
-      // Обидва — рядок виклику в цьому ж методі, а не переписування методу.
+      // Живе оновлення: усім активним учасникам, автора включно (його інші вкладки),
+      // ПІСЛЯ коміту. Повтор з тим самим clientMessageId сюди не доходить — `post()`
+      // повертає збережений рядок раніше, а гонку двох однакових відсікає унікальний
+      // індекс, і транзакція програвшого відкочується разом із реєстрацією емісії
+      await this.chatRealtime.messageCreated(tx, message);
+
+      // Шов під CHAT-0.2b+: тут стане `publish(tx, chatMessagePostedEvent, …)` — подія для
+      // майбутніх підписників (auto-assign, SLA, AI-чернетка, docs/chat.md §4.11). Її немає,
+      // доки немає першого підписника: запис у MESSAGE_TOPOLOGY без споживача — мертва конфігурація
 
       return message;
     });

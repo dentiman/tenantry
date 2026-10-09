@@ -60,8 +60,9 @@ unavailable", "Server error".
   invited to, or that are linked to a customer and not private.
 - **A customer disappeared from the list.** It may be archived — choose the "Archived" status
   filter. Deleted customers cannot be recovered.
-- **New chat messages do not appear.** Chat does not update live yet; click "Refresh" or switch
-  back to the window.
+- **New chat messages do not appear.** Chat updates on its own while the connection to the
+  server is up. If a message is missing, the connection may have dropped: switch back to the
+  window or reload the page, and the conversation catches up.
 - **I did not get an email notification.** Notifications are in-app only; check the bell.
 - **Times look shifted.** Your calendar uses the time zone from User settings → "Profile" (or
   the organization default); set it to where you are.

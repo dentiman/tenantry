@@ -6,28 +6,16 @@ import {
   chatPost,
   chatTranscript,
   getChatFindAllQueryKey,
-  getChatFindOneQueryKey,
   getChatTranscriptQueryKey,
 } from '../../../api/generated/api';
 import type { ChatMessageListResponseDtoOutputItemsItem } from '../../../api/generated/model/chatMessageListResponseDtoOutputItemsItem';
 import type { ConversationListResponseDtoOutputItemsItem } from '../../../api/generated/model/conversationListResponseDtoOutputItemsItem';
+import { CONVERSATIONS_PAGE, TRANSCRIPT_PAGE, conversationListKey } from '../chat-keys';
+import { mergeIncomingMessage } from '../realtime/chat-cache';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 
 export type Conversation = ConversationListResponseDtoOutputItemsItem;
 export type ChatMessage = ChatMessageListResponseDtoOutputItemsItem;
-
-const CONVERSATIONS_PAGE = 30;
-const TRANSCRIPT_PAGE = 30;
-
-/**
- * Чат живе без realtime (фаза CHAT-0.1), тому свіжість тримається на перечитуванні:
- * коротший `staleTime` за глобальні 30 с (`main.tsx`) — інакше повернення у вікно
- * нічого б не перезапитало і екран мовчки показував би вчорашній стан.
- *
- * `refetchInterval` тут НЕМАЄ свідомо: у `0.2` його довелося б знімати, а до того
- * він маскував би помилки курсора, перечитуючи все кожні N секунд (design.md D8).
- */
-const CHAT_STALE_TIME = 5_000;
 
 /** Список розмов: курсорний фід, свіжі згори */
 export function useConversationList() {
@@ -41,7 +29,6 @@ export function useConversationList() {
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: CHAT_STALE_TIME,
   });
 }
 
@@ -62,7 +49,6 @@ export function useTranscript(conversationId: string) {
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: CHAT_STALE_TIME,
     enabled: conversationId !== '',
   });
 }
@@ -84,27 +70,23 @@ export function flattenConversations(
 
 /**
  * Надсилання. Оптимістичний рядок живе в окремому сторі, а не в кеші запиту
- * (design.md D8), тому тут лишається рівно дві дії: покласти його туди і, коли
- * сервер відповів, прибрати — стрічку до того моменту вже перечитали.
+ * (design.md D8 фази 0.1), тому тут лишається рівно дві дії: покласти його туди і, коли
+ * сервер відповів, злити збережене повідомлення в кеш стрічки тим самим правилом `seq`,
+ * що й відлуння сокета (`mergeIncomingMessage`, design.md D4 фази 0.2a). Відповідь і подія
+ * можуть прийти в будь-якому порядку — рядок у стрічці при цьому один, а сам `send`
+ * підтверджується і коли сокет лежить.
  */
 export function useSendMessage(conversationId: string) {
   const queryClient = useQueryClient();
-  const { enqueue, markFailed, markSending, resolve } = useChatOutboxStore.getState();
+  const { enqueue, markFailed, markSending } = useChatOutboxStore.getState();
 
   const mutation = useMutation({
     mutationFn: ({ body, clientMessageId }: { body: string; clientMessageId: string }) =>
       chatPost(conversationId, { body, clientMessageId }),
-    onSuccess: async (_message, variables) => {
-      resolve(conversationId, variables.clientMessageId);
-      // Стрічка і список — одним рухом: прев'ю та порядок у списку теж змінились
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: getChatTranscriptQueryKey(conversationId, { limit: TRANSCRIPT_PAGE }),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: getChatFindAllQueryKey({ limit: CONVERSATIONS_PAGE }),
-        }),
-      ]);
+    onSuccess: async (message) => {
+      mergeIncomingMessage(queryClient, conversationId, message);
+      // Прев'ю й порядок у списку змінились; лічильники в ньому персональні — перечитуємо
+      await queryClient.invalidateQueries({ queryKey: conversationListKey() });
     },
     onError: (_error, variables) => {
       markFailed(conversationId, variables.clientMessageId);
@@ -134,30 +116,6 @@ export function useSendMessage(conversationId: string) {
   return { send, retry };
 }
 
-/**
- * Явне оновлення всієї area: картка, стрічка і список розмов разом.
- *
- * Саме разом, а не `refetch()` однієї картки: без realtime кнопка «Оновити» —
- * єдиний спосіб дізнатись про чужу репліку, і оновити при цьому лише заголовок
- * означало б збрехати кнопкою. Список теж перечитується — інакше прев'ю і
- * бейдж непрочитаних лишились би вчорашніми.
- */
-export function useRefreshChat(conversationId: string) {
-  const queryClient = useQueryClient();
-
-  return useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: getChatFindOneQueryKey(conversationId) }),
-      queryClient.invalidateQueries({
-        queryKey: getChatTranscriptQueryKey(conversationId, { limit: TRANSCRIPT_PAGE }),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: getChatFindAllQueryKey({ limit: CONVERSATIONS_PAGE }),
-      }),
-    ]);
-  }, [conversationId, queryClient]);
-}
-
 /** Рух курсора прочитаного. Відмова тут нічого не ламає — бейдж просто лишиться */
 export function useMarkRead(conversationId: string) {
   const queryClient = useQueryClient();
@@ -165,9 +123,7 @@ export function useMarkRead(conversationId: string) {
   const mutation = useMutation({
     mutationFn: (seq: number) => chatMarkRead(conversationId, { seq }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: getChatFindAllQueryKey({ limit: CONVERSATIONS_PAGE }),
-      });
+      await queryClient.invalidateQueries({ queryKey: conversationListKey() });
     },
     meta: { silentError: true },
   });

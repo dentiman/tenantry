@@ -1,4 +1,4 @@
-import type { Prisma } from '@saas-skeleton/database';
+import type { ChatMessage, Prisma } from '@saas-skeleton/database';
 
 /**
  * Дефолтний канал тенанта («General»): розмова, у якій перебувають усі його юзери
@@ -61,19 +61,26 @@ export async function ensureDefaultChannel(
   return channel;
 }
 
+/** Що записав вступ: канал і системний запис `member.added` — щоб викликач міг про нього сповістити */
+export interface DefaultChannelJoin {
+  conversationId: string;
+  message: ChatMessage;
+}
+
 /**
  * Ввести юзера в канал тенанта. Викликається З ТІЄЇ САМОЇ транзакції, що створює юзера:
  * членство — частина його появи, а не окремий крок, який може не статися.
  *
  * Каналу немає — кидаємо. Це зламаний інваріант тенанта (канал створюють поява тенанта,
  * сід і міграційний backfill), і тихо пропустити його означало б назавжди лишити людину
- * поза каналом, не сказавши нікому. Уже учасник — нічого не робимо (ідемпотентно).
+ * поза каналом, не сказавши нікому. Уже учасник — нічого не робимо (ідемпотентно) і
+ * повертаємо `null`: записувати і сповіщати нема про що.
  */
 export async function joinDefaultChannel(
   tx: Prisma.TransactionClient,
   tenantId: string,
   user: { id: string; name: string | null; email: string },
-): Promise<void> {
+): Promise<DefaultChannelJoin | null> {
   const channel = await tx.conversation.findFirst({
     where: { tenantId, isDefault: true },
     select: { id: true },
@@ -87,7 +94,7 @@ export async function joinDefaultChannel(
     select: { leftAt: true },
   });
   if (existing?.leftAt === null) {
-    return;
+    return null;
   }
 
   // Інкремент-і-повернення, як у звичайному надсиланні: двох юзерів можуть заводити
@@ -99,7 +106,7 @@ export async function joinDefaultChannel(
     select: { lastSeq: true },
   });
 
-  await tx.chatMessage.create({
+  const message = await tx.chatMessage.create({
     data: {
       tenantId,
       conversationId: channel.id,
@@ -129,4 +136,5 @@ export async function joinDefaultChannel(
     },
     update: { leftAt: null, joinSeq: lastSeq, lastReadSeq: lastSeq, unreadCount: 0 },
   });
+  return { conversationId: channel.id, message };
 }
