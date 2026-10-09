@@ -3,8 +3,8 @@
 ## Purpose
 
 Defines the Chat area as a screen in the tenant application: how conversations are listed and
-opened, how a message behaves between being sent and being confirmed, and how a client that
-holds no live connection learns that the conversation has moved on.
+opened, how a message behaves between being sent and being confirmed, and how the screen stays
+current as conversations move on.
 
 ## Requirements
 
@@ -51,25 +51,39 @@ failed state with a way to retry, and retrying SHALL NOT produce a second messag
 - **WHEN** the user retries that entry and the retry succeeds
 - **THEN** the transcript contains exactly one message for it
 
-### Requirement: The transcript refreshes on demand, not continuously
-The Chat area SHALL NOT hold a live connection for chat and SHALL NOT poll on a timer. It
-SHALL refresh the open transcript and the conversation list when the window regains focus and
-after the user sends a message, and SHALL offer a way to refresh deliberately. Consequently a
-message posted by another user SHALL become visible at the next refresh rather than
-immediately, and the screen SHALL NOT present stale data as live.
+### Requirement: The Chat area stays current without a reload
+The Chat area SHALL show changes made elsewhere as they happen: another participant's message
+SHALL appear in the open transcript, the conversation list SHALL reflect new previews, ordering,
+unread indicators and newly created conversations, and reading a conversation in one tab SHALL
+clear its unread indicator in the user's other tabs — all without a reload, a focus change or a
+manual refresh action. The area SHALL NOT poll on a timer. When the live channel is unavailable,
+the area SHALL still converge to the stored state when the window regains focus or the
+connection is restored, and SHALL NOT show the same message twice.
 
-#### Scenario: A colleague posts while the window is in the background
-- **WHEN** another participant posts a message and the user returns to the window
-- **THEN** the transcript and the conversation list show that message and the updated unread
-  indicator
+#### Scenario: A colleague posts into the open conversation
+- **WHEN** another participant posts a message while the user has that conversation open and
+  scrolled to the end
+- **THEN** the message appears at the end of the transcript without any action by the user, and
+  the conversation is not left marked as unread
+
+#### Scenario: A colleague posts into another conversation
+- **WHEN** another participant posts into a conversation that is not open
+- **THEN** the conversation list moves it to the top with the new preview and an increased
+  unread indicator
 
 #### Scenario: The user sends a message
-- **WHEN** the user sends a message
-- **THEN** the conversation list reflects the new preview and ordering without a manual refresh
+- **WHEN** the user sends a message and its confirmation and its live notice both arrive
+- **THEN** the transcript contains exactly one entry for it, and the conversation list reflects
+  the new preview and ordering
+
+#### Scenario: The live channel is unavailable
+- **WHEN** the live connection is down and the user sends a message
+- **THEN** the message is still confirmed in the transcript, and messages from others appear
+  once the window regains focus or the connection returns
 
 #### Scenario: The window is left open and untouched
-- **WHEN** the window stays focused and idle
-- **THEN** the client issues no repeated background requests for the conversation
+- **WHEN** the window stays focused and nothing changes in the user's conversations
+- **THEN** the client issues no repeated background requests for chat
 
 ### Requirement: Older history loads by scrolling up without losing the reading position
 The transcript SHALL open anchored at its most recent message and SHALL load the preceding page
