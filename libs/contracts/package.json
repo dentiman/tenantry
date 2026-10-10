@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./platform": "./src/platform/index.ts"
+    "./platform": "./src/platform/index.ts",
+    "./demo": "./src/demo/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
