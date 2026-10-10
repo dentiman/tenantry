@@ -8,6 +8,9 @@
 Джерело: [libs/database/prisma/seed.ts](../libs/database/prisma/seed.ts),
 [libs/database/scripts/reset-db.ts](../libs/database/scripts/reset-db.ts).
 
+> Демо-датасет для показу клієнтам (три галузеві тенанти, `pnpm db:seed:demo`) описано окремо —
+> [demo.md](demo.md). Цей файл — про мінімальний базовий сід.
+
 ## pgvector bootstrap (AI-2a)
 
 `db:roles` тепер також встановлює `vector` 0.8.6 під адміністратором у цільову

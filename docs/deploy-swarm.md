@@ -84,9 +84,9 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | `docker/entrypoint-api.sh` | entrypoint api: migrate deploy → старт |
 | `Dockerfile.web` | Vite build → nginx (`ARG APP`: web/platform-web) |
 | `docker/nginx/default.conf.template` | SPA-fallback + `/api`-проксі (`${API_UPSTREAM}` через envsubst) |
-| `Dockerfile.tools` | повний-deps образ для one-shot `db:roles`/`db:seed`/`db:migrate:deploy` |
+| `Dockerfile.tools` | повний-deps образ для one-shot `db:roles`/`db:seed`/`db:seed:demo`/`db:migrate:deploy` |
 | `docker/docker-compose.stack.yml` | повний стек (anchors: pinning, update, env-групи) |
-| `.gitlab-ci.yml` | build (6 образів) → deploy_dev/prod + manual `db_roles`/`seed`/`dump` |
+| `.gitlab-ci.yml` | build (6 образів) → deploy_dev/prod + manual `db_roles`/`seed`/`seed_demo`/`demo_reset`/`dump` ([demo.md §5](demo.md)) |
 | `.dockerignore` | контекст без node_modules/dist/logs/.env |
 
 ## 4. Образи (механіка)

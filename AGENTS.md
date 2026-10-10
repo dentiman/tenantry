@@ -41,6 +41,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
 - `docs/deploy-swarm.md` — GitLab CI (check → build → deploy) → Docker Swarm
+- `docs/demo.md` — демо-стенд для показу клієнтам: датасет трьох галузевих тенантів (`db:seed:demo`),
+  статичні демо-акаунти (їх читають сід і логін-сторінки), ручні CI-джоби завантаження/скидання
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
 - `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet
@@ -115,6 +117,9 @@ pnpm db:migrate:dev        # dev migration (don't pass `--name` through `pnpm ..
                            # it hangs on a pnpm/prisma flag-duplication bug — instead:
                            # `cd libs/database && pnpm exec prisma migrate dev --name X`)
 pnpm db:seed               # idempotent upsert of default tenant/admin/platform-operator
+pnpm db:seed:demo          # demo dataset: 3 industry tenants (users, ~35 customers each, calendar, chat,
+                           # activity, notifications) — idempotent; docs/demo.md. Needs `db:seed` first
+pnpm db:seed:demo:reset    # delete the 3 demo tenants (cascade) and recreate; never touches `default`
 pnpm db:reset              # destructive, local-only: DROP+CREATE DATABASE → roles → migrate → seed
 pnpm api:dev                        # tenant API   http://localhost:3001  (Swagger /api/docs)
 pnpm platform:dev                   # platform API http://localhost:3002 (Swagger /api/docs)

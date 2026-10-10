@@ -13,6 +13,8 @@
     "db:migrate:dev": "pnpm --filter @saas-skeleton/database db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @saas-skeleton/database db:migrate:deploy",
     "db:seed": "pnpm --filter @saas-skeleton/database db:seed",
+    "db:seed:demo": "pnpm --filter @saas-skeleton/database db:seed:demo",
+    "db:seed:demo:reset": "pnpm --filter @saas-skeleton/database db:seed:demo:reset",
     "db:studio": "pnpm --filter @saas-skeleton/database db:studio",
     "db:reset": "pnpm --filter @saas-skeleton/database db:reset",
     "ws:init": "tsx scripts/workspace-init.ts",

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Повна перевірка коміту перед збіркою образів: lint (з ai:knowledge:check) → typecheck →
-# unit → e2e обох API. Це джоба `verify` стадії check у .gitlab-ci.yml; локально той самий
+# unit → демо-сід (двічі) → e2e обох API. Це джоба `verify` стадії check у .gitlab-ci.yml; локально той самий
 # прогін — `bash scripts/ci-verify.sh` (потрібен лише Docker, dev-стек не чіпає).
 #
 # Усе живе в одноразових контейнерах на власній docker-мережі: Postgres (той самий
@@ -65,6 +65,13 @@ docker run --rm --network "$RUN_ID" \
     pnpm lint
     pnpm typecheck
     pnpm test
+    # Демо-сід на чистій БД двічі: перший прогін ловить розрив зі схемою/контрактами, другий —
+    # неідемпотентність (docs/demo.md). e2e нижче користуються окремою тестовою БД, тож це їх не чіпає
+    pnpm db:roles
+    pnpm db:migrate:deploy
+    pnpm db:seed
+    pnpm db:seed:demo
+    pnpm db:seed:demo
     pnpm api:test:e2e
     pnpm platform:test:e2e
   '

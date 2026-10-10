@@ -287,7 +287,8 @@ deploy_prod:
     # прикладні секрети — з docker/deploy.env (source у before_script)
 
 # ===========================================================================
-# ONE-SHOT (manual): db:roles → ДО першого деплою; seed → демо-дані; dump → бекап БД.
+# ONE-SHOT (manual): db:roles → ДО першого деплою; seed → базові ідентичності; seed_demo/demo_reset →
+# демо-датасет для показу клієнтам (docs/demo.md); dump → бекап БД.
 # Виконуються на manager через context (docker run/exec по overlay-мережі стеку).
 # ===========================================================================
 .tools_base:
@@ -387,6 +388,54 @@ seed_dev:
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
         -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
         "$TOOLS_IMAGE" pnpm db:seed
+
+# Демо-датасет для показу клієнтам (docs/demo.md): три галузеві тенанти з командою, кастомерами,
+# календарем, чатом, журналом і сповіщеннями. ТІЛЬКИ вручну (рішення власника 2026-10-10): деплой
+# сам нічого не сідить — демо-дані завантажують окремою кнопкою, коли стенд потрібен для показу.
+# `db:seed` стоїть першим навмисно: на свіжому стеку без базового сіда немає оператора платформи
+# і тенанта `default`; на наявному він ідемпотентний і нічого не ламає.
+seed_demo_dev:
+  extends: .tools_base
+  stage: deploy_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_dev }
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo'
+
+# Скидання демо до чистого стану перед зустріччю: видаляє три демо-тенанти (каскадом разом з усім,
+# що в них накликали під час попередніх показів) і створює заново; зсуває дати календаря на «сьогодні».
+# Тенант `default` і оператор платформи не чіпаються.
+demo_reset_dev:
+  extends: .tools_base
+  stage: deploy_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_dev }
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo:reset'
 
 dump_db_prod:
   extends: .prod_disabled

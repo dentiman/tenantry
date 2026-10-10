@@ -190,6 +190,19 @@ pnpm db:seed
 `platform@example.com`/`Platform12345`. Можна ганяти повторно на живій БД без ризику
 дублів. Деталі — [docs/database-seed.md](database-seed.md).
 
+### `pnpm db:seed:demo` / `pnpm db:seed:demo:reset`
+
+```bash
+pnpm db:seed:demo          # → tsx libs/database/prisma/seed-demo/index.ts
+pnpm db:seed:demo:reset    # → ... --reset
+```
+
+Демо-датасет для показу клієнтам: три галузеві тенанти (`northwind`, `helix`, `brightside`) із
+командою, десятками кастомерів, календарем, чатом, журналом і сповіщеннями. Ідемпотентно;
+`:reset` видаляє ці три тенанти каскадом і створює заново (дати календаря знову на «сьогодні»).
+Не чіпає `default` і оператора платформи, тож спершу потрібен `pnpm db:seed`. Акаунти, склад
+даних і CI-джоби — [docs/demo.md](demo.md).
+
 ### `pnpm db:studio`
 
 ```bash
