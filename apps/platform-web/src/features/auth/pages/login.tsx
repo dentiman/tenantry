@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PlatformLoginSchema, type PlatformLogin } from '@saas-skeleton/contracts/platform';
+import { DEMO_PLATFORM_ACCOUNT } from '@saas-skeleton/contracts/demo';
 import { usePlatformAuthLogin } from '../../../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 import {
@@ -11,8 +12,13 @@ import {
   FormTextField,
 } from '@saas-skeleton/ui/components/form';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
+import { AuthLayout } from '../components/auth-layout';
+import {
+  DEFAULT_DEMO_OPERATOR,
+  DEMO_LOGINS_ENABLED,
+  DemoOperator,
+} from '../components/demo-operator';
 
 export function LoginPage() {
   const { t } = useTranslation('auth');
@@ -22,7 +28,12 @@ export function LoginPage() {
 
   const form = useForm<PlatformLogin>({
     resolver: zodResolver(PlatformLoginSchema),
-    defaultValues: { email: '', password: '' },
+    // Демо-стенд: форма відкривається вже з демо-оператором (вимикається
+    // `VITE_DEMO_LOGINS=false`)
+    defaultValues: {
+      email: DEFAULT_DEMO_OPERATOR?.email ?? '',
+      password: DEFAULT_DEMO_OPERATOR?.password ?? '',
+    },
   });
   const {
     control,
@@ -42,37 +53,44 @@ export function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm [--card-spacing:--spacing(6)]">
-        <CardHeader>
-          <CardTitle className="text-center text-xl">{t('login.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-            <FieldGroup>
-              <FormTextField
-                control={control}
-                name="email"
-                label={t('login.email')}
-                type="email"
-                autoComplete="email"
-              />
-              <FormPasswordField
-                control={control}
-                name="password"
-                label={t('login.password')}
-                autoComplete="current-password"
-              />
-            </FieldGroup>
-            {errors.root?.server && (
-              <p className="text-sm text-destructive">{errors.root.server.message}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? t('login.submitting') : t('login.submit')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout title={t('login.title')}>
+      <div className="flex flex-col gap-6">
+        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+          <FieldGroup>
+            <FormTextField
+              control={control}
+              name="email"
+              label={t('login.email')}
+              type="email"
+              autoComplete="email"
+            />
+            <FormPasswordField
+              control={control}
+              name="password"
+              label={t('login.password')}
+              autoComplete="current-password"
+            />
+          </FieldGroup>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
+          )}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? t('login.submitting') : t('login.submit')}
+          </Button>
+        </form>
+        {DEMO_LOGINS_ENABLED && (
+          <DemoOperator
+            disabled={isSubmitting}
+            onSelect={() => {
+              form.reset({
+                email: DEMO_PLATFORM_ACCOUNT.email,
+                password: DEMO_PLATFORM_ACCOUNT.password,
+              });
+              void onSubmit();
+            }}
+          />
+        )}
+      </div>
+    </AuthLayout>
   );
 }
