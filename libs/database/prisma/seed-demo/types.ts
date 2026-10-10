@@ -93,6 +93,8 @@ export interface DemoTenantDataset {
   slug: string;
   name: string;
   currency: string;
+  /** Вік воркспейсу: старший за найдавнішого юзера й кастомера, щоб консоль оператора не виглядала «щойно створеною» */
+  createdDaysAgo: number;
   timeZone: string;
   /** Робочий день воркспейсу — іде в `settings.calendar` тенанта */
   workDay: { start: string; end: string };

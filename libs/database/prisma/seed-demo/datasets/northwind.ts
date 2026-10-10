@@ -11,6 +11,7 @@ export const northwind: DemoTenantDataset = {
   slug: 'northwind',
   name: 'Northwind Logistics',
   currency: 'EUR',
+  createdDaysAgo: 300,
   timeZone: 'Europe/Amsterdam',
   workDay: { start: '08:00', end: '17:30' },
   users: [

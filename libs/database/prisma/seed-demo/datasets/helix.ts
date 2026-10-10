@@ -11,6 +11,7 @@ export const helix: DemoTenantDataset = {
   slug: 'helix',
   name: 'Helix Health',
   currency: 'GBP',
+  createdDaysAgo: 280,
   timeZone: 'Europe/London',
   workDay: { start: '08:30', end: '17:30' },
   users: [

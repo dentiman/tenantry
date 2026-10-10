@@ -11,6 +11,7 @@ export const brightside: DemoTenantDataset = {
   slug: 'brightside',
   name: 'Brightside Studio',
   currency: 'USD',
+  createdDaysAgo: 270,
   timeZone: 'America/New_York',
   workDay: { start: '09:30', end: '18:00' },
   users: [

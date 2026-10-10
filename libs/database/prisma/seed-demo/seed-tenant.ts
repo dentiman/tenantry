@@ -109,7 +109,15 @@ export async function seedTenant(
   };
   const tenant = await prisma.tenant.upsert({
     where: { slug },
-    create: { id: uid('tenant', slug), slug, name: data.name, currency: data.currency, locale: 'en', settings },
+    create: {
+      id: uid('tenant', slug),
+      slug,
+      name: data.name,
+      currency: data.currency,
+      locale: 'en',
+      settings,
+      createdAt: new Date(now.getTime() - data.createdDaysAgo * DAY),
+    },
     update: { name: data.name, currency: data.currency, isActive: true, settings },
   });
   const tenantId = tenant.id;
