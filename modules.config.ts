@@ -185,7 +185,7 @@ export const MODULES = {
   },
   activities: {
     tier: 'platform',
-    dependsOn: ['settings'],
+    dependsOn: ['dashboard', 'settings'],
     summary: 'Стрічка активності (activities / activity_links) і її рендеринг.',
     paths: [
       'apps/web/src/features/activities/',

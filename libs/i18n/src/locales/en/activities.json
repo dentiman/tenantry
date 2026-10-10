@@ -1,5 +1,8 @@
 {
   "title": "Activity",
+  "widget": {
+    "title": "Latest activity"
+  },
   "user": {
     "created": "<b>{{actor}}</b> created user <b>{{user}}</b>",
     "password_changed": "<b>{{actor}}</b> changed the password of <b>{{user}}</b>",

@@ -23,6 +23,7 @@ import type {
 
 import type {
   ActivitiesFindAllParams,
+  ActivitiesFindWorkspaceParams,
   ActivityListResponseDtoOutput,
   AiCitationContentResponseDtoOutput,
   AiConversationListResponseDtoOutput,
@@ -2886,6 +2887,133 @@ export function useActivitiesFindAll<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getActivitiesFindAllQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const activitiesFindWorkspace = (
+  params?: ActivitiesFindWorkspaceParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ActivityListResponseDtoOutput>(
+    { url: `/api/activities/workspace`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getActivitiesFindWorkspaceQueryKey = (params?: ActivitiesFindWorkspaceParams) => {
+  return [`/api/activities/workspace`, ...(params ? [params] : [])] as const;
+};
+
+export const getActivitiesFindWorkspaceQueryOptions = <
+  TData = Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+  TError = unknown,
+>(
+  params?: ActivitiesFindWorkspaceParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof activitiesFindWorkspace>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getActivitiesFindWorkspaceQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof activitiesFindWorkspace>>> = ({
+    signal,
+  }) => activitiesFindWorkspace(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ActivitiesFindWorkspaceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof activitiesFindWorkspace>>
+>;
+export type ActivitiesFindWorkspaceQueryError = unknown;
+
+export function useActivitiesFindWorkspace<
+  TData = Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+  TError = unknown,
+>(
+  params: undefined | ActivitiesFindWorkspaceParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof activitiesFindWorkspace>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+          TError,
+          Awaited<ReturnType<typeof activitiesFindWorkspace>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useActivitiesFindWorkspace<
+  TData = Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+  TError = unknown,
+>(
+  params?: ActivitiesFindWorkspaceParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof activitiesFindWorkspace>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+          TError,
+          Awaited<ReturnType<typeof activitiesFindWorkspace>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useActivitiesFindWorkspace<
+  TData = Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+  TError = unknown,
+>(
+  params?: ActivitiesFindWorkspaceParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof activitiesFindWorkspace>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useActivitiesFindWorkspace<
+  TData = Awaited<ReturnType<typeof activitiesFindWorkspace>>,
+  TError = unknown,
+>(
+  params?: ActivitiesFindWorkspaceParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof activitiesFindWorkspace>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getActivitiesFindWorkspaceQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

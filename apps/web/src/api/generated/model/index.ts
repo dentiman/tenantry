@@ -8,6 +8,7 @@
 
 export * from './activitiesFindAllParams';
 export * from './activitiesFindAllType';
+export * from './activitiesFindWorkspaceParams';
 export * from './activityListResponseDtoOutput';
 export * from './activityListResponseDtoOutputItemsItem';
 export * from './activityListResponseDtoOutputItemsItemActorType';

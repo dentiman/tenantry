@@ -74,6 +74,9 @@ interface NotificationDraft {
   groupCount?: number;
 }
 
+/** Скільки годин тому створено останніх кастомерів (від найновішого): свіжа стрічка активності на дашборді */
+const RECENT_CUSTOMER_HOURS_AGO: readonly number[] = [3, 27, 52, 78, 110];
+
 const STREETS = ['High Street', 'Station Road', 'Harbour Lane', 'Market Square', 'Park Avenue', 'Mill Road', 'Kings Way', 'Main Street', 'Elm Street', 'Canal Street'];
 
 const ref = (kind: string, id: string, label: string): { kind: string; id: string; label: string } => ({ kind, id, label });
@@ -207,7 +210,14 @@ export async function seedTenant(
     const rng = createRng(`${slug}:customer:${String(i)}`);
     const externalId = `demo-${slug}-${String(i + 1).padStart(3, '0')}`;
     const id = uid(slug, 'customer', i);
-    const createdAt = new Date(now.getTime() - ((total - i) * spanDays * DAY) / total - rng.int(1, 10) * HOUR);
+    // Останні п'ятеро — «щойно»: години й дні тому, а не ті ж ~6 днів, на які розтягнуто решту.
+    // Інакше «Остання активність» на дашборді відкривалась би подією тижневої давності
+    const fromEnd = total - 1 - i;
+    const recentHours = RECENT_CUSTOMER_HOURS_AGO[fromEnd];
+    const createdAt =
+      recentHours === undefined
+        ? new Date(now.getTime() - ((total - i) * spanDays * DAY) / total - rng.int(1, 10) * HOUR)
+        : new Date(now.getTime() - recentHours * HOUR);
     const sinceDays = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / DAY));
     const updatedAt = new Date(Math.min(now.getTime() - HOUR, createdAt.getTime() + rng.int(0, Math.min(45, sinceDays)) * DAY));
     const status = spec.status ?? 'ACTIVE';
@@ -504,6 +514,17 @@ export async function seedTenant(
     at: clamp(new Date(now.getTime() - 30 * DAY)),
   });
   users.forEach((u, i) => {
+    if (!u.active) {
+      // Відключений юзер лишає слід у журналі: його видно в загальній стрічці, а не лише у фільтрі гріда
+      drafts.push({
+        key: `user-disabled-${String(i)}`,
+        type: 'user.disabled',
+        actorIdx: 0,
+        payload: { user: ref('user', u.id, u.name) },
+        links: [{ entityType: 'user', entityId: u.id, role: 'subject' }],
+        at: clamp(new Date(now.getTime() - (8 + i) * DAY)),
+      });
+    }
     drafts.push({
       key: `user-created-${String(i)}`,
       type: 'user.created',

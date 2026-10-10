@@ -108,7 +108,7 @@ flowchart TB
 | ----------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
 | `shellHeaderActions`    | `app-shell.tsx` (хедер)                                        | `ai` — кнопка асистента                                         |
 | `shellSidePanels`       | `app-shell.tsx` (права колонка)                                | `ai` — панель асистента                                         |
-| `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`                       | `calendar` — агенда                                             |
+| `dashboardWidgets`      | `features/dashboard/pages/dashboard.tsx`                       | `calendar` — агенда; `activities` — остання активність          |
 | `customerOverviewCards` | `features/customers/pages/customer-overview.tsx`               | `calendar` — найближчі події                                    |
 
 ### 4.1.1. Фронтенд: навігація — розділи рейлу й пункти меню

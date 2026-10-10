@@ -197,7 +197,8 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = {
   }),
 } as const satisfies Record<ActivityType, z.ZodType>;
 
-// Query: фід ЗАВЖДИ по сутності (tenant-wide фід — беклог)
+// Query: стрічка сутності — по парі {entityType, entityId}. Загальна стрічка воркспейсу —
+// окремий ендпоінт і схема (WorkspaceActivityQuerySchema), див. «Читання: GET /api/activities/workspace»
 export const ActivityQuerySchema = CursorQuerySchema.extend({
   entityType: z.string().min(1),
   entityId: z.uuid(),
@@ -457,6 +458,39 @@ const rows = await this.prisma.activity.findMany({
 }
 ```
 
+## Читання: `GET /api/activities/workspace` (загальна стрічка воркспейсу)
+
+«Що відбувається в компанії» по ВСІХ юзерах — для віджета «Остання активність» на дашборді. Query —
+лише `cursor` і `limit`; курсор і порядок ті самі (`createdAt DESC, id DESC`), відповідь —
+`ActivityListResponse`. Межу тенанта тримає RLS, як і в решти читань.
+
+**Хто що бачить — рішення, а не збіг обставин.** Ендпоінт відкритий КОЖНОМУ юзеру тенанта, тому
+склад стрічки обмежений **типами, які власник типу дозволив показувати всім** — `workspace: true` у
+його визначенні (`ActivityTypeDef`, `libs/contracts/src/activity/activity-definition.ts`).
+Дефолт — «ні»: нова подія не з'явиться в чужій стрічці, поки її автор цього явно не вирішить.
+`WORKSPACE_ACTIVITY_TYPES` (`activity-types.ts`) лише збирає позначені типи, а сервер фільтрує за
+ним у самому запиті (`type IN …`), тож приховані типи не з'їдають слотів сторінки й не ламають курсор.
+Клієнт набір типів змінити не може.
+
+Дозволено: `customer.*` (створено, змінено відповідального, архівовано, відновлено, видалено),
+`user.created` / `user.enabled` / `user.disabled`. **Свідомо ні:**
+
+- безпекові — `user.password_changed`, `user.sessions_revoked`, `user.email_changed`: це не
+  справа колег;
+- `calendar_event.*` — приватна подія не має бути видна нікому, окрім учасників, а активність про
+  це нічого не знає і спитати календар не може (`activities` — рівень нижче календаря, а доступ до
+  запису тримає сама функція доступу календаря). Календар має власну агенду на дашборді. Коли
+  видимість зможе виражатись на рівні запису активності (напр. поле у payload), типи календаря
+  можна буде допустити;
+- `settings.*`, `email.sent` — для них є журнал налаштувань і картка юзера.
+
+Інваріант тримають e2e (`activities.e2e-spec.ts`, блок «workspace feed»): фільтр за позначкою
+типу, ізоляція тенантів, курсор з прихованими подіями між видимими, 401 без токена. Дозволити
+безпековий тип — отже зламати тест.
+
+Фронтенд: `DashboardActivityWidget` (`features/activities/components/`) — той самий `ActivityFeed`
+з власним `useFeedQuery`, у слоті `dashboardWidgets` ([modules.md](modules.md) §4.1).
+
 ## Фронтенд: рендер фіда
 
 Демо-споживач (за зразком ChangeAvatarModal): row action «Activity» на `/users` →
@@ -543,8 +577,8 @@ Definition of Done: `pnpm lint && pnpm typecheck && pnpm build` зелені; `a
 
 - `user.updated` з diff-ом полів (`changes: [{field, from, to}]`) — окремий хід: дизайн
   снапшота змін (whitelist полів, маскування чутливого) не тягнути в v1.
-- Tenant-wide фід («останні події по всьому воркспейсу») — індекс уже є
-  (`tenantId, createdAt DESC`), потрібен лише варіант query без entityType/entityId.
+- ~~Tenant-wide фід~~ — зроблено: `GET /activities/workspace` (див. вище). Лишилось допустити в нього
+  події календаря, коли приватність виражатиметься на рівні запису активності.
 - Лінки з фіда на сторінки сутностей — коли з'являться сторінки (customers).
 - `useInfiniteQuery` через orval-конфіг замість накопичення items у власному стані.
 - Retention-cron (system-scope, за зразком cleanup-orphans) — коли з'явиться обсяг.

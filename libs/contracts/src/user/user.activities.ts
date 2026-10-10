@@ -18,6 +18,7 @@ export const USER_ACTIVITIES = defineActivityTypes(
   { ns: 'activities' },
   {
     'user.created': {
+      workspace: true,
       payload: z.object({
         user: EntityRefSchema, // kind: 'user'
       }),
@@ -52,11 +53,13 @@ export const USER_ACTIVITIES = defineActivityTypes(
           : undefined,
     },
     'user.enabled': {
+      workspace: true,
       payload: z.object({
         user: EntityRefSchema,
       }),
     },
     'user.disabled': {
+      workspace: true,
       payload: z.object({
         user: EntityRefSchema,
       }),

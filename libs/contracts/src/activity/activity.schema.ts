@@ -17,6 +17,12 @@ export const ActivityQuerySchema = CursorQuerySchema.extend({
   type: ActivityTypeSchema.optional(),
 });
 
+/**
+ * Query загальної стрічки воркспейсу: лише курсор і ліміт — сутність не адресується, а набір
+ * типів визначає сервер (`WORKSPACE_ACTIVITY_TYPES`), клієнт його звузити чи розширити не може.
+ */
+export const WorkspaceActivityQuerySchema = CursorQuerySchema;
+
 export const ActivityResponseSchema = z.object({
   id: z.uuid(),
   type: ActivityTypeSchema, // фронт усе одно має generic-fallback на невідомий тип

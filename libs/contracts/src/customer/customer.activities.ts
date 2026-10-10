@@ -13,22 +13,26 @@ export const CUSTOMER_ACTIVITIES = defineActivityTypes(
   { ns: 'customers', prefix: 'activity' },
   {
     'customer.created': {
+      workspace: true,
       payload: z.object({
         customer: EntityRefSchema, // kind: 'customer'
       }),
     },
     'customer.archived': {
+      workspace: true,
       payload: z.object({
         customer: EntityRefSchema,
       }),
     },
     'customer.restored': {
+      workspace: true,
       payload: z.object({
         customer: EntityRefSchema,
         status: z.enum(['ACTIVE', 'INACTIVE']), // куди саме повернули з архіву
       }),
     },
     'customer.owner_changed': {
+      workspace: true,
       payload: z.object({
         customer: EntityRefSchema,
         // null з обох боків легальний: «нічий» — робочий стан, а не помилка
@@ -39,6 +43,7 @@ export const CUSTOMER_ACTIVITIES = defineActivityTypes(
       textVariant: (payload) => (payload.owner === null ? 'customer.owner_cleared' : undefined),
     },
     'customer.deleted': {
+      workspace: true,
       payload: z.object({
         // Лінк лишається на неіснуючий id, і це нормально: журнал переживає сутність,
         // саме тому label — снапшот, а не join

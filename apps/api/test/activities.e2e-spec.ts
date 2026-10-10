@@ -191,6 +191,120 @@ describe('Activities API (e2e)', () => {
     expect(collected).toEqual(expectedDesc); // порядок, без дублів і пропусків
   });
 
+  describe('workspace feed (GET /activities/workspace)', () => {
+    /**
+     * Сідування з довільним типом/тенантом: загальна стрічка фільтрує за ТИПОМ, тож для неї важить
+     * саме тип. Payload мінімальний — recorder тут обходимо (fail-fast-перевірку payload-у
+     * має окремий юніт нижче), а фільтр на payload не дивиться.
+     */
+    const seedTyped = async (
+      type: string,
+      createdAt: Date,
+      tenantId: string = DEFAULT_TENANT_ID,
+    ): Promise<string> => {
+      const activity = await prisma.activity.create({
+        data: { tenantId, type, actorType: 'system', payload: {}, createdAt },
+      });
+      return activity.id;
+    };
+
+    const userHeaders = async (
+      suffix: string,
+    ): Promise<{ Authorization: string }> => {
+      const { tokens } = await createAndLoginTestUser(app, prisma, {
+        email: `member-${suffix}@example.com`,
+        password: 'SecurePass123',
+        name: `Member ${suffix}`,
+        role: 'USER',
+      });
+      return { Authorization: `Bearer ${tokens.accessToken}` };
+    };
+
+    it('lists only types their owner allowed for everyone, newest first, to a plain USER', async () => {
+      const headers = await userHeaders(`${Date.now()}-ws`);
+      const base = Date.now();
+
+      const visibleOld = await seedTyped('customer.created', new Date(base - 3000));
+      const visibleNew = await seedTyped('user.created', new Date(base - 1000));
+      // Типи, яких загальна стрічка показувати не має: безпека, налаштування, лист, і календар —
+      // подія не знає, приватна вона чи ні (доступ до запису тут недоступний)
+      await seedTyped('user.password_changed', new Date(base - 500));
+      await seedTyped('user.sessions_revoked', new Date(base - 400));
+      await seedTyped('settings.updated', new Date(base - 300));
+      await seedTyped('email.sent', new Date(base - 200));
+      await seedTyped('calendar_event.created', new Date(base - 100));
+
+      const res = await request(app.getHttpServer())
+        .get('/api/activities/workspace')
+        .set(headers)
+        .expect(200);
+
+      expect((res.body.items as { id: string }[]).map((item) => item.id)).toEqual([
+        visibleNew,
+        visibleOld,
+      ]);
+      expect(res.body.nextCursor).toBeNull();
+    });
+
+    it("never returns another tenant's activity", async () => {
+      const headers = await userHeaders(`${Date.now()}-ws-rls`);
+      const otherId = `ws-other-${Date.now()}`;
+      await prisma.tenant.create({ data: { id: otherId, slug: otherId, name: otherId } });
+      try {
+        await seedTyped('customer.created', new Date(), otherId);
+        const mine = await seedTyped('customer.created', new Date(Date.now() - 1000));
+
+        const res = await request(app.getHttpServer())
+          .get('/api/activities/workspace')
+          .set(headers)
+          .expect(200);
+
+        expect((res.body.items as { id: string }[]).map((item) => item.id)).toEqual([mine]);
+      } finally {
+        await prisma.activity.deleteMany({ where: { tenantId: otherId } });
+        await prisma.tenant.delete({ where: { id: otherId } });
+      }
+    });
+
+    it('paginates by cursor and hidden types never eat a page slot', async () => {
+      const headers = await userHeaders(`${Date.now()}-ws-cursor`);
+      const base = Date.now();
+
+      const seeded: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        seeded.push(await seedTyped('customer.created', new Date(base + i * 1000)));
+        // Прихована подія між видимими: фільтр має бути в запиті, а не після вибірки сторінки,
+        // інакше сторінки виходили б неповними, а курсор — з пропусками
+        await seedTyped('user.password_changed', new Date(base + i * 1000 + 500));
+      }
+
+      const collected: string[] = [];
+      let cursor: string | undefined;
+      let pages = 0;
+      for (;;) {
+        const res = await request(app.getHttpServer())
+          .get('/api/activities/workspace')
+          .set(headers)
+          .query({ limit: 2, ...(cursor && { cursor }) })
+          .expect(200);
+        collected.push(...(res.body.items as { id: string }[]).map((item) => item.id));
+        pages += 1;
+        if (!res.body.nextCursor) {
+          break;
+        }
+        cursor = res.body.nextCursor as string;
+        expect(pages).toBeLessThan(10);
+      }
+
+      expect(pages).toBe(3);
+      expect(collected).toEqual([...seeded].reverse());
+    });
+
+    it('requires authentication', async () => {
+      await request(app.getHttpServer()).get('/api/activities/workspace').expect(401);
+    });
+  });
+
   it('rejects an invalid cursor with 400', async () => {
     const { headers } = await adminHeaders(`${Date.now()}-badcursor`);
     const target = await createTestUser(prisma, { email: `bc-${Date.now()}@example.com` });

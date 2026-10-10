@@ -34,6 +34,15 @@ export const ACTIVITY_PAYLOAD_SCHEMAS = Object.fromEntries(
   ACTIVITY_TYPES.map((type) => [type, ACTIVITY_DEFINITIONS[type].payload]),
 ) as { readonly [K in ActivityType]: (typeof ACTIVITY_DEFINITIONS)[K]['payload'] };
 
+/**
+ * Типи, дозволені в загальній стрічці воркспейсу: рішення приймає модуль-власник типу
+ * (`workspace: true` у його визначенні), цей список лише збирає їх разом. Закритий і виводиться
+ * з визначень — як і весь перелік типів, руками не дописується.
+ */
+export const WORKSPACE_ACTIVITY_TYPES: readonly ActivityType[] = ACTIVITY_TYPES.filter(
+  (type) => (ACTIVITY_DEFINITIONS[type] as ActivityTypeDef).workspace === true,
+);
+
 export type ActivityDefinition = ActivityTypeDef & { readonly texts: TypeTexts };
 
 /** Визначення за рядком із відповіді API; `undefined` — фронт старіший за бекенд */
