@@ -46,6 +46,8 @@ export const MODULES = {
       'libs/contracts/src/money/',
       'libs/contracts/src/phone/',
       'libs/contracts/src/time/',
+      // Демо-акаунти — чисті дані без залежностей; їх читають і сід, і логін-сторінки обох фронтів
+      'libs/contracts/src/demo/demo-accounts.ts',
       'apps/api/src/common/',
       'apps/api/src/config/',
       'apps/api/src/types/',
@@ -355,6 +357,7 @@ export const COMPOSITION_ROOTS: readonly string[] = [
   'libs/contracts/src/notification-types.ts',
   'libs/contracts/src/socket-events.ts',
   'libs/database/prisma/seed.ts',
+  'libs/database/prisma/seed-demo/',
   'libs/contracts/src/*/index.ts',
   'libs/shared/src/index.ts',
   'libs/shared/src/*/index.ts',
