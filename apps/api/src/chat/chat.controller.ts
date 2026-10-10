@@ -120,7 +120,7 @@ export class ChatController {
     @Body() dto: MarkConversationReadDto,
     @CurrentUser() actor: JwtPayload,
   ): Promise<void> {
-    await this.chat.markRead(actor, id, dto.seq);
+    await this.chat.markRead(actor.sub, id, dto.seq);
   }
 
   private async toResponses(

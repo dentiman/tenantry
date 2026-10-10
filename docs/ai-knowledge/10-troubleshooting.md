@@ -63,6 +63,12 @@ unavailable", "Server error".
 - **New chat messages do not appear.** Chat updates on its own while the connection to the
   server is up. If a message is missing, the connection may have dropped: switch back to the
   window or reload the page, and the conversation catches up.
+- **A conversation stays unread although I opened it.** A conversation counts as read only while
+  the window is in front of you and the latest message is on screen. If you are scrolled up in the
+  history or the window is in the background, the unread badge stays until you scroll to the
+  newest message or come back to the window.
+- **I see "… is typing…" above the message box.** A colleague who has the same conversation open
+  is writing a message. It disappears when they send it or stop typing.
 - **I did not get an email notification.** Notifications are in-app only; check the bell.
 - **Times look shifted.** Your calendar uses the time zone from User settings → "Profile" (or
   the organization default); set it to where you are.

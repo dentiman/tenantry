@@ -28,7 +28,11 @@ export type NotificationChanged = z.infer<typeof NotificationChangedSchema>;
 export type RealtimeErrorCode = z.infer<typeof RealtimeErrorCodeSchema>;
 export type RealtimeError = z.infer<typeof RealtimeErrorSchema>;
 
-/** Події client → server. Server → client — `ServerToClientEvents` у root `socket-events.ts` */
-export interface ClientToServerEvents {
+/**
+ * Платформні події client → server (поки одна). Повний протокол — `ClientToServerEvents` у root
+ * `socket-events.ts`: платформні події + зареєстровані модулями (`ClientEventRegistry`).
+ * Server → client — `ServerToClientEvents` там само.
+ */
+export interface PlatformClientToServerEvents {
   [AUTH_UPDATE_EVENT]: (payload: AuthUpdate, ack: (result: AuthUpdateResult) => void) => void;
 }

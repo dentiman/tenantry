@@ -42,6 +42,24 @@ export const ChatConversationChangedSchema = z.object({
 export type ChatConversationChange = z.infer<typeof ChatConversationChangeSchema>;
 export type ChatConversationChanged = z.infer<typeof ChatConversationChangedSchema>;
 
+/**
+ * «Хтось друкує» (docs/chat.md §4.8.2). Ефемерне: ніде не зберігається і гасне само.
+ *
+ * Термін — ВІДНОСНИЙ (`expiresInMs`), а не абсолютний `until`: клієнт перетворює його на
+ * локальний дедлайн у момент отримання, тож годинник, що поспішає чи відстає на хвилини, не
+ * змусить індикатор зникнути одразу чи висіти вічно.
+ *
+ * Летить усім сокетам room-у розмови, КРІМ відправника, — отже, інші вкладки самого
+ * друкуючого його теж отримують; клієнт відкидає події зі своїм `userId`.
+ */
+export const ChatTypingChangedSchema = z.object({
+  conversationId: z.uuid(),
+  userId: z.uuid(),
+  expiresInMs: z.number().int().positive(),
+});
+
+export type ChatTypingChanged = z.infer<typeof ChatTypingChangedSchema>;
+
 /** Події сокета чату (docs/chat.md §4.8); збирає root `socket-events.ts` */
 export const CHAT_SOCKET_EVENTS = {
   chatMessageCreated: defineSocketEvent('chat.message-created.v1', ChatMessageCreatedSchema),
@@ -49,4 +67,5 @@ export const CHAT_SOCKET_EVENTS = {
     'chat.conversation-changed.v1',
     ChatConversationChangedSchema,
   ),
+  chatTypingChanged: defineSocketEvent('chat.typing-changed.v1', ChatTypingChangedSchema),
 };

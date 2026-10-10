@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SendHorizontal } from 'lucide-react';
-import { CHAT_MAX_MESSAGE_CHARS } from '@saas-skeleton/contracts';
+import { CHAT_MAX_MESSAGE_CHARS, CHAT_TYPING_PULSE_MS } from '@saas-skeleton/contracts';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
 import { cn } from '@saas-skeleton/ui/lib/utils';
@@ -28,8 +28,26 @@ export function shouldSendOnKey(event: {
   return event.key === 'Enter' && !event.shiftKey && !event.isComposing;
 }
 
+/**
+ * Чи слати імпульс «друкую»: лише для непорожнього вводу і не частіше за інтервал
+ * (`CHAT_TYPING_PULSE_MS`, менший за термін індикатора, тож безперервний набір не блимає).
+ * Чиста функція — правило перевіряється тестом без DOM, як і `shouldSendOnKey`.
+ */
+export function shouldPulseTyping(
+  lastPulseAt: number | null,
+  now: number,
+  value: string,
+): boolean {
+  if (value.trim().length === 0) {
+    return false;
+  }
+  return lastPulseAt === null || now - lastPulseAt >= CHAT_TYPING_PULSE_MS;
+}
+
 interface ChatComposerProps {
   onSend: (body: string) => void;
+  /** Імпульс «друкую»; композер сам тримає інтервал, викликач лише шле подію */
+  onTyping?: () => void;
   isDisabled?: boolean;
 }
 
@@ -40,10 +58,11 @@ interface ChatComposerProps {
  * Вкладень, емодзі й форматування тут немає свідомо — вони приходять зі своїми
  * фазами, і поки їх немає, панель інструментів була б порожньою рамкою.
  */
-export function ChatComposer({ onSend, isDisabled = false }: ChatComposerProps) {
+export function ChatComposer({ onSend, onTyping, isDisabled = false }: ChatComposerProps) {
   const { t } = useTranslation('chat');
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastPulseAt = useRef<number | null>(null);
 
   // Висота під вміст до стелі. У layout-ефекті, а не в onChange: так вона
   // правильна і після програмного очищення, і після відновлення тексту
@@ -66,6 +85,8 @@ export function ChatComposer({ onSend, isDisabled = false }: ChatComposerProps) 
     }
     onSend(body);
     setValue('');
+    // Після надсилання імпульс більше не актуальний: наступний набір почне інтервал заново
+    lastPulseAt.current = null;
   }, [value, isDisabled, onSend]);
 
   return (
@@ -83,7 +104,13 @@ export function ChatComposer({ onSend, isDisabled = false }: ChatComposerProps) 
           aria-label={t('composer.label')}
           className="max-h-40 min-h-9 resize-none"
           onChange={(event) => {
-            setValue(event.target.value);
+            const next = event.target.value;
+            setValue(next);
+            const now = Date.now();
+            if (onTyping && shouldPulseTyping(lastPulseAt.current, now, next)) {
+              lastPulseAt.current = now;
+              onTyping();
+            }
           }}
           onKeyDown={(event) => {
             if (

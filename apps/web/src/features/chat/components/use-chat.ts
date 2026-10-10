@@ -12,6 +12,7 @@ import type { ChatMessageListResponseDtoOutputItemsItem } from '../../../api/gen
 import type { ConversationListResponseDtoOutputItemsItem } from '../../../api/generated/model/conversationListResponseDtoOutputItemsItem';
 import { CONVERSATIONS_PAGE, TRANSCRIPT_PAGE, conversationListKey } from '../chat-keys';
 import { mergeIncomingMessage } from '../realtime/chat-cache';
+import { reportRead } from '../realtime/chat-socket';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 
 export type Conversation = ConversationListResponseDtoOutputItemsItem;
@@ -116,22 +117,30 @@ export function useSendMessage(conversationId: string) {
   return { send, retry };
 }
 
-/** Рух курсора прочитаного. Відмова тут нічого не ламає — бейдж просто лишиться */
+/**
+ * Рух курсора прочитаного: через сокет (`chat.read.v1`), а коли він не підключений чи сервер
+ * не підтвердив — запасним REST. Відмова тут нічого не ламає: бейдж просто лишиться, а наступне
+ * підтвердження зрушить курсор далі. Список перечитує лише REST-шлях; для сокетного відлуння
+ * `chat.conversation-changed.v1` приходить саме (design.md D5 фази 0.2b).
+ */
 export function useMarkRead(conversationId: string) {
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
+  const rest = useMutation({
     mutationFn: (seq: number) => chatMarkRead(conversationId, { seq }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: conversationListKey() });
     },
     meta: { silentError: true },
   });
+  const { mutate } = rest;
 
   return useCallback(
     (seq: number) => {
-      mutation.mutate(seq);
+      void reportRead(conversationId, seq, (fallbackSeq) => {
+        mutate(fallbackSeq);
+      });
     },
-    [mutation],
+    [conversationId, mutate],
   );
 }

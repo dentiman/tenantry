@@ -278,6 +278,20 @@ messaging, сокет), а `socket-events` одразу каже про тран
   `toUser`, `WorkerRealtimeEmitter.toUser`; методів «під фічу» в емітерах немає, виклики —
   у сервісах фічі.
 
+Вхідний бік (client → server) влаштований так само, дзеркально:
+
+- **Механізм** — `defineClientSocketEvent(name, payload, ackData)`
+  (`libs/contracts/src/realtime/client-socket-event.ts`): схема payload-у, схема даних ack-а і
+  закритий перелік кодів відмови.
+- **Визначення** — у контрактах власника: `chat/chat.client-events.ts`. Збирання — root
+  `socket-events.ts`: `CLIENT_SOCKET_EVENTS`, `CLIENT_EVENTS`, `ClientToServerEvents` (платформні
+  події + зареєстровані). `auth.update.v1` лишається `@SubscribeMessage` гейтвея: він змінює
+  `socket.data` і тримає таймери, це ядро протоколу, а не подія фічі.
+- **Реєстрація** — фіча кличе `ClientEventRegistry.register(def, handler, { rateLimit? })` зі свого
+  `onModuleInit` (`chat/chat.socket-handlers.ts`). Реєстр — у `realtime`, тож realtime не знає про
+  фічу, а фіча лишається в межах свого модуля: перевірку доступу виконує її власна функція.
+  Подробиці й гарантії (ліміт, валідація, tenant-контекст, ack) — docs/realtime.md.
+
 ### 7.3. Провізіонінг тенанта
 
 Дефолтний канал чату при появі тенанта: провізіонер `libs/shared/src/chat/default-channel.ts`

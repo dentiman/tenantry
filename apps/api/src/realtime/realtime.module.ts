@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { ClientEventRegistry } from './client-event.registry';
 import { loadRealtimeConfig, type RealtimeConfig } from './realtime.config';
 import { REALTIME_CONFIG } from './realtime.constants';
 import { RealtimeEmitter } from './realtime.emitter';
@@ -27,9 +28,10 @@ import { PresenceStore } from './presence/presence.store';
     LastSeenWriter,
     PresenceService,
     RealtimeEmitter,
+    ClientEventRegistry,
     SocketAuthService,
     RealtimeGateway,
   ],
-  exports: [REALTIME_CONFIG, RealtimeEmitter],
+  exports: [REALTIME_CONFIG, RealtimeEmitter, ClientEventRegistry],
 })
 export class RealtimeModule {}

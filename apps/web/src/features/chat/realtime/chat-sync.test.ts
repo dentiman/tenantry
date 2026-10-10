@@ -4,12 +4,15 @@ import {
   REALTIME_EVENTS,
   type ChatConversationChanged,
   type ChatMessageCreated,
+  type ChatTypingChanged,
 } from '@saas-skeleton/contracts';
 import { getChatFindOneQueryKey } from '../../../api/generated/api';
 import type { ChatMessageListResponseDtoOutput } from '../../../api/generated/model/chatMessageListResponseDtoOutput';
 import type { AppSocket } from '../../realtime/socket';
 import { conversationListKey, transcriptKey } from '../chat-keys';
+import { useAuthStore } from '../../auth/stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
+import { useChatTypingStore } from '../stores/chat-typing.store';
 import { initChatSync } from './chat-sync';
 
 const CONVERSATION = '11111111-1111-4111-8111-111111111111';
@@ -194,4 +197,58 @@ describe('initChatSync', () => {
 
     expect(queryClient.getQueryState(transcriptKey(CONVERSATION))?.isInvalidated).toBe(false);
   });
+
+  describe('typing', () => {
+    const ME = '33333333-3333-4333-8333-333333333333';
+    const ALICE = '44444444-4444-4444-8444-444444444444';
+
+    const typingEvent = (userId: string): ChatTypingChanged => ({
+      conversationId: CONVERSATION,
+      userId,
+      expiresInMs: 6_000,
+    });
+
+    beforeEach(() => {
+      useChatTypingStore.setState({ entries: {} });
+      useAuthStore.setState({ user: { id: ME } as never });
+    });
+
+    it('records a colleague typing without touching the query cache', () => {
+      const { socket, fire } = createFakeSocket();
+      const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+      initChatSync(queryClient, socket);
+
+      fire(REALTIME_EVENTS.chatTypingChanged, typingEvent(ALICE));
+
+      expect(Object.keys(useChatTypingStore.getState().entries[CONVERSATION] ?? {})).toEqual([
+        ALICE,
+      ]);
+      expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('drops the echo of the user’s own typing from another tab', () => {
+      const { socket, fire } = createFakeSocket();
+      initChatSync(queryClient, socket);
+
+      fire(REALTIME_EVENTS.chatTypingChanged, typingEvent(ME));
+
+      expect(useChatTypingStore.getState().entries).toEqual({});
+    });
+
+    it('clears a typist the moment their message arrives', () => {
+      useChatTypingStore.getState().pulse(CONVERSATION, ALICE, 6_000);
+      const { socket, fire } = createFakeSocket();
+      vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+      initChatSync(queryClient, socket);
+
+      const event = created(6);
+      fire(REALTIME_EVENTS.chatMessageCreated, {
+        ...event,
+        message: { ...event.message, senderId: ALICE },
+      });
+
+      expect(useChatTypingStore.getState().entries).toEqual({});
+    });
+  });
 });
+

@@ -87,3 +87,29 @@ conversation whose newest message is on screen in a focused window SHALL report 
 #### Scenario: A conversation with unread messages is opened
 - **WHEN** the user opens a conversation with unread messages in a focused window
 - **THEN** it is reported read once the newest message is on screen
+
+### Requirement: An incoming message does not move a reader who has scrolled up
+While the user is reading earlier messages, a message arriving from someone else SHALL NOT move
+the reading position; it SHALL leave the conversation unread and make it possible to jump to the
+newest message. A user who is at the newest message SHALL keep following new messages, and a
+message the user sends themselves SHALL always be brought into view.
+
+#### Scenario: A colleague posts while the user is reading history
+- **WHEN** another participant posts while the user has scrolled up in the transcript
+- **THEN** the visible part of the transcript does not move, the conversation stays unread, and
+  the control for jumping to the newest message is available
+
+#### Scenario: A colleague posts while the user is at the newest message
+- **WHEN** another participant posts while the newest message is on screen
+- **THEN** the new message is brought into view
+
+#### Scenario: The user sends a message while scrolled up
+- **WHEN** the user sends a message while reading earlier messages
+- **THEN** the transcript moves to show that message
+
+#### Scenario: A new message is placed at the bottom
+- **WHEN** a message is added to the end of the transcript, whether sent by the user or by someone
+  else while the user is at the newest message
+- **THEN** it appears directly under the previous messages at the bottom of the visible
+  transcript, with no blank space below it
+

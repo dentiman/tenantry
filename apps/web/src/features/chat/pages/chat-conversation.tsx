@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from '@tanstack/react-router';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { MessagesSquare } from 'lucide-react';
+import { CLIENT_EVENTS } from '@saas-skeleton/contracts';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
 import { useChatFindOne } from '../../../api/generated/api';
 import { useAuthStore } from '../../auth/stores/auth.store';
@@ -18,7 +19,10 @@ import { ChatComposer } from '../components/chat-composer';
 import { ChatTranscript } from '../components/chat-transcript';
 import { NewConversationDialog } from '../components/new-conversation-dialog';
 import { conversationLabel } from '../components/chat-labels';
+import { TypingIndicator } from '../components/typing-indicator';
 import { useSendMessage } from '../components/use-chat';
+import { emitChatEvent } from '../realtime/chat-socket';
+import { watchConversation } from '../realtime/chat-subscriptions';
 import { randomUUID } from '../../../lib/uuid';
 
 /**
@@ -43,6 +47,20 @@ export function ChatConversationPage() {
     },
     [send],
   );
+
+  // Розмова відкрита → сервер знає, що її дивляться (`chat.subscribe.v1`); закрита чи змінена
+  // → знімається. Перепідписку після розриву робить сам спостерігач. Відмова нічого не ламає:
+  // без підписки стрічка й список оновлюються, зникає лише «друкує…» інших
+  useEffect(() => {
+    if (conversationId === '') {
+      return;
+    }
+    return watchConversation(conversationId);
+  }, [conversationId]);
+
+  const onTyping = useCallback(() => {
+    void emitChatEvent(CLIENT_EVENTS.chatTyping, { conversationId });
+  }, [conversationId]);
 
   const onDiscard = useCallback(
     (clientMessageId: string) => {
@@ -104,7 +122,8 @@ export function ChatConversationPage() {
           onRetry={retry}
           onDiscard={onDiscard}
         />
-        <ChatComposer onSend={onSend} />
+        <TypingIndicator conversation={conversation} />
+        <ChatComposer onSend={onSend} onTyping={onTyping} />
       </div>
     </>
   );

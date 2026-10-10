@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OutboxMessage } from '../stores/chat-outbox.store';
-import { buildRows } from './chat-transcript';
+import { buildRows, isOwnRow, type Row } from './chat-transcript';
 import type { ChatMessage } from './use-chat';
 
 /**
@@ -51,5 +51,38 @@ describe('buildRows', () => {
     expect(rows.filter((row) => row.kind === 'outbox').map((row) => row.key)).toEqual([
       'outbox-cid-2',
     ]);
+  });
+});
+
+/**
+ * Власна репліка (design.md D6, фаза 0.2b): її стрічка докручує до кінця явно, бо примітив у
+ * режимі «слідувати за низом» не змінює позицію того, хто прогорнув історію вгору.
+ */
+describe('isOwnRow', () => {
+  const VIEWER = '33333333-3333-4333-8333-333333333333';
+  const OTHER = '99999999-9999-4999-8999-999999999999';
+  const row = (entry: ChatMessage): Row => ({
+    kind: 'message',
+    key: entry.id,
+    message: entry,
+    groupedWithPrevious: false,
+  });
+
+  it('recognises an unsent entry from the outbox as the reader’s own', () => {
+    expect(isOwnRow({ kind: 'outbox', key: 'outbox-1', entry: pending('cid-1') }, VIEWER)).toBe(
+      true,
+    );
+  });
+
+  it('recognises a confirmed message by its sender', () => {
+    expect(isOwnRow(row({ ...message(6, null), senderId: VIEWER }), VIEWER)).toBe(true);
+    expect(isOwnRow(row({ ...message(5, null), senderId: OTHER }), VIEWER)).toBe(false);
+  });
+
+  it('never treats a date divider or a system entry as the reader’s own', () => {
+    expect(isOwnRow({ kind: 'day', key: 'day-1', label: 'Today' }, VIEWER)).toBe(false);
+    expect(isOwnRow(row({ ...message(7, null), kind: 'SYSTEM', senderId: VIEWER }), VIEWER)).toBe(
+      false,
+    );
   });
 });

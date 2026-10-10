@@ -74,8 +74,9 @@ the same name twice throws at boot. `RealtimeGateway.handleConnection` calls
 connection**. That is why it is not `@SubscribeMessage`: registration order across modules is not
 known when the gateway initialises, and per-connection attachment needs no ordering.
 
-The pipeline for each event, in this order: parse the payload with the definition's Zod schema →
-rate limit → `TenantContextService.runWith(socket.data.tenantId, handler)` → ack. The handler gets
+The pipeline for each event, in this order: rate limit → parse the payload with the definition's Zod
+schema → `TenantContextService.runWith(socket.data.tenantId, handler)` → ack. The limit comes first
+because it is the cheap check: a flood of garbage payloads must not be free. The handler gets
 `{ socket, userId, tenantId, role, payload }`: a verified identity and a parsed payload, never
 the raw event. A handler throws `SocketEventError(code)` for a domain refusal. The registry also
 maps Nest `NotFoundException → NOT_FOUND`, `ForbiddenException → FORBIDDEN`,
@@ -168,15 +169,36 @@ so "timed out, then REST" cannot double-apply anything visible.
 `windowActive && atEnd && newestSeq > reportedSeq`. A `useReadOnView` hook feeds it:
 - `windowActive` = `document.visibilityState === 'visible' && document.hasFocus()`, tracked with
   `visibilitychange`, `focus` and `blur`;
-- `atEnd` from the vendored scroller's own state. Apply must check which of
-  `useMessageScrollerScrollable` / `useMessageScrollerVisibility` exposes "newest row on screen";
-  if neither does, an `IntersectionObserver` on the last row is the fallback. A thread shorter than
-  the viewport is trivially at its end;
+- `atEnd` from `useMessageScrollerScrollable()` of the vendored scroller: its `end` flag is true when
+  there is content below the viewport (`contentBottom - scrollTop - clientHeight > threshold`), so
+  at-end is `!end`. A thread shorter than the viewport is trivially at its end. The hook works only
+  under the provider, so the rule is applied by a small component rendered inside it
+  (`ReadOnViewTracker`);
 - the effect re-runs when any input changes, so returning to the window or scrolling down reports
   read at that moment.
 
 This replaces the unconditional `newestSeq > lastReportedSeq` effect in `ChatTranscript`; the
 `lastReportedSeq` ref stays so that the same position is not reported twice.
+
+**Scrolling is "follow the bottom", not an anchor (found during live verification and reported
+afterwards).** The vendored scroller scrolls to any row marked `scrollAnchor` and aligns it to the
+**top** of the viewport, adding a blank spacer under it (the behaviour AI chats want, where an
+answer grows downwards). The transcript marked its newest row as the anchor unconditionally, so in
+a messenger it looked like a jump: a message the user had just sent appeared at the top with about
+600 px of empty space below it (measured: 64 px from the top, a 615 px spacer), and with live
+messages every incoming message pulled a reader who had scrolled up to the bottom
+(`scrollTop` 0 → 2016), which also made "scrolled up stays unread" unreachable. An earlier fix in
+this change only gated the anchor on the reader being at the end; that kept the top alignment, and
+my "distance from the end" probe could not see it because the spacer fills the space below.
+
+The transcript now uses no anchors at all. `MessageScrollerProvider autoScroll` puts the primitive
+in its "following-bottom" mode: a reader who is at the bottom stays at the bottom with the new row
+directly under the previous ones, and a reader who scrolls up switches to free scrolling and is
+never moved. The primitive cannot know that a row is the user's own, so `TranscriptRows` calls
+`scrollToEnd()` when the newest row changes and `isOwnRow` says it is the reader's (an outbox entry
+or their confirmed text message). The first render does not scroll; `defaultScrollPosition` places
+the thread at its end. The verification now measures where the newest row sits relative to the
+viewport and the spacer height, not the distance from the end.
 
 Caveat: `document.hasFocus()` is false while focus is in an iframe or devtools, and some embedded
 webviews report it strictly. The failure mode is "stays unread slightly longer", which is the safe

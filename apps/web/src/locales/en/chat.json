@@ -41,6 +41,12 @@
     "placeholder": "Write a message…",
     "send": "Send"
   },
+  "typing": {
+    "one": "{{name}} is typing…",
+    "two": "{{first}} and {{second}} are typing…",
+    "many_one": "{{count}} person is typing…",
+    "many_other": "{{count}} people are typing…"
+  },
   "newConversation": {
     "title": "New conversation",
     "participants": "Participants",

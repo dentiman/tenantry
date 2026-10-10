@@ -1,6 +1,17 @@
 export { defineSocketEvent, socketEventNames } from './socket-event';
 export type { SocketEventDef, ServerEventsOf } from './socket-event';
 export {
+  ClientEventErrorCodeSchema,
+  clientSocketEventNames,
+  defineClientSocketEvent,
+} from './client-socket-event';
+export type {
+  ClientEventAck,
+  ClientEventErrorCode,
+  ClientEventsOf,
+  ClientSocketEventDef,
+} from './client-socket-event';
+export {
   REALTIME_PATH,
   TENANT_NAMESPACE,
   tenantRoom,
@@ -37,5 +48,5 @@ export type {
   NotificationChanged,
   RealtimeErrorCode,
   RealtimeError,
-  ClientToServerEvents,
+  PlatformClientToServerEvents,
 } from './realtime.types';

@@ -8,6 +8,7 @@ import {
   MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
+  useMessageScroller,
 } from '@saas-skeleton/ui/components/ui/message-scroller';
 import {
   Message,
@@ -33,6 +34,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 import { CHAT_COLUMN } from './chat-layout';
 import { useChatOutboxStore, type OutboxMessage } from '../stores/chat-outbox.store';
 import { initialsOf, systemEntryText } from './chat-labels';
+import { ReadOnViewTracker } from './read-on-view-tracker';
 import { flattenTranscript, useMarkRead, useTranscript, type ChatMessage } from './use-chat';
 import type { Conversation } from './use-chat';
 
@@ -72,17 +74,10 @@ export function ChatTranscript({
     [query.data?.pages],
   );
 
-  // Курсор прочитаного рухаємо, коли видно кінець стрічки. Один раз на новий
-  // `seq`: повторний рух на те саме число сервер і так проігнорує, але зайвого
-  // запиту краще не робити
-  const lastReportedSeq = useRef<number>(conversation.lastReadSeq);
+  // Курсор прочитаного рухає `ReadOnViewTracker` (нижче), а не зміна даних: «прочитано» —
+  // це «дивилась людина», а не «репліка долетіла» (docs/chat.md §4.8.2). Стартова позиція —
+  // та, що вже підтвердив сервер, щоб її не повторювати
   const newestSeq = messages.at(-1)?.seq ?? 0;
-  useEffect(() => {
-    if (newestSeq > lastReportedSeq.current) {
-      lastReportedSeq.current = newestSeq;
-      markRead(newestSeq);
-    }
-  }, [newestSeq, markRead]);
 
   const rows = useMemo(
     () => buildRows(messages, pending),
@@ -120,7 +115,13 @@ export function ChatTranscript({
   }
 
   return (
-    <MessageScrollerProvider>
+    <MessageScrollerProvider autoScroll>
+      <ReadOnViewTracker
+        key={conversation.id}
+        newestSeq={newestSeq}
+        initialReportedSeq={conversation.lastReadSeq}
+        onRead={markRead}
+      />
       <MessageScroller className="min-h-0 flex-1">
         <MessageScrollerViewport className="px-4 py-3">
           {/* `justify-end` — коротка розмова притискається до композера, як у
@@ -139,27 +140,13 @@ export function ChatTranscript({
               }}
             />
 
-            {rows.map((row) => (
-              <MessageScrollerItem
-                key={row.key}
-                scrollAnchor={row === rows.at(-1)}
-                /* Знімаємо `content-visibility:auto` з рядків. Примітив резервує
-                   під пропущений рядок `contain-intrinsic-size: auto 10rem`, а
-                   наші рядки — від 20px (роздільник) до ~60px (репліка), тож
-                   контейнер отримував ~1200px скролу на ~400px вмісту і стрічка
-                   «зависала» вгорі над порожнечею. Сторінка тут 30 рядків —
-                   віртуалізація ще не окупається, а її припущення вже шкодить */
-                className="[contain-intrinsic-size:auto] [content-visibility:visible]"
-              >
-                <TranscriptRow
-                  row={row}
-                  conversation={conversation}
-                  viewerId={viewerId}
-                  onRetry={onRetry}
-                  onDiscard={onDiscard}
-                />
-              </MessageScrollerItem>
-            ))}
+            <TranscriptRows
+              rows={rows}
+              conversation={conversation}
+              viewerId={viewerId}
+              onRetry={onRetry}
+              onDiscard={onDiscard}
+            />
           </MessageScrollerContent>
         </MessageScrollerViewport>
         <MessageScrollerButton direction="end" />
@@ -169,6 +156,83 @@ export function ChatTranscript({
 }
 
 const EMPTY_OUTBOX: OutboxMessage[] = [];
+
+/**
+ * Чи це власна репліка людини (ненадіслана з черги чи щойно підтверджена). Чиста функція —
+ * правило перевіряється тестом без DOM.
+ */
+export function isOwnRow(row: Row, viewerId: string): boolean {
+  return (
+    row.kind === 'outbox' ||
+    (row.kind === 'message' && row.message.kind === 'TEXT' && row.message.senderId === viewerId)
+  );
+}
+
+/**
+ * Рядки стрічки. Окремий компонент, бо `scrollToEnd` віддає хук примітива, а той працює лише під
+ * `MessageScrollerProvider`.
+ *
+ * Прокрутка тут — «слідувати за низом» (`autoScroll` на провайдері), а НЕ якір. Раніше останній
+ * рядок позначався `scrollAnchor`: примітив вирівнює новий якір по ВЕРХУ вʼюпорта й додає під
+ * ним порожній спейсер (так роблять AI-чати, де відповідь росте вниз). У месенджері це виглядало
+ * як стрибок: щойно надіслане повідомлення зʼявлялося нагорі, під ним ~600px порожнечі (виміряно
+ * в 0.2b: 64px від верху, спейсер 615px). Тепер:
+ *  - хто внизу, той і лишається внизу: нове повідомлення стає рівно під попередніми;
+ *  - хто прогорнув історію вгору, того ніщо не смикає (режим «вільної прокрутки»);
+ *  - власну репліку примітив не знає, тож її докручуємо явно: надіславши, людина чекає побачити її.
+ */
+function TranscriptRows({
+  rows,
+  conversation,
+  viewerId,
+  onRetry,
+  onDiscard,
+}: {
+  rows: Row[];
+  conversation: Conversation;
+  viewerId: string;
+  onRetry: ChatTranscriptProps['onRetry'];
+  onDiscard: ChatTranscriptProps['onDiscard'];
+}) {
+  const { scrollToEnd } = useMessageScroller();
+  const last = rows.at(-1);
+  const lastKey = last?.key;
+  const lastIsOwn = last ? isOwnRow(last, viewerId) : false;
+  // Ключ останнього рядка, на якому вже відпрацювали: перший рендер (відкриття розмови) не
+  // докручуємо — стартову позицію («кінець») тримає `defaultScrollPosition` примітива
+  const handledKey = useRef<string | undefined>(lastKey);
+
+  useEffect(() => {
+    if (lastKey === handledKey.current) {
+      return;
+    }
+    handledKey.current = lastKey;
+    if (lastIsOwn) {
+      scrollToEnd({ behavior: 'auto' });
+    }
+  }, [lastKey, lastIsOwn, scrollToEnd]);
+
+  return rows.map((row) => (
+    <MessageScrollerItem
+      key={row.key}
+      /* Знімаємо `content-visibility:auto` з рядків. Примітив резервує
+         під пропущений рядок `contain-intrinsic-size: auto 10rem`, а
+         наші рядки — від 20px (роздільник) до ~60px (репліка), тож
+         контейнер отримував ~1200px скролу на ~400px вмісту і стрічка
+         «зависала» вгорі над порожнечею. Сторінка тут 30 рядків —
+         віртуалізація ще не окупається, а її припущення вже шкодить */
+      className="[contain-intrinsic-size:auto] [content-visibility:visible]"
+    >
+      <TranscriptRow
+        row={row}
+        conversation={conversation}
+        viewerId={viewerId}
+        onRetry={onRetry}
+        onDiscard={onDiscard}
+      />
+    </MessageScrollerItem>
+  ));
+}
 
 /**
  * Службові рядки стрічки — роздільник дати, «початок розмови», системні записи

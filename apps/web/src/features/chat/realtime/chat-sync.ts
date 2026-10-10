@@ -3,10 +3,13 @@ import {
   REALTIME_EVENTS,
   type ChatConversationChanged,
   type ChatMessageCreated,
+  type ChatTypingChanged,
 } from '@saas-skeleton/contracts';
 import { getChatFindOneQueryKey } from '../../../api/generated/api';
+import { useAuthStore } from '../../auth/stores/auth.store';
 import { getSocket, type AppSocket } from '../../realtime/socket';
 import { conversationListKey, isChatQueryKey } from '../chat-keys';
+import { useChatTypingStore } from '../stores/chat-typing.store';
 import { mergeIncomingMessage } from './chat-cache';
 
 /**
@@ -34,6 +37,21 @@ export function initChatSync(queryClient: QueryClient, socket: AppSocket = getSo
   socket.on(REALTIME_EVENTS.chatMessageCreated, (payload: ChatMessageCreated) => {
     mergeIncomingMessage(queryClient, payload.conversationId, payload.message);
     invalidateList();
+    // Людина надіслала репліку — «друкує…» гасне одразу, не чекаючи терміну
+    if (payload.message.senderId) {
+      useChatTypingStore.getState().clear(payload.conversationId, payload.message.senderId);
+    }
+  });
+
+  // Ефемерне, тільки у стор: ні кеша запитів, ні перечитувань. Власні події (інша вкладка
+  // того самого юзера теж у room-і) відкидаємо тут — сервер їх не відсікає свідомо
+  socket.on(REALTIME_EVENTS.chatTypingChanged, (payload: ChatTypingChanged) => {
+    if (payload.userId === useAuthStore.getState().user?.id) {
+      return;
+    }
+    useChatTypingStore
+      .getState()
+      .pulse(payload.conversationId, payload.userId, payload.expiresInMs);
   });
 
   socket.on(REALTIME_EVENTS.chatConversationChanged, (payload: ChatConversationChanged) => {

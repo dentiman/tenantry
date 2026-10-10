@@ -313,8 +313,8 @@ export class ChatService {
    * дає семантику GREATEST без сирого SQL, а застарілий запит стає no-op —
    * не помилкою (клієнт не має ловити гонку власних вкладок).
    */
-  async markRead(actor: JwtPayload, conversationId: string, seq: number): Promise<void> {
-    await this.access.assertParticipant(conversationId, actor.sub);
+  async markRead(userId: string, conversationId: string, seq: number): Promise<void> {
+    await this.access.assertParticipant(conversationId, userId);
 
     await this.transactions.withTenantTx(async (tx) => {
       // Перерахунок, а не `unreadCount = 0`: курсор можуть посунути НЕ на кінець
@@ -326,12 +326,12 @@ export class ChatService {
           seq: { gt: seq },
           kind: 'TEXT',
           deletedAt: null,
-          senderUserId: { not: actor.sub },
+          senderUserId: { not: userId },
         },
       });
 
       const { count } = await tx.conversationParticipant.updateMany({
-        where: { conversationId, userId: actor.sub, leftAt: null, lastReadSeq: { lt: seq } },
+        where: { conversationId, userId, leftAt: null, lastReadSeq: { lt: seq } },
         data: { lastReadSeq: seq, lastReadAt: new Date(), unreadCount },
       });
 
@@ -339,7 +339,7 @@ export class ChatService {
       // повторний запит (`count = 0`) мовчить: інакше дві вкладки, що читають одне й те саме,
       // гойдали б одна одну подіями (design.md D2). Чужі позиції прочитаного нікому не шлемо
       if (count > 0) {
-        await this.chatRealtime.conversationChanged(tx, conversationId, 'read', [actor.sub]);
+        await this.chatRealtime.conversationChanged(tx, conversationId, 'read', [userId]);
       }
     });
   }

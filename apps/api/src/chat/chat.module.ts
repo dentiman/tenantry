@@ -3,6 +3,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { UsersModule } from '../users/users.module';
 import { ChatController } from './chat.controller';
 import { ChatRealtime } from './chat-realtime';
+import { ChatSocketHandlers } from './chat.socket-handlers';
 import { ChatService } from './chat.service';
 import { ConversationAccessService } from './conversation-access.service';
 import { DefaultChannelService } from './default-channel.service';
@@ -15,6 +16,12 @@ import { DefaultChannelService } from './default-channel.service';
   // той самий напрямок вниз, що в calendar і ai
   imports: [UsersModule, RealtimeModule],
   controllers: [ChatController],
-  providers: [ChatService, ChatRealtime, ConversationAccessService, DefaultChannelService],
+  providers: [
+    ChatService,
+    ChatRealtime,
+    ChatSocketHandlers,
+    ConversationAccessService,
+    DefaultChannelService,
+  ],
 })
 export class ChatModule {}

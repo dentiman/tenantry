@@ -10,6 +10,7 @@ import {
 import { AuthUpdateSchema, REALTIME_EVENTS, TENANT_NAMESPACE } from '@saas-skeleton/contracts';
 import type { AuthUpdateResult } from '@saas-skeleton/contracts';
 import { AUTH_EXPIRY_WARNING_MS, sessionRoom, tenantRoom, userRoom } from './realtime.constants';
+import { ClientEventRegistry } from './client-event.registry';
 import { RealtimeAuthError, toHandshakeError } from './realtime.errors';
 import { RealtimeEmitter } from './realtime.emitter';
 import { SocketAuthService } from './socket-auth.service';
@@ -49,6 +50,7 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
     private readonly socketAuth: SocketAuthService,
     private readonly presence: PresenceService,
     private readonly emitter: RealtimeEmitter,
+    private readonly clientEvents: ClientEventRegistry,
   ) {}
 
   afterInit(namespace: TenantNamespace): void {
@@ -82,6 +84,11 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
 
   async handleConnection(socket: TenantSocket): Promise<void> {
     const { tenantId, userId, sid } = socket.data;
+
+    // Першим, до будь-якого await: клієнт може послати подію одразу після `connect`, і
+    // обробник, повішений після `join`, цю подію пропустив би. Зареєстровані події від
+    // room-ів user/tenant/session не залежать — вони самі називають те, що їм потрібно
+    this.clientEvents.attach(socket);
 
     // Клієнт НІКОЛИ не називає room сам — лише сервер із перевіреного payload-у
     await socket.join([tenantRoom(tenantId), userRoom(tenantId, userId), sessionRoom(tenantId, sid)]);
