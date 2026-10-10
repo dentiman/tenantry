@@ -86,7 +86,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | `docker/nginx/default.conf.template` | SPA-fallback + `/api`-проксі (`${API_UPSTREAM}` через envsubst) |
 | `Dockerfile.tools` | повний-deps образ для one-shot `db:roles`/`db:seed`/`db:seed:demo`/`db:migrate:deploy` |
 | `docker/docker-compose.stack.yml` | повний стек (anchors: pinning, update, env-групи) |
-| `.gitlab-ci.yml` | build (6 образів) → deploy_dev/prod + manual `db_roles`/`seed`/`seed_demo`/`demo_reset`/`dump` ([demo.md §5](demo.md)) |
+| `.gitlab-ci.yml` | build (6 образів) → deploy_dev/prod + manual `db_roles`/`seed`/`seed_demo`/`demo_reset`/`dump`, `ai_index_dev` — індекс знань асистента, авто при зміні документації ([demo.md §5, §7](demo.md)) |
 | `.dockerignore` | контекст без node_modules/dist/logs/.env |
 
 ## 4. Образи (механіка)

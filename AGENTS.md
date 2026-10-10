@@ -133,6 +133,8 @@ pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact 
 pnpm ai:docs:preview       # external Markdown docs → admission + chunks + tokens; offline, no DB/keys
 pnpm ai:docs:ingest        # → embeddings into a tenant's pgvector index, atomic revision publication
 pnpm ai:docs:search        # question → top-K published chunks (operator check, no LLM)
+pnpm ai:knowledge:index    # our own docs/ai-knowledge → pgvector index of every tenant (`--all-tenants`; `--dry-run`
+                           # is offline); needs AI_KNOWLEDGE_BACKEND=postgres + AI_KNOWLEDGE_PRODUCT=saas to be read
 pnpm ai:docs:eval          # retrieval-only comparison of search modes/thresholds on a question set
                            # (all four: docs/ai-sources/README.md; ingest/search/eval need DB + key)
 pnpm ai:answers:eval       # answer quality × price per configuration file (AI-5c; --max-cost unless

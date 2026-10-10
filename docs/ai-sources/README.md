@@ -207,6 +207,47 @@ Tenant `default`, OpenRouter:
 - `[USER]` бачить лише два глосарії: на питання про WhatsApp — глосарій
   (distance ≈0.70), документи pricing для нього закриті.
 
+## Власна документація: `pnpm ai:knowledge:index`
+
+Той самий індекс і той самий пошук, що для FMS, тільки джерело — **наша `docs/ai-knowledge/`**.
+Для демо-стенду (docs/demo.md §7): замість вбудованого корпусу, який кладеться в КОЖЕН промпт
+(≈11 тис. токенів), асистент бере з індексу лише 3–5 релевантних фрагментів (стеля контексту
+`AI_DOCS_MAX_CONTEXT_TOKENS`, 2 500) і показує цитати «Sources».
+
+```bash
+pnpm ai:knowledge:index --dry-run                      # офлайн: документи, чанки, токени, ревізія
+pnpm ai:knowledge:index --tenant northwind --tenant helix
+pnpm ai:knowledge:index --all-tenants                  # усі активні тенанти (потрібен PLATFORM_DATABASE_URL)
+```
+
+- **Вхід — закомічений корпус**, а не `.md` з диска: `libs/shared/src/ai/knowledge/generated/knowledge-corpus.json`,
+  який збирає `pnpm ai:knowledge` і звіряє CI (`ai:knowledge:check`). Індекс тому гарантовано збігається
+  з тим, що рев'юїли в PR; другого парсера й другого формату front-matter немає. Адаптер —
+  `ingest/corpus-preview.ts` (`previewCorpus`): корпус → той самий `SourcePreview`, що дає `previewSource`,
+  далі працює незмінний `KnowledgeIngestor`.
+- **Продукт `saas`** (`AI_KNOWLEDGE_PRODUCT=saas`), чанки 400/50 токенів, як у пілоті FMS. Мапінг
+  аудиторій той самий, що у статичного бекенду: `admin` → лише ADMIN, `all` → усім.
+- **Поточний обсяг:** 13 документів, 97 чанків, **10 650 embedding-токенів на тенант**; чотири
+  тенанти — близько 43 тис. токенів (частки цента на `text-embedding-3-small`), ≈15 с.
+- **Ідемпотентність і ціна.** Корпус не змінився → `unchanged: true`, нуль викликів провайдера. Змінився
+  документ → нова ревізія, але вектори решти чанків перевикористано за `content_hash` (платиться лише
+  за змінені). Між тенантами reuse немає — вектори під RLS, тож кожен тенант платить свою частку.
+- **Витрати** пишуться в журнал `ai_usage_events` (`ingest_embedding`, `source_id = saas/saas`) під
+  кожним тенантом — звіт platform-web → AI → Costs.
+- **Помилка одного тенанта не зупиняє решту**; код виходу 1, якщо хоч один не вдався. Попередня
+  опублікована ревізія лишається чинною.
+- **Облікові дані:** `AI_BASE_URL` + `AI_API_KEY` (або пара `AI_EMBEDDING_*`), БД — `DATABASE_URL`
+  під `saas_app` (CLI відмовляється працювати під ролями з BYPASSRLS). Для `--all-tenants` додатково
+  `PLATFORM_DATABASE_URL` — лише `SELECT slug` активних тенантів.
+
+Перевірено наживо 2026-10-10 (OpenRouter): чотири тенанти, повторний запуск — `unchanged`; USER на
+«How do I disable a user or change their role?» не отримує `users-and-roles` (лише для адміна), ADMIN
+отримує; «How do I add a new customer?» → `customers > Adding a customer`, distance 0.30.
+
+**Увімкнути в чаті** — `AI_KNOWLEDGE_BACKEND=postgres` + `AI_KNOWLEDGE_PRODUCT=saas` у воркері. Тенант
+без індексу відповідає «не знаю» (тихого відкату на статичний корпус немає), тож індексацію треба
+запускати для кожного нового тенанта — на стенді це джоба `ai_index_dev` (docs/demo.md §7).
+
 ## Режими пошуку й eval: `pnpm ai:docs:eval` (AI-2a.4)
 
 Пошук у чаті й `ai:docs:search` має три режими (`AI_DOCS_SEARCH_MODE`):

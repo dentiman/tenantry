@@ -56,6 +56,7 @@
     "prepare": "husky",
     "ai:docs:preview": "tsx scripts/ai-docs-preview.ts",
     "ai:docs:ingest": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-ingest.ts",
+    "ai:knowledge:index": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-knowledge-index.ts",
     "ai:docs:search": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-search.ts",
     "ai:docs:eval": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-eval.ts",
     "ai:answers:eval": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-answers-eval.ts"

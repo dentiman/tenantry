@@ -44,7 +44,8 @@ export interface SourcePreview {
 const MAX_FILE_BYTES = 1_048_576;
 const MAX_ENTRIES = 10_000;
 
-function canonical(value: unknown): string {
+/** Канонічне JSON-представлення (ключі відсортовано): основа стабільних хешів manifest і revision */
+export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (value !== null && typeof value === 'object') {
     return `{${Object.entries(value)

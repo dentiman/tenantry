@@ -92,6 +92,10 @@ x-ai-env: &ai-env
   AI_ASK_LIMIT_PER_MINUTE: ${AI_ASK_LIMIT_PER_MINUTE:-10}
   # Добовий ліміт ПИТАНЬ на юзера (резервується в api, `ask()`); 0 — без ліміту. Демо-стенд — 3
   AI_QUOTA_USER_DAILY_MESSAGES: ${AI_QUOTA_USER_DAILY_MESSAGES:-0}
+  # Джерело знань: `static` — вбудований корпус; `postgres` — індекс продукту AI_KNOWLEDGE_PRODUCT
+  # (читає worker; без продукту він не стартує). Індекс будує `pnpm ai:knowledge:index`
+  AI_KNOWLEDGE_BACKEND: ${AI_KNOWLEDGE_BACKEND:-static}
+  AI_KNOWLEDGE_PRODUCT: ${AI_KNOWLEDGE_PRODUCT:-}
   AI_PROVIDER_RETRIES: ${AI_PROVIDER_RETRIES:-1}
   AI_RETRY_DELAY_MS: ${AI_RETRY_DELAY_MS:-2000}
 

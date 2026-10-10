@@ -392,6 +392,9 @@ seed_dev:
 # Демо-датасет для показу клієнтам (docs/demo.md): три галузеві тенанти з командою, кастомерами,
 # календарем, чатом, журналом і сповіщеннями. ТІЛЬКИ вручну (рішення власника 2026-10-10): деплой
 # сам нічого не сідить — демо-дані завантажують окремою кнопкою, коли стенд потрібен для показу.
+# Наприкінці — індексація знань асистента (див. `ai_index_dev` нижче): скидання видаляє тенанти разом
+# з їхнім індексом, тож без цього кроку асистент на свіжих тенантах не мав би знань. Збій індексації
+# не валить джобу (сід уже зроблено) — лише попереджає.
 # `db:seed` стоїть першим навмисно: на свіжому стеку без базового сіда немає оператора платформи
 # і тенанта `default`; на наявному він ідемпотентний і нічого не ламає.
 seed_demo_dev:
@@ -412,7 +415,51 @@ seed_demo_dev:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
         -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
-        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo'
+        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        -e AI_BASE_URL -e AI_API_KEY \
+        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo && { pnpm ai:knowledge:index --all-tenants || echo "УВАГА: індексація знань не вдалась — запусти ai_index_dev"; }'
+
+# Індекс знань асистента: власна документація (docs/ai-knowledge) → pgvector КОЖНОГО активного
+# тенанта (`pnpm ai:knowledge:index --all-tenants`, docs/demo.md §7). Те саме, що ми робили для FMS
+# (`ai:docs:ingest`), лише джерело — закомічений корпус. Запускається:
+#   • САМ, коли пуш зачепив документацію, корпус, індексатор чи конфіг стенда (перший розкат —
+#     теж: змінюються deploy.env і сам індексатор);
+#   • ВРУЧНУ в будь-який момент: новий тенант, відновлення після скидання БД.
+# Ідемпотентно й дешево: корпус не змінився — нуль викликів провайдера; змінився один документ —
+# платиться лише за його чанки; повний прогін усіх тенантів ≈ 10,6 тис. токенів на тенант.
+# `allow_failure`: збій провайдера не має червонити деплой; попередній індекс лишається чинним.
+# Ключ embeddings — CI Variable `AI_API_KEY` (той самий, що у воркера), `AI_BASE_URL` — із deploy.env.
+ai_index_dev:
+  extends: .tools_base
+  stage: deploy_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - docs/ai-knowledge/**/*
+        - libs/shared/src/ai/knowledge/generated/knowledge-corpus.json
+        - libs/shared/src/ai/knowledge/ingest/**/*
+        - scripts/ai-knowledge-index.ts
+        - docker/deploy.env
+      when: on_success
+      allow_failure: true
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+  needs:
+    - { job: build_tools, artifacts: true }
+    - { job: deploy_dev }
+  variables:
+    STACK_NAME: saas-dev
+    DEPLOY_USER: $DEPLOY_USER_DEV
+    DEPLOY_HOST: $DEPLOY_HOST_DEV
+    DEPLOY_PORT: $DEPLOY_PORT_DEV
+  script:
+    - |
+      DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
+        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        -e AI_BASE_URL -e AI_API_KEY \
+        "$TOOLS_IMAGE" pnpm ai:knowledge:index --all-tenants
 
 # Скидання демо до чистого стану перед зустріччю: видаляє три демо-тенанти (каскадом разом з усім,
 # що в них накликали під час попередніх показів) і створює заново; зсуває дати календаря на «сьогодні».
@@ -435,7 +482,9 @@ demo_reset_dev:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
         -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
-        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo:reset'
+        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        -e AI_BASE_URL -e AI_API_KEY \
+        "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo:reset && { pnpm ai:knowledge:index --all-tenants || echo "УВАГА: індексація знань не вдалась — запусти ai_index_dev"; }'
 
 dump_db_prod:
   extends: .prod_disabled
