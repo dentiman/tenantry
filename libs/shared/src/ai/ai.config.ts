@@ -151,6 +151,13 @@ const AiEnvSchema = z.object({
    * щоб обмежити сумарний розгін багатьма юзерами, кожен у межах власної квоти
    */
   AI_QUOTA_TENANT_DAILY_TOKENS: intFromEnv(10_000_000),
+  /**
+   * Ліміт ПИТАНЬ на користувача за добу UTC (демо-стенд, docs/demo.md): щоб глядач міг спробувати
+   * асистента, а випадковий перебір не спалив бюджет ключа. Окремо від токенних квот: ті міряють
+   * вартість і списуються після відповіді, а питання резервується атомарно в `ask()`. `0` — ліміту
+   * немає (дефолт; прод-інсталяції керуються лише токенними квотами)
+   */
+  AI_QUOTA_USER_DAILY_MESSAGES: nonNegativeIntFromEnv(0),
   AI_KNOWLEDGE_BACKEND: z
     .string()
     .trim()
@@ -223,6 +230,8 @@ export interface AiConfig {
   quotaUserDailyTokens: number;
   /** Квота токенів на тенанта за ту саму добу (ai-1d, design.md D7) */
   quotaTenantDailyTokens: number;
+  /** Ліміт питань на користувача за добу UTC; `0` — без ліміту */
+  quotaUserDailyMessages: number;
   /** AI-2a.3: джерело знань і бюджет retrieval (design.md D1/D2) */
   knowledge: {
     backend: z.infer<typeof AiKnowledgeBackendSchema>;
@@ -265,6 +274,7 @@ export function loadAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig {
     retentionDays: e.AI_RETENTION_DAYS,
     quotaUserDailyTokens: e.AI_QUOTA_USER_DAILY_TOKENS,
     quotaTenantDailyTokens: e.AI_QUOTA_TENANT_DAILY_TOKENS,
+    quotaUserDailyMessages: e.AI_QUOTA_USER_DAILY_MESSAGES,
     knowledge: {
       backend: e.AI_KNOWLEDGE_BACKEND,
       product: e.AI_KNOWLEDGE_PRODUCT,

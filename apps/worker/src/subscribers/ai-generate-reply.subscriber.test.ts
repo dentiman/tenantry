@@ -461,6 +461,7 @@ function makeSubscriber(
     retentionDays: 90,
     quotaUserDailyTokens: 1_000_000,
     quotaTenantDailyTokens: 10_000_000,
+    quotaUserDailyMessages: 0,
     knowledge: {
       backend: 'static',
       product: null,

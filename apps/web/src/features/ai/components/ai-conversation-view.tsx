@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { SendIcon, SquareIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AiMessageResponse } from '@saas-skeleton/contracts';
-import { AI_MAX_INPUT_CHARS, AI_QUOTA_EXCEEDED_CODE } from '@saas-skeleton/contracts';
+import {
+  AI_MAX_INPUT_CHARS,
+  AI_MESSAGE_LIMIT_CODE,
+  AI_QUOTA_EXCEEDED_CODE,
+} from '@saas-skeleton/contracts';
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
@@ -102,9 +106,11 @@ function AiComposer({
   const ask = useAiAsk();
   const cancel = useAiCancel();
   const [draft, setDraft] = useState('');
-  // ai-1d, design.md D9: стан «квота вичерпана» — окремий від generic toast-шляху,
-  // бо 400 не потрапляє в isGlobalApiError() і композер має показати це явно
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  // ai-1d, design.md D9: стан «ліміт вичерпано» — окремий від generic toast-шляху, бо 400 не
+  // потрапляє в isGlobalApiError() і композер має показати це явно. Причин дві, і текст у них
+  // різний: токенна квота («поки що») і добовий ліміт питань («до завтра»)
+  const [limitReached, setLimitReached] = useState<'quota' | 'messages' | null>(null);
+  const quotaExceeded = limitReached !== null;
 
   const pending = messages.find((message) => message.role === 'ASSISTANT' && isInFlight(message));
 
@@ -115,14 +121,17 @@ function AiComposer({
       return;
     }
     setDraft('');
-    setQuotaExceeded(false);
+    setLimitReached(null);
     ask.mutate(
       { data: { text } },
       {
         onError: (error) => {
           const parsed = parseApiError(error);
-          if (parsed.fieldErrors.some((fieldError) => fieldError.code === AI_QUOTA_EXCEEDED_CODE)) {
-            setQuotaExceeded(true);
+          const codes = parsed.fieldErrors.map((fieldError) => fieldError.code);
+          if (codes.includes(AI_MESSAGE_LIMIT_CODE)) {
+            setLimitReached('messages');
+          } else if (codes.includes(AI_QUOTA_EXCEEDED_CODE)) {
+            setLimitReached('quota');
           }
         },
         onSettled: () => {
@@ -136,7 +145,7 @@ function AiComposer({
     <form onSubmit={submit}>
       {quotaExceeded && (
         <p className="mb-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-          {t('quota.exceeded')}
+          {limitReached === 'messages' ? t('quota.messageLimit') : t('quota.exceeded')}
         </p>
       )}
       <Textarea

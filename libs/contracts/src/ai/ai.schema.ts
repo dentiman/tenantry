@@ -145,6 +145,13 @@ export const AskAiRequestSchema = z.object({
 export const AI_QUOTA_EXCEEDED_CODE = 'ai_quota_exceeded';
 
 /**
+ * Окремий код для ДОБОВОГО ЛІМІТУ ПИТАНЬ (`AI_QUOTA_USER_DAILY_MESSAGES`): панель пояснює його
+ * інакше, ніж токенну квоту («питання на сьогодні вичерпано, спробуйте завтра» проти загального
+ * «ліміт використання»). Той самий конверт — `400` + `fieldErrors[{ field: 'text', code }]`.
+ */
+export const AI_MESSAGE_LIMIT_CODE = 'ai_message_limit';
+
+/**
  * Відповідь на питання — 202: питання і ПОРОЖНЯ відповідь у статусі `PENDING`.
  * Обидва рядки повертаються одразу, щоб панель намалювала хід ще до того, як
  * воркер узяв job із черги.

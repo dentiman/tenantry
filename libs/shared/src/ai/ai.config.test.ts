@@ -25,6 +25,7 @@ describe('loadAiConfig', () => {
     // ai-1d: дефолти квот (design.md D7)
     expect(config.quotaUserDailyTokens).toBe(1_000_000);
     expect(config.quotaTenantDailyTokens).toBe(10_000_000);
+    expect(config.quotaUserDailyMessages).toBe(0);
   });
 
   it('читає задані значення', () => {

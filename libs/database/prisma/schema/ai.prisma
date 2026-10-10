@@ -138,6 +138,10 @@ model AiUsageCounter {
   // Підмножина promptTokens, НЕ додається зверху (design.md D5) — лише видимість кеша
   cachedPromptTokens Int @default(0) @map("cached_prompt_tokens")
   completionTokens   Int @default(0) @map("completion_tokens")
+  // Скільки ПИТАНЬ юзер поставив за добу — для ліміту `AI_QUOTA_USER_DAILY_MESSAGES` (демо-стенд).
+  // Окремо від токенів: токени вимірюють вартість і пишуться після відповіді, а кількість питань
+  // резервується атомарно в самому `ask()`
+  messageCount Int @default(0) @map("message_count")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

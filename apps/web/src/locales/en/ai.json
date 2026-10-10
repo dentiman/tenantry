@@ -32,7 +32,8 @@
     "INTERNAL": "Something went wrong while answering. Try again."
   },
   "quota": {
-    "exceeded": "You've reached the usage limit for the assistant for now. Try again later."
+    "exceeded": "You've reached the usage limit for the assistant for now. Try again later.",
+    "messageLimit": "You've used all of today's assistant messages. It will be available again tomorrow."
   },
   "citations": {
     "title": "Sources",

@@ -67,6 +67,43 @@ export class AiUsageQuotaService {
   }
 
   /**
+   * Резервує одне ПИТАННЯ з добового ліміту юзера (`AI_QUOTA_USER_DAILY_MESSAGES`) — `true`,
+   * якщо ліміт ще не вичерпано і лічильник зріс, `false`, якщо вичерпано. Ліміт 0 — вимкнено: нічого
+   * не пишемо, завжди `true`.
+   *
+   * Одним атомарним `INSERT … ON CONFLICT DO UPDATE … WHERE count < limit`: перевірка й інкремент
+   * — той самий рядковий лок, тож два паралельні питання не пройдуть повз ліміт (читання-потім-запис
+   * програло б цю гонку). Умова `WHERE` у `DO UPDATE` не виконується → рядок не змінюється й не
+   * повертається. Резерв живе в тій самій транзакції, що й `ask()`: якщо далі `ask()` відмовить
+   * (розмова зайнята, питання не створено), відкат повертає й резерв — спроба, якої не було, не
+   * з'їдає питання. Токенних лічильників не торкається.
+   */
+  async reserveMessage(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    now: Date,
+  ): Promise<boolean> {
+    const limit = this.config.quotaUserDailyMessages;
+    if (limit === 0) {
+      return true;
+    }
+    const periodStart = startOfUtcDay(now);
+    const rows = await tx.$queryRaw<{ message_count: number }[]>`
+      INSERT INTO ai_usage_counters
+        (id, tenant_id, user_id, period_start, message_count, updated_at)
+      VALUES
+        (${randomUUID()}, ${tenantId}, ${userId}, ${periodStart}, 1, now())
+      ON CONFLICT (tenant_id, user_id, period_start) DO UPDATE SET
+        message_count = ai_usage_counters.message_count + 1,
+        updated_at = now()
+      WHERE ai_usage_counters.message_count < ${limit}
+      RETURNING message_count
+    `;
+    return rows.length > 0;
+  }
+
+  /**
    * Списання ПІСЛЯ генерації (design.md D4) — атомарний `INSERT ... ON CONFLICT DO
    * UPDATE` СИРИМ SQL, а не Prisma `upsert()`: під справжнім конкурентним
    * навантаженням (два `deduct()` для того самого (tenant, user, period), що

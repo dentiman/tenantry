@@ -21,6 +21,7 @@ import {
   type AiConfig,
 } from '@saas-skeleton/shared';
 import {
+  AI_MESSAGE_LIMIT_CODE,
   AI_QUOTA_EXCEEDED_CODE,
   REALTIME_EVENTS,
   type AiCitationContentResponse,
@@ -293,6 +294,16 @@ export class AiService {
         throw new BadRequestException({
           message,
           fieldErrors: [{ field: 'text', message, code: AI_QUOTA_EXCEEDED_CODE }],
+        });
+      }
+
+      // Крок 0b: добовий ліміт ПИТАНЬ (демо). Резерв атомарний і лежить у цій самій транзакції —
+      // відмова нижче (409 «зайнято») відкотить і його. Токенну квоту вище це не замінює
+      if (!(await this.usageQuota.reserveMessage(tx, actor.tenantId, actor.sub, new Date()))) {
+        const message = 'Daily AI message limit reached for the current period';
+        throw new BadRequestException({
+          message,
+          fieldErrors: [{ field: 'text', message, code: AI_MESSAGE_LIMIT_CODE }],
         });
       }
 
