@@ -1,5 +1,4 @@
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +8,12 @@ import { LoginSchema, type Login } from '@saas-skeleton/contracts';
 import { useAuthLogin } from '../../../api/generated/api';
 import { useAuthStore } from '../stores/auth.store';
 import { applyServerError, FormPasswordField, FormTextField } from '../../../components/form';
+import { AuthLayout } from '../components/auth-layout';
+import {
+  DEFAULT_DEMO_ACCOUNT,
+  DEMO_LOGINS_ENABLED,
+  DemoAccounts,
+} from '../components/demo-accounts';
 
 export function LoginPage() {
   const { t } = useTranslation('auth');
@@ -18,7 +23,13 @@ export function LoginPage() {
 
   const form = useForm<Login>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: { email: '', password: '', tenant: '' },
+    // Демо-стенд: форма відкривається вже з флагманським акаунтом, презентеру
+    // нічого не треба вводити (вимикається `VITE_DEMO_LOGINS=false`)
+    defaultValues: {
+      email: DEFAULT_DEMO_ACCOUNT?.email ?? '',
+      password: DEFAULT_DEMO_ACCOUNT?.password ?? '',
+      tenant: DEFAULT_DEMO_ACCOUNT?.tenant ?? '',
+    },
   });
   const {
     control,
@@ -38,51 +49,60 @@ export function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm [--card-spacing:--spacing(6)]">
-        <CardHeader>
-          <CardTitle className="text-center text-xl">{t('login.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-            <FieldGroup>
-              {/* MT-3: недовірена підказка «де шукати юзера» (тимчасово ручне поле;
-                  піддомени — MT-4). Порожнє → дефолтний tenant інсталяції */}
-              <FormTextField
-                control={control}
-                name="tenant"
-                label={t('login.tenant')}
-                autoComplete="organization"
-              />
-              <FormTextField
-                control={control}
-                name="email"
-                label={t('login.email')}
-                type="email"
-                autoComplete="email"
-              />
-              <FormPasswordField
-                control={control}
-                name="password"
-                label={t('login.password')}
-                autoComplete="current-password"
-              />
-            </FieldGroup>
-            {errors.root?.server && (
-              <p className="text-sm text-destructive">{errors.root.server.message}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? t('login.submitting') : t('login.submit')}
-            </Button>
-            <Link
-              to="/reset-password"
-              className="text-center text-sm text-muted-foreground underline underline-offset-4"
-            >
-              {t('login.forgotPassword')}
-            </Link>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout title={t('login.title')}>
+      <div className="flex flex-col gap-6">
+        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+          <FieldGroup>
+            <FormTextField
+              control={control}
+              name="email"
+              label={t('login.email')}
+              type="email"
+              autoComplete="email"
+            />
+            <FormPasswordField
+              control={control}
+              name="password"
+              label={t('login.password')}
+              autoComplete="current-password"
+            />
+            {/* MT-3: недовірена підказка «де шукати юзера» (тимчасово ручне поле;
+                піддомени — MT-4). Порожнє → дефолтний tenant інсталяції. Останнє:
+                більшості людей воно не потрібне, тож не стоїть перед email */}
+            <FormTextField
+              control={control}
+              name="tenant"
+              label={t('login.tenant')}
+              autoComplete="organization"
+            />
+          </FieldGroup>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
+          )}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? t('login.submitting') : t('login.submit')}
+          </Button>
+          <Link
+            to="/reset-password"
+            className="text-center text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t('login.forgotPassword')}
+          </Link>
+        </form>
+        {DEMO_LOGINS_ENABLED && (
+          <DemoAccounts
+            disabled={isSubmitting}
+            onSelect={(account) => {
+              form.reset({
+                email: account.email,
+                password: account.password,
+                tenant: account.tenant,
+              });
+              void onSubmit();
+            }}
+          />
+        )}
+      </div>
+    </AuthLayout>
   );
 }

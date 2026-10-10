@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
 import { FieldGroup } from '@saas-skeleton/ui/components/ui/field';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +10,7 @@ import { PasswordResetConfirmSchema } from '@saas-skeleton/contracts';
 import { usePasswordResetConfirm } from '../../../api/generated/api';
 import { applyServerError, FormPasswordField } from '../../../components/form';
 import { useAuthStore } from '../stores/auth.store';
+import { AuthLayout } from '../components/auth-layout';
 
 interface ConfirmForm {
   newPassword: string;
@@ -72,45 +72,38 @@ export function ResetPasswordConfirmPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm [--card-spacing:--spacing(6)]">
-        <CardHeader>
-          <CardTitle className="text-center text-xl">{t('resetPasswordConfirm.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!token || tokenInvalid ? (
-            <div className="flex flex-col gap-4 text-center">
-              <p className="text-sm text-destructive">{t('resetPasswordConfirm.invalidLink')}</p>
-              <Link to="/reset-password" className="text-sm text-primary underline underline-offset-4">
-                {t('resetPasswordConfirm.requestNew')}
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
-              <FieldGroup>
-                <FormPasswordField
-                  control={control}
-                  name="newPassword"
-                  label={t('resetPasswordConfirm.newPassword')}
-                  autoComplete="new-password"
-                />
-                <FormPasswordField
-                  control={control}
-                  name="confirmPassword"
-                  label={t('resetPasswordConfirm.confirmPassword')}
-                  autoComplete="new-password"
-                />
-              </FieldGroup>
-              {errors.root?.server && (
-                <p className="text-sm text-destructive">{errors.root.server.message}</p>
-              )}
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? t('resetPasswordConfirm.submitting') : t('resetPasswordConfirm.submit')}
-              </Button>
-            </form>
+    <AuthLayout title={t('resetPasswordConfirm.title')}>
+      {!token || tokenInvalid ? (
+        <div className="flex flex-col gap-4 text-center">
+          <p className="text-sm text-destructive">{t('resetPasswordConfirm.invalidLink')}</p>
+          <Link to="/reset-password" className="text-sm text-primary underline underline-offset-4">
+            {t('resetPasswordConfirm.requestNew')}
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
+          <FieldGroup>
+            <FormPasswordField
+              control={control}
+              name="newPassword"
+              label={t('resetPasswordConfirm.newPassword')}
+              autoComplete="new-password"
+            />
+            <FormPasswordField
+              control={control}
+              name="confirmPassword"
+              label={t('resetPasswordConfirm.confirmPassword')}
+              autoComplete="new-password"
+            />
+          </FieldGroup>
+          {errors.root?.server && (
+            <p className="text-sm text-destructive">{errors.root.server.message}</p>
           )}
-        </CardContent>
-      </Card>
-    </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? t('resetPasswordConfirm.submitting') : t('resetPasswordConfirm.submit')}
+          </Button>
+        </form>
+      )}
+    </AuthLayout>
   );
 }
