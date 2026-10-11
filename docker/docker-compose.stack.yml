@@ -209,6 +209,10 @@ services:
       AUTH_REUSE_REVOKES_ALL_SESSIONS: ${AUTH_REUSE_REVOKES_ALL_SESSIONS:-false}
       # AUTH-2: refresh у httpOnly cookie — тестовий прод по http (без TLS)
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Скільки проксі стоїть перед api: nginx у web = 1 (дефолт). Із зовнішнім TLS-проксі
+      # (Caddy на Hetzner, docs/deploy-hetzner.md) — 2, інакше req.ip = адреса шлюзу Docker
+      # і ліміти по IP спільні для всіх користувачів
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
       # AUTH-3: шифрує токени одноразових посилань перед публікацією (план D-11)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
     networks: [saas_net]
@@ -250,6 +254,8 @@ services:
       AUTH_SESSION_IDLE_DAYS: ${AUTH_SESSION_IDLE_DAYS:-7}
       AUTH_SESSION_ABSOLUTE_DAYS: ${AUTH_SESSION_ABSOLUTE_DAYS:-30}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Те саме, що в api (кількість проксі перед сервісом)
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
     networks: [saas_net]
     logging: *logging
     # порт не публікуємо — platform-api по overlay (platform-web nginx проксить /api → platform-api:3002)

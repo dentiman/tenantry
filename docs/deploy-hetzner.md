@@ -60,6 +60,11 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
   `curl -m5 http://2.29.1.13:8511/` має зависнути/відмовити, а `https://web.…` — відповісти.
 - **Порти Swarm** (2377, 7946, 4789) UFW закриває; Swarm ініціалізовано з пулом `10.200.0.0/16`,
   щоб overlay-мережі не перетиналися з `wg0` (`10.8.0.0/24`).
+- **Скільки проксі довіряти:** перед api стоять два — Caddy і nginx у `web`, тож у
+  `/etc/saas/deploy.env` `TRUST_PROXY_HOPS="2"` (дефолт стеку 1 — лише nginx). З одиницею `req.ip` =
+  шлюз Docker `172.18.0.1` для всіх: ліміти по IP (`loginIp`, `refresh`, скидання пароля) спільні на
+  всіх користувачів, а адреса в журналі сесій хибна. Перевірка: в логу api поле `req.ip` має бути
+  реальною адресою клієнта (`X-Forwarded-For` зліва), а не `172.18.0.1`.
 - **Cookie:** `COOKIE_SECURE=true` (HTTPS). Origin-и (`REALTIME_ALLOWED_ORIGINS`, CORS, S3 CORS,
   `APP_PUBLIC_URL`) — `https://…sslip.io` у `/etc/saas/deploy.env`.
 - Початкові паролі адміна й оператора платформи — `SEED_ADMIN_PASSWORD` / `SEED_PLATFORM_PASSWORD`
