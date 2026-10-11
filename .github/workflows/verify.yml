@@ -1,0 +1,32 @@
+# Повна перевірка коміту на GitHub-hosted runner-і (scripts/ci-verify.sh): lint → typecheck →
+# unit → демо-сід ×2 → e2e обох API.
+#
+# ЗАРАЗ ВІДКЛЮЧЕНО як шлюз деплою (рішення власника 2026-10-11: стенд ще не прод) — перевірка
+# робиться локально, `pnpm release:hetzner` (verify → push). Тут вона лишилась як кнопка
+# («Run workflow») і як перевикористовуваний workflow.
+#
+# Повернути її шлюзом перед деплоєм — у .github/workflows/deploy.yml додати
+#     verify:
+#       uses: ./.github/workflows/verify.yml
+# і `needs: verify` у job `build`. Витрачає безкоштовні хвилини приватного репо (2000/міс,
+# ~9 хв на прогін), тому Hetzner-вузол (4 ГБ) її не виконує: e2e поруч із живим стеком ризикує OOM.
+name: Verify
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      # Дешевий ранній провал: закомічений корпус знань AI не розійшовся з docs/ai-knowledge
+      - name: AI knowledge corpus
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo node:24-bookworm-slim node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check
+      - name: Verify (lint, typecheck, unit, demo seed ×2, e2e)
+        run: bash scripts/ci-verify.sh

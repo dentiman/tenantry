@@ -1,45 +1,31 @@
-# CI/CD для GitHub: verify → build → deploy на Hetzner (docs/deploy-hetzner.md).
+# CI/CD для GitHub: build → deploy на Hetzner (docs/deploy-hetzner.md). Деплоїться гілка `main`.
 #
 # Паралельно існує GitLab-пайплайн (.gitlab-ci.yml, стенд saas-dev); вони незалежні.
-# Тут деплоїться гілка `main`.
 #
-# • verify — на GitHub-hosted runner-і: повний прогін (lint → typecheck → unit → e2e) потребує
-#   кількох ГБ RAM, а Hetzner-вузол (4 ГБ) ділить їх із живим стеком. Витрачає безкоштовні
-#   хвилини приватного репо (2000/міс), тому запускається лише на main і PR у main.
-# • build / deploy — на self-hosted runner-і, що стоїть НА Hetzner-вузлі (label `hetzner`):
-#   образи збираються локально й у registry не пушаться, деплой іде в локальний Docker.
+# Перевірки (verify) тут НЕМАЄ: стенд ще не прод, тож шлюзом є локальна `pnpm release:hetzner`
+# (verify → push). Той самий прогін на GitHub-hosted лишився кнопкою — verify.yml; як повернути
+# його шлюзом — у шапці verify.yml.
+#
+# Обидві джоби — на self-hosted runner-і, що стоїть НА Hetzner-вузлі (label `hetzner`):
+# образи збираються локально й у registry не пушаться, деплой іде в локальний Docker.
 name: CI/CD
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Новий пуш скасовує застарілий прогін PR, але не main — розкат не переривається посеред шляху
+# Новий пуш не скасовує розкат, що вже йде, — він стає в чергу (одна «очікуюча» заміна на групу)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-      # Дешевий ранній провал: закомічений корпус знань AI не розійшовся з docs/ai-knowledge
-      - name: AI knowledge corpus
-        run: docker run --rm -v "$PWD:/repo:ro" -w /repo node:24-bookworm-slim node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check
-      - name: Verify (lint, typecheck, unit, demo seed ×2, e2e)
-        run: bash scripts/ci-verify.sh
-
   build:
-    needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, hetzner]
     timeout-minutes: 60
     strategy:
@@ -64,7 +50,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, hetzner]
     timeout-minutes: 45
     # Один розкат за раз, і не одночасно з ops-операціями (спільна група з ops.yml)

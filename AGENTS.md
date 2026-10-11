@@ -181,11 +181,13 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   `saas-dev`). `github` = `dentiman/saas-skeleton` (private; `.github/workflows/`), where a push
   to **`main`** deploys the Hetzner stack `saas-prod` through a self-hosted runner —
   `docs/deploy-hetzner.md`. Pushing to one remote does not trigger the other's pipeline; push to
-  `github` only when you mean to deploy there.
+  `github` only when you mean to deploy there — the way is `pnpm release:hetzner` (local
+  `scripts/ci-verify.sh`, then a fast-forward push to `github/main`).
 - **GitLab:** stage `check` (`ai_knowledge_check`, `verify` = `scripts/ci-verify.sh`) gates
   `build`, and `build` gates `deploy_dev` — an unverified SHA is never built or deployed. A red
   `verify` blocks the dev deploy: fix the cause, don't skip the job. Details:
-  `docs/deploy-swarm.md` §6. **GitHub** has the same gate (`verify` → `build` → `deploy`).
+  `docs/deploy-swarm.md` §6. **GitHub** has no `verify` gate for now (the stand is not production): the gate is the local
+  `pnpm release:hetzner`; `verify.yml` stays as a manual button.
 
 ## Architecture
 

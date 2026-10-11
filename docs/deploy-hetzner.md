@@ -7,8 +7,9 @@
 ## 1. Топологія
 
 ```
-GitHub (push у main)
-  │  verify  ── GitHub-hosted ubuntu-latest (scripts/ci-verify.sh, безкоштовні хвилини)
+Ваш Mac:  pnpm release:hetzner  = локальний verify (scripts/ci-verify.sh) → git push github main
+  │
+GitHub (push у main) ── Actions CI/CD: build → deploy (verify у пайплайні ВІДКЛЮЧЕНО)
   ▼
 Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
   ├─ self-hosted runner `hetzner-hel1` (user github-runner, systemd) ── build, deploy, ops
@@ -31,9 +32,13 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
   GitHub і `docker context` не потрібно: `docker` дивиться на локальний демон. Мінус: хто може
   запушити workflow у репо, має фактично root на сервері (`docker.sock`). Репо лишається
   приватним, колаборантів мінімум; запуск від fork-PR не вмикати.
-- **verify на GitHub-hosted.** Повний прогін (e2e з Postgres/Valkey, lint, typecheck) разом із живим
-  стеком не вміщається у 4 ГБ — OOM-killer міг би зачепити Postgres. Ціна: хвилини приватного
-  репо (2000/міс на Free), тому verify лише на `main` і PR у `main`, не на кожну гілку.
+- **verify — локально, не в пайплайні** (рішення власника 2026-10-11: стенд ще не прод). Повний
+  прогін (e2e з Postgres/Valkey, lint, typecheck) на самому вузлі не вміщається у 4 ГБ поруч із
+  живим стеком — OOM-killer міг би зачепити Postgres, а на GitHub-hosted він з'їдає безкоштовні
+  хвилини приватного репо (2000/міс, ~9 хв на прогін). Тому шлюзом є `pnpm release:hetzner`
+  (§4). Без шлюзу в CI зламаний коміт доїде до сервера: його зупинять лише пост-перевірки
+  `deploy.sh` (образ сервісу, `/api/health`) і автовідкат Swarm. Повернути verify шлюзом —
+  шапка `.github/workflows/verify.yml`.
 - **Без registry.** Приватні образи на GitHub Free впираються в квоти Packages; а при одному вузлі
   registry нічого не дає. Деплой — `docker stack deploy --resolve-image never`. Коли з'явиться
   друга нода, потрібен registry (GHCR із classic PAT `read:packages` — fine-grained PAT для ghcr.io
@@ -66,8 +71,15 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
 
 | Файл | Коли | Що |
 | --- | --- | --- |
-| `.github/workflows/deploy.yml` | push у `main`, PR у `main`, вручну | `verify` (hosted) → `build` ×5 образів (self-hosted, по одному) → `deploy` (`scripts/hetzner/deploy.sh`). PR — лише `verify` |
+| `.github/workflows/deploy.yml` | push у `main`, вручну | `build` ×5 образів (self-hosted, по одному) → `deploy` (`scripts/hetzner/deploy.sh`) |
+| `.github/workflows/verify.yml` | лише вручну / `workflow_call` | повна перевірка на GitHub-hosted (`scripts/ci-verify.sh`); не шлюз деплою |
 | `.github/workflows/ops.yml` | вручну («Run workflow») | `seed`, `db_roles`, `seed_demo`, `demo_reset`, `backup_db` (`scripts/hetzner/ops.sh`) |
+
+**Як розкотити:** `pnpm release:hetzner` (`scripts/hetzner/release.sh`) — на поточній гілці з чистим
+деревом: `scripts/ci-verify.sh` локально (потрібен Docker, dev-стек не зачіпається) → `git push github
+HEAD:main` (лише fast-forward) → підтягує локальний `main`. `SKIP_VERIFY=1 pnpm release:hetzner` —
+без перевірки (правка CI/доків, термінове виправлення). Перерозкат без нового коміту: Actions →
+CI/CD → Run workflow.
 
 `deploy.sh` на **першому** розкаті (стека ще нема): `stack deploy` без очікування → чекає Postgres →
 збирає tools-образ → `db:roles` → чекає `api 1/1` → звичайний розкат. Далі: `stack deploy

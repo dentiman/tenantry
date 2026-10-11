@@ -428,6 +428,13 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 Перший прогін довгий (холодний pnpm store), далі store береться з тому
 `saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
 
+### `pnpm verify` / `pnpm release:hetzner`
+
+`pnpm verify` — синонім `bash scripts/ci-verify.sh`. `pnpm release:hetzner` — локальний шлях до
+деплою на Hetzner (`docs/deploy-hetzner.md` §4): на поточній гілці з чистим деревом проганяє той
+самий `verify`, потім fast-forward `git push github HEAD:main` (це запускає розкат). Verify у
+GitHub-пайплайн свідомо не входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
+
 ### `pnpm format` / `pnpm format:check`
 
 ```bash
