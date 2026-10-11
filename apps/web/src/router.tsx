@@ -43,7 +43,7 @@ import {
   customerContactsRoute,
 } from './features/customers/customers.routes';
 import { dashboardRoute } from './features/dashboard/dashboard.routes';
-import { guideRoute } from './features/guide/guide.routes';
+import { aboutRoute, guideRoute } from './features/guide/guide.routes';
 import { userSettingsNotificationsRoute } from './features/notifications/notifications.routes';
 import { settingsNumberingRoute } from './features/numbering/numbering.routes';
 import {
@@ -76,6 +76,7 @@ const routeTree = rootRoute.addChildren([
   resetPasswordRoute,
   resetPasswordConfirmRoute,
   confirmEmailRoute,
+  aboutRoute, // guide: публічна копія путівника, без гейта й шела
   appRoute.addChildren([
     appIndexRoute,
     workspaceRoute.addChildren([

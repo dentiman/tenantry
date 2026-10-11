@@ -313,7 +313,7 @@ export const MODULES = {
   },
   guide: {
     tier: 'feature',
-    dependsOn: ['app'],
+    dependsOn: ['app', 'auth', 'dashboard'],
     summary: 'Внутрішній гайд по UI-кіту (демо, не продукт).',
     paths: ['apps/web/src/features/guide/'],
   },

@@ -1,5 +1,6 @@
 import { createRoute } from '@tanstack/react-router';
-import { appRoute } from '../../app-shell/app.routes';
+import { appRoute, rootRoute } from '../../app-shell/app.routes';
+import { AboutPage } from './pages/about';
 import { GuidePage } from './pages/guide';
 
 /**
@@ -13,4 +14,16 @@ export const guideRoute = createRoute({
   path: '/guide',
   component: GuidePage,
   staticData: { backdrop: 'brand' },
+});
+
+/**
+ * Публічний путівник — той самий вміст, що в `/guide`, але поза шелом і поза гейтом
+ * `requireAuth`: батько — `rootRoute`, як у `/login` і `/reset-password`. Без
+ * `beforeLoad` свідомо: сторінка однаково відкривається і гостю, і залогіненому
+ * (кнопка входу в рамі залежить від сесії). Решту — див. `pages/about.tsx`.
+ */
+export const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/about',
+  component: AboutPage,
 });

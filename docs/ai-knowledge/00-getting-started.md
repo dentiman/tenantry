@@ -54,7 +54,11 @@ someone who manages accounts on the Users page can change a role.
 1. Open **User settings → Profile** and fill in your "Name" and, if it differs from the
    organization default, your "Time zone". Your calendar is drawn in this zone.
 2. Look at the **Dashboard** (Workspace → "Dashboard"): it shows who you are signed in as, your
-   role, since when you are a member, and your "Upcoming Events".
+   role, since when you are a member, and your "Upcoming Events". At the top there is a
+   "Product tour" card: "Open the guide" opens the Guide, and its links ("Modules & services",
+   "Development & delivery", "Architecture", "Key subsystems") jump to that part of it. Close
+   the card with its "Hide the product tour" button; the Guide stays available in the left
+   rail.
 3. Open **Customers** to see the organization's customer list.
 4. Open **Calendar** to see your week.
 

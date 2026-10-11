@@ -13,6 +13,10 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *      від стоку; поля вирівняні по тій самій висоті.
  *   4. `radius="full"` — opt-in pill для текстових кнопок і коло для icon-only;
  *      звичайний radius лишається дефолтом і не ламає наявні виклики.
+ *   5. `xl` (48px, `text-base`, іконка 20px) — єдиний «великий» розмір: головний заклик
+ *      вітринної сторінки (кнопка входу під публічним путівником). Це не метрика форм —
+ *      у формах і таблицях він не вживається; додано, щоб велику кнопку давав примітив,
+ *      а не `h-*` на місці виклику.
  * Фокус — суцільне `ring-2` кольору `--ring` (наш синій) з відступом 2px.
  */
 const buttonVariants = cva(
@@ -50,6 +54,7 @@ const buttonVariants = cva(
         xs: "h-7 gap-1 rounded-md px-2.5 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1 rounded-md px-3 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: 'h-10 gap-2 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
+        xl: "h-12 gap-2.5 px-8 text-base has-data-[icon=inline-end]:pr-6 has-data-[icon=inline-start]:pl-6 [&_svg:not([class*='size-'])]:size-5",
         icon: 'size-9',
         'icon-xs':
           "size-7 rounded-md in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",

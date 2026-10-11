@@ -44,7 +44,7 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/deploy-hetzner.md` — GitHub Actions → Hetzner VPS (self-hosted runner on the same host,
   Caddy TLS on `sslip.io`, server-side secrets in `/etc/saas/deploy.env`, `main` deploys)
 - `docs/demo.md` — демо-стенд для показу клієнтам: датасет трьох галузевих тенантів (`db:seed:demo`),
-  статичні демо-акаунти (їх читають сід і логін-сторінки), ручні CI-джоби завантаження/скидання
+  статичні демо-акаунти (їх читають сід і логін-сторінки), публічний путівник `/about` (рішення про видимі гостям статуси модулів — §8), ручні CI-джоби завантаження/скидання
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
 - `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet

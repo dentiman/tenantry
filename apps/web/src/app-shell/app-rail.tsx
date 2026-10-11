@@ -31,8 +31,11 @@ import { useActiveArea, useRailAreas, type Area } from '@saas-skeleton/ui/naviga
  * модифікатором свій `size-8!`, і голий `size-8!` йому не конкурент (модифікатори
  * різні → tailwind-merge лишає обидва). Тут значення збігаються, але правило
  * тримаємо явним — інакше наступна зміна боксу тихо не подіє у згорнутому стані.
+ *
+ * Експортується для статичного рейла публічного путівника (`features/guide`), щоб обидва
+ * рейли лишались однакового розміру й форми; сам `AppRail` лишається єдиним, що читає реєстр.
  */
-const RAIL_NAV_BUTTON = 'size-8! justify-center group-data-[collapsible=icon]:size-8!';
+export const RAIL_NAV_BUTTON = 'size-8! justify-center group-data-[collapsible=icon]:size-8!';
 
 /**
  * Кнопка-ЯКІР рейлу — зараз лише бренд угорі (аватар унизу переїхав у спільну
@@ -48,7 +51,7 @@ const RAIL_NAV_BUTTON = 'size-8! justify-center group-data-[collapsible=icon]:si
  * `[&_svg]` — ЄДИНЕ джерело розміру знака: селектор нащадка специфічніший за клас
  * на елементі, тож «на місці» його не перебити без `!`.
  */
-const RAIL_ANCHOR_BUTTON =
+export const RAIL_ANCHOR_BUTTON =
   'size-10! justify-center p-0! [&_svg]:size-5 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! ' +
   // Якір смуги — БЕЗ підкладки на наведенні. Це не пункт меню, а кольорова
   // плитка `rounded-lg`; прямокутна сіра підкладка `rounded-md` під нею

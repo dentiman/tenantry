@@ -80,6 +80,16 @@ export const GUIDE_SECTIONS = [
 
 export type GuideSectionId = (typeof GUIDE_SECTIONS)[number]['id'];
 
+/**
+ * Параграф із хеша URL (`/guide#architecture`, з ним або без `#`); `null`, якщо хеш
+ * порожній чи не збігається з жодним параграфом — довільний якір не повинен
+ * ні прокручувати, ні ламати сторінку.
+ */
+export function guideSectionFromHash(hash: string): GuideSectionId | null {
+  const id = hash.replace(/^#/, '');
+  return GUIDE_SECTIONS.find((section) => section.id === id)?.id ?? null;
+}
+
 export const MODULE_STATUSES = ['done', 'partial', 'designed', 'planned'] as const;
 export type ModuleStatus = (typeof MODULE_STATUSES)[number];
 

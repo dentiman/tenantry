@@ -89,7 +89,7 @@
 | Коли `AppRail` «згортається»?              | Ніколи сам — `Sidebar` стискається до `--sidebar-width-icon`, ховаючи `AreaSidebar` (Cmd+B / `SidebarTrigger`) |
 | Коли видно `ContextPanel`?                | `hasContent` (є змонтований `ContextPanelPortal`) **І** `isOpen` (людина не сховала кнопкою)                |
 | Хрестик у панелі vs кнопка в хедері?      | Хрестик знімає ВИБІР (`onClose` сторінки); кнопка лише ХОВАЄ панель, вибір лишається                        |
-| Звідки брендовий фон і скляний шел?       | Теж від роуту: `staticData.backdrop: 'brand'` → `data-backdrop` на обгортці шела + `BrandBackdrop` під ним; лише `/guide` (`brand-backdrop.md`) |
+| Звідки брендовий фон і скляний шел?       | Теж від роуту: `staticData.backdrop: 'brand'` → `data-backdrop` на обгортці шела + `BrandBackdrop` під ним; лише `/guide` і його публічна копія `/about` (`brand-backdrop.md`) |
 | `padded` чи `bleed`?                      | Оголошує **сторінка** через `staticData.layout` на роуті; `bleed` — коли сторінка сама полотно (грід, календар) |
 | Коли `ContextPanel`, коли `Sheet`?        | Якщо сторінка позаду ще потрібна людині — панель; якщо рішення самодостатнє — `Sheet`                        |
 | Де ще ContextPanel запланована, але не заведена? | Рядок гріда `/users`/`/customers`, `ActivityDrawer` (кандидат №1), area `Chat` — черга в §5.6 `app-shell.md` |

@@ -6,6 +6,19 @@
     "architecture": "Architecture",
     "subsystems": "Key subsystems"
   },
+  "tour": {
+    "title": "Product tour",
+    "lead": "This is a demo of a multi-tenant CRM/ERP foundation. The guide shows what is already built, how every organization stays isolated from the others and how the system is delivered.",
+    "open": "Open the guide",
+    "dismiss": "Hide the product tour"
+  },
+  "about": {
+    "sections": "Guide sections",
+    "signIn": "Sign in",
+    "openApp": "Open the app",
+    "demoLogin": "Login to CRM Demo",
+    "demoOpen": "Open the CRM demo"
+  },
   "overview": {
     "eyebrow": "Product introduction",
     "title": "SaaS Skeleton",

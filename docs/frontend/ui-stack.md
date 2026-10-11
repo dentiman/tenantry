@@ -119,7 +119,8 @@ vite не читає tsconfig paths.
    `oklch(0.594 0.1967 24.63)` у dark. Hover обчислюється так само, як у HeroUI:
    90% semantic color + 10% його foreground. Фокус синій, бо `--ring` = `--primary`.
 2. **Метрика однорядкових контролів — 36px.** `default` кнопка, `input`, `select` та
-   `input-group` мають 36px; кнопки `sm` 32, `xs` 28, `lg` 40, іконкові — `size-7/8/9/10`.
+   `input-group` мають 36px; кнопки `sm` 32, `xs` 28, `lg` 40, іконкові — `size-7/8/9/10`; `xl` 48 — виняток лише для
+   головного заклику вітринної сторінки, у формах і таблицях не вживається.
    `textarea` багаторядкова і лишається `min-h-16`. Горизонтальні відступи полів — `px-3`.
    Фокус form controls — суцільний `ring-1` кольору `--ring` без відступу; error-state
    лишається помітнішим `ring-2`. Кнопки й навігаційні примітиви зберігають `ring-2`.
@@ -713,7 +714,7 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 | `ui/badge.tsx`                      | `success`/`warning`; opacity мʼяких фонів обмежена так, щоб дрібний текст тримав 4.5:1                                                 |
 | `ui/alert.tsx`                      | варіант **`warning`** (мʼякий фон `bg-warning/10` + `text-warning`, як у `badge`) і вимір **`accent="left"`** — кольорова смужка 3px ліворуч; товщину задає `accent`, колір бере `compoundVariants` від варіанта. Реєстр радить робити це хардкодом `bg-amber-50 dark:bg-amber-950` на місці використання («Custom Colors»), що розписувало б dark у кожному виклику |
 | `ui/calendar.tsx`                   | обведення дня прибрано з `data-focused` і лишилось лише на `focus-visible`: `react-day-picker` тримає «сфокусований день» своїм станом і сам кличе `focus()`, тому реєстрові класи малювали кільце після кліку МИШЕЮ — воно лишалось висіти й переїжджало на інший день при навігації. Індикатор для клавіатури збережений |
-| `ui/button.tsx`                     | суцільний `destructive`, HeroUI hover, метрика 28/32/36/40px, `radius="full"` і суцільний focus ring                                   |
+| `ui/button.tsx`                     | суцільний `destructive`, HeroUI hover, метрика 28/32/36/40px (+ `xl` 48 для заклику), `radius="full"` і суцільний focus ring                                   |
 | `ui/{input,select,input-group}.tsx` | висота 36px і `px-3`; `bg-field` / `border-input`, без тіні, тонкий primary-blue focus `ring-1`                                        |
 | `ui/textarea.tsx`                   | `px-3`, `bg-field`, без тіні, `ring-1`; стокова багаторядкова мінімальна висота `min-h-16`                                             |
 | `ui/combobox.tsx`                   | поле пошуку й chips-контейнер використовують `bg-field` / `border-input`, без тіні, `ring-1`; **`ComboboxClear` доданий до експортів** — реєстр визначає його, але тримає приватним для `ComboboxInput` (`showClear`), а комбобокс із кнопкою-тригером (`UserSelect`) інпута зовні не має і рендерить скидання сестрою тригера; **`ComboboxTrigger` отримав `showChevron`** — комбобокс можна відкривати кнопкою-ДІЄЮ («+ Add a guest» у `UserMultiList`), де шеврон означав би розкривний список; **`ComboboxChip` отримав `removeLabel`** — кнопка зняття чипа несе саму іконку і не отримує від Base UI дефолтного `aria-label`, а ззовні її не дістати (`...props` ідуть на чип); **`ComboboxChip` фон — `bg-accent` замість реєстрового `bg-muted`** (2026-09-09) — чип живе у `bg-field`, а в темному Notion-режимі `--field`/`--muted` практично збігаються (`#252525`/`#262626`), тож чип ставав невидимим; прозора накладка контрастує з БУДЬ-ЯКою поверхнею під собою |

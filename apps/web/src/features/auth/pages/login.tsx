@@ -49,7 +49,16 @@ export function LoginPage() {
   });
 
   return (
-    <AuthLayout title={t('login.title')}>
+    <AuthLayout
+      title={t('login.title')}
+      footerLink={
+        // Публічний путівник (`/about`, модуль guide): вхід — єдина сторінка без сесії, куди
+        // приходять із запрошення на демо, тож «що це за система» — тут
+        <Link to="/about" className="underline underline-offset-4 hover:text-foreground">
+          {t('shell.about')}
+        </Link>
+      }
+    >
       <div className="flex flex-col gap-6">
         <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4" noValidate>
           <FieldGroup>
