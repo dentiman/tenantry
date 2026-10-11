@@ -21,7 +21,7 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
 | --- | --- |
 | Публічні URL | `https://web.2-29-1-13.sslip.io` (tenant), `https://platform.…` (control plane), `https://s3.…` (presigned URL браузера) |
 | Домен | `sslip.io` — безкоштовний wildcard-DNS: `<будь-що>.2-29-1-13.sslip.io` → `2.29.1.13`. Сертифікат справжній, Caddy отримує його сам. GitHub домену й HTTPS для застосунків **не дає** (лише Pages для статики) |
-| Образи | `saas/<app>:<sha>` у локальному Docker вузла; **registry немає** (single-node). 3 найновіші тримаються для автовідкату |
+| Образи | `saas/<app>:<sha>` у локальному Docker вузла; **registry немає** (single-node). 2 найновіші (поточний + попередній) тримаються для автовідкату |
 | Конфіг | `docker/deploy.env` (git, несекретні дефолти) → **`/etc/saas/deploy.env`** (лише сервер, `root:github-runner 640`, перекриває перший) |
 | Дані | `/srv/saas-prod/data/{postgres,seaweedfs}` (bind), бекапи — `/srv/saas-prod/backups` |
 | Caddy | `/etc/caddy/Caddyfile` |
@@ -99,7 +99,7 @@ CI/CD → Run workflow.
 ## 6. Обмеження й борги
 
 - **Диск 38 ГБ.** Кеш збірки росте з кожним SHA, тому `deploy.sh` після успіху тримає лише 6 ГБ кешу
-  (`docker builder prune --max-used-space 6GB`) і 3 найновіші образи кожного сервісу. Образи Docker 29
+  (`docker builder prune --max-used-space 6GB`) і 2 найновіші образи кожного сервісу. Образи Docker 29
   лежать у `/var/lib/containerd`, а не `/var/lib/docker` — дивитись `docker system df` і `df -h /`.
 - **4 ГБ RAM.** Збірки йдуть по одній, є 4 ГБ swap. Якщо збірки впиратимуться в OOM — збільшити
   вузол у консолі Hetzner (rescale) або додати `--memory` у `docker build`. Перевірка:

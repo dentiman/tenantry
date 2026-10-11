@@ -76,11 +76,15 @@ for origin in "$APP_PUBLIC_URL" "$PLATFORM_CORS_ALLOWED_ORIGINS"; do
   echo
 done
 
-# Прибирання (лише після успіху): тримаємо 3 найновіші образи кожного сервісу — попередній потрібен
-# swarm для автовідкату. Образи, які ще використовуються, docker rmi не видалить.
-for app in api platform-api worker web platform-web tools; do
-  docker images "$IMAGE_PREFIX/$app" --format '{{.Repository}}:{{.Tag}}' | tail -n +4 | xargs -r docker rmi >/dev/null 2>&1 || true
+# Прибирання (лише після успіху). Спершу зупинені таски стека: swarm тримає їх історію, а образ
+# зупиненого контейнера `docker rmi` не видаляє. Далі лишаємо 2 найновіші образи кожного сервісу
+# (поточний + попередній — ціль автовідкату swarm; один набір ≈ 5 ГБ на диску 38 ГБ) і 1 образ tools.
+# Образи, які ще використовуються, docker rmi не видалить.
+docker container prune -f --filter "label=com.docker.stack.namespace=$STACK_NAME" >/dev/null 2>&1 || true
+for app in api platform-api worker web platform-web; do
+  docker images "$IMAGE_PREFIX/$app" --format '{{.Repository}}:{{.Tag}}' | tail -n +3 | xargs -r docker rmi >/dev/null 2>&1 || true
 done
+docker images "$IMAGE_PREFIX/tools" --format '{{.Repository}}:{{.Tag}}' | tail -n +2 | xargs -r docker rmi >/dev/null 2>&1 || true
 docker image prune -f >/dev/null 2>&1 || true
 # Кеш збірки росте з кожним SHA (шари після `COPY . .` не перевикористовуються): без межі диск 38 ГБ
 # заповнюється за кілька деплоїв. Найновіші 6 ГБ лишаємо — повторні збірки лишаються швидкими
