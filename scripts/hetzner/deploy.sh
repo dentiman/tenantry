@@ -82,6 +82,8 @@ for app in api platform-api worker web platform-web tools; do
   docker images "$IMAGE_PREFIX/$app" --format '{{.Repository}}:{{.Tag}}' | tail -n +4 | xargs -r docker rmi >/dev/null 2>&1 || true
 done
 docker image prune -f >/dev/null 2>&1 || true
-docker builder prune -f --filter "until=168h" >/dev/null 2>&1 || true
+# Кеш збірки росте з кожним SHA (шари після `COPY . .` не перевикористовуються): без межі диск 38 ГБ
+# заповнюється за кілька деплоїв. Найновіші 6 ГБ лишаємо — повторні збірки лишаються швидкими
+docker builder prune -f --max-used-space 6GB >/dev/null 2>&1 || true
 docker system df --format '{{.Type}}: {{.Size}} ({{.Reclaimable}} reclaimable)' || true
 echo "Готово."

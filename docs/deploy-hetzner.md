@@ -86,6 +86,9 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
 
 ## 6. Обмеження й борги
 
+- **Диск 38 ГБ.** Кеш збірки росте з кожним SHA, тому `deploy.sh` після успіху тримає лише 6 ГБ кешу
+  (`docker builder prune --max-used-space 6GB`) і 3 найновіші образи кожного сервісу. Образи Docker 29
+  лежать у `/var/lib/containerd`, а не `/var/lib/docker` — дивитись `docker system df` і `df -h /`.
 - **4 ГБ RAM.** Збірки йдуть по одній, є 4 ГБ swap. Якщо збірки впиратимуться в OOM — збільшити
   вузол у консолі Hetzner (rescale) або додати `--memory` у `docker build`. Перевірка:
   `journalctl -k | grep -i oom`.
