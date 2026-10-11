@@ -41,6 +41,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
 - `docs/deploy-swarm.md` — GitLab CI (check → build → deploy) → Docker Swarm
+- `docs/deploy-hetzner.md` — GitHub Actions → Hetzner VPS (self-hosted runner on the same host,
+  Caddy TLS on `sslip.io`, server-side secrets in `/etc/saas/deploy.env`, `main` deploys)
 - `docs/demo.md` — демо-стенд для показу клієнтам: датасет трьох галузевих тенантів (`db:seed:demo`),
   статичні демо-акаунти (їх читають сід і логін-сторінки), ручні CI-джоби завантаження/скидання
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
@@ -171,14 +173,19 @@ a contract or controller changes — see `docs/commands.md` for the full list in
 
 - **`dev` is the primary branch.** Work lands in `dev` (or a feature branch merged into it);
   a push to `dev` deploys the `saas-dev` stack.
-- **`main` is a mirror of `dev` and is not deployed.** It is fast-forwarded to `dev` from time
-  to time; on `main` only the `check` stage runs — no images, no prod jobs (`.prod_disabled` in
+- **`main` is a mirror of `dev`.** It is fast-forwarded to `dev` from time to time. On GitLab
+  it is not deployed: only the `check` stage runs — no images, no prod jobs (`.prod_disabled` in
   `.gitlab-ci.yml`). Do not re-enable prod or retarget prod jobs to another branch without an
   explicit request. GitLab's default branch is still `main`, so `$CI_DEFAULT_BRANCH` ≠ `dev`.
-- **CI is GitLab only** (there is no GitHub remote). Stage `check` (`ai_knowledge_check`,
-  `verify` = `scripts/ci-verify.sh`) gates `build`, and `build` gates `deploy_dev` — an
-  unverified SHA is never built or deployed. A red `verify` blocks the dev deploy: fix the cause,
-  don't skip the job. Details: `docs/deploy-swarm.md` §6.
+- **Two independent CIs, two remotes.** `origin` = GitLab (`.gitlab-ci.yml`, deploys `dev` →
+  `saas-dev`). `github` = `dentiman/saas-skeleton` (private; `.github/workflows/`), where a push
+  to **`main`** deploys the Hetzner stack `saas-prod` through a self-hosted runner —
+  `docs/deploy-hetzner.md`. Pushing to one remote does not trigger the other's pipeline; push to
+  `github` only when you mean to deploy there.
+- **GitLab:** stage `check` (`ai_knowledge_check`, `verify` = `scripts/ci-verify.sh`) gates
+  `build`, and `build` gates `deploy_dev` — an unverified SHA is never built or deployed. A red
+  `verify` blocks the dev deploy: fix the cause, don't skip the job. Details:
+  `docs/deploy-swarm.md` §6. **GitHub** has the same gate (`verify` → `build` → `deploy`).
 
 ## Architecture
 

@@ -1,0 +1,36 @@
+# Разові операції на Hetzner-стеку — кнопка «Run workflow» (аналог ручних `when: manual` джоб
+# GitLab). Що робить кожна дія — scripts/hetzner/ops.sh і docs/deploy-hetzner.md §6.
+name: Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Що виконати на сервері
+        type: choice
+        required: true
+        options:
+          - seed
+          - db_roles
+          - seed_demo
+          - demo_reset
+          - backup_db
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, hetzner]
+    timeout-minutes: 60
+    # Спільна група з deploy.yml: операції й розкат не накладаються
+    concurrency:
+      group: saas-prod-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ${{ inputs.action }}
+        env:
+          ACTION: ${{ inputs.action }}
+        run: bash scripts/hetzner/ops.sh "$ACTION"

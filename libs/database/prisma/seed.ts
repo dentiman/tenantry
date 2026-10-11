@@ -15,12 +15,31 @@ const DEFAULT_PLATFORM_DATABASE_URL =
 // Сід — інфраструктура: явний tenantId тут легальний
 const DEFAULT_TENANT_ID = '00000000-0000-4000-8000-000000000001';
 
+// Дефолтні паролі — лише для локальної розробки і CI. Публічний стенд задає свої через
+// SEED_ADMIN_PASSWORD / SEED_PLATFORM_PASSWORD (docs/deploy-hetzner.md): пароль із коду
+// відомий усім, хто бачить репозиторій
+function seedPassword(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  if (value) return value;
+  return fallback;
+}
+
 const ADMIN_EMAIL = 'admin@example.com';
 // AUTH-0: мінімум 12 символів (PasswordSchema). Upsert із `update: {}` пароль наявного
 // адміна НЕ переписує — на старій dev-БД лишається попередній до `pnpm db:reset`
-const ADMIN_PASSWORD = 'Admin1234567';
+const DEFAULT_ADMIN_PASSWORD = 'Admin1234567';
+const ADMIN_PASSWORD = seedPassword('SEED_ADMIN_PASSWORD', DEFAULT_ADMIN_PASSWORD);
 const PLATFORM_ADMIN_EMAIL = 'platform@example.com';
-const PLATFORM_ADMIN_PASSWORD = 'Platform12345';
+const DEFAULT_PLATFORM_ADMIN_PASSWORD = 'Platform12345';
+const PLATFORM_ADMIN_PASSWORD = seedPassword(
+  'SEED_PLATFORM_PASSWORD',
+  DEFAULT_PLATFORM_ADMIN_PASSWORD,
+);
+
+/** У лог — лише дефолтний (і так публічний) пароль; заданий через env не друкуємо */
+function passwordForLog(password: string, fallback: string): string {
+  return password === fallback ? password : '(from SEED_*_PASSWORD)';
+}
 
 async function main(): Promise<void> {
   const adapter = new PrismaPg({
@@ -125,12 +144,12 @@ async function main(): Promise<void> {
   await prisma.$transaction((tx) => joinDefaultChannel(tx, tenant.id, admin));
 
   console.log(
-    `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${ADMIN_PASSWORD})`,
+    `Seeded tenant "${tenant.slug}" and admin user: ${admin.email} (password: ${passwordForLog(ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD)})`,
   );
   console.log(`Seeded ${String(demoCustomers.length)} demo customers`);
   console.log('Seeded the default chat channel "General"');
   console.log(
-    `Seeded platform operator: ${platformAdmin.email} (password: ${PLATFORM_ADMIN_PASSWORD})`,
+    `Seeded platform operator: ${platformAdmin.email} (password: ${passwordForLog(PLATFORM_ADMIN_PASSWORD, DEFAULT_PLATFORM_ADMIN_PASSWORD)})`,
   );
   await prisma.$disconnect();
 }
