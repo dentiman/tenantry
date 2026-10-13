@@ -7,14 +7,18 @@ import {
   AiKnowledgeModule,
   AiLlmModule,
   AiModule,
+  ChannelAdapterRegistry,
+  ChannelIngestService,
   CryptoModule,
   MessagingModule,
   NotificationsModule,
   StorageModule,
+  createChannelAdapterRegistry,
 } from '@saas-skeleton/shared';
 import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
+import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { AiPurgeConversationsSubscriber } from './subscribers/ai-purge-conversations.subscriber';
 import { AiReconcileUsageCostsSubscriber } from './subscribers/ai-reconcile-usage-costs.subscriber';
@@ -56,6 +60,10 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
   ],
   providers: [
     WorkerRealtimeEmitter,
+    // CHAT-2a: розбір вебхуків каналів (fake-провайдер — лише з CHAT_DEV_TOOLS)
+    { provide: ChannelAdapterRegistry, useFactory: (): ChannelAdapterRegistry => createChannelAdapterRegistry() },
+    ChannelIngestService,
+    ChannelsIngestSubscriber,
     AiLeaseGuard,
     AiGenerateReplySubscriber,
     AiPurgeConversationsSubscriber,

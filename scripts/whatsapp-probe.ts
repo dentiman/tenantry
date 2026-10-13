@@ -63,11 +63,18 @@ async function graph(
   return { ok: res.ok, status: res.status, body };
 }
 
+/** Значення з JSON Graph у рядок без `[object Object]` */
+function str(value: unknown, fallback = '—'): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return value === undefined || value === null ? fallback : JSON.stringify(value);
+}
+
 function errorText(r: GraphResult): string {
   const e = (r.body.error ?? {}) as Json;
-  const parts = [`HTTP ${r.status}`];
-  if (e.code !== undefined) parts.push(`code ${String(e.code)}`);
-  if (e.error_subcode !== undefined) parts.push(`subcode ${String(e.error_subcode)}`);
+  const parts = [`HTTP ${String(r.status)}`];
+  if (e.code !== undefined) parts.push(`code ${str(e.code)}`);
+  if (e.error_subcode !== undefined) parts.push(`subcode ${str(e.error_subcode)}`);
   if (typeof e.message === 'string') parts.push(e.message);
   if (typeof e.fbtrace_id === 'string') parts.push(`fbtrace ${e.fbtrace_id}`);
   return parts.join(' · ');
@@ -124,7 +131,7 @@ async function main(): Promise<void> {
       d.is_valid === true && lacking.length === 0,
       `valid=${String(d.is_valid)} type=${String(d.type)} app_id=${String(d.app_id) === env('APP_ID') ? 'збігається' : 'НЕ збігається'} ` +
         `expires_at=${expires === 0 ? '0 (безстроковий)' : new Date(expires * 1000).toISOString()} ` +
-        `data_access_expires_at=${String(d.data_access_expires_at ?? '—')} scopes=[${scopes.join(',')}]` +
+        `data_access_expires_at=${str(d.data_access_expires_at)} scopes=[${scopes.join(',')}]` +
         (lacking.length ? ` БРАКУЄ: ${lacking.join(',')}` : '') +
         ` granular=${granular.length > 400 ? `${granular.slice(0, 400)}…` : granular}`,
     );
@@ -157,7 +164,7 @@ async function main(): Promise<void> {
     'GET /{waba}/phone_numbers',
     p.result.ok && phones.length > 0,
     p.result.ok
-      ? `${phones.length} номер(ів), fields=${p.fields || '(за замовчуванням)'} → ${JSON.stringify(phones)}`
+      ? `${String(phones.length)} номер(ів), fields=${p.fields || '(за замовчуванням)'} → ${JSON.stringify(phones)}`
       : errorText(p.result),
   );
   if (p.result.ok && phones.length > 0) {
@@ -180,7 +187,7 @@ async function main(): Promise<void> {
     'GET /{waba}/message_templates',
     tpl.result.ok,
     tpl.result.ok
-      ? `${templates.length} шаблон(ів), fields=${tpl.fields || '(за замовчуванням)'}: ${templates.map((t) => `${String(t.name)}/${String(t.language)}=${String(t.status)}`).join(', ') || '—'}`
+      ? `${String(templates.length)} шаблон(ів), fields=${tpl.fields || '(за замовчуванням)'}: ${templates.map((t) => `${String(t.name)}/${String(t.language)}=${String(t.status)}`).join(', ') || '—'}`
       : errorText(tpl.result),
   );
 
@@ -203,7 +210,7 @@ async function main(): Promise<void> {
   // 7. Тестова відправка (запис — лише з --send)
   if (flags.send) {
     const to = env('TEST_RECIPIENT').replace(/\D/g, '');
-    const phoneId = String(phones[0]?.id ?? '');
+    const phoneId = str(phones[0]?.id, '');
     if (!to || !phoneId) {
       record('POST /{phone}/messages', false, 'потрібні WHATSAPP_TEST_RECIPIENT і хоча б один номер у WABA');
     } else {
@@ -223,7 +230,7 @@ async function main(): Promise<void> {
   // 8. Звичайний текст (запис — лише з --text); тіло — у `text.body`, перевіряє вікно 24 год
   if (flags.text !== undefined) {
     const to = env('TEST_RECIPIENT').replace(/\D/g, '');
-    const phoneId = String(phones[0]?.id ?? '');
+    const phoneId = str(phones[0]?.id, '');
     if (!to || !phoneId || !flags.text) {
       record('POST /{phone}/messages (text)', false, 'потрібні WHATSAPP_TEST_RECIPIENT, номер у WABA і непорожній текст');
     } else {
@@ -242,7 +249,7 @@ async function main(): Promise<void> {
   }
 
   const failed = checks.filter((c) => !c.ok).length;
-  console.log(`\nПідсумок: ${checks.length - failed}/${checks.length} OK`);
+  console.log(`\nПідсумок: ${String(checks.length - failed)}/${String(checks.length)} OK`);
   if (flags.json) console.log(JSON.stringify(checks, null, 2));
   if (failed) process.exitCode = 1;
 }

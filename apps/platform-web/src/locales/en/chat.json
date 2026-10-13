@@ -1,0 +1,18 @@
+{
+  "channelEvents": {
+    "title": "Channel webhooks without a tenant",
+    "subtitle": "Deliveries from messaging providers that could not be matched to a tenant. The body is never stored; the key is shown as a hash.",
+    "empty": "Nothing here",
+    "emptyHint": "Every webhook so far was matched to a tenant.",
+    "columns": {
+      "time": "Received",
+      "provider": "Provider",
+      "reason": "Reason",
+      "keyHash": "Key (hash)",
+      "ip": "IP"
+    },
+    "reasons": {
+      "unknown_key": "Unknown or disabled key"
+    }
+  }
+}

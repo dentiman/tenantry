@@ -1,6 +1,16 @@
 import { Module } from '@nestjs/common';
+import { ChannelAdapterRegistry, createChannelAdapterRegistry } from '@saas-skeleton/shared';
+import { CustomersModule } from '../customers/customers.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { UsersModule } from '../users/users.module';
+import { ChannelController, MessagingSettingsController } from './channel.controller';
+import { ChatDevToolsController } from './chat-dev-tools.controller';
+import { ChatDevToolsGuard } from './chat-dev-tools.guard';
+import { ChatDevToolsService } from './chat-dev-tools.service';
+import { ChannelInboxService } from './channel-inbox.service';
+import { ChannelWebhookController } from './channel-webhook.controller';
+import { MessagingAccountService } from './messaging-account.service';
+import { ChannelWebhookService } from './channel-webhook.service';
 import { ChatController } from './chat.controller';
 import { ChatRealtime } from './chat-realtime';
 import { ChatSocketHandlers } from './chat.socket-handlers';
@@ -14,9 +24,25 @@ import { DefaultChannelService } from './default-channel.service';
   // chat → users, не навпаки (docs/modules.md).
   // RealtimeModule — за `RealtimeEmitter` (живі зміни в особисті room-и учасників);
   // той самий напрямок вниз, що в calendar і ai
-  imports: [UsersModule, RealtimeModule],
-  controllers: [ChatController],
+  imports: [UsersModule, RealtimeModule, CustomersModule],
+  controllers: [
+    ChatController,
+    ChannelController,
+    MessagingSettingsController,
+    ChannelWebhookController,
+    ChatDevToolsController,
+  ],
   providers: [
+    // CHAT-2a: реєстр адаптерів (fake — лише з CHAT_DEV_TOOLS) і публічний вебхук каналів
+    {
+      provide: ChannelAdapterRegistry,
+      useFactory: (): ChannelAdapterRegistry => createChannelAdapterRegistry(),
+    },
+    ChannelWebhookService,
+    ChannelInboxService,
+    MessagingAccountService,
+    ChatDevToolsGuard,
+    ChatDevToolsService,
     ChatService,
     ChatRealtime,
     ChatSocketHandlers,

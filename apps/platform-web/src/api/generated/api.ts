@@ -32,6 +32,8 @@ import type {
   AiModelPriceResponseDtoOutput,
   AiModelPriceSyncResponseDtoOutput,
   AiUsageEventListResponseDtoOutput,
+  ChannelEventsUnroutableParams,
+  ChannelUnroutableListResponseDtoOutput,
   CreateAiModelPriceDto,
   CreateTenantDto,
   JobListResponseDtoOutput,
@@ -1204,6 +1206,133 @@ export const useTenantUsersRevokeSessions = <TError = unknown, TContext = unknow
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const channelEventsUnroutable = (
+  params?: ChannelEventsUnroutableParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelUnroutableListResponseDtoOutput>(
+    { url: `/api/channel-events/unroutable`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getChannelEventsUnroutableQueryKey = (params?: ChannelEventsUnroutableParams) => {
+  return [`/api/channel-events/unroutable`, ...(params ? [params] : [])] as const;
+};
+
+export const getChannelEventsUnroutableQueryOptions = <
+  TData = Awaited<ReturnType<typeof channelEventsUnroutable>>,
+  TError = unknown,
+>(
+  params?: ChannelEventsUnroutableParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof channelEventsUnroutable>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChannelEventsUnroutableQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof channelEventsUnroutable>>> = ({
+    signal,
+  }) => channelEventsUnroutable(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof channelEventsUnroutable>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChannelEventsUnroutableQueryResult = NonNullable<
+  Awaited<ReturnType<typeof channelEventsUnroutable>>
+>;
+export type ChannelEventsUnroutableQueryError = unknown;
+
+export function useChannelEventsUnroutable<
+  TData = Awaited<ReturnType<typeof channelEventsUnroutable>>,
+  TError = unknown,
+>(
+  params: undefined | ChannelEventsUnroutableParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof channelEventsUnroutable>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelEventsUnroutable>>,
+          TError,
+          Awaited<ReturnType<typeof channelEventsUnroutable>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelEventsUnroutable<
+  TData = Awaited<ReturnType<typeof channelEventsUnroutable>>,
+  TError = unknown,
+>(
+  params?: ChannelEventsUnroutableParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof channelEventsUnroutable>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelEventsUnroutable>>,
+          TError,
+          Awaited<ReturnType<typeof channelEventsUnroutable>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelEventsUnroutable<
+  TData = Awaited<ReturnType<typeof channelEventsUnroutable>>,
+  TError = unknown,
+>(
+  params?: ChannelEventsUnroutableParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof channelEventsUnroutable>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChannelEventsUnroutable<
+  TData = Awaited<ReturnType<typeof channelEventsUnroutable>>,
+  TError = unknown,
+>(
+  params?: ChannelEventsUnroutableParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof channelEventsUnroutable>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChannelEventsUnroutableQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 export const jobsFindAll = (
   params?: JobsFindAllParams,

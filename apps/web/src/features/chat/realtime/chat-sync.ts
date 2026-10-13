@@ -2,13 +2,14 @@ import type { QueryClient } from '@tanstack/react-query';
 import {
   REALTIME_EVENTS,
   type ChatConversationChanged,
+  type ChatInboxChanged,
   type ChatMessageCreated,
   type ChatTypingChanged,
 } from '@saas-skeleton/contracts';
 import { getChatFindOneQueryKey } from '../../../api/generated/api';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { getSocket, type AppSocket } from '../../realtime/socket';
-import { conversationListKey, isChatQueryKey } from '../chat-keys';
+import { INBOX_KEY_PREFIX, conversationListKey, isChatQueryKey, transcriptKey } from '../chat-keys';
 import { useChatTypingStore } from '../stores/chat-typing.store';
 import { mergeIncomingMessage } from './chat-cache';
 
@@ -63,6 +64,19 @@ export function initChatSync(queryClient: QueryClient, socket: AppSocket = getSo
         queryKey: getChatFindOneQueryKey(payload.conversationId),
       });
     }
+  });
+
+  // CHAT-2a: «у клієнтській розмові щось змінилось» — сигнал без даних. Скринька перечитується
+  // для всіх фільтрів; відкриту розмову (стрічка й картка) — теж: payload не несе повідомлення,
+  // тож застосовувати нічого, а Postgres лишається джерелом правди
+  socket.on(REALTIME_EVENTS.chatInboxChanged, (payload: ChatInboxChanged) => {
+    void queryClient.invalidateQueries({
+      predicate: (query) => String(query.queryKey[0]).startsWith(INBOX_KEY_PREFIX),
+    });
+    void queryClient.invalidateQueries({ queryKey: transcriptKey(payload.conversationId) });
+    void queryClient.invalidateQueries({
+      queryKey: getChatFindOneQueryKey(payload.conversationId),
+    });
   });
 
   socket.on('connect', () => {

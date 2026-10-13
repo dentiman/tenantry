@@ -1,6 +1,7 @@
 import { linkOptions } from '@tanstack/react-router';
-import { MessagesSquare } from 'lucide-react';
+import { MessageSquareShare, MessagesSquare } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
+import { settingsArea } from '../settings/settings.nav';
 import { ChatSidebar } from './chat-sidebar';
 
 export const chatArea = defineArea({
@@ -12,4 +13,16 @@ export const chatArea = defineArea({
   panel: ChatSidebar,
 });
 
-export default defineNavigation({ areas: [chatArea] });
+export default defineNavigation({
+  areas: [chatArea],
+  items: [
+    {
+      id: 'settings.messaging',
+      area: settingsArea,
+      order: 30,
+      link: linkOptions({ to: '/settings/messaging' }),
+      label: 'chat:settings.nav',
+      icon: MessageSquareShare,
+    },
+  ],
+});

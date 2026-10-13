@@ -13,4 +13,5 @@ export type ChatMessageListResponseDtoOutputItemsItemSenderType =
 export const ChatMessageListResponseDtoOutputItemsItemSenderType = {
   user: 'user',
   system: 'system',
+  customer: 'customer',
 } as const;

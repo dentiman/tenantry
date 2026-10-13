@@ -8,3 +8,4 @@ export * from './notifications';
 export * from './numbering';
 export * from './ai';
 export * from './chat';
+export * from './channels';

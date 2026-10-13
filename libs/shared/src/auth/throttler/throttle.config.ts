@@ -25,6 +25,9 @@ const ThrottleEnvSchema = z.object({
   AUTH_REFRESH_LIMIT_PER_MINUTE: intFromEnv(30),
   ACCOUNT_SENSITIVE_LIMIT_PER_HOUR: intFromEnv(10),
   AI_ASK_LIMIT_PER_MINUTE: intFromEnv(10),
+  // CHAT-2a: вебхук провайдера на пару (ключ каналу, ip). Щедрий: статусів приходить у ~3 рази більше
+  // за повідомлення, а ретрай провайдера після нашого 429 лише множить трафік
+  CHANNEL_WEBHOOK_LIMIT_PER_MINUTE: intFromEnv(600),
 });
 
 /**
@@ -40,6 +43,7 @@ export interface ThrottleConfig {
   refreshPerMinute: number;
   accountSensitivePerHour: number;
   aiAskPerMinute: number;
+  channelWebhookPerMinute: number;
   storageTimeoutMs: number;
 }
 
@@ -59,6 +63,7 @@ export function loadThrottleConfig(env: NodeJS.ProcessEnv = process.env): Thrott
     refreshPerMinute: e.AUTH_REFRESH_LIMIT_PER_MINUTE,
     accountSensitivePerHour: e.ACCOUNT_SENSITIVE_LIMIT_PER_HOUR,
     aiAskPerMinute: e.AI_ASK_LIMIT_PER_MINUTE,
+    channelWebhookPerMinute: e.CHANNEL_WEBHOOK_LIMIT_PER_MINUTE,
     storageTimeoutMs: STORAGE_TIMEOUT_MS,
   };
 }

@@ -1,7 +1,9 @@
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
+import { settingsRoute } from '../settings/settings.routes';
 import { ChatPage } from './pages/chat';
 import { ChatConversationPage } from './pages/chat-conversation';
+import { MessagingSettingsPage } from './pages/messaging-settings';
 
 /**
  * Area «Chat». Layout + index, як і задумувалось: index лишається станом
@@ -27,4 +29,11 @@ export const chatConversationRoute = createRoute({
   path: '$conversationId',
   component: ChatConversationPage,
   staticData: { layout: 'bleed' },
+});
+
+/** Налаштування каналів — пункт area Settings (доступ ADMIN — з батьківського роуту) */
+export const settingsMessagingRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'messaging',
+  component: MessagingSettingsPage,
 });

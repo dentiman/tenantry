@@ -12,11 +12,13 @@ import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { MessagesSquare } from 'lucide-react';
 import { CLIENT_EVENTS } from '@saas-skeleton/contracts';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
+import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
 import { useChatFindOne } from '../../../api/generated/api';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 import { ChatComposer } from '../components/chat-composer';
 import { ChatTranscript } from '../components/chat-transcript';
+import { ContactPanel } from '../components/contact-panel';
 import { NewConversationDialog } from '../components/new-conversation-dialog';
 import { conversationLabel } from '../components/chat-labels';
 import { TypingIndicator } from '../components/typing-indicator';
@@ -95,6 +97,8 @@ export function ChatConversationPage() {
 
   const conversation = query.data;
   const label = conversationLabel(conversation, viewerId, t);
+  // Клієнтська розмова: контакт є, відповідати ще нічим (CHAT-2a) — стрічка лише для читання
+  const isCustomer = conversation.contact !== null;
 
   return (
     <>
@@ -107,7 +111,11 @@ export function ChatConversationPage() {
       <PageHeader
         label="ChatConversationPage"
         breadcrumbs={[{ label: t('title'), to: '/chat' }, { label }]}
-        subtitle={t('page.participants', { count: conversation.participants.length })}
+        subtitle={
+          conversation.contact
+            ? (conversation.contact.channelNumber ?? undefined)
+            : t('page.participants', { count: conversation.participants.length })
+        }
         actions={<NewConversationDialog />}
       />
       {/* `h-[calc(100vh-3.5rem)]` компенсує `h-14` хедера шела — той самий
@@ -122,9 +130,22 @@ export function ChatConversationPage() {
           onRetry={retry}
           onDiscard={onDiscard}
         />
-        <TypingIndicator conversation={conversation} />
-        <ChatComposer onSend={onSend} onTyping={onTyping} />
+        {isCustomer ? (
+          <p className="border-t px-4 py-3 text-sm text-muted-foreground">
+            {t('contact.readOnly')}
+          </p>
+        ) : (
+          <>
+            <TypingIndicator conversation={conversation} />
+            <ChatComposer onSend={onSend} onTyping={onTyping} />
+          </>
+        )}
       </div>
+      {conversation.contact && (
+        <ContextPanelPortal contentKey={conversation.contact.id} label="ChatConversationPage">
+          <ContactPanel contactId={conversation.contact.id} />
+        </ContextPanelPortal>
+      )}
     </>
   );
 }

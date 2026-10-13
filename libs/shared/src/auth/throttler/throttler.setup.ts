@@ -59,6 +59,17 @@ export function emailAndIpTracker(req: Record<string, unknown>): string {
   return `${normalized}|${ipOf(req)}`;
 }
 
+/**
+ * Вебхук провайдера: ключ каналу з адреси + ip. Ключ — у шляху, тому береться з `req.params`
+ * (guard виконується після маршрутизації); без нього — лише ip. Довжину обрізаємо: недовірений
+ * рядок не роздуває простір ключів Redis.
+ */
+export function webhookKeyAndIpTracker(req: Record<string, unknown>): string {
+  const params = req.params as { webhookKey?: unknown } | undefined;
+  const key = typeof params?.webhookKey === 'string' ? params.webhookKey.slice(0, 128) : '';
+  return key ? `${key}|${ipOf(req)}` : ipOf(req);
+}
+
 export interface CreateAppThrottlerModuleOptions {
   /** DI-токен клієнта Redis без offline-черги (свій у кожного процесу) */
   redisClientToken: string | symbol;
@@ -158,6 +169,13 @@ export function createAppThrottlerModule(options: CreateAppThrottlerModuleOption
           limit: config.aiAskPerMinute,
           skipIf: optIn(RATE_LIMITS.aiAsk),
           getTracker: options.principalTracker,
+        },
+        {
+          name: RATE_LIMITS.channelWebhook,
+          ttl: MINUTE_MS,
+          limit: config.channelWebhookPerMinute,
+          skipIf: optIn(RATE_LIMITS.channelWebhook),
+          getTracker: webhookKeyAndIpTracker,
         },
         {
           name: RATE_LIMITS.verificationConfirm,

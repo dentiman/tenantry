@@ -17,6 +17,11 @@ export type ConversationWithMembership = Prisma.ConversationGetPayload<{
     createdAt: true;
   };
 }> & {
+  /**
+   * Рядок членства того, хто питає. `null` — легально лише для клієнтської розмови (`access =
+   * 'tenant'`), яку видно всім активним юзерам тенанта без участі; у внутрішній (`private`)
+   * без членства доступу немає взагалі, тож там поле завжди заповнене.
+   */
   membership: {
     userId: string;
     role: string;
@@ -24,11 +29,11 @@ export type ConversationWithMembership = Prisma.ConversationGetPayload<{
     lastReadSeq: number;
     unreadCount: number;
     label: string;
-  };
+  } | null;
 };
 
 /**
- * ЄДИНА функція доступу модуля чату.
+ * ЄДИНА функція доступу модуля чату (CHAT-2a: гілка `tenant` дописана — chat/customer-inbox).
  *
  * Дві межі, і вони різні:
  * - межу ТЕНАНТА тримає RLS (міграція `chat_conversations`);
@@ -38,11 +43,11 @@ export type ConversationWithMembership = Prisma.ConversationGetPayload<{
  *
  * Чому окремий сервіс, а не умова `EXISTS (participant)` у кожному запиті: саме
  * розкопійована по хендлерах умова рано чи пізно десь не дописується. Правило
- * модуля — жоден запит до розмови не йде повз `assertParticipant`.
+ * модуля — жоден запит до розмови не йде повз `assertAccess`.
  *
- * Резолвер від початку приймає `access`, хоча зараз розбирає лише `private`:
- * дописати гілку `tenant` у функцію, яка вже нею оперує, — рядок; додати їй
- * аргумент заднім числом — переписати кожен виклик (docs/chat.md §6).
+ * Резолвер від початку приймає `access`: гілка `tenant` дописалась одним рядком у
+ * `canSee`, без зміни жодного виклику (docs/chat.md §6). Клієнтські розмови (CUSTOMER)
+ * видно всім активним користувачам тенанта (O-W1); RBAC колись звузить це ТУТ же.
  */
 @Injectable()
 export class ConversationAccessService {
@@ -55,7 +60,7 @@ export class ConversationAccessService {
    * зробив би ендпоінт оракулом. Та сама відповідь для неіснуючої, чужої і
    * покинутої розмови — і для ADMIN теж: роль тут прав не дає.
    */
-  async assertParticipant(
+  async assertAccess(
     conversationId: string,
     userId: string,
     tx?: Prisma.TransactionClient,
@@ -90,32 +95,35 @@ export class ConversationAccessService {
     });
 
     const membership = conversation?.participants[0];
-    if (!conversation || !membership || !canSee(conversation.access, membership)) {
+    if (!conversation || !canSee(conversation.access, membership)) {
       throw new NotFoundException('Conversation not found');
     }
 
     const { participants: _participants, ...rest } = conversation;
     return {
       ...rest,
-      membership: {
-        userId: membership.userId,
-        role: membership.role,
-        joinSeq: membership.joinSeq,
-        lastReadSeq: membership.lastReadSeq,
-        unreadCount: membership.unreadCount,
-        // Снапшот підпису для sender_label: ім'я, якщо є, інакше пошта —
-        // та сама форма, що в payload системних записів
-        label: membership.user.name ?? membership.user.email,
-      },
+      membership: membership
+        ? {
+            userId: membership.userId,
+            role: membership.role,
+            joinSeq: membership.joinSeq,
+            lastReadSeq: membership.lastReadSeq,
+            unreadCount: membership.unreadCount,
+            // Снапшот підпису для sender_label: ім'я, якщо є, інакше пошта —
+            // та сама форма, що в payload системних записів
+            label: membership.user.name ?? membership.user.email,
+          }
+        : null,
     };
   }
 }
 
 /**
- * Правило видимості. `tenant` у переліку є, але НЕ обробляється: сервер таких
- * розмов не створює, і поки їх нема кому створити — гілки під них не пишемо.
+ * Правило видимості. `private` — лише поточний учасник; `tenant` — будь-який активний юзер
+ * тенанта (межу тенанта вже тримає RLS, а активність — guard автентифікації).
  * Невідомий `access` дає «не видно», а не «видно»: дефолт має бути закритим.
  */
 function canSee(access: string, membership: { userId: string } | undefined): boolean {
+  if (access === 'tenant') return true;
   return access === 'private' && membership !== undefined;
 }

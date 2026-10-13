@@ -8,6 +8,7 @@ import {
   TENANT_NAMESPACE,
   realtimeSessionKeyPrefix,
   realtimeStreamName,
+  tenantRoom,
   userRoom,
   type ClientToServerEvents,
   type NotificationChanged,
@@ -96,6 +97,22 @@ export class WorkerRealtimeEmitter
       return;
     }
     this.namespace.to(userRoom(tenantId, recipientId)).emit(event, ...payload);
+  }
+
+  /**
+   * Подія в room ТЕНАНТА — усім його підключеним сокетам. Лише для сигналів «перечитай» без
+   * даних (`chat.inbox-changed.v1`): payload із станом у такий широкий room не йде.
+   */
+  toTenant<E extends keyof ServerToClientEvents>(
+    tenantId: string,
+    event: E,
+    ...payload: Parameters<ServerToClientEvents[E]>
+  ): void {
+    if (!this.namespace) {
+      this.logger.warn(`Realtime emitter is not ready, dropping "${event}"`);
+      return;
+    }
+    this.namespace.to(tenantRoom(tenantId)).emit(event, ...payload);
   }
 
   async onApplicationShutdown(): Promise<void> {

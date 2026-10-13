@@ -43,7 +43,7 @@ describe('navigation snapshot', () => {
       [
         "rail: workspace, calendar, chat, assistant, settings, playground, guide",
         "workspace: dashboard, users, customers",
-        "settings: settings.general, settings.calendar, settings.numbering, settings.ai, settings.activity",
+        "settings: settings.general, settings.calendar, settings.messaging, settings.numbering, settings.ai, settings.activity",
         "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
         "customers.detail: customers.overview, customers.contacts, calendar.customer-events",

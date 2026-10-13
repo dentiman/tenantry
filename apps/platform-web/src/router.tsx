@@ -16,6 +16,7 @@ import {
   operationsQueuesRoute,
   operationsRoute,
 } from './features/messaging/messaging.routes';
+import { operationsChannelEventsRoute } from './features/chat/chat.routes';
 import {
   aiCostsRoute,
   aiIndexRoute,
@@ -42,7 +43,12 @@ const routeTree = rootRoute.addChildren([
       tenantsIndexRoute,
       tenantDetailRoute.addChildren([tenantOverviewRoute, tenantAccessRoute, tenantUsersRoute]),
     ]),
-    operationsRoute.addChildren([operationsIndexRoute, operationsJobsRoute, operationsQueuesRoute]),
+    operationsRoute.addChildren([
+      operationsIndexRoute,
+      operationsJobsRoute,
+      operationsQueuesRoute,
+      operationsChannelEventsRoute,
+    ]),
     aiRoute.addChildren([aiIndexRoute, aiSettingsRoute, aiCostsRoute, aiPricesRoute]),
     userSettingsRoute.addChildren([userSettingsProfileRoute, userSettingsAppearanceRoute]),
     notFoundRoute,

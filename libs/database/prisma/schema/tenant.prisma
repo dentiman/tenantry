@@ -23,43 +23,48 @@ model Tenant {
   // разом із файлом prisma/schema/<модуль>.prisma — `prisma validate` покаже, чого бракує.
   //
   // платформа
-  users                    User[]
-  authSessions             AuthSession[]
-  verificationTokens       VerificationToken[]
-  files                    File[]
-  attachments              Attachment[]
-  activities               Activity[]
-  activityLinks            ActivityLink[]
-  notifications            Notification[]
-  notificationStates       NotificationState[]
-  notificationPreferences  NotificationPreference[]
-  scheduledNotifications   ScheduledNotification[]
-  numberSequences          NumberSequence[]
-  numberSeries             NumberSeries[]
+  users                   User[]
+  authSessions            AuthSession[]
+  verificationTokens      VerificationToken[]
+  files                   File[]
+  attachments             Attachment[]
+  activities              Activity[]
+  activityLinks           ActivityLink[]
+  notifications           Notification[]
+  notificationStates      NotificationState[]
+  notificationPreferences NotificationPreference[]
+  scheduledNotifications  ScheduledNotification[]
+  numberSequences         NumberSequence[]
+  numberSeries            NumberSeries[]
 
   // customers
-  customers                Customer[]
-  customerContacts         CustomerContact[]
+  customers        Customer[]
+  customerContacts CustomerContact[]
 
   // calendar
-  calendarEvents           CalendarEvent[]
-  calendarEventAttendees   CalendarEventAttendee[]
-  calendarReminders        CalendarReminder[]
+  calendarEvents         CalendarEvent[]
+  calendarEventAttendees CalendarEventAttendee[]
+  calendarReminders      CalendarReminder[]
 
   // chat
   conversations            Conversation[]
   conversationParticipants ConversationParticipant[]
   chatMessages             ChatMessage[]
+  messagingAccounts        MessagingAccount[]
+  channels                 Channel[]
+  channelContacts          ChannelContact[]
+  channelContactAddresses  ChannelContactAddress[]
+  channelWebhookEvents     ChannelWebhookEvent[]
 
   // ai
-  aiAccess                 TenantAiAccess?
-  aiConversations          AiConversation[]
-  aiMessages               AiMessage[]
-  aiUsageCounters          AiUsageCounter[]
-  aiUsageEvents            AiUsageEvent[]
-  aiKnowledgeSources       AiKnowledgeSource[]
-  aiKnowledgeDocuments     AiKnowledgeDocument[]
-  aiKnowledgeChunks        AiKnowledgeChunk[]
+  aiAccess             TenantAiAccess?
+  aiConversations      AiConversation[]
+  aiMessages           AiMessage[]
+  aiUsageCounters      AiUsageCounter[]
+  aiUsageEvents        AiUsageEvent[]
+  aiKnowledgeSources   AiKnowledgeSource[]
+  aiKnowledgeDocuments AiKnowledgeDocument[]
+  aiKnowledgeChunks    AiKnowledgeChunk[]
 
   @@map("tenants")
 }

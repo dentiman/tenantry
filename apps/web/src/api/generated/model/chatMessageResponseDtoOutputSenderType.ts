@@ -13,4 +13,5 @@ export type ChatMessageResponseDtoOutputSenderType =
 export const ChatMessageResponseDtoOutputSenderType = {
   user: 'user',
   system: 'system',
+  customer: 'customer',
 } as const;

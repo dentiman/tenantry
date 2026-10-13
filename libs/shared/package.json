@@ -15,6 +15,7 @@
     "@saas-skeleton/contracts": "workspace:*",
     "@saas-skeleton/database": "workspace:*",
     "ioredis": "^5.11.1",
+    "libphonenumber-js": "^1.13.10",
     "js-tiktoken": "^1.0.21",
     "mdast-util-from-markdown": "^2.1.0",
     "nestjs-cls": "^6.2.1",

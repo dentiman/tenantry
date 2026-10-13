@@ -1,5 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
-import type { Express } from 'express';
+import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -11,6 +11,10 @@ import { REDIS_CLIENT } from './redis/redis.constants';
 import type { RealtimeConfig } from './realtime/realtime.config';
 import { resolveAllowedOrigins } from './config/cors.config';
 import { resolveTrustProxyHops } from './config/env.schema';
+
+/** Префікс публічних канальних вебхуків із глобальним префіксом `api` */
+export const CHANNEL_WEBHOOK_PATH = '/api/public/channels';
+export const CHANNEL_WEBHOOK_BODY_LIMIT = '3mb';
 
 /**
  * Спільний сетап HTTP-шару — використовується в main.ts і e2e-тестах.
@@ -34,6 +38,13 @@ export function configureApp(app: INestApplication): void {
   app.enableCors({ origin: resolveAllowedOrigins(), credentials: true });
   // AUTH-2: refresh-cookie — без цього middleware `req.cookies` не існує
   app.use(cookieParser());
+
+  // CHAT-2a: підпис вебхука провайдера рахується над ТОЧНИМИ байтами, тож для публічних
+  // канальних маршрутів тіло лишається Buffer-ом (`req.body`), а не розібраним JSON.
+  // Монтується ДО глобальних парсерів Nest і лише на цей шлях: ліміт 3 МБ потрібен вебхукові
+  // (Meta батчить до 1000 подій), решта API лишається з типовим. `express.raw` ставить
+  // `req._body`, тому JSON-парсер Nest це тіло вдруге не чіпає
+  app.use(CHANNEL_WEBHOOK_PATH, express.raw({ type: () => true, limit: CHANNEL_WEBHOOK_BODY_LIMIT }));
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());

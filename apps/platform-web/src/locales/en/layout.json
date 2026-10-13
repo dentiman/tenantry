@@ -10,6 +10,7 @@
     "allTenants": "All tenants",
     "jobs": "Jobs",
     "queues": "Queues",
+    "channelEvents": "Channel webhooks",
     "userSettings": "User settings",
     "aiSettings": "Settings",
     "aiCosts": "Costs",

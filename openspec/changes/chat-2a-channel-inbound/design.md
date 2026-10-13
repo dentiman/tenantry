@@ -45,7 +45,7 @@ State of the code after CHAT-0.2b (0.2c — notifications — is planned, not bu
 ### D1. Adapter contract, registry and the fake provider
 
 `libs/shared/src/channels/` holds the `ChannelAdapter` interface (`provider`, `type`, `capabilities`,
-`verifyWebhook(req, creds)`, `handshake?`, `parseWebhook(raw: Buffer, ctx): NormalizedEvent[]`) and a
+`verifyWebhook(req, creds)`, `handshake`, `parseWebhook(raw: Buffer): { events, error? }` — a result object, so a poison body is reported instead of thrown and the core can store it as `FAILED`) and a
 `provider → adapter` registry. Optional capabilities (templates, media, health, connection, read
 receipts) are separate interfaces and are **not** written here. `NormalizedEvent` is a Zod
 discriminated union in `libs/contracts`; 2a implements `message` and `unsupported` (anything the core
@@ -65,10 +65,10 @@ Tables follow the MT-2 template (RLS `ENABLE`+`FORCE`, `tenant_id` with the DB d
 `messaging_accounts` (`UNIQUE (tenant_id, provider)`, `webhookKey` unique across tenants, encrypted
 credentials and app secret, `verifyToken`, `status`), `channels` (`UNIQUE (provider, external_id)` among
 non-missing), `channel_contacts`, `channel_contact_addresses` (`UNIQUE (channel_id, kind, value)`),
-`channel_webhook_events` (raw body, `UNIQUE (channel_id, payload_hash)`, `state`). `conversations` gains
+`channel_webhook_events` (per **account**, because one delivery may name several numbers; raw body as text, `UNIQUE (account_id, payload_hash)`, `state` ∈ `RECEIVED/PROCESSED/FAILED/UNROUTABLE`). `conversations` gains
 `channel_id`, `contact_id`, `customer_last_message_at`, `assignee_id`, and a partial
 `UNIQUE (contact_id) WHERE status <> 'RESOLVED'`. `chat_messages` gains `direction`, `channel_id`,
-`external_id`, `sender_contact_id`, `provider_meta`, a partial `UNIQUE (tenant_id, channel_id,
+`external_id`, `sender_contact_id`, `provider_sent_at` (the provider's time), `provider_meta`, a partial `UNIQUE (tenant_id, channel_id,
 external_id) WHERE external_id IS NOT NULL`, and `MessageStatus` gains `SENDING`.
 `channel_unroutable_events` has **no** `tenant_id` and no RLS; it is written only through a
 `SECURITY DEFINER` function and read by platform-api. `resolve_account_by_key(provider, key)` is
@@ -81,8 +81,10 @@ backfill that FORCE RLS makes awkward (AGENTS.md rule 17). Retrofit cost, not sp
 ### D3. The public webhook
 
 One controller, `/public/channels/:provider/:webhookKey` (GET handshake, POST delivery); `@Public()`,
-named limit `channel-webhook`. The Nest application is created with `rawBody: true` and the route has a
-body limit of 3 MB (Meta batches up to 1000 updates). The order for POST is: resolve the account by key
+named limit `channel-webhook`. A path-scoped `express.raw` parser mounted by `configureApp()` before Nest's own parsers keeps the
+body as a `Buffer` for `/api/public/channels/*` only, with a 3 MB limit (Meta batches up to 1000
+updates); every other route keeps the default limit. (Nest's `rawBody: true` was rejected: it is a
+`NestFactory` argument, and the e2e suites build the app without it.) The order for POST is: resolve the account by key
 (`SECURITY DEFINER`), enter the tenant context, decrypt the secret, **verify the signature over
 `req.rawBody`**, then one `withTenantTx` that inserts the raw event and `publish`es
 `channels.ingest-webhook`, then `200`. Outcomes:
@@ -92,7 +94,7 @@ body limit of 3 MB (Meta batches up to 1000 updates). The order for POST is: res
 | signature missing/invalid (known key) | 401 | nothing written |
 | unknown key / disabled account | 200 | `channel_unroutable_events` (no body, reason) |
 | signed, body unparsable | 200 | event stored as `FAILED` |
-| signed, channel unknown/disabled/foreign | 200 | event stored, ingest records unroutable per change |
+| signed, channel unknown/disabled/foreign | 200 | event stored; ingest marks it `UNROUTABLE` with the reason |
 | signed, valid | 200 after commit | event stored, job queued |
 | byte-identical repeat | 200 | unique `payload_hash` → no second row |
 | transaction fails | 5xx | provider retries |
@@ -120,18 +122,21 @@ conflict (a WABA has one callback override; see `docs/whatsapp-channel.md` §8.1
 
 ### D4. Ingest
 
-`channels.ingest-webhook` is a command with one consumer, in the worker, keyed per channel and sender
-(`singletonKey = channelId:address`) so one contact's messages are ordered while others run in
-parallel. It parses with the adapter, then for each `message` runs **one transaction**: find or create
+`channels.ingest-webhook` is a command with one consumer, in the worker, on a **standard** queue (no
+per-sender key: the order of record is the conversation `seq`, the provider guarantees no order, and a
+permanently failing job on a strict-FIFO key would block it; correctness rests on the unique indexes
+below, not on the queue). It parses with the adapter, then for each `message` runs **one transaction**: find or create
 the contact and address (D5) → find or open the conversation (D6) → `INSERT … ON CONFLICT DO NOTHING
 RETURNING` on `(tenant_id, channel_id, external_id)`; only a returned row proceeds to take the next
 `seq` (the same increment-and-return as `ChatService.insert`), update `last_message_at`,
 `customer_last_message_at` (provider time) and the preview, and register the after-commit signal. Dedup
 is the index, never a prior `SELECT`; `MessageInboxService.runOnce` guards only the database effects of
 a redelivered job. A poison payload sets the event `FAILED` and does not throw, so the queue is not
-wedged. The sequence is taken **after** the insert-or-skip so a duplicate does not burn a `seq`.
+wedged. The conversation row is locked (`SELECT … FOR UPDATE`) and the duplicate check runs **before** the `seq` increment, so two concurrent deliveries of one provider message serialise on the row and the loser sees the winner's committed message — a duplicate never burns a `seq`. The partial unique index stays as the final arbiter.
 *Alternative:* take the `seq` first and discard on conflict. Rejected: it leaves holes the gap
-detector (`chat.md` §4.3) would then chase forever.
+detector (`chat.md` §4.3) would then chase forever. Contact and conversation creation use
+`INSERT … ON CONFLICT DO NOTHING` (not catch-and-retry): inside a Postgres transaction a unique-violation
+aborts the whole transaction, so the loser must see "zero rows", not an error.
 
 ### D5. Contacts, addresses and phone matching
 

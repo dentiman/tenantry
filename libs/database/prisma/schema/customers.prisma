@@ -64,9 +64,12 @@ model Customer {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  owner          User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  contacts       CustomerContact[]
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner    User?             @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts CustomerContact[]
+
+  // chat — контакти каналів, привʼязані до цього клієнта (docs/whatsapp-channel.md §4.6)
+  channelContacts ChannelContact[]
 
   // calendar — зворотний звʼязок фічі (docs/modules.md): зустрічі й дзвінки з цим
   // контрагентом, блок «Upcoming» на картці + стрічка

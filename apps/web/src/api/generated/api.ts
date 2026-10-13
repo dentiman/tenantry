@@ -44,6 +44,9 @@ import type {
   CalendarSettingsDto,
   CalendarSettingsDtoOutput,
   ChangeOwnPasswordDto,
+  ChannelContactResponseDtoOutput,
+  ChannelInboxListParams,
+  ChannelListResponseDtoOutput,
   ChatFindAllParams,
   ChatMessageListResponseDtoOutput,
   ChatMessageResponseDtoOutput,
@@ -69,10 +72,13 @@ import type {
   GeneralSettingsDto,
   GeneralSettingsResponseDtoOutput,
   HealthCheck200,
+  InboxListResponseDtoOutput,
+  LinkContactCustomerDto,
   LoginDto,
   LogoutDto,
   MarkConversationReadDto,
   MeResponseDtoOutput,
+  MessagingAccountListResponseDtoOutput,
   NotificationListResponseDtoOutput,
   NotificationPreferenceListDtoOutput,
   NotificationResponseDtoOutput,
@@ -6285,6 +6291,689 @@ export const useChatMarkRead = <TError = unknown, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+
+export const channelInboxList = (
+  params?: ChannelInboxListParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<InboxListResponseDtoOutput>(
+    { url: `/api/chat/inbox`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getChannelInboxListQueryKey = (params?: ChannelInboxListParams) => {
+  return [`/api/chat/inbox`, ...(params ? [params] : [])] as const;
+};
+
+export const getChannelInboxListQueryOptions = <
+  TData = Awaited<ReturnType<typeof channelInboxList>>,
+  TError = unknown,
+>(
+  params?: ChannelInboxListParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelInboxList>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChannelInboxListQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof channelInboxList>>> = ({ signal }) =>
+    channelInboxList(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof channelInboxList>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChannelInboxListQueryResult = NonNullable<Awaited<ReturnType<typeof channelInboxList>>>;
+export type ChannelInboxListQueryError = unknown;
+
+export function useChannelInboxList<
+  TData = Awaited<ReturnType<typeof channelInboxList>>,
+  TError = unknown,
+>(
+  params: undefined | ChannelInboxListParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelInboxList>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelInboxList>>,
+          TError,
+          Awaited<ReturnType<typeof channelInboxList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelInboxList<
+  TData = Awaited<ReturnType<typeof channelInboxList>>,
+  TError = unknown,
+>(
+  params?: ChannelInboxListParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelInboxList>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelInboxList>>,
+          TError,
+          Awaited<ReturnType<typeof channelInboxList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelInboxList<
+  TData = Awaited<ReturnType<typeof channelInboxList>>,
+  TError = unknown,
+>(
+  params?: ChannelInboxListParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelInboxList>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChannelInboxList<
+  TData = Awaited<ReturnType<typeof channelInboxList>>,
+  TError = unknown,
+>(
+  params?: ChannelInboxListParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelInboxList>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChannelInboxListQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const channelChannels = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelListResponseDtoOutput>(
+    { url: `/api/chat/channels`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getChannelChannelsQueryKey = () => {
+  return [`/api/chat/channels`] as const;
+};
+
+export const getChannelChannelsQueryOptions = <
+  TData = Awaited<ReturnType<typeof channelChannels>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelChannels>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChannelChannelsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof channelChannels>>> = ({ signal }) =>
+    channelChannels(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof channelChannels>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChannelChannelsQueryResult = NonNullable<Awaited<ReturnType<typeof channelChannels>>>;
+export type ChannelChannelsQueryError = unknown;
+
+export function useChannelChannels<
+  TData = Awaited<ReturnType<typeof channelChannels>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelChannels>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelChannels>>,
+          TError,
+          Awaited<ReturnType<typeof channelChannels>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelChannels<
+  TData = Awaited<ReturnType<typeof channelChannels>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelChannels>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelChannels>>,
+          TError,
+          Awaited<ReturnType<typeof channelChannels>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelChannels<
+  TData = Awaited<ReturnType<typeof channelChannels>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelChannels>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChannelChannels<
+  TData = Awaited<ReturnType<typeof channelChannels>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelChannels>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChannelChannelsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const channelContact = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelContactResponseDtoOutput>(
+    { url: `/api/chat/contacts/${id}`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getChannelContactQueryKey = (id?: string) => {
+  return [`/api/chat/contacts/${id}`] as const;
+};
+
+export const getChannelContactQueryOptions = <
+  TData = Awaited<ReturnType<typeof channelContact>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelContact>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getChannelContactQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof channelContact>>> = ({ signal }) =>
+    channelContact(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof channelContact>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ChannelContactQueryResult = NonNullable<Awaited<ReturnType<typeof channelContact>>>;
+export type ChannelContactQueryError = unknown;
+
+export function useChannelContact<
+  TData = Awaited<ReturnType<typeof channelContact>>,
+  TError = unknown,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelContact>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelContact>>,
+          TError,
+          Awaited<ReturnType<typeof channelContact>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelContact<
+  TData = Awaited<ReturnType<typeof channelContact>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelContact>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof channelContact>>,
+          TError,
+          Awaited<ReturnType<typeof channelContact>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useChannelContact<
+  TData = Awaited<ReturnType<typeof channelContact>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelContact>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useChannelContact<
+  TData = Awaited<ReturnType<typeof channelContact>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof channelContact>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getChannelContactQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const channelLinkCustomer = (
+  id: string,
+  linkContactCustomerDto: LinkContactCustomerDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelContactResponseDtoOutput>(
+    {
+      url: `/api/chat/contacts/${id}/link-customer`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: linkContactCustomerDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChannelLinkCustomerMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof channelLinkCustomer>>,
+    TError,
+    { id: string; data: LinkContactCustomerDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof channelLinkCustomer>>,
+  TError,
+  { id: string; data: LinkContactCustomerDto },
+  TContext
+> => {
+  const mutationKey = ['channelLinkCustomer'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof channelLinkCustomer>>,
+    { id: string; data: LinkContactCustomerDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return channelLinkCustomer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChannelLinkCustomerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof channelLinkCustomer>>
+>;
+export type ChannelLinkCustomerMutationBody = LinkContactCustomerDto;
+export type ChannelLinkCustomerMutationError = unknown;
+
+export const useChannelLinkCustomer = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof channelLinkCustomer>>,
+      TError,
+      { id: string; data: LinkContactCustomerDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof channelLinkCustomer>>,
+  TError,
+  { id: string; data: LinkContactCustomerDto },
+  TContext
+> => {
+  const mutationOptions = getChannelLinkCustomerMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const channelCreateCustomer = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelContactResponseDtoOutput>(
+    { url: `/api/chat/contacts/${id}/create-customer`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getChannelCreateCustomerMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof channelCreateCustomer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof channelCreateCustomer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['channelCreateCustomer'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof channelCreateCustomer>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return channelCreateCustomer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChannelCreateCustomerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof channelCreateCustomer>>
+>;
+
+export type ChannelCreateCustomerMutationError = unknown;
+
+export const useChannelCreateCustomer = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof channelCreateCustomer>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof channelCreateCustomer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getChannelCreateCustomerMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const channelUnlinkCustomer = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<ChannelContactResponseDtoOutput>(
+    { url: `/api/chat/contacts/${id}/customer`, method: 'DELETE' },
+    options,
+  );
+};
+
+export const getChannelUnlinkCustomerMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof channelUnlinkCustomer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof channelUnlinkCustomer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['channelUnlinkCustomer'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof channelUnlinkCustomer>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return channelUnlinkCustomer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChannelUnlinkCustomerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof channelUnlinkCustomer>>
+>;
+
+export type ChannelUnlinkCustomerMutationError = unknown;
+
+export const useChannelUnlinkCustomer = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof channelUnlinkCustomer>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof channelUnlinkCustomer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getChannelUnlinkCustomerMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsList = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<MessagingAccountListResponseDtoOutput>(
+    { url: `/api/settings/messaging`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsListQueryKey = () => {
+  return [`/api/settings/messaging`] as const;
+};
+
+export const getMessagingSettingsListQueryOptions = <
+  TData = Awaited<ReturnType<typeof messagingSettingsList>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsList>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getMessagingSettingsListQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof messagingSettingsList>>> = ({ signal }) =>
+    messagingSettingsList(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof messagingSettingsList>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type MessagingSettingsListQueryResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsList>>
+>;
+export type MessagingSettingsListQueryError = unknown;
+
+export function useMessagingSettingsList<
+  TData = Awaited<ReturnType<typeof messagingSettingsList>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsList>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsList>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsList<
+  TData = Awaited<ReturnType<typeof messagingSettingsList>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsList>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsList>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsList<
+  TData = Awaited<ReturnType<typeof messagingSettingsList>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsList>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useMessagingSettingsList<
+  TData = Awaited<ReturnType<typeof messagingSettingsList>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsList>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getMessagingSettingsListQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 export const filesCreate = (
   createFileUploadDto: CreateFileUploadDto,

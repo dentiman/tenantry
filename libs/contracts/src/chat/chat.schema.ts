@@ -46,6 +46,8 @@ export const ChatMessageVisibilitySchema = z.enum(['PUBLIC', 'INTERNAL']);
  */
 export const ChatMessageStatusSchema = z.enum([
   'QUEUED',
+  // CHAT-2b: воркер почав відправку; у шкалі вже зараз, щоб не міняти контракт пізніше
+  'SENDING',
   'SENT',
   'DELIVERED',
   'READ',
@@ -62,7 +64,7 @@ export const ChatMessageStatusSchema = z.enum([
  * Аватар за цим `senderId` клієнт бере зі списку учасників розмови — у стрічці
  * його не дублюємо.
  */
-export const ChatSenderTypeSchema = z.enum(['user', 'system']);
+export const ChatSenderTypeSchema = z.enum(['user', 'system', 'customer']);
 
 /** Посилання на живого юзера — там, де він справді живий (список учасників) */
 export const ChatUserRefSchema = z.object({
@@ -141,6 +143,17 @@ export const ConversationResponseSchema = z.object({
   /** `null` — назви не задали; підпис збирається з учасників на клієнті */
   title: z.string().nullable(),
   participants: z.array(ConversationParticipantResponseSchema),
+  /**
+   * Клієнтська розмова (CUSTOMER): з ким і з якого номера каналу. `null` для внутрішніх. Повні дані
+   * контакта (адреси, привʼязаний клієнт) — окремим запитом `GET /chat/contacts/:id`.
+   */
+  contact: z
+    .object({
+      id: z.uuid(),
+      displayName: z.string().nullable(),
+      channelNumber: z.string().nullable(),
+    })
+    .nullable(),
   lastMessageAt: z.iso.datetime().nullable(),
   /**
    * Прев'ю ОСТАННЬОЇ ТЕКСТОВОЇ репліки. `null` — реплік ще не було: системний

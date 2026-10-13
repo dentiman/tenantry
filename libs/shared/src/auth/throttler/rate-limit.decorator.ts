@@ -35,6 +35,8 @@ export const RATE_LIMITS = {
    * на безкоштовному фейковому провайдері
    */
   aiAsk: 'ai-ask',
+  /** CHAT-2a: вебхук провайдера, на пару (ключ каналу, ip) — рахує і відмови підпису */
+  channelWebhook: 'channel-webhook',
 } as const;
 
 export type RateLimitName = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];

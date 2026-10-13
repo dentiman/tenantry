@@ -555,6 +555,8 @@ interface ChannelAdapter {
 | `chat.message-created.v1` | особисті room-и **всіх активних учасників**, автора включно (його інші вкладки) | `{ conversationId, message, occurredAt }` — `message` це **той самий** вихід мапера, що в REST, з `seq` і `clientMessageId` |
 | `chat.conversation-changed.v1` | `created` — усі члени нової розмови; `membership` — усі активні учасники; `read` — **лише власник курсора**, усі його вкладки | `{ conversationId, change: 'created' \| 'membership' \| 'read', occurredAt }` — сигнал «перечитай», без лічильників і прев'ю |
 
+| `chat.inbox-changed.v1` (CHAT-2a) | room **тенанта** (усі підключені сокети), з воркера через headless-емітер | `{ conversationId, occurredAt }` — сигнал «перечитай» для скриньки клієнтських розмов, **без** повідомлення й лічильників (тому правило AGENTS.md №15 його не стосується) |
+
 Рішення, на яких усе тримається (у коді — `apps/api/src/chat/chat-realtime.ts`):
 
 1. **Одержувачі читаються в тій самій транзакції, що пише зміну.** Рядок розмови вже
@@ -614,7 +616,7 @@ namespace — відхилений варіант (двічі auth-middleware, �
 
 | Подія | Що робить |
 | --- | --- |
-| `chat.subscribe.v1` | «розмова відкрита переді мною»: `assertParticipant` (та сама функція, що в REST) → `socket.join(room)`. Не-учасник, чужий тенант, залишений чат і неіснуючий id — **однакова** відповідь `NOT_FOUND`. На сокет не більше `CHAT_MAX_VIEWED_CONVERSATIONS = 5` розмов (`LIMIT_EXCEEDED`; перевірка після доступу, щоб не-учасник не відрізнив «існує» від «ні») |
+| `chat.subscribe.v1` | «розмова відкрита переді мною»: `assertAccess` (та сама функція, що в REST; до CHAT-2a звалась `assertParticipant`) → `socket.join(room)`. Не-учасник, чужий тенант, залишений чат і неіснуючий id — **однакова** відповідь `NOT_FOUND`. На сокет не більше `CHAT_MAX_VIEWED_CONVERSATIONS = 5` розмов (`LIMIT_EXCEEDED`; перевірка після доступу, щоб не-учасник не відрізнив «існує» від «ні») |
 | `chat.unsubscribe.v1` | `socket.leave(room)`, завжди `ok`: вийти з room-у прав не потребує і нічого не розкриває |
 | `chat.typing.v1` | лише від сокета, що вже в room-і (`FORBIDDEN` інакше); БД не чіпається — доступ доведено підпискою. Ліміт 5 за 10 с |
 | `chat.read.v1` | `{ conversationId, seq }` → той самий `ChatService.markRead(userId, …)`, що й `POST /conversations/:id/read`: ефект, forward-only і відлуння `read` у вкладки спільні за побудовою. `markRead` бере `userId`, а не JWT: у обробника сокета є identity, а не токен |

@@ -74,7 +74,7 @@ flowchart TB
   end
   calendar --> customers
   calendar --> users & settings & notifications & activities & realtime & auth
-  chat --> users & files & realtime & auth
+  chat --> users & files & realtime & auth & customers & messaging & settings
   ai --> settings & realtime & messaging & auth & app
   playground --> users & app
   customers --> users & settings & notifications & activities & numbering & auth

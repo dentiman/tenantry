@@ -20,6 +20,12 @@ const TENANT_TABLES = [
   'ai_knowledge_sources',
   'ai_knowledge_documents',
   'ai_knowledge_chunks',
+  // CHAT-2a: канали. channel_unroutable_events — свідомо поза списком (без tenant_id, без RLS)
+  'messaging_accounts',
+  'channels',
+  'channel_contacts',
+  'channel_contact_addresses',
+  'channel_webhook_events',
 ];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
@@ -189,6 +195,142 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
       await db.query(`DELETE FROM users WHERE id = $1`, [userId]);
       await db.query('COMMIT');
     }
+  });
+
+  /**
+   * CHAT-2a. Канали: усе, що тенант A записав, під B не існує; пошук за ключем вебхука
+   * працює ДО tenant-контексту, але повертає лише ідентифікатори, а вимкнений акаунт невидимий.
+   */
+  describe('канали (CHAT-2a)', () => {
+    const tenantA = '00000000-0000-4000-8000-000000000001';
+    const tenantB = '00000000-0000-4000-8000-0000000000ff';
+    const accountId = 'rls-chan-account';
+    const channelId = 'rls-chan-channel';
+    const contactId = 'rls-chan-contact';
+    const webhookKey = 'rls-chan-key-0123456789abcdef0123456789abcdef';
+
+    const inTenant = async (tenant: string, fn: () => Promise<void>): Promise<void> => {
+      await db.query('BEGIN');
+      try {
+        await db.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenant]);
+        await fn();
+        await db.query('COMMIT');
+      } catch (error) {
+        await db.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      }
+    };
+
+    const cleanup = async (): Promise<void> => {
+      await inTenant(tenantA, async () => {
+        await db.query(`DELETE FROM channel_webhook_events WHERE account_id = $1`, [accountId]);
+        await db.query(`DELETE FROM channel_contacts WHERE id = $1`, [contactId]);
+        await db.query(`DELETE FROM channels WHERE id = $1`, [channelId]);
+        await db.query(`DELETE FROM messaging_accounts WHERE id = $1`, [accountId]);
+      });
+    };
+
+    beforeAll(async () => {
+      await cleanup();
+      await inTenant(tenantA, async () => {
+        await db.query(
+          `INSERT INTO messaging_accounts (id, tenant_id, provider, name, verify_token, webhook_key, updated_at)
+           VALUES ($1, $2, 'fake', 'RLS smoke', 'vt', $3, now())`,
+          [accountId, tenantA, webhookKey],
+        );
+        await db.query(
+          `INSERT INTO channels (id, tenant_id, account_id, type, provider, external_id, updated_at)
+           VALUES ($1, $2, $3, 'WHATSAPP', 'fake', 'rls-chan-ext', now())`,
+          [channelId, tenantA, accountId],
+        );
+        await db.query(
+          `INSERT INTO channel_contacts (id, tenant_id, channel_id, updated_at)
+           VALUES ($1, $2, $3, now())`,
+          [contactId, tenantA, channelId],
+        );
+        await db.query(
+          `INSERT INTO channel_webhook_events (id, tenant_id, account_id, body, payload_hash)
+           VALUES ('rls-chan-event', $1, $2, '{}', 'hash')`,
+          [tenantA, accountId],
+        );
+      });
+    });
+
+    afterAll(cleanup);
+
+    it('рядки тенанта A невидимі під B в усіх канальних таблицях', async () => {
+      const count = async (table: string): Promise<string | undefined> => {
+        const r = await db.query<{ count: string }>(`SELECT count(*) FROM "${table}"`);
+        return r.rows[0]?.count;
+      };
+      await inTenant(tenantA, async () => {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events']) {
+          expect({ table, seen: Number(await count(table)) > 0 }).toEqual({ table, seen: true });
+        }
+      });
+      await inTenant(tenantB, async () => {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events']) {
+          expect({ table, count: await count(table) }).toEqual({ table, count: '0' });
+        }
+      });
+    });
+
+    it('запис у чужий тенант падає на політиці', async () => {
+      await expect(
+        inTenant(tenantB, async () => {
+          await db.query(
+            `INSERT INTO messaging_accounts (id, tenant_id, provider, name, verify_token, webhook_key, updated_at)
+             VALUES ('rls-chan-foreign', $1, 'fake', 'x', 'vt', 'rls-chan-foreign-key', now())`,
+            [tenantA],
+          );
+        }),
+      ).rejects.toThrow(/row-level security/);
+    });
+
+    it('resolve_account_by_key: ключ знайдено без tenant-контексту, повертаються лише ідентифікатори', async () => {
+      const found = await db.query<{ tenant_id: string; account_id: string }>(
+        `SELECT * FROM resolve_account_by_key('fake', $1)`,
+        [webhookKey],
+      );
+      expect(found.rows).toEqual([{ tenant_id: tenantA, account_id: accountId }]);
+
+      const wrongProvider = await db.query(`SELECT * FROM resolve_account_by_key('meta_cloud', $1)`, [webhookKey]);
+      expect(wrongProvider.rows).toEqual([]);
+      const unknown = await db.query(`SELECT * FROM resolve_account_by_key('fake', 'no-such-key')`);
+      expect(unknown.rows).toEqual([]);
+    });
+
+    it('політика пошуку за ключем не відкриває таблицю поза функцією', async () => {
+      const direct = await db.query<{ count: string }>(`SELECT count(*) FROM messaging_accounts`);
+      expect(direct.rows[0]?.count).toBe('0');
+      // і після виклику функції налаштування не лишається діючим
+      await db.query(`SELECT * FROM resolve_account_by_key('fake', $1)`, [webhookKey]);
+      const afterCall = await db.query<{ count: string }>(`SELECT count(*) FROM messaging_accounts`);
+      expect(afterCall.rows[0]?.count).toBe('0');
+    });
+
+    it('вимкнений акаунт невидимий для пошуку за ключем, як невідомий', async () => {
+      await inTenant(tenantA, async () => {
+        await db.query(`UPDATE messaging_accounts SET status = 'DISABLED' WHERE id = $1`, [accountId]);
+      });
+      const found = await db.query(`SELECT * FROM resolve_account_by_key('fake', $1)`, [webhookKey]);
+      expect(found.rows).toEqual([]);
+      await inTenant(tenantA, async () => {
+        await db.query(`UPDATE messaging_accounts SET status = 'CONNECTED' WHERE id = $1`, [accountId]);
+      });
+    });
+
+    it('channel_unroutable_events: saas_app лише пише через функцію і не читає напряму', async () => {
+      await expect(db.query(`SELECT count(*) FROM channel_unroutable_events`)).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(
+        db.query(`INSERT INTO channel_unroutable_events (id, provider, key_hash, reason) VALUES ('x','fake','h','r')`),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        db.query(`SELECT record_unroutable_event('fake', 'rls-chan-hash', 'unknown_key', NULL)`),
+      ).resolves.toBeDefined();
+    });
   });
 
   it('resolve_tenant(slug): EXECUTE дозволено, прямого перебору tenants немає', async () => {

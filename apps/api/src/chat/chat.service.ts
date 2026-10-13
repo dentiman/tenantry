@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { ChatMessage, Prisma } from '@saas-skeleton/database';
 import {
-  CHAT_PREVIEW_CHARS,
   type CreateConversation,
   type CursorQuery,
   type PostChatMessage,
 } from '@saas-skeleton/contracts';
+import { toPreview } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { ChatRealtime } from './chat-realtime';
 import { ConversationAccessService } from './conversation-access.service';
@@ -19,6 +24,9 @@ const CONVERSATION_SELECT = {
   status: true,
   isDefault: true,
   title: true,
+  // CHAT-2a: клієнтська розмова — з ким і з якого номера
+  contact: { select: { id: true, displayName: true } },
+  channel: { select: { displayPhoneNumber: true } },
   lastSeq: true,
   lastMessageAt: true,
   lastMessagePreview: true,
@@ -79,12 +87,6 @@ function decodeSeqCursor(cursor: string | undefined): number | null {
   return seq;
 }
 
-/** Прев'ю в списку — плоский однорядковий зріз тіла */
-function toPreview(body: string): string {
-  const flat = body.replace(/\s+/g, ' ').trim();
-  return flat.length > CHAT_PREVIEW_CHARS ? `${flat.slice(0, CHAT_PREVIEW_CHARS - 1)}…` : flat;
-}
-
 /**
  * Чат (docs/chat.md §7): INTERNAL-розмови, текст, REST + живі зміни через сокет (CHAT-0.2a).
  *
@@ -141,8 +143,8 @@ export class ChatService {
 
   /** Картка розмови. Доступ — через єдину функцію, як і всюди в модулі */
   async findOne(actor: JwtPayload, conversationId: string): Promise<ConversationWithParticipants> {
-    await this.access.assertParticipant(conversationId, actor.sub);
-    // Перечитуємо повною формою: assertParticipant віддає лише членство того,
+    await this.access.assertAccess(conversationId, actor.sub);
+    // Перечитуємо повною формою: assertAccess віддає лише членство того,
     // хто питає, а картці потрібні всі учасники
     return this.prisma.conversation.findUniqueOrThrow({
       where: { id: conversationId },
@@ -155,10 +157,7 @@ export class ChatService {
    * розмова без стрічки і без учасників не є проміжним станом, який хтось
    * може побачити.
    */
-  async create(
-    actor: JwtPayload,
-    dto: CreateConversation,
-  ): Promise<ConversationWithParticipants> {
+  async create(actor: JwtPayload, dto: CreateConversation): Promise<ConversationWithParticipants> {
     // Автор завжди учасник: дозволити створити розмову, у яку сам не потрапив,
     // означало б створити недосяжний для автора обʼєкт
     const memberIds = [...new Set([actor.sub, ...dto.participantUserIds])];
@@ -201,7 +200,9 @@ export class ChatService {
           kind: 'SYSTEM',
           senderType: 'user',
           senderUserId: actor.sub,
-          senderLabel: labelOf(members.find((m) => m.id === actor.sub) ?? { name: null, email: actor.email }),
+          senderLabel: labelOf(
+            members.find((m) => m.id === actor.sub) ?? { name: null, email: actor.email },
+          ),
           payload: { type: 'conversation.created' },
         },
         ...members.map((member, index) => ({
@@ -210,7 +211,9 @@ export class ChatService {
           kind: 'SYSTEM' as const,
           senderType: 'user',
           senderUserId: actor.sub,
-          senderLabel: labelOf(members.find((m) => m.id === actor.sub) ?? { name: null, email: actor.email }),
+          senderLabel: labelOf(
+            members.find((m) => m.id === actor.sub) ?? { name: null, email: actor.email },
+          ),
           payload: {
             type: 'member.added',
             member: { id: member.id, label: labelOf(member) },
@@ -252,7 +255,7 @@ export class ChatService {
     conversationId: string,
     query: CursorQuery,
   ): Promise<{ items: ChatMessage[]; nextCursor: string | null }> {
-    await this.access.assertParticipant(conversationId, actor.sub);
+    await this.access.assertAccess(conversationId, actor.sub);
     const before = decodeSeqCursor(query.cursor);
 
     const rows = await this.prisma.chatMessage.findMany({
@@ -285,7 +288,14 @@ export class ChatService {
     conversationId: string,
     dto: PostChatMessage,
   ): Promise<ChatMessage> {
-    const conversation = await this.access.assertParticipant(conversationId, actor.sub);
+    const conversation = await this.access.assertAccess(conversationId, actor.sub);
+    // CHAT-2a: клієнтську розмову видно всім, але відповідати в неї ще нічим — вихідний канал
+    // (черга, вікно 24 год, статуси) це CHAT-2b. Репліка тут стала б «внутрішньою» у розмові з клієнтом
+    if (conversation.kind === 'CUSTOMER' || !conversation.membership) {
+      throw new UnprocessableEntityException(
+        'Replies to customer conversations are not available yet',
+      );
+    }
 
     const replayed = await this.findByClientMessageId(conversationId, dto.clientMessageId);
     if (replayed) {
@@ -314,7 +324,7 @@ export class ChatService {
    * не помилкою (клієнт не має ловити гонку власних вкладок).
    */
   async markRead(userId: string, conversationId: string, seq: number): Promise<void> {
-    await this.access.assertParticipant(conversationId, userId);
+    await this.access.assertAccess(conversationId, userId);
 
     await this.transactions.withTenantTx(async (tx) => {
       // Перерахунок, а не `unreadCount = 0`: курсор можуть посунути НЕ на кінець
@@ -439,7 +449,8 @@ function isClientMessageIdConflict(error: unknown): boolean {
   if (error.code !== 'P2002') {
     return false;
   }
-  const target = 'meta' in error ? (error.meta as { target?: unknown } | undefined)?.target : undefined;
+  const target =
+    'meta' in error ? (error.meta as { target?: unknown } | undefined)?.target : undefined;
   const targets = Array.isArray(target) ? target : [target];
   return targets.some((entry) => String(entry).includes('client_message_id'));
 }

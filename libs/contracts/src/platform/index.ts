@@ -10,3 +10,5 @@ export * from './ai-costs.schema';
 export * from './ai-costs.types';
 export * from './tenant-user.schema';
 export * from './tenant-user.types';
+export * from './channel-events.schema';
+export * from './channel-events.types';

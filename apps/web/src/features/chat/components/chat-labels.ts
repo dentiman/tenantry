@@ -14,6 +14,14 @@ export function conversationLabel(
   if (conversation.title) {
     return conversation.title;
   }
+  // Клієнтська розмова: людина по той бік каналу, а не «Just you» (учасників у ній нема)
+  if (conversation.contact) {
+    return (
+      conversation.contact.displayName ??
+      conversation.contact.channelNumber ??
+      t('inbox.unknownContact')
+    );
+  }
   const others = conversation.participants.filter((p) => p.id !== viewerId);
   if (others.length === 0) {
     return t('conversation.justYou');

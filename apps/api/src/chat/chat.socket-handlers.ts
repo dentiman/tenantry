@@ -46,7 +46,7 @@ export class ChatSocketHandlers implements OnModuleInit {
     this.registry.register(events.chatSubscribe, async ({ socket, userId, tenantId, payload }) => {
       // Спершу доступ, потім ліміт: не-учасник завжди чує «не знайдено», а не «забагато» —
       // інакше відповідь розрізняла б існуючу розмову від неіснуючої
-      await this.access.assertParticipant(payload.conversationId, userId);
+      await this.access.assertAccess(payload.conversationId, userId);
 
       const room = conversationRoom(tenantId, payload.conversationId);
       if (!socket.rooms.has(room)) {

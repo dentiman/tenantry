@@ -1,0 +1,224 @@
+// ============================================================================
+// Канали зв'язку з клієнтами (CHAT-2a). Модель і причини —
+// docs/whatsapp-channel.md §4.1; зміна — openspec/changes/chat-2a-channel-inbound.
+//
+// Ядро провайдеронейтральне: `provider` (meta_cloud | fake | пізніше twilio)
+// стоїть ОКРЕМО від `type` (WHATSAPP). Один акаунт на тенанта на провайдера;
+// канал = один номер телефону цього акаунта.
+//
+// RLS — межа ТЕНАНТА для всіх таблиць, крім channel_unroutable_events: вона
+// без tenant_id і без RLS (запис — лише через SECURITY DEFINER-функцію,
+// читає platform-api). Часткові UNIQUE (дедуп за external_id, один номер у
+// одному тенанті, одна відкрита розмова на контакт) — у міграції: Prisma
+// частковий індекс не виражає, але `migrate diff` їх не чіпає.
+// ============================================================================
+
+enum ChannelType {
+  WHATSAPP
+}
+
+enum MessagingAccountStatus {
+  CONNECTED
+  NEEDS_REAUTH
+  DISABLED
+}
+
+enum WebhookEventState {
+  // Збережено, обробка в черзі
+  RECEIVED
+  PROCESSED
+  // Підписано, але розібрати не вдалося («отруйний» payload): відповідь провайдеру
+  // все одно 200, інакше він повторює його днями
+  FAILED
+  // Усі зміни в тілі адресовані каналу, якого нема / вимкнений / чужий
+  UNROUTABLE
+}
+
+// «Налаштування каналу» тенанта: облікові дані провайдера і публічний ключ вебхука.
+model MessagingAccount {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+
+  provider String
+  name     String
+
+  // Ідентифікатор акаунта у провайдера (WhatsApp: WABA id). Звичайна індексована
+  // колонка, а не поле зашифрованого JSON: застосунковий вебхук Meta маршрутизує
+  // саме за нею (CHAT-3a), а додати її пізніше під FORCE RLS — backfill
+  externalId String? @map("external_id")
+
+  // Зашифровано CryptoService (AES-256-GCM, `v1:`); у відповідях — лише «задано / ні»
+  credentials String?
+  appSecret   String? @map("app_secret")
+  // Токен рукостискання GET (hub.verify_token) — свій у кожного акаунта
+  verifyToken String  @map("verify_token")
+  // Випадковий, унікальний між тенантами: частина публічної адреси вебхука
+  webhookKey  String  @unique @map("webhook_key")
+
+  tokenKind      String?   @map("token_kind")
+  tokenExpiresAt DateTime? @map("token_expires_at")
+  tokenCheckedAt DateTime? @map("token_checked_at")
+  scopes         String[]  @default([])
+
+  status              MessagingAccountStatus @default(CONNECTED)
+  webhookSubscribedAt DateTime?              @map("webhook_subscribed_at")
+  lastSyncAt          DateTime?              @map("last_sync_at")
+  lastError           String?                @map("last_error")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channels      Channel[]
+  webhookEvents ChannelWebhookEvent[]
+
+  // Один акаунт на провайдера на тенанта; обмеження знімається, коли знадобиться другий WABA
+  @@unique([tenantId, provider])
+  @@unique([tenantId, id])
+  @@index([provider, externalId])
+  @@map("messaging_accounts")
+}
+
+// Канал = номер телефону акаунта, синхронізований із провайдера (CHAT-3a) або
+// створений fake-провайдером. Нові номери вимкнені, зниклі не видаляються.
+model Channel {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  accountId String @map("account_id")
+
+  type       ChannelType
+  provider   String
+  // WhatsApp: phone_number_id. Унікальний (provider, external_id) серед
+  // не-providerMissing — часткове UNIQUE в міграції: номер не може бути у двох тенантів
+  externalId String      @map("external_id")
+
+  displayPhoneNumber String? @map("display_phone_number")
+  verifiedName       String? @map("verified_name")
+  qualityRating      String? @map("quality_rating")
+  accountMode        String? @map("account_mode")
+  limits             Json    @default("{}")
+
+  isEnabled         Boolean   @default(false) @map("is_enabled")
+  isDefault         Boolean   @default(false) @map("is_default")
+  // Зник у провайдера: канал із розмовами НЕ видаляємо (каскад знищив би розмови)
+  providerMissingAt DateTime? @map("provider_missing_at")
+  syncedAt          DateTime? @map("synced_at")
+
+  // reopen-вікно (години, за замовчуванням 24), підпис тощо
+  settings Json @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account       MessagingAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Cascade)
+  contacts      ChannelContact[]
+  conversations Conversation[]
+  messages      ChatMessage[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, accountId])
+  @@map("channels")
+}
+
+// Людина по той бік каналу. Існує й без клієнта: привʼязка — окрема дія агента
+// (або автоматична, коли номер належить рівно одному клієнтові).
+model ChannelContact {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  channelId String @map("channel_id")
+
+  // Профільне імʼя з провайдера
+  displayName String? @map("display_name")
+
+  // FK НЕ композитний — та сама причина, що в Customer.owner: Prisma не вміє
+  // SET NULL з переліком колонок і занулила б заодно tenant_id. Захист — RLS
+  customerId String? @map("customer_id")
+
+  // Згода (джерело й час); правила — docs/whatsapp-channel.md §7 O-W9
+  optInAt       DateTime? @map("opt_in_at")
+  optInSource   String?   @map("opt_in_source")
+  lastInboundAt DateTime? @map("last_inbound_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel       Channel                 @relation(fields: [tenantId, channelId], references: [tenantId, id], onDelete: Cascade)
+  customer      Customer?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  addresses     ChannelContactAddress[]
+  conversations Conversation[]
+  messages      ChatMessage[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, customerId])
+  @@map("channel_contacts")
+}
+
+// Адреса контакта: телефон або (пізніше) BSUID. При ротації адреса ДОДАЄТЬСЯ, а не
+// замінюється; автоматичного злиття контактів немає.
+model ChannelContactAddress {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  contactId String @map("contact_id")
+  // Дублює contact.channel_id заради UNIQUE (channel_id, kind, value)
+  channelId String @map("channel_id")
+
+  // phone | bsuid | parent_bsuid. Рядок, а не enum — за docs/chat.md §4.2
+  kind       String
+  // Як прийшла (wa_id)
+  value      String
+  // E.164 для phone (libphonenumber-js); пошук іде за обома
+  normalized String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact ChannelContact @relation(fields: [tenantId, contactId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([channelId, kind, value])
+  @@index([tenantId, channelId, kind, normalized])
+  @@index([contactId])
+  @@map("channel_contact_addresses")
+}
+
+// Сире тіло вебхука, збережене ДО відповіді 200: обробка — окремий job, і
+// «отруйне» тіло не мусить губитися. Під RLS (тенант уже відомий з ключа).
+// Retention — cron (CHAT-2c, пропозиція 30 днів).
+model ChannelWebhookEvent {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  accountId String @map("account_id")
+
+  receivedAt  DateTime          @default(now()) @map("received_at")
+  processedAt DateTime?         @map("processed_at")
+  // Тіло як рядок: підпис рахується над байтами, JSON.parse може впасти, а текст лишається
+  body        String            @db.Text
+  // Дешевий захист від дослівного повтору: UNIQUE (account_id, payload_hash)
+  payloadHash String            @map("payload_hash")
+  state       WebhookEventState @default(RECEIVED)
+  error       String?
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account MessagingAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([accountId, payloadHash])
+  @@index([tenantId, accountId, receivedAt(sort: Desc)])
+  @@map("channel_webhook_events")
+}
+
+// ВИНЯТОК: без tenant_id і без RLS. Сюди потрапляє те, що не вдалося привʼязати до
+// тенанта (невідомий ключ вебхука, вимкнений акаунт). Пише лише SECURITY DEFINER-
+// функція `record_unroutable_event`, читає platform-api. Тіло НЕ зберігається.
+model ChannelUnroutableEvent {
+  id         String   @id @default(uuid())
+  provider   String
+  // Хеш ключа, а не сам ключ: перелік ключів у журналі був би перелічуванням акаунтів
+  keyHash    String   @map("key_hash")
+  reason     String
+  ip         String?
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@index([receivedAt(sort: Desc)])
+  @@map("channel_unroutable_events")
+}

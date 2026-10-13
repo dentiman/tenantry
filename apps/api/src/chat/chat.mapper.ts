@@ -21,7 +21,10 @@ export function toChatMessageResponse(message: ChatMessage): ChatMessageResponse
     status: message.status,
     // Плоска трійка, а не вкладений юзер: senderLabel — снапшот на момент
     // написання, саме він тримає транскрипт читабельним після видалення людини
-    senderType: message.senderType === 'system' ? 'system' : 'user',
+    senderType:
+      message.senderType === 'system' || message.senderType === 'customer'
+        ? message.senderType
+        : 'user',
     senderId: message.senderUserId,
     senderLabel: message.senderLabel,
     body: message.body,
@@ -73,6 +76,13 @@ export async function toConversationResponse(
     isDefault: conversation.isDefault,
     title: conversation.title,
     participants,
+    contact: conversation.contact
+      ? {
+          id: conversation.contact.id,
+          displayName: conversation.contact.displayName,
+          channelNumber: conversation.channel?.displayPhoneNumber ?? null,
+        }
+      : null,
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     lastMessagePreview: conversation.lastMessagePreview,
     unreadCount: viewer?.unreadCount ?? 0,

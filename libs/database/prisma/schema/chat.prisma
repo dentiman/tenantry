@@ -32,6 +32,16 @@ model Conversation {
 
   title String?
 
+  // --- клієнтська розмова (CHAT-2a; NULL для INTERNAL) ---
+  // FK не композитні (як Customer.owner): optional-зв'язок із tenant_id Prisma не виражає.
+  // NoAction (перевірка в кінці оператора), а не SetNull/Cascade: канал чи контакт з розмовами не видалити окремо, але каскад від tenant (скидання демо-тенанта) проходить — Restrict ламав би його
+  channelId             String?   @map("channel_id")
+  contactId             String?   @map("contact_id")
+  // Час провайдера від останнього вхідного від клієнта: з нього рахується вікно 24 год
+  customerLastMessageAt DateTime? @map("customer_last_message_at")
+  assigneeId            String?   @map("assignee_id")
+  resolvedAt            DateTime? @map("resolved_at")
+
   // --- денормалізація під список розмов (docs/chat.md §4.3) ---
   // Лічильник порядку: інкремент цього рядка І Є видачею seq повідомленню.
   // Він же серіалізує вставки в МЕЖАХ розмови (рядок залочено) і лишає різні
@@ -47,6 +57,9 @@ model Conversation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel      Channel?                  @relation(fields: [channelId], references: [id], onDelete: NoAction)
+  contact      ChannelContact?           @relation(fields: [contactId], references: [id], onDelete: NoAction)
+  assignee     User?                     @relation("ConversationAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   participants ConversationParticipant[]
   messages     ChatMessage[]
 
@@ -54,6 +67,10 @@ model Conversation {
   @@unique([tenantId, id])
   // Список розмов — найгарячіший запит модуля: «мої», завжди свіжі згори
   @@index([tenantId, lastMessageAt(sort: Desc)])
+  // Скринька клієнтських розмов: фільтри «нерозібрані / мої»
+  @@index([tenantId, kind, assigneeId, lastMessageAt(sort: Desc)])
+  // Часткове UNIQUE (contact_id) WHERE status <> 'RESOLVED' — у міграції
+  @@index([contactId])
   @@map("conversations")
 }
 
@@ -141,16 +158,31 @@ model ChatMessage {
   // від канального адаптера, а без неї футер бульбашки довелося б писати вдруге
   status MessageStatus @default(SENT)
 
+  // --- канал (CHAT-2a) ---
+  // INBOUND від клієнта / OUTBOUND агента; для внутрішніх реплік — NULL
+  direction       String?   @map("direction")
+  channelId       String?   @map("channel_id")
+  // Ідентифікатор повідомлення в провайдера. Часткове UNIQUE (tenant_id, channel_id,
+  // external_id) WHERE external_id IS NOT NULL — у міграції: арбітр дедупа
+  externalId      String?   @map("external_id")
+  senderContactId String?   @map("sender_contact_id")
+  // Час повідомлення в провайдера (коли клієнт НАПИСАВ), на відміну від createdAt
+  providerSentAt  DateTime? @map("provider_sent_at")
+  // Усе провайдерське (pricing, referral…): ядро його не читає
+  providerMeta    Json      @default("{}") @map("provider_meta")
+
   // М'яке видалення: «видалено для всіх» лишає рядок, щоб нумерація seq не мала дірок
   deletedAt DateTime? @map("deleted_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  conversation Conversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation  Conversation    @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  channel       Channel?        @relation(fields: [channelId], references: [id], onDelete: NoAction)
+  senderContact ChannelContact? @relation(fields: [senderContactId], references: [id], onDelete: SetNull)
   // FK НЕ композитний — та сама грабля, що в CalendarEvent.owner: Prisma не вміє
   // SET NULL з переліком колонок і занулила б заодно tenant_id. Саме SetNull:
   // транскрипт переживає видалення людини, підпис лишається в sender_label
-  sender       User?        @relation("ChatMessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  sender        User?           @relation("ChatMessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
 
   // Арбітр порядку — він же індекс під читання стрічки. Окремого DESC-індексу
   // немає свідомо: Postgres сканує btree у зворотному напрямку так само дешево,
@@ -171,6 +203,8 @@ enum MessageVisibility {
 
 enum MessageStatus {
   QUEUED
+  // CHAT-2b: воркер почав відправку. У шкалі вже зараз — додати значення пізніше дорожче
+  SENDING
   SENT
   DELIVERED
   READ

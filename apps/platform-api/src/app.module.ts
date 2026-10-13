@@ -5,6 +5,7 @@ import { SystemPrismaModule } from '@saas-skeleton/database';
 import { HealthController } from './health.controller';
 import { PlatformAuthModule } from './auth/platform-auth.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { ChatOperationsModule } from './chat/chat-operations.module';
 import { ChatProvisioningModule } from './chat/chat-provisioning.module';
 import { JobsMonitorModule } from './jobs/jobs.module';
 import { AiCostsModule } from './ai-costs/ai-costs.module';
@@ -40,6 +41,8 @@ import { validatePlatformEnv } from './config/env.schema';
     TenantsModule,
     // Дефолтний канал чату при появі тенанта (docs/modules.md §7.3)
     ChatProvisioningModule,
+    // CHAT-2a: вебхуки каналів без тенанта (невідомий ключ тощо)
+    ChatOperationsModule,
     JobsMonitorModule,
     AiSettingsModule,
     // AI-5b: журнал витрат і тарифи

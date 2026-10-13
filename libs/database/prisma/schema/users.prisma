@@ -30,37 +30,38 @@ model User {
   // виглядала б як редагування профілю. З доменного коду не чіпати.
   lastSeenAt   DateTime? @map("last_seen_at")
 
-  tenant                  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   authSessions            AuthSession[]
   verificationTokens      VerificationToken[]
   // Персональний інбокс (docs/notifications.md): іде разом із юзером — це його
   // особисті дані, а не журнал (журнал — activities, він переживає видалення)
-  notifications           Notification[]            @relation("NotificationRecipient")
-  notificationState       NotificationState?        @relation("NotificationState")
-  notificationPreferences NotificationPreference[]  @relation("NotificationPreference")
+  notifications           Notification[]           @relation("NotificationRecipient")
+  notificationState       NotificationState?       @relation("NotificationState")
+  notificationPreferences NotificationPreference[] @relation("NotificationPreference")
   // FK НЕ композитний свідомо: onDelete SetNull з композитним FK занулив би і tenant_id
   // (Prisma не вміє SET NULL з переліком колонок). Крос-tenant захист — RLS на обох таблицях.
-  avatarFile              File?                     @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
-  uploadedFiles           File[]                    @relation("UploadedFiles")
-  scheduledNotifications  ScheduledNotification[]   @relation("ScheduledNotificationRecipient")
+  avatarFile              File?                    @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  uploadedFiles           File[]                   @relation("UploadedFiles")
+  scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationRecipient")
 
   // Зворотні звʼязки модулів-фіч (docs/modules.md) — згруповані, щоб видалення фічі з
   // форку прибирало одну групу; `prisma validate` покаже, чого бракує
   // customers
-  ownedCustomers          Customer[]                @relation("CustomerOwner")
+  ownedCustomers Customer[] @relation("CustomerOwner")
 
   // calendar
-  organizedEvents         CalendarEvent[]           @relation("CalendarEventOwner")
-  eventAttendances        CalendarEventAttendee[]
-  calendarReminders       CalendarReminder[]
+  organizedEvents   CalendarEvent[]         @relation("CalendarEventOwner")
+  eventAttendances  CalendarEventAttendee[]
+  calendarReminders CalendarReminder[]
 
   // chat
   conversationMemberships ConversationParticipant[]
   chatMessages            ChatMessage[]             @relation("ChatMessageSender")
+  assignedConversations   Conversation[]            @relation("ConversationAssignee")
 
   // ai
-  aiConversations         AiConversation[]          @relation("AiConversationOwner")
-  aiUsageCounters         AiUsageCounter[]          @relation("AiUsageCounterOwner")
+  aiConversations AiConversation[] @relation("AiConversationOwner")
+  aiUsageCounters AiUsageCounter[] @relation("AiUsageCounterOwner")
 
   // Email унікальний У МЕЖАХ tenant-а (та сама людина у двох тенантах = два акаунти)
   @@unique([tenantId, email])

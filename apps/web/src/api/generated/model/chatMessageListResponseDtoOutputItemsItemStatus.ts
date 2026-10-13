@@ -12,6 +12,7 @@ export type ChatMessageListResponseDtoOutputItemsItemStatus =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ChatMessageListResponseDtoOutputItemsItemStatus = {
   QUEUED: 'QUEUED',
+  SENDING: 'SENDING',
   SENT: 'SENT',
   DELIVERED: 'DELIVERED',
   READ: 'READ',

@@ -60,6 +60,19 @@ export const ChatTypingChangedSchema = z.object({
 
 export type ChatTypingChanged = z.infer<typeof ChatTypingChangedSchema>;
 
+/**
+ * Сигнал скриньці клієнтських розмов: «в цій розмові щось змінилося, перечитай»
+ * (CHAT-2a, design.md D8). Летить у room тенанта. Не несе ні повідомлення, ні
+ * лічильників — тому правило AGENTS.md №15 (payload лише з монотонним лічильником
+ * і REST-resync) його не стосується: втрата сигналу нічого не губить, стан у Postgres.
+ */
+export const ChatInboxChangedSchema = z.object({
+  conversationId: z.uuid(),
+  occurredAt: z.iso.datetime(),
+});
+
+export type ChatInboxChanged = z.infer<typeof ChatInboxChangedSchema>;
+
 /** Події сокета чату (docs/chat.md §4.8); збирає root `socket-events.ts` */
 export const CHAT_SOCKET_EVENTS = {
   chatMessageCreated: defineSocketEvent('chat.message-created.v1', ChatMessageCreatedSchema),
@@ -68,4 +81,5 @@ export const CHAT_SOCKET_EVENTS = {
     ChatConversationChangedSchema,
   ),
   chatTypingChanged: defineSocketEvent('chat.typing-changed.v1', ChatTypingChangedSchema),
+  chatInboxChanged: defineSocketEvent('chat.inbox-changed.v1', ChatInboxChangedSchema),
 };

@@ -4,6 +4,10 @@
     "empty": {
       "title": "No conversations yet",
       "description": "Conversations you take part in will appear here."
+    },
+    "tabs": {
+      "internal": "Team",
+      "customers": "Customers"
     }
   },
   "page": {
@@ -68,5 +72,106 @@
     "cancel": "Cancel",
     "retry": "Retry",
     "discard": "Discard"
+  },
+  "inbox": {
+    "filter": {
+      "label": "Inbox filter",
+      "all": "All",
+      "unassigned": "Unassigned",
+      "mine": "Mine"
+    },
+    "empty": {
+      "all": {
+        "title": "No customer messages yet",
+        "description": "Messages from customers on your channels will appear here."
+      },
+      "unassigned": {
+        "title": "Nothing unassigned",
+        "description": "Every customer conversation has someone looking after it."
+      },
+      "mine": {
+        "title": "Nothing assigned to you",
+        "description": "Conversations assigned to you will appear here."
+      }
+    },
+    "loadError": "Could not load customer conversations",
+    "unknownContact": "Unknown contact",
+    "notLinked": "No customer linked",
+    "awaitingReply": "Waiting for a reply",
+    "simulate": {
+      "open": "Simulate an incoming message",
+      "hint": "Development only: sends a signed message through the public webhook.",
+      "send": "Send",
+      "sent": "Accepted",
+      "failed": "Failed"
+    }
+  },
+  "contact": {
+    "title": "Contact",
+    "channel": "Channel",
+    "addresses": "Phone numbers",
+    "customer": "Customer",
+    "notLinked": "Not linked to a customer",
+    "linkedHint": "Linked customer",
+    "link": "Link to a customer",
+    "create": "Create customer from contact",
+    "unlink": "Unlink",
+    "openCustomer": "Open customer",
+    "picker": {
+      "title": "Link to a customer",
+      "search": "Search customers",
+      "empty": "No customers found",
+      "hint": "Pick the customer this person is."
+    },
+    "errors": {
+      "alreadyLinked": "This contact is already linked to a customer.",
+      "failed": "Could not update the contact."
+    },
+    "readOnly": "Replies to customers arrive with the next channel update."
+  },
+  "settings": {
+    "nav": "Messaging",
+    "title": "Messaging",
+    "subtitle": "Provider account and channels that customer conversations arrive on.",
+    "empty": {
+      "title": "No messaging account yet",
+      "description": "A provider account is connected when the WhatsApp channel is set up. In development, create a fake channel from the Customers tab of Chat."
+    },
+    "status": {
+      "CONNECTED": "Connected",
+      "NEEDS_REAUTH": "Needs re-authorization",
+      "DISABLED": "Disabled"
+    },
+    "channels": {
+      "title": "Channels",
+      "none": "No channels yet",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "default": "Default"
+    },
+    "webhook": {
+      "title": "Webhook",
+      "address": "Webhook address",
+      "addressMissing": "No public address is configured for this deployment. Set CHANNEL_WEBHOOK_BASE_URL on the API.",
+      "verifyToken": "Verify token",
+      "signingSecret": "Signing secret",
+      "secretSet": "Set",
+      "secretNotSet": "Not set",
+      "lastDelivery": "Last delivery",
+      "neverDelivered": "Nothing has arrived yet",
+      "last24h": "Last 24 hours",
+      "counts": {
+        "received": "queued",
+        "processed": "processed",
+        "failed": "failed",
+        "unroutable": "unroutable"
+      },
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "credentials": {
+      "set": "Credentials set",
+      "notSet": "Credentials not set"
+    }
   }
 }

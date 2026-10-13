@@ -35,7 +35,12 @@ import {
   settingsCalendarRoute,
   customerEventsRoute,
 } from './features/calendar/calendar.routes';
-import { chatRoute, chatIndexRoute, chatConversationRoute } from './features/chat/chat.routes';
+import {
+  chatRoute,
+  chatIndexRoute,
+  chatConversationRoute,
+  settingsMessagingRoute,
+} from './features/chat/chat.routes';
 import {
   customersRoute,
   customerDetailRoute,
@@ -97,6 +102,7 @@ const routeTree = rootRoute.addChildren([
     settingsRoute.addChildren([
       settingsGeneralRoute,
       settingsCalendarRoute,
+      settingsMessagingRoute,
       settingsNumberingRoute,
       settingsAiRoute,
       settingsActivityRoute,

@@ -57,6 +57,7 @@
     "logs:clean": "rm -rf apps/api/logs/*.log*",
     "prepare": "husky",
     "whatsapp:probe": "tsx scripts/whatsapp-probe.ts",
+    "chat:simulate": "tsx scripts/chat-simulate.ts",
     "ai:docs:preview": "tsx scripts/ai-docs-preview.ts",
     "ai:docs:ingest": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-ingest.ts",
     "ai:knowledge:index": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-knowledge-index.ts",

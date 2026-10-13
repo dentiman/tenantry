@@ -3,13 +3,14 @@ import { QueryClient, type InfiniteData } from '@tanstack/react-query';
 import {
   REALTIME_EVENTS,
   type ChatConversationChanged,
+  type ChatInboxChanged,
   type ChatMessageCreated,
   type ChatTypingChanged,
 } from '@saas-skeleton/contracts';
 import { getChatFindOneQueryKey } from '../../../api/generated/api';
 import type { ChatMessageListResponseDtoOutput } from '../../../api/generated/model/chatMessageListResponseDtoOutput';
 import type { AppSocket } from '../../realtime/socket';
-import { conversationListKey, transcriptKey } from '../chat-keys';
+import { conversationListKey, inboxKey, transcriptKey } from '../chat-keys';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 import { useChatTypingStore } from '../stores/chat-typing.store';
@@ -160,6 +161,36 @@ describe('initChatSync', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getChatFindOneQueryKey(OTHER) });
   });
 
+  it('inbox signal: re-reads every inbox filter and the open conversation, and applies nothing itself', () => {
+    queryClient.setQueryData(inboxKey('all'), { pages: [], pageParams: [] });
+    queryClient.setQueryData(inboxKey('mine'), { pages: [], pageParams: [] });
+    seedTranscript(queryClient, 5);
+    const { socket, fire } = createFakeSocket();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+    initChatSync(queryClient, socket);
+
+    const signal: ChatInboxChanged = {
+      conversationId: CONVERSATION,
+      occurredAt: '2026-01-01T00:00:00.000Z',
+    };
+    fire(REALTIME_EVENTS.chatInboxChanged, signal);
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: transcriptKey(CONVERSATION) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getChatFindOneQueryKey(CONVERSATION) });
+    // перший виклик — предикат по префіксу скриньки: він зачіпає ВСІ фільтри, а не один
+    const filters = invalidate.mock.calls[0]?.[0];
+    const matches = (queryKey: readonly unknown[]): boolean =>
+      queryClient
+        .getQueryCache()
+        .findAll({ predicate: filters?.predicate })
+        .some((query) => JSON.stringify(query.queryKey) === JSON.stringify(queryKey));
+    expect(matches(inboxKey('all'))).toBe(true);
+    expect(matches(inboxKey('mine'))).toBe(true);
+    expect(matches(conversationListKey())).toBe(false);
+    // транскрипт не змінено напряму: сигнал не несе повідомлення
+    expect(newestSeq(queryClient)).toBe(5);
+  });
+
   it('re-reads only the list when the reader moved the cursor in another tab', () => {
     const { socket, fire } = createFakeSocket();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
@@ -251,4 +282,3 @@ describe('initChatSync', () => {
     });
   });
 });
-

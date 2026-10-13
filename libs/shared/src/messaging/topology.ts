@@ -5,6 +5,7 @@ import {
   reconcileAiUsageCostsCommand,
   syncAiModelPricesCommand,
 } from './definitions/ai.messages';
+import { channelsIngestWebhookCommand } from './definitions/chat.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
@@ -93,6 +94,14 @@ export interface TopologyEntry {
  * (MessageWorkerRegistrar), а не тихо недоставлені повідомлення.
  */
 export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
+  {
+    // CHAT-2a: розбір збереженого вебхука каналу. Свідомо `standard`, а не `key_strict_fifo`:
+    // порядок записує `seq` розмови, провайдер порядку не гарантує, а постійно впала робота
+    // блокувала б ключ (docs/whatsapp-channel.md §4.5). Коректність тримають унікальні індекси
+    // (дедуп за external_id, одна відкрита розмова на контакт), а не черга.
+    definition: channelsIngestWebhookCommand,
+    consumers: [{ id: 'channels-ingest', retryLimit: 3, retryDelaySeconds: 2, retryBackoff: true, pollingIntervalSeconds: 0.5 }],
+  },
   {
     definition: userRegisteredEvent,
     consumers: [{ id: 'welcome-email' }],
