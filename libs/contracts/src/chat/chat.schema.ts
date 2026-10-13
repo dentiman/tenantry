@@ -88,7 +88,13 @@ export const ConversationParticipantResponseSchema = ChatUserRefSchema.extend({
  * Дискримінований union, а не `Record<string, unknown>`: саме він не дає
  * розійтися тому, що пише сервер, і тому, що чекає рендерер.
  */
-export const CHAT_SYSTEM_ENTRY_TYPES = ['conversation.created', 'member.added'] as const;
+export const CHAT_SYSTEM_ENTRY_TYPES = [
+  'conversation.created',
+  'member.added',
+  // CHAT-2b: робочий процес клієнтської розмови
+  'conversation.assigned',
+  'conversation.status_changed',
+] as const;
 
 export const ChatSystemEntryTypeSchema = z.enum(CHAT_SYSTEM_ENTRY_TYPES);
 
@@ -102,7 +108,40 @@ export const ChatSystemPayloadSchema = z.discriminatedUnion('type', [
   /** Актор — відправник самого запису (`senderId`/`senderLabel`), тут не дублюється */
   z.object({ type: z.literal('conversation.created') }),
   z.object({ type: z.literal('member.added'), member: ChatMemberRefSchema }),
+  /** Призначення; `null` — знято. Хто призначив — `senderLabel` самого запису */
+  z.object({ type: z.literal('conversation.assigned'), assignee: ChatMemberRefSchema.nullable() }),
+  /** Зміна статусу; для зміни від вхідного повідомлення відправник запису — клієнт (`customer`) */
+  z.object({
+    type: z.literal('conversation.status_changed'),
+    from: ConversationStatusSchema,
+    to: ConversationStatusSchema,
+  }),
 ]);
+
+/**
+ * Закрита множина класів відмови доставки (CHAT-2b, design.md D4): адаптер перекладає код
+ * провайдера в один із них, ядро діє за класом, а не за рядком помилки.
+ */
+export const ChannelErrorClassSchema = z.enum([
+  'WINDOW_CLOSED',
+  'PERMANENT',
+  'POLICY',
+  'RATE_LIMITED',
+  'AUTH',
+  'TRANSIENT',
+  'HUMAN',
+]);
+
+/** Чому вихідне не доставлено. `code` — провайдера як текст; `unconfirmed` — не змогли підтвердити */
+export const ChatMessageFailureSchema = z.object({
+  class: ChannelErrorClassSchema,
+  code: z.string(),
+  title: z.string(),
+  details: z.string().optional(),
+  unconfirmed: z.boolean().optional(),
+});
+
+export const ChatMessageDirectionSchema = z.enum(['INBOUND', 'OUTBOUND']);
 
 export const ChatMessageResponseSchema = z.object({
   id: z.uuid(),
@@ -125,6 +164,13 @@ export const ChatMessageResponseSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
   /** Повертається назад, щоб клієнт зшив оптимістичний рядок із серверним */
   clientMessageId: z.uuid().nullable(),
+  /** `null` для внутрішніх реплік і системних записів */
+  direction: ChatMessageDirectionSchema.nullable(),
+  /** Доставка вихідного (CHAT-2b): час кроку за квитанцією та причина відмови */
+  sentAt: z.iso.datetime().nullable(),
+  deliveredAt: z.iso.datetime().nullable(),
+  readAt: z.iso.datetime().nullable(),
+  failure: ChatMessageFailureSchema.nullable(),
   createdAt: z.iso.datetime(),
   deletedAt: z.iso.datetime().nullable(),
 });
@@ -143,6 +189,16 @@ export const ConversationResponseSchema = z.object({
   /** `null` — назви не задали; підпис збирається з учасників на клієнті */
   title: z.string().nullable(),
   participants: z.array(ConversationParticipantResponseSchema),
+  /** Відповідальний за клієнтську розмову (CHAT-2b); `null` — нічия і для внутрішніх */
+  assignee: ChatMemberRefSchema.nullable(),
+  /**
+   * Чи можна відповісти клієнтові ЗАРАЗ (вікно вільного тексту каналу). Знімок на момент відповіді:
+   * вікно може зачинитись, поки екран відкритий, — тоді сервер відповість `CHANNEL_WINDOW_CLOSED`.
+   * Для внутрішніх розмов завжди `true`.
+   */
+  canReply: z.boolean(),
+  /** Коли вікно закривається; `null` — вікна немає (провайдер без вікна) або клієнт ще не писав */
+  replyWindowEndsAt: z.iso.datetime().nullable(),
   /**
    * Клієнтська розмова (CUSTOMER): з ким і з якого номера каналу. `null` для внутрішніх. Повні дані
    * контакта (адреси, привʼязаний клієнт) — окремим запитом `GET /chat/contacts/:id`.
@@ -184,6 +240,23 @@ export const PostChatMessageSchema = z.object({
    * (docs/chat.md §4.5).
    */
   clientMessageId: z.uuid(),
+  /**
+   * `INTERNAL` — нотатка для колег у клієнтській розмові (CHAT-2b): не йде провайдеру, без вікна.
+   * У внутрішній розмові допустимий лише `PUBLIC` (за замовчуванням).
+   */
+  visibility: ChatMessageVisibilitySchema.default('PUBLIC').optional(),
+});
+
+/** Статуси, які людина ставить руками; `SNOOZED` — CHAT-4 */
+export const SettableConversationStatusSchema = z.enum(['OPEN', 'PENDING', 'RESOLVED']);
+
+export const SetConversationStatusSchema = z.object({
+  status: SettableConversationStatusSchema,
+});
+
+export const SetConversationAssigneeSchema = z.object({
+  /** `null` — зняти призначення */
+  userId: z.uuid().nullable(),
 });
 
 export const MarkConversationReadSchema = z.object({

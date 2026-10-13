@@ -28,4 +28,9 @@ export type InboxListResponseDtoOutputItemsItem = {
   /** @nullable */
   lastMessagePreview: string | null;
   awaitingReply: boolean;
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  unreadCount: number;
 };

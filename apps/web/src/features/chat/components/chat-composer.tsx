@@ -5,7 +5,9 @@ import { CHAT_MAX_MESSAGE_CHARS, CHAT_TYPING_PULSE_MS } from '@saas-skeleton/con
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Textarea } from '@saas-skeleton/ui/components/ui/textarea';
 import { cn } from '@saas-skeleton/ui/lib/utils';
+import { formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { CHAT_COLUMN } from './chat-layout';
+import type { ComposerMode } from './delivery-state';
 
 /** Стеля автовисоти: далі textarea скролиться, а не з'їдає стрічку */
 const MAX_HEIGHT_PX = 160;
@@ -44,11 +46,23 @@ export function shouldPulseTyping(
   return lastPulseAt === null || now - lastPulseAt >= CHAT_TYPING_PULSE_MS;
 }
 
+/** Стан клієнтської розмови для композера (CHAT-2b): режим, чи відкрите вікно, коли воно закрилось */
+export interface CustomerComposerState {
+  /** Режим, який діє ЗАРАЗ (закрите вікно вже зведено до нотатки — `effectiveMode`) */
+  mode: ComposerMode;
+  canReply: boolean;
+  /** Коли вікно закрилось (або закриється); `null` — клієнт ще не писав */
+  windowEndsAt: string | null;
+  onModeChange: (mode: ComposerMode) => void;
+}
+
 interface ChatComposerProps {
   onSend: (body: string) => void;
   /** Імпульс «друкую»; композер сам тримає інтервал, викликач лише шле подію */
   onTyping?: () => void;
   isDisabled?: boolean;
+  /** Лише в клієнтській розмові: перемикач «відповідь / нотатка» і пояснення закритого вікна */
+  customer?: CustomerComposerState;
 }
 
 /**
@@ -58,7 +72,12 @@ interface ChatComposerProps {
  * Вкладень, емодзі й форматування тут немає свідомо — вони приходять зі своїми
  * фазами, і поки їх немає, панель інструментів була б порожньою рамкою.
  */
-export function ChatComposer({ onSend, onTyping, isDisabled = false }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  onTyping,
+  isDisabled = false,
+  customer,
+}: ChatComposerProps) {
   const { t } = useTranslation('chat');
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -92,7 +111,51 @@ export function ChatComposer({ onSend, onTyping, isDisabled = false }: ChatCompo
   return (
     // Лінія і фон — на всю ширину, саме поле — у читальній колонці під
     // бульбашками (`chat-layout.ts`)
-    <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+    <div
+      className={cn(
+        'shrink-0 border-t border-border bg-background px-4 py-3',
+        customer?.mode === 'note' && 'bg-muted/40',
+      )}
+    >
+      {customer && (
+        <div className={cn('mb-2 flex flex-col gap-2', CHAT_COLUMN)}>
+          <div className="flex gap-1" role="group" aria-label={t('composer.modeLabel')}>
+            <Button
+              type="button"
+              size="xs"
+              variant={customer.mode === 'reply' ? 'secondary' : 'ghost'}
+              disabled={!customer.canReply}
+              aria-pressed={customer.mode === 'reply'}
+              onClick={() => {
+                customer.onModeChange('reply');
+              }}
+            >
+              {t('composer.modeReply')}
+            </Button>
+            <Button
+              type="button"
+              size="xs"
+              variant={customer.mode === 'note' ? 'secondary' : 'ghost'}
+              aria-pressed={customer.mode === 'note'}
+              onClick={() => {
+                customer.onModeChange('note');
+              }}
+            >
+              {t('composer.modeNote')}
+            </Button>
+          </div>
+          {!customer.canReply && (
+            <p className="text-sm text-muted-foreground">
+              {customer.windowEndsAt
+                ? t('composer.windowClosedSince', { date: formatDateTime(customer.windowEndsAt) })
+                : t('composer.windowClosedNever')}
+            </p>
+          )}
+          {customer.mode === 'note' && customer.canReply && (
+            <p className="text-xs text-muted-foreground">{t('composer.noteHint')}</p>
+          )}
+        </div>
+      )}
       <div className={cn('flex items-end gap-2', CHAT_COLUMN)}>
         <Textarea
           ref={textareaRef}
@@ -100,7 +163,7 @@ export function ChatComposer({ onSend, onTyping, isDisabled = false }: ChatCompo
           value={value}
           maxLength={CHAT_MAX_MESSAGE_CHARS}
           disabled={isDisabled}
-          placeholder={t('composer.placeholder')}
+          placeholder={customer?.mode === 'note' ? t('composer.notePlaceholder') : t('composer.placeholder')}
           aria-label={t('composer.label')}
           className="max-h-40 min-h-9 resize-none"
           onChange={(event) => {

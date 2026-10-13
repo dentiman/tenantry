@@ -15,6 +15,9 @@ import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
 // Сцена збирається напряму через SystemPrismaService (BYPASSRLS): що саме приходить із вебхука —
 // предмет інших сьютів, тут перевіряється те, що бачить і може робити людина.
 
+// Fake-адаптер у реєстрі лише під цим прапорцем: без нього відповідь відхиляється як «каналу немає»
+process.env.CHAT_DEV_TOOLS = 'true';
+
 const TENANT_B_ID = '00000000-0000-4000-8000-000000000045';
 const TENANT_B_SLUG = 'chat-inbox-b';
 const SECRET_VALUE = 'super-secret-signing-value';
@@ -271,7 +274,7 @@ describe('Customer inbox (e2e, CHAT-2a)', () => {
       await http().post('/api/auth/login').send({ email, password: 'SecurePass123' }).expect(401);
     });
 
-    it('відповісти в клієнтську розмову ще не можна (422), позначити прочитаним — без помилки й без зайвого', async () => {
+    it('відповідь поза вікном — 422 CHANNEL_WINDOW_CLOSED і нічого не записано; позначити прочитаним — без помилки й без зайвого', async () => {
       const reader = await login('inbox-poster');
       const { conversationId } = await customerConversation({ name: 'Клієнт', at: new Date() });
 
@@ -279,7 +282,10 @@ describe('Customer inbox (e2e, CHAT-2a)', () => {
         .post(`/api/conversations/${conversationId}/messages`)
         .set(reader.headers)
         .send({ body: 'hi', clientMessageId: randomUUID() })
-        .expect(422);
+        .expect(422)
+        .expect((res) => {
+          expect((res.body as { code: string }).code).toBe('CHANNEL_WINDOW_CLOSED');
+        });
       expect(await prisma.chatMessage.count({ where: { conversationId } })).toBe(2);
 
       await http()

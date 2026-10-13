@@ -95,6 +95,8 @@ import type {
   SetCalendarEventStatusDto,
   SetCalendarRemindersDto,
   SetCalendarRsvpDto,
+  SetConversationAssigneeDto,
+  SetConversationStatusDto,
   SetCustomerStatusDto,
   SetNextNumberDto,
   SetUserPasswordDto,
@@ -6211,6 +6213,229 @@ export const useChatPost = <TError = unknown, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getChatPostMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatResend = (
+  id: string,
+  messageId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChatMessageResponseDtoOutput>(
+    { url: `/api/conversations/${id}/messages/${messageId}/resend`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getChatResendMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatResend>>,
+    TError,
+    { id: string; messageId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatResend>>,
+  TError,
+  { id: string; messageId: string },
+  TContext
+> => {
+  const mutationKey = ['chatResend'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatResend>>,
+    { id: string; messageId: string }
+  > = (props) => {
+    const { id, messageId } = props ?? {};
+
+    return chatResend(id, messageId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatResendMutationResult = NonNullable<Awaited<ReturnType<typeof chatResend>>>;
+
+export type ChatResendMutationError = unknown;
+
+export const useChatResend = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatResend>>,
+      TError,
+      { id: string; messageId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatResend>>,
+  TError,
+  { id: string; messageId: string },
+  TContext
+> => {
+  const mutationOptions = getChatResendMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatSetStatus = (
+  id: string,
+  setConversationStatusDto: SetConversationStatusDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<ConversationResponseDtoOutput>(
+    {
+      url: `/api/conversations/${id}/status`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: setConversationStatusDto,
+    },
+    options,
+  );
+};
+
+export const getChatSetStatusMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatSetStatus>>,
+    TError,
+    { id: string; data: SetConversationStatusDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatSetStatus>>,
+  TError,
+  { id: string; data: SetConversationStatusDto },
+  TContext
+> => {
+  const mutationKey = ['chatSetStatus'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatSetStatus>>,
+    { id: string; data: SetConversationStatusDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return chatSetStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatSetStatusMutationResult = NonNullable<Awaited<ReturnType<typeof chatSetStatus>>>;
+export type ChatSetStatusMutationBody = SetConversationStatusDto;
+export type ChatSetStatusMutationError = unknown;
+
+export const useChatSetStatus = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatSetStatus>>,
+      TError,
+      { id: string; data: SetConversationStatusDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatSetStatus>>,
+  TError,
+  { id: string; data: SetConversationStatusDto },
+  TContext
+> => {
+  const mutationOptions = getChatSetStatusMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const chatSetAssignee = (
+  id: string,
+  setConversationAssigneeDto: SetConversationAssigneeDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<ConversationResponseDtoOutput>(
+    {
+      url: `/api/conversations/${id}/assignee`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: setConversationAssigneeDto,
+    },
+    options,
+  );
+};
+
+export const getChatSetAssigneeMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatSetAssignee>>,
+    TError,
+    { id: string; data: SetConversationAssigneeDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatSetAssignee>>,
+  TError,
+  { id: string; data: SetConversationAssigneeDto },
+  TContext
+> => {
+  const mutationKey = ['chatSetAssignee'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatSetAssignee>>,
+    { id: string; data: SetConversationAssigneeDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return chatSetAssignee(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatSetAssigneeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof chatSetAssignee>>
+>;
+export type ChatSetAssigneeMutationBody = SetConversationAssigneeDto;
+export type ChatSetAssigneeMutationError = unknown;
+
+export const useChatSetAssignee = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatSetAssignee>>,
+      TError,
+      { id: string; data: SetConversationAssigneeDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatSetAssignee>>,
+  TError,
+  { id: string; data: SetConversationAssigneeDto },
+  TContext
+> => {
+  const mutationOptions = getChatSetAssigneeMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

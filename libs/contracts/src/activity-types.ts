@@ -9,6 +9,7 @@ import { AUTH_ACTIVITIES } from './auth/auth.activities';
 import { CUSTOMER_ACTIVITIES } from './customer/customer.activities';
 import { SETTINGS_ACTIVITIES } from './settings/settings.activities';
 import { CALENDAR_ACTIVITIES } from './calendar/calendar.activities';
+import { CHAT_ACTIVITIES } from './chat/chat.activities';
 
 /**
  * Composition root типів активності (docs/modules.md §7.1): єдине місце, що знає,
@@ -21,6 +22,7 @@ export const ACTIVITY_DEFINITIONS = mergeTypeGroups(
   CUSTOMER_ACTIVITIES,
   SETTINGS_ACTIVITIES,
   CALENDAR_ACTIVITIES,
+  CHAT_ACTIVITIES,
 );
 
 export type ActivityType = Extract<keyof typeof ACTIVITY_DEFINITIONS, string>;

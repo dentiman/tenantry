@@ -1,11 +1,16 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
+import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import {
   chatFindAll,
   chatMarkRead,
   chatPost,
+  chatResend,
   chatTranscript,
   getChatFindAllQueryKey,
+  getChatFindOneQueryKey,
   getChatTranscriptQueryKey,
 } from '../../../api/generated/api';
 import type { ChatMessageListResponseDtoOutputItemsItem } from '../../../api/generated/model/chatMessageListResponseDtoOutputItemsItem';
@@ -78,18 +83,38 @@ export function flattenConversations(
  * підтверджується і коли сокет лежить.
  */
 export function useSendMessage(conversationId: string) {
+  const { t } = useTranslation('chat');
   const queryClient = useQueryClient();
-  const { enqueue, markFailed, markSending } = useChatOutboxStore.getState();
+  const { enqueue, markFailed, markSending, discard } = useChatOutboxStore.getState();
 
   const mutation = useMutation({
-    mutationFn: ({ body, clientMessageId }: { body: string; clientMessageId: string }) =>
-      chatPost(conversationId, { body, clientMessageId }),
+    mutationFn: ({
+      body,
+      clientMessageId,
+      visibility,
+    }: {
+      body: string;
+      clientMessageId: string;
+      visibility: 'PUBLIC' | 'INTERNAL';
+    }) => chatPost(conversationId, { body, clientMessageId, visibility }),
     onSuccess: async (message) => {
       mergeIncomingMessage(queryClient, conversationId, message);
-      // Прев'ю й порядок у списку змінились; лічильники в ньому персональні — перечитуємо
-      await queryClient.invalidateQueries({ queryKey: conversationListKey() });
+      // Прев'ю й порядок у списку змінились; лічильники в ньому персональні — перечитуємо. Картка
+      // теж: відповідь могла призначити розмову автору чи відкрити розв'язану
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: conversationListKey() }),
+        queryClient.invalidateQueries({ queryKey: getChatFindOneQueryKey(conversationId) }),
+      ]);
     },
-    onError: (_error, variables) => {
+    onError: (error, variables) => {
+      // Вікно закрилось, поки екран був відкритий: повтор безглуздий, тож рядок не лишається
+      // «ненадісланим» — знімається, картка перечитується (покаже пояснення замість поля відповіді)
+      if (isWindowClosed(error)) {
+        discard(conversationId, variables.clientMessageId);
+        void queryClient.invalidateQueries({ queryKey: getChatFindOneQueryKey(conversationId) });
+        toast.add({ type: 'error', title: t('composer.windowClosedToast') });
+        return;
+      }
       markFailed(conversationId, variables.clientMessageId);
     },
     // Відмова показується в самому рядку (стан «не надіслано» з повтором),
@@ -98,9 +123,9 @@ export function useSendMessage(conversationId: string) {
   });
 
   const send = useCallback(
-    (body: string, clientMessageId: string) => {
-      enqueue(conversationId, body, clientMessageId);
-      mutation.mutate({ body, clientMessageId });
+    (body: string, clientMessageId: string, visibility: 'PUBLIC' | 'INTERNAL' = 'PUBLIC') => {
+      enqueue(conversationId, body, clientMessageId, visibility);
+      mutation.mutate({ body, clientMessageId, visibility });
     },
     [conversationId, enqueue, mutation],
   );
@@ -108,13 +133,40 @@ export function useSendMessage(conversationId: string) {
   /** Повтор іде з ТИМ САМИМ id — сервер поверне той самий рядок, а не другий */
   const retry = useCallback(
     (body: string, clientMessageId: string) => {
+      const entry = useChatOutboxStore
+        .getState()
+        .pending[conversationId]?.find((item) => item.clientMessageId === clientMessageId);
       markSending(conversationId, clientMessageId);
-      mutation.mutate({ body, clientMessageId });
+      mutation.mutate({ body, clientMessageId, visibility: entry?.visibility ?? 'PUBLIC' });
     },
     [conversationId, markSending, mutation],
   );
 
   return { send, retry };
+}
+
+/** Серверний код «вікно вільного тексту закрите» (`ApiError.code`, CHAT-2b) */
+function isWindowClosed(error: unknown): boolean {
+  return (
+    isAxiosError(error) &&
+    (error.response?.data as { code?: string } | undefined)?.code === 'CHANNEL_WINDOW_CLOSED'
+  );
+}
+
+/**
+ * Повторити відправку невдалого вихідного (CHAT-2b): те саме повідомлення знову в чергу. Результат
+ * приходить сигналом `chat.message-updated.v1`, але відповідь теж перечитує стрічку — сокет може лежати.
+ */
+export function useResendMessage(conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => chatResend(conversationId, messageId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: getChatTranscriptQueryKey(conversationId, { limit: TRANSCRIPT_PAGE }),
+      });
+    },
+  });
 }
 
 /**

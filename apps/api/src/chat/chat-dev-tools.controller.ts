@@ -6,7 +6,7 @@ import type { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ChatDevToolsGuard } from './chat-dev-tools.guard';
 import { ChatDevToolsService } from './chat-dev-tools.service';
-import { SimulateInboundDto } from './dto/channel.dto';
+import { SimulateInboundDto, SimulateStatusDto } from './dto/channel.dto';
 
 /**
  * Лише розробка (`CHAT_DEV_TOOLS`): не потрапляє в OpenAPI і не має клієнта — його викликають
@@ -36,5 +36,15 @@ export class ChatDevToolsController {
       process.env.CHAT_SIMULATOR_BASE_URL?.trim().replace(/\/+$/, '') ??
       `${req.protocol}://${req.get('host') ?? 'localhost'}`;
     return this.tools.simulate(dto, base);
+  }
+
+  @Post('simulate-status')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.ADMIN)
+  simulateStatus(@Body() dto: SimulateStatusDto, @Req() req: Request): Promise<SimulateInboundResponse> {
+    const base =
+      process.env.CHAT_SIMULATOR_BASE_URL?.trim().replace(/\/+$/, '') ??
+      `${req.protocol}://${req.get('host') ?? 'localhost'}`;
+    return this.tools.simulateStatus(dto, base);
   }
 }

@@ -63,6 +63,11 @@ function created(seq: number, clientMessageId: string | null = null): ChatMessag
       body: `message ${String(seq)}`,
       payload: {},
       clientMessageId,
+      direction: null,
+      sentAt: null,
+      deliveredAt: null,
+      readAt: null,
+      failure: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       deletedAt: null,
     },
@@ -159,6 +164,30 @@ describe('initChatSync', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationListKey() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getChatFindOneQueryKey(CONVERSATION) });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getChatFindOneQueryKey(OTHER) });
+  });
+
+  it('message-updated signal: re-reads the transcript and the inbox, applies nothing itself', () => {
+    queryClient.setQueryData(inboxKey('all'), { pages: [], pageParams: [] });
+    seedTranscript(queryClient, 5);
+    const { socket, fire } = createFakeSocket();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+    initChatSync(queryClient, socket);
+
+    fire(REALTIME_EVENTS.chatMessageUpdated, {
+      conversationId: CONVERSATION,
+      messageId: '33333333-3333-4333-8333-333333333333',
+      occurredAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: transcriptKey(CONVERSATION) });
+    const filters = invalidate.mock.calls.find((call) => call[0]?.predicate)?.[0];
+    const touchesInbox = queryClient
+      .getQueryCache()
+      .findAll({ predicate: filters?.predicate })
+      .some((query) => JSON.stringify(query.queryKey) === JSON.stringify(inboxKey('all')));
+    expect(touchesInbox).toBe(true);
+    // стан доставки сигнал не несе: кеш стрічки не змінено напряму
+    expect(newestSeq(queryClient)).toBe(5);
   });
 
   it('inbox signal: re-reads every inbox filter and the open conversation, and applies nothing itself', () => {

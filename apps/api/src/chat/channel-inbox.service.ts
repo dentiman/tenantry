@@ -75,18 +75,34 @@ export class ChannelInboxService {
     const hasMore = rows.length > query.limit;
     const page = hasMore ? rows.slice(0, query.limit) : rows;
 
-    // «Чекає відповіді»: остання репліка розмови клієнтська. Один запит на сторінку,
-    // а не по запиту на рядок
-    const lastMessages = await this.prisma.chatMessage.findMany({
-      where: { OR: page.map((row) => ({ conversationId: row.id, seq: row.lastSeq })) },
-      select: { conversationId: true, direction: true },
+    // «Чекає відповіді»: остання ПУБЛІЧНА текстова репліка розмови клієнтська. Системні записи
+    // (призначення, статус) і нотатки теж беруть `seq`, тож «остання за seq» тут не годиться
+    // (CHAT-2b). Два запити на сторінку, а не по запиту на рядок: максимум seq по розмовах, потім
+    // самі рядки
+    const latest = await this.prisma.chatMessage.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversationId: { in: page.map((row) => row.id) },
+        kind: 'TEXT',
+        visibility: 'PUBLIC',
+      },
+      _max: { seq: true },
     });
+    const lastMessages =
+      latest.length === 0
+        ? []
+        : await this.prisma.chatMessage.findMany({
+            where: {
+              OR: latest.map((row) => ({ conversationId: row.conversationId, seq: row._max.seq ?? 0 })),
+            },
+            select: { conversationId: true, direction: true },
+          });
     const inbound = new Set(
       lastMessages.filter((m) => m.direction === 'INBOUND').map((m) => m.conversationId),
     );
 
     const items = page
-      .map((row) => toInboxEntry(row, inbound.has(row.id)))
+      .map((row) => toInboxEntry(row, inbound.has(row.id), actor.sub))
       .filter((entry): entry is InboxEntry => entry !== null);
     const last = page.at(-1);
     return {

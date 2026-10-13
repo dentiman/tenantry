@@ -88,6 +88,19 @@ export class RealtimeEmitter implements NotificationDispatcher {
     this.emit(userRoom(tenantId, recipientId), REALTIME_EVENTS.notificationChanged, payload);
   }
 
+  /**
+   * Подія в room ТЕНАНТА — усім його підключеним сокетам. Лише для сигналів «перечитай» без даних
+   * (`chat.inbox-changed.v1`, `chat.message-updated.v1`): клієнтську розмову бачать усі, а payload зі
+   * станом у такий широкий room не йде (AGENTS.md №15).
+   */
+  toTenant<E extends keyof ServerToClientEvents>(
+    tenantId: string,
+    event: E,
+    ...payload: Parameters<ServerToClientEvents[E]>
+  ): void {
+    this.emit(tenantRoom(tenantId), event, ...payload);
+  }
+
   // ---- події фіч: в особисті room-и (docs/modules.md §7.2) ----
 
   /**

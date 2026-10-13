@@ -55,6 +55,7 @@ model Tenant {
   channelContacts          ChannelContact[]
   channelContactAddresses  ChannelContactAddress[]
   channelWebhookEvents     ChannelWebhookEvent[]
+  channelPendingStatuses   ChannelPendingStatus[]
 
   // ai
   aiAccess             TenantAiAccess?

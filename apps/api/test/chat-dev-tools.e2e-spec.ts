@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 
+import { randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -7,7 +8,10 @@ import request from 'supertest';
 import { SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import {
   ChannelAdapterRegistry,
+  ActivityRecorder,
   ChannelIngestService,
+  ChannelStatusService,
+  ConversationWorkflow,
   FakeChannelAdapter,
 } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
@@ -111,7 +115,11 @@ describe('Chat dev tools (e2e, CHAT-2a)', () => {
     expect(sentJobs.forQueue('channels.ingest-webhook/channels-ingest')).toHaveLength(1);
 
     // Роль воркера: той самий ingest, у транзакції під контекстом тенанта
-    const ingest = new ChannelIngestService(new ChannelAdapterRegistry().register(new FakeChannelAdapter()));
+    const ingest = new ChannelIngestService(
+      new ChannelAdapterRegistry().register(new FakeChannelAdapter()),
+      new ChannelStatusService(),
+      new ConversationWorkflow(new ActivityRecorder()),
+    );
     const outcome = await app
       .get(TenantContextService)
       .runWith(DEFAULT_TENANT_ID, () =>
@@ -138,13 +146,65 @@ describe('Chat dev tools (e2e, CHAT-2a)', () => {
 
     const account = await prisma.messagingAccount.findFirstOrThrow({ where: { provider: 'fake' } });
     const events = await prisma.channelWebhookEvent.findMany({ where: { accountId: account.id }, orderBy: { receivedAt: 'asc' } });
-    const ingest = new ChannelIngestService(new ChannelAdapterRegistry().register(new FakeChannelAdapter()));
+    const ingest = new ChannelIngestService(
+      new ChannelAdapterRegistry().register(new FakeChannelAdapter()),
+      new ChannelStatusService(),
+      new ConversationWorkflow(new ActivityRecorder()),
+    );
     for (const event of events) {
       await app.get(TenantContextService).runWith(DEFAULT_TENANT_ID, () =>
         app.get(TenantTransactions).withTenantTx((tx) => ingest.ingestEvent(tx, event.id)),
       );
     }
     expect(await prisma.chatMessage.count({ where: { externalId: 'sim-fixed-id' } })).toBe(1);
+  });
+
+  it('simulate-status: підписана квитанція доходить до вебхука й після ingest змінює вихідне повідомлення (CHAT-2b)', async () => {
+    await http().post('/api/dev/chat/fake-channel').set(adminHeaders).expect(200);
+    const account = await prisma.messagingAccount.findFirstOrThrow({ where: { provider: 'fake' } });
+    const ingest = new ChannelIngestService(
+      new ChannelAdapterRegistry().register(new FakeChannelAdapter()),
+      new ChannelStatusService(),
+      new ConversationWorkflow(new ActivityRecorder()),
+    );
+    const run = async (): Promise<void> => {
+      const events = await prisma.channelWebhookEvent.findMany({ where: { accountId: account.id, state: 'RECEIVED' } });
+      for (const event of events) {
+        await app.get(TenantContextService).runWith(DEFAULT_TENANT_ID, () =>
+          app.get(TenantTransactions).withTenantTx((tx) => ingest.ingestEvent(tx, event.id)),
+        );
+      }
+    };
+
+    await http().post('/api/dev/chat/simulate').set(adminHeaders).send({ from: '380501234500', text: 'привіт' }).expect(200);
+    await run();
+    const inbound = await prisma.chatMessage.findFirstOrThrow({ where: { direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+    const outbound = await prisma.chatMessage.create({
+      data: {
+        tenantId: DEFAULT_TENANT_ID,
+        conversationId: inbound.conversationId,
+        seq: inbound.seq + 1,
+        kind: 'TEXT',
+        status: 'SENT',
+        senderType: 'user',
+        body: 'відповідь',
+        direction: 'OUTBOUND',
+        channelId: inbound.channelId,
+        externalId: 'fake-out-dev-1',
+      },
+    });
+
+    const res = await http()
+      .post('/api/dev/chat/simulate-status')
+      .set(adminHeaders)
+      .send({ messageId: outbound.id, status: 'delivered' })
+      .expect(200);
+    expect(res.body).toMatchObject({ webhookStatus: 200, externalMessageId: 'fake-out-dev-1' });
+    await run();
+
+    expect((await prisma.chatMessage.findUniqueOrThrow({ where: { id: outbound.id } })).status).toBe('DELIVERED');
+    // невідоме повідомлення — 409 з підказкою, а не тиха пустота
+    await http().post('/api/dev/chat/simulate-status').set(adminHeaders).send({ messageId: randomUUID(), status: 'read' }).expect(409);
   });
 
   it('симуляція без fake-каналу — 409 з підказкою', async () => {
@@ -154,6 +214,7 @@ describe('Chat dev tools (e2e, CHAT-2a)', () => {
   it('не-адмін не користується ні створенням каналу, ні симулятором', async () => {
     await http().post('/api/dev/chat/fake-channel').set(userHeaders).expect(403);
     await http().post('/api/dev/chat/simulate').set(userHeaders).send({ from: '380501112233', text: 'x' }).expect(403);
+    await http().post('/api/dev/chat/simulate-status').set(userHeaders).send({ externalMessageId: 'x', status: 'sent' }).expect(403);
   });
 
   it('без CHAT_DEV_TOOLS обидві дії відповідають як неіснуючий маршрут (404), навіть для адміна', async () => {
@@ -161,6 +222,7 @@ describe('Chat dev tools (e2e, CHAT-2a)', () => {
     try {
       await http().post('/api/dev/chat/fake-channel').set(adminHeaders).expect(404);
       await http().post('/api/dev/chat/simulate').set(adminHeaders).send({ from: '380501112233', text: 'x' }).expect(404);
+      await http().post('/api/dev/chat/simulate-status').set(adminHeaders).send({ externalMessageId: 'x', status: 'sent' }).expect(404);
     } finally {
       process.env.CHAT_DEV_TOOLS = 'true';
     }

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
@@ -11,6 +12,8 @@ import {
   type CreateConversation,
   type CursorQuery,
   type PostChatMessage,
+  type SetConversationAssignee,
+  type SetConversationStatus,
 } from '@saas-skeleton/contracts';
 import {
   chatMessagePostedEvent,
@@ -22,6 +25,8 @@ import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { RealtimeEmitter } from '../realtime/realtime.emitter';
 import { ChatRealtime } from './chat-realtime';
 import { ConversationAccessService } from './conversation-access.service';
+import { isClientMessageIdConflict } from './idempotency';
+import { CustomerChatService } from './customer-chat.service';
 
 /** Що віддається як розмова — і в списку, і в картці (форма спільна) */
 const CONVERSATION_SELECT = {
@@ -33,7 +38,9 @@ const CONVERSATION_SELECT = {
   title: true,
   // CHAT-2a: клієнтська розмова — з ким і з якого номера
   contact: { select: { id: true, displayName: true } },
-  channel: { select: { displayPhoneNumber: true } },
+  assignee: { select: { id: true, name: true, email: true } },
+  channel: { select: { displayPhoneNumber: true, provider: true } },
+  customerLastMessageAt: true,
   lastSeq: true,
   lastMessageAt: true,
   lastMessagePreview: true,
@@ -115,6 +122,7 @@ export class ChatService {
     private readonly realtime: RealtimeEmitter,
     private readonly tenantContext: TenantContextService,
     private readonly notificationRecorder: NotificationRecorder,
+    private readonly customer: CustomerChatService,
   ) {}
 
   /**
@@ -129,6 +137,8 @@ export class ChatService {
 
     const rows = await this.prisma.conversation.findMany({
       where: {
+        // Клієнтські розмови (відповідальний теж учасник) — у скриньці, а не в списку внутрішніх
+        kind: 'INTERNAL',
         participants: { some: { userId: actor.sub, leftAt: null } },
         ...(cursor && {
           OR: [
@@ -301,12 +311,16 @@ export class ChatService {
     dto: PostChatMessage,
   ): Promise<ChatMessage> {
     const conversation = await this.access.assertAccess(conversationId, actor.sub);
-    // CHAT-2a: клієнтську розмову видно всім, але відповідати в неї ще нічим — вихідний канал
-    // (черга, вікно 24 год, статуси) це CHAT-2b. Репліка тут стала б «внутрішньою» у розмові з клієнтом
-    if (conversation.kind === 'CUSTOMER' || !conversation.membership) {
-      throw new UnprocessableEntityException(
-        'Replies to customer conversations are not available yet',
-      );
+    // Клієнтська розмова — відповідь провайдеру або нотатка колегам; правила інші (черга, вікно),
+    // тож це окремий сервіс (CHAT-2b)
+    if (conversation.kind === 'CUSTOMER') {
+      return this.customer.post(actor, conversation, dto);
+    }
+    if (dto.visibility === 'INTERNAL') {
+      throw fieldValidationException('visibility', 'Internal notes exist only in customer conversations');
+    }
+    if (!conversation.membership) {
+      throw new UnprocessableEntityException('Only participants can post to an internal conversation');
     }
 
     const replayed = await this.findByClientMessageId(conversationId, dto.clientMessageId);
@@ -340,6 +354,29 @@ export class ChatService {
       }
       return existing;
     }
+  }
+
+  /** Повторити відправку невдалого вихідного повідомлення клієнтської розмови (CHAT-2b) */
+  async resend(actor: JwtPayload, conversationId: string, messageId: string): Promise<ChatMessage> {
+    const conversation = await this.access.assertAccess(conversationId, actor.sub);
+    if (conversation.kind !== 'CUSTOMER') {
+      throw new NotFoundException('Message not found');
+    }
+    return this.customer.resend(actor, conversation, messageId);
+  }
+
+  async setStatus(actor: JwtPayload, conversationId: string, dto: SetConversationStatus): Promise<void> {
+    const conversation = await this.access.assertAccess(conversationId, actor.sub);
+    await this.customer.setStatus(actor, conversation, dto);
+  }
+
+  async setAssignee(
+    actor: JwtPayload,
+    conversationId: string,
+    dto: SetConversationAssignee,
+  ): Promise<void> {
+    const conversation = await this.access.assertAccess(conversationId, actor.sub);
+    await this.customer.setAssignee(actor, conversation, dto);
   }
 
   /**
@@ -471,33 +508,4 @@ function fieldValidationException(field: string, message: string): BadRequestExc
     message,
     fieldErrors: [{ field, message, code: 'invalid_value' }],
   });
-}
-
-/**
- * P2002 саме на індексі ідемпотентності. Перевіряємо ім'я індексу, а не факт
- * P2002: інше унікальне порушення (наприклад, гонка за seq) — це помилка, і
- * мовчки повертати на неї «той самий рядок» не можна.
- */
-function isClientMessageIdConflict(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('code' in error)) {
-    return false;
-  }
-  if (error.code !== 'P2002') {
-    return false;
-  }
-  const meta = 'meta' in error ? (error.meta as PrismaUniqueMeta | undefined) : undefined;
-  // Прямий рушій дає `target` (імена колонок), а `adapter-pg` — лише текст помилки драйвера з
-  // назвою індексу: без другої гілки гонка двох однакових запитів повертала б 409 замість
-  // рядка переможця
-  const targets = Array.isArray(meta?.target) ? meta.target : [meta?.target];
-  const driverMessage = meta?.driverAdapterError?.cause?.originalMessage ?? '';
-  return (
-    targets.some((entry) => String(entry).includes('client_message_id')) ||
-    driverMessage.includes('client_message_id')
-  );
-}
-
-interface PrismaUniqueMeta {
-  target?: unknown;
-  driverAdapterError?: { cause?: { originalMessage?: string } };
 }

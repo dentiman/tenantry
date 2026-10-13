@@ -4,6 +4,7 @@ import {
   type ChatConversationChanged,
   type ChatInboxChanged,
   type ChatMessageCreated,
+  type ChatMessageUpdated,
   type ChatTypingChanged,
 } from '@saas-skeleton/contracts';
 import { getChatFindOneQueryKey } from '../../../api/generated/api';
@@ -76,6 +77,15 @@ export function initChatSync(queryClient: QueryClient, socket: AppSocket = getSo
     void queryClient.invalidateQueries({ queryKey: transcriptKey(payload.conversationId) });
     void queryClient.invalidateQueries({
       queryKey: getChatFindOneQueryKey(payload.conversationId),
+    });
+  });
+
+  // CHAT-2b: стан доставки вихідного змінився (квитанція, відмова, повторна відправка). Сигнал без
+  // даних: стрічка розмови перечитується, а скринька — бо її рядок показує останній стан розмови
+  socket.on(REALTIME_EVENTS.chatMessageUpdated, (payload: ChatMessageUpdated) => {
+    void queryClient.invalidateQueries({ queryKey: transcriptKey(payload.conversationId) });
+    void queryClient.invalidateQueries({
+      predicate: (query) => String(query.queryKey[0]).startsWith(INBOX_KEY_PREFIX),
     });
   });
 

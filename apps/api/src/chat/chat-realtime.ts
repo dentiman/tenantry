@@ -72,4 +72,31 @@ export class ChatRealtime {
       this.realtime.toUsers(tenantId, recipients, REALTIME_EVENTS.chatConversationChanged, payload);
     });
   }
+
+  /**
+   * Сигнал «в клієнтській розмові щось змінилося, перечитай» усьому тенанту (ПІСЛЯ коміту).
+   * Клієнтську розмову бачать усі, а склад її учасників — лише відповідальний, тому адресувати по
+   * учасниках не можна (CHAT-2b, design.md D1). Без даних: втрата сигналу нічого не губить.
+   */
+  inboxChanged(tx: Prisma.TransactionClient, conversationId: string): void {
+    const tenantId = this.tenantContext.requireTenantId();
+    this.transactions.onCommit(tx, () => {
+      this.realtime.toTenant(tenantId, REALTIME_EVENTS.chatInboxChanged, {
+        conversationId,
+        occurredAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  /** Стан доставки повідомлення змінився (повторна відправка, відмова): перечитай його */
+  messageUpdated(tx: Prisma.TransactionClient, conversationId: string, messageId: string): void {
+    const tenantId = this.tenantContext.requireTenantId();
+    this.transactions.onCommit(tx, () => {
+      this.realtime.toTenant(tenantId, REALTIME_EVENTS.chatMessageUpdated, {
+        conversationId,
+        messageId,
+        occurredAt: new Date().toISOString(),
+      });
+    });
+  }
 }

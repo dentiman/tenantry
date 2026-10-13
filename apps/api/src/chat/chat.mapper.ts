@@ -4,7 +4,7 @@ import type {
   ConversationResponse,
   ConversationParticipantResponse,
 } from '@saas-skeleton/contracts';
-import type { StorageService } from '@saas-skeleton/shared';
+import { replyWindow, type ChannelAdapterRegistry, type StorageService } from '@saas-skeleton/shared';
 import type { ConversationWithParticipants } from './chat.service';
 
 /**
@@ -30,6 +30,11 @@ export function toChatMessageResponse(message: ChatMessage): ChatMessageResponse
     body: message.body,
     payload: (message.payload ?? {}) as Record<string, unknown>,
     clientMessageId: message.clientMessageId,
+    direction: message.direction === 'INBOUND' || message.direction === 'OUTBOUND' ? message.direction : null,
+    sentAt: message.sentAt?.toISOString() ?? null,
+    deliveredAt: message.deliveredAt?.toISOString() ?? null,
+    readAt: message.readAt?.toISOString() ?? null,
+    failure: (message.failure ?? null) as ChatMessageResponse['failure'],
     createdAt: message.createdAt.toISOString(),
     deletedAt: message.deletedAt?.toISOString() ?? null,
   };
@@ -46,7 +51,17 @@ export async function toConversationResponse(
   conversation: ConversationWithParticipants,
   viewerId: string,
   storage: StorageService,
+  registry: ChannelAdapterRegistry,
 ): Promise<ConversationResponse> {
+  // Внутрішня розмова вікна не має; клієнтська — за адаптером її каналу
+  const window =
+    conversation.kind === 'CUSTOMER'
+      ? replyWindow(
+          conversation.channel ? registry.get(conversation.channel.provider) : undefined,
+          conversation.customerLastMessageAt,
+          new Date(),
+        )
+      : { canReply: true, endsAt: null };
   const participants: ConversationParticipantResponse[] = await Promise.all(
     conversation.participants.map(async (participant) => {
       const avatar = participant.user.avatarFile;
@@ -76,6 +91,11 @@ export async function toConversationResponse(
     isDefault: conversation.isDefault,
     title: conversation.title,
     participants,
+    assignee: conversation.assignee
+      ? { id: conversation.assignee.id, label: conversation.assignee.name ?? conversation.assignee.email }
+      : null,
+    canReply: window.canReply,
+    replyWindowEndsAt: window.endsAt?.toISOString() ?? null,
     contact: conversation.contact
       ? {
           id: conversation.contact.id,

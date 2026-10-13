@@ -26,6 +26,8 @@ export const INBOX_SELECT = {
   lastMessageAt: true,
   lastMessagePreview: true,
   lastSeq: true,
+  // Учасник клієнтської розмови — її відповідальний: звідси персональний лічильник (CHAT-2b)
+  participants: { where: { leftAt: null }, select: { userId: true, unreadCount: true } },
   channel: { select: CHANNEL_SELECT },
   contact: {
     select: {
@@ -62,10 +64,14 @@ export function toChannelResponse(channel: ChannelRow): ChannelResponse {
 }
 
 /**
- * Рядок скриньки. `awaitingReply`: остання репліка — клієнтська, а розмова ще відкрита. Без
- * особистих лічильників: у спільній скриньці курсор з'являється з призначенням (CHAT-2b).
+ * Рядок скриньки. `awaitingReply`: остання публічна репліка — клієнтська, а розмова ще відкрита.
+ * `unreadCount` — лише відповідальному (він єдиний учасник, D7), для решти 0.
  */
-export function toInboxEntry(row: InboxRow, lastMessageIsInbound: boolean): InboxEntry | null {
+export function toInboxEntry(
+  row: InboxRow,
+  lastMessageIsInbound: boolean,
+  viewerId: string,
+): InboxEntry | null {
   // Клієнтська розмова без каналу чи контакта — порушення інваріанта; у відповідь не віддаємо
   if (!row.channel || !row.contact) return null;
   return {
@@ -81,6 +87,7 @@ export function toInboxEntry(row: InboxRow, lastMessageIsInbound: boolean): Inbo
     lastMessageAt: row.lastMessageAt?.toISOString() ?? null,
     lastMessagePreview: row.lastMessagePreview,
     awaitingReply: row.status !== 'RESOLVED' && lastMessageIsInbound,
+    unreadCount: row.participants.find((p) => p.userId === viewerId)?.unreadCount ?? 0,
   };
 }
 

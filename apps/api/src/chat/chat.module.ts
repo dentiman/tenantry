@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ChannelAdapterRegistry, createChannelAdapterRegistry } from '@saas-skeleton/shared';
+import {
+  ChannelAdapterRegistry,
+  ChatSharedModule,
+  createChannelAdapterRegistry,
+} from '@saas-skeleton/shared';
 import { CustomersModule } from '../customers/customers.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { UsersModule } from '../users/users.module';
@@ -15,6 +19,7 @@ import { ChatController } from './chat.controller';
 import { ChatRealtime } from './chat-realtime';
 import { ChatSocketHandlers } from './chat.socket-handlers';
 import { ChatService } from './chat.service';
+import { CustomerChatService } from './customer-chat.service';
 import { ConversationAccessService } from './conversation-access.service';
 import { DefaultChannelService } from './default-channel.service';
 
@@ -24,7 +29,7 @@ import { DefaultChannelService } from './default-channel.service';
   // chat → users, не навпаки (docs/modules.md).
   // RealtimeModule — за `RealtimeEmitter` (живі зміни в особисті room-и учасників);
   // той самий напрямок вниз, що в calendar і ai
-  imports: [UsersModule, RealtimeModule, CustomersModule],
+  imports: [UsersModule, RealtimeModule, CustomersModule, ChatSharedModule],
   controllers: [
     ChatController,
     ChannelController,
@@ -44,6 +49,7 @@ import { DefaultChannelService } from './default-channel.service';
     ChatDevToolsGuard,
     ChatDevToolsService,
     ChatService,
+    CustomerChatService,
     ChatRealtime,
     ChatSocketHandlers,
     ConversationAccessService,

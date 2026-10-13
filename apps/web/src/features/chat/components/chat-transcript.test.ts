@@ -22,13 +22,24 @@ function message(seq: number, clientMessageId: string | null): ChatMessage {
     body: `message ${String(seq)}`,
     payload: {},
     clientMessageId,
+    direction: null,
+    sentAt: null,
+    deliveredAt: null,
+    readAt: null,
+    failure: null,
     createdAt: '2026-01-01T10:00:00.000Z',
     deletedAt: null,
   };
 }
 
 function pending(clientMessageId: string): OutboxMessage {
-  return { clientMessageId, body: 'text', state: 'sending', createdAt: '2026-01-01T10:00:01.000Z' };
+  return {
+    clientMessageId,
+    body: 'text',
+    state: 'sending',
+    createdAt: '2026-01-01T10:00:01.000Z',
+    visibility: 'PUBLIC',
+  };
 }
 
 describe('buildRows', () => {

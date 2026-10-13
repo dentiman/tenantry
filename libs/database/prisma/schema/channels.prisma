@@ -68,9 +68,10 @@ model MessagingAccount {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  channels      Channel[]
-  webhookEvents ChannelWebhookEvent[]
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channels        Channel[]
+  webhookEvents   ChannelWebhookEvent[]
+  pendingStatuses ChannelPendingStatus[]
 
   // Один акаунт на провайдера на тенанта; обмеження знімається, коли знадобиться другий WABA
   @@unique([tenantId, provider])
@@ -205,6 +206,33 @@ model ChannelWebhookEvent {
   @@unique([accountId, payloadHash])
   @@index([tenantId, accountId, receivedAt(sort: Desc)])
   @@map("channel_webhook_events")
+}
+
+// Квитанція, що випередила запис `external_id` нашого повідомлення (CHAT-2b, docs/whatsapp-channel.md §4.4).
+// Застосовується при запису id і хвилинним підмітанням; після `attempts` невдач видаляється з логом
+model ChannelPendingStatus {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  accountId String @map("account_id")
+
+  // Ідентифікатор НАШОГО номера в провайдера; канал знаходиться за ним у момент застосування
+  channelExternalId String   @map("channel_external_id")
+  externalId        String?  @map("external_id")
+  // Наш id повідомлення, якщо провайдер його повернув (biz_opaque_callback_data)
+  opaqueId          String?  @map("opaque_id")
+  status            String
+  occurredAt        DateTime @map("occurred_at")
+  failure           Json?
+  attempts          Int      @default(0)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account MessagingAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, accountId, externalId])
+  @@index([tenantId, opaqueId])
+  @@index([createdAt])
+  @@map("channel_pending_statuses")
 }
 
 // ВИНЯТОК: без tenant_id і без RLS. Сюди потрапляє те, що не вдалося привʼязати до

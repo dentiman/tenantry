@@ -33,4 +33,6 @@ export const ActivityListResponseDtoOutputItemsItemType = {
   calendar_eventattendee_added: 'calendar_event.attendee_added',
   calendar_eventattendee_removed: 'calendar_event.attendee_removed',
   calendar_eventrsvp_changed: 'calendar_event.rsvp_changed',
+  conversationassigned: 'conversation.assigned',
+  conversationstatus_changed: 'conversation.status_changed',
 } as const;

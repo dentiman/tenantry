@@ -4,4 +4,9 @@ export { activeParticipantIds } from './participants';
 export { toPreview } from './preview';
 export { ChatNotifier } from './chat-notifier.service';
 export type { MessagePostedInput } from './chat-notifier.service';
-export { ChatNotifierModule } from './chat-notifier.module';
+export { ChatSharedModule } from './chat-shared.module';
+export {
+  ConversationWorkflow,
+  type StatusChange,
+  type WorkflowActor,
+} from './conversation-workflow';

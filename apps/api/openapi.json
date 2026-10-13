@@ -1327,7 +1327,9 @@
                 "calendar_event.deleted",
                 "calendar_event.attendee_added",
                 "calendar_event.attendee_removed",
-                "calendar_event.rsvp_changed"
+                "calendar_event.rsvp_changed",
+                "conversation.assigned",
+                "conversation.status_changed"
               ]
             }
           }
@@ -2769,6 +2771,139 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ChatMessageResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/conversations/{id}/messages/{messageId}/resend": {
+      "post": {
+        "operationId": "chatResend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/conversations/{id}/status": {
+      "put": {
+        "operationId": "chatSetStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetConversationStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/conversations/{id}/assignee": {
+      "put": {
+        "operationId": "chatSetAssignee",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetConversationAssigneeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto_Output"
                 }
               }
             }
@@ -5170,7 +5305,9 @@
                     "calendar_event.deleted",
                     "calendar_event.attendee_added",
                     "calendar_event.attendee_removed",
-                    "calendar_event.rsvp_changed"
+                    "calendar_event.rsvp_changed",
+                    "conversation.assigned",
+                    "conversation.status_changed"
                   ]
                 },
                 "actorType": {
@@ -7491,6 +7628,34 @@
                     "additionalProperties": false
                   }
                 },
+                "assignee": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "canReply": {
+                  "type": "boolean"
+                },
+                "replyWindowEndsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
                 "contact": {
                   "type": "object",
                   "properties": {
@@ -7550,6 +7715,9 @@
                 "isDefault",
                 "title",
                 "participants",
+                "assignee",
+                "canReply",
+                "replyWindowEndsAt",
                 "contact",
                 "lastMessageAt",
                 "lastMessagePreview",
@@ -7676,6 +7844,34 @@
               "additionalProperties": false
             }
           },
+          "assignee": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "canReply": {
+            "type": "boolean"
+          },
+          "replyWindowEndsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
           "contact": {
             "type": "object",
             "properties": {
@@ -7735,6 +7931,9 @@
           "isDefault",
           "title",
           "participants",
+          "assignee",
+          "canReply",
+          "replyWindowEndsAt",
           "contact",
           "lastMessageAt",
           "lastMessagePreview",
@@ -7825,6 +8024,69 @@
                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                   "nullable": true
                 },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "INBOUND",
+                    "OUTBOUND",
+                    null
+                  ],
+                  "nullable": true
+                },
+                "sentAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "deliveredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "readAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "failure": {
+                  "type": "object",
+                  "properties": {
+                    "class": {
+                      "type": "string",
+                      "enum": [
+                        "WINDOW_CLOSED",
+                        "PERMANENT",
+                        "POLICY",
+                        "RATE_LIMITED",
+                        "AUTH",
+                        "TRANSIENT",
+                        "HUMAN"
+                      ]
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    },
+                    "unconfirmed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "class",
+                    "code",
+                    "title"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -7850,6 +8112,11 @@
                 "body",
                 "payload",
                 "clientMessageId",
+                "direction",
+                "sentAt",
+                "deliveredAt",
+                "readAt",
+                "failure",
                 "createdAt",
                 "deletedAt"
               ],
@@ -7879,6 +8146,14 @@
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "visibility": {
+            "default": "PUBLIC",
+            "type": "string",
+            "enum": [
+              "PUBLIC",
+              "INTERNAL"
+            ]
           }
         },
         "required": [
@@ -7962,6 +8237,69 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "nullable": true
           },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "INBOUND",
+              "OUTBOUND",
+              null
+            ],
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "failure": {
+            "type": "object",
+            "properties": {
+              "class": {
+                "type": "string",
+                "enum": [
+                  "WINDOW_CLOSED",
+                  "PERMANENT",
+                  "POLICY",
+                  "RATE_LIMITED",
+                  "AUTH",
+                  "TRANSIENT",
+                  "HUMAN"
+                ]
+              },
+              "code": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "details": {
+                "type": "string"
+              },
+              "unconfirmed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "class",
+              "code",
+              "title"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -7987,10 +8325,45 @@
           "body",
           "payload",
           "clientMessageId",
+          "direction",
+          "sentAt",
+          "deliveredAt",
+          "readAt",
+          "failure",
           "createdAt",
           "deletedAt"
         ],
         "additionalProperties": false
+      },
+      "SetConversationStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "PENDING",
+              "RESOLVED"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "SetConversationAssigneeDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          }
+        },
+        "required": [
+          "userId"
+        ]
       },
       "MarkConversationReadDto": {
         "type": "object",
@@ -8131,6 +8504,11 @@
                 },
                 "awaitingReply": {
                   "type": "boolean"
+                },
+                "unreadCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -8141,7 +8519,8 @@
                 "assigneeId",
                 "lastMessageAt",
                 "lastMessagePreview",
-                "awaitingReply"
+                "awaitingReply",
+                "unreadCount"
               ],
               "additionalProperties": false
             }
@@ -8715,7 +9094,8 @@
                     "calendar_event.reminder",
                     "auth.new_device",
                     "auth.session_reuse_detected",
-                    "chat.message_received"
+                    "chat.message_received",
+                    "chat.customer_message_received"
                   ]
                 },
                 "payload": {
@@ -8869,7 +9249,8 @@
                     "calendar_event.reminder",
                     "auth.new_device",
                     "auth.session_reuse_detected",
-                    "chat.message_received"
+                    "chat.message_received",
+                    "chat.customer_message_received"
                   ]
                 },
                 "channel": {
@@ -8933,7 +9314,8 @@
                     "calendar_event.reminder",
                     "auth.new_device",
                     "auth.session_reuse_detected",
-                    "chat.message_received"
+                    "chat.message_received",
+                    "chat.customer_message_received"
                   ]
                 },
                 "channel": {
@@ -8991,7 +9373,8 @@
               "calendar_event.reminder",
               "auth.new_device",
               "auth.session_reuse_detected",
-              "chat.message_received"
+              "chat.message_received",
+              "chat.customer_message_received"
             ]
           },
           "payload": {

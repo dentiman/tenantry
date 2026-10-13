@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
-import { ConversationStatusSchema } from './chat.schema';
+import { ChatMessageFailureSchema, ConversationStatusSchema } from './chat.schema';
 
 /**
  * Контракти каналів зв'язку з клієнтами (CHAT-2a). Модель — docs/whatsapp-channel.md §4.1;
@@ -53,8 +53,26 @@ export const NormalizedUnsupportedEventSchema = z.object({
   providerMeta: z.record(z.string(), z.unknown()),
 });
 
+/**
+ * Квитанція провайдера про вихідне (CHAT-2b, design.md D10). Знаходить повідомлення за
+ * `externalMessageId` або, якщо квитанція випередила запис id, за нашим `opaqueId`.
+ */
+export const NormalizedStatusEventSchema = z.object({
+  kind: z.literal('status'),
+  channelExternalId: z.string().min(1),
+  externalMessageId: z.string().min(1),
+  /** Наш id повідомлення, якщо провайдер його повернув (WhatsApp: `biz_opaque_callback_data`) */
+  opaqueId: z.string().nullable(),
+  status: z.enum(['sent', 'delivered', 'read', 'failed']),
+  occurredAt: z.iso.datetime(),
+  /** Лише для `failed`: клас уже визначив адаптер */
+  failure: ChatMessageFailureSchema.nullable(),
+  providerMeta: z.record(z.string(), z.unknown()),
+});
+
 export const NormalizedEventSchema = z.discriminatedUnion('kind', [
   NormalizedMessageEventSchema,
+  NormalizedStatusEventSchema,
   NormalizedUnsupportedEventSchema,
 ]);
 
@@ -160,11 +178,13 @@ export const InboxEntrySchema = z.object({
   assigneeId: z.uuid().nullable(),
   lastMessageAt: z.iso.datetime().nullable(),
   lastMessagePreview: z.string().nullable(),
-  /**
-   * Остання репліка — клієнтська й ще чекає на відповідь. Особистих лічильників
-   * непрочитаного в спільній скриньці немає: курсор з'являється з призначенням (CHAT-2b).
-   */
+  /** Остання публічна репліка — клієнтська й розмова ще не розв'язана: на неї чекають відповіді */
   awaitingReply: z.boolean(),
+  /**
+   * Непрочитане того, хто питає: рахується лише відповідальному (учасник клієнтської розмови — її
+   * відповідальний), іншим завжди 0 (CHAT-2b).
+   */
+  unreadCount: z.number().int().nonnegative(),
 });
 
 export const InboxListResponseSchema = cursorResponseSchema(InboxEntrySchema);
@@ -182,6 +202,19 @@ export const SimulateInboundSchema = z.object({
   externalMessageId: z.string().trim().min(1).max(128).optional(),
 });
 
+/**
+ * Dev-квитанція про вихідне (CHAT-2b): або наш `messageId`, або id провайдера. Без `messageId`
+ * можна імітувати квитанцію, що випередила запис `external_id`.
+ */
+export const SimulateStatusSchema = z.object({
+  messageId: z.uuid().optional(),
+  externalMessageId: z.string().trim().min(1).max(128).optional(),
+  status: z.enum(['sent', 'delivered', 'read', 'failed']),
+  failure: z
+    .object({ code: z.string().trim().min(1).max(32), title: z.string().trim().min(1).max(200) })
+    .optional(),
+});
+
 export const SimulateInboundResponseSchema = z.object({
   externalMessageId: z.string(),
   /** Статус відповіді вебхука; 200 — прийнято */
@@ -195,6 +228,7 @@ export type WebhookEventState = z.infer<typeof WebhookEventStateSchema>;
 export type ContactAddressKind = z.infer<typeof ContactAddressKindSchema>;
 export type NormalizedEvent = z.infer<typeof NormalizedEventSchema>;
 export type NormalizedMessageEvent = z.infer<typeof NormalizedMessageEventSchema>;
+export type NormalizedStatusEvent = z.infer<typeof NormalizedStatusEventSchema>;
 export type MessagingWebhookBlock = z.infer<typeof MessagingWebhookBlockSchema>;
 export type ChannelResponse = z.infer<typeof ChannelResponseSchema>;
 export type MessagingAccountResponse = z.infer<typeof MessagingAccountResponseSchema>;
@@ -204,6 +238,7 @@ export type InboxFilter = z.infer<typeof InboxFilterSchema>;
 export type InboxQuery = z.infer<typeof InboxQuerySchema>;
 export type InboxEntry = z.infer<typeof InboxEntrySchema>;
 export type SimulateInbound = z.infer<typeof SimulateInboundSchema>;
+export type SimulateStatus = z.infer<typeof SimulateStatusSchema>;
 export type InboxListResponse = z.infer<typeof InboxListResponseSchema>;
 export type ChannelListResponse = z.infer<typeof ChannelListResponseSchema>;
 export type MessagingAccountListResponse = z.infer<typeof MessagingAccountListResponseSchema>;

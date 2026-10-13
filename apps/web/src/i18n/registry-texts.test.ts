@@ -53,6 +53,9 @@ describe('тексти типів активностей', () => {
     ['user.sessions_revoked', { reason: 'user' }],
     ['user.sessions_revoked', { reason: 'revoke_all' }],
     ['user.sessions_revoked', { reason: 'rotation_reuse' }],
+    ['conversation.assigned', { assignee: null }],
+    ['conversation.status_changed', { to: 'RESOLVED' }],
+    ['conversation.status_changed', { to: 'PENDING' }],
   ] as const)('%s → варіант для %o', (type, payload) => {
     const definition = activityDefinition(type);
     const variant = definition?.textVariant?.(payload);

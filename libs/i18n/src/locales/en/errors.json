@@ -8,6 +8,7 @@
     "FORBIDDEN": "Access denied",
     "NOT_FOUND": "Not found",
     "CONFLICT": "Conflict",
+    "CHANNEL_WINDOW_CLOSED": "The 24-hour reply window is closed",
     "TOO_MANY_REQUESTS": "Wait a minute and try again.",
     "INTERNAL_ERROR": "Internal server error",
     "SERVICE_UNAVAILABLE": "Service temporarily unavailable, please try again"

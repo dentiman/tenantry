@@ -34,3 +34,36 @@ export const chatMessagePostedEvent = defineEvent(
     viewerIds: z.array(z.uuid()),
   }),
 );
+
+/**
+ * Відправка збереженого вихідного повідомлення провайдеру (CHAT-2b, design.md D2). Єдиний
+ * споживач — `channels-deliver` у воркері на `key_strict_fifo`-черзі з ключем `conversationId`:
+ * клієнт має бачити репліки в порядку, в якому їх написав агент. У payload лише id — текст під RLS.
+ */
+export const channelsDeliverOutboundCommand = defineCommand(
+  'channels.deliver-outbound',
+  z.object({
+    messageId: z.uuid(),
+  }),
+);
+
+/**
+ * Клієнт написав у розмову (CHAT-2b, design.md D8): публікує ingest у транзакції збереження. Єдиний
+ * споживач `chat-notify-customer` сповіщає призначеного агента, якщо він не дивиться на розмову.
+ */
+export const chatCustomerMessageReceivedEvent = defineEvent(
+  'chat.customer-message-received.v1',
+  z.object({
+    conversationId: z.uuid(),
+    messageId: z.uuid(),
+  }),
+);
+
+/**
+ * Хвилинне підмітання квитанцій, що випередили запис `external_id` (CHAT-2b, design.md D10).
+ * Cron, системний scope; кожен рядок обробляється під контекстом свого тенанта.
+ */
+export const channelsSweepPendingStatusesCommand = defineCommand(
+  'channels.sweep-pending-statuses',
+  z.object({}),
+);

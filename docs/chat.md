@@ -1,6 +1,6 @@
 # Чати / Conversations
 
-**Статус: дизайн зафіксовано; збудовано `CHAT-0.1` (REST), `CHAT-0.2a` (живі зміни) і `CHAT-0.2b` (кімнати, typing, прочитане, §4.8) — **план каналів і звужені фази (2026-10-13) — [whatsapp-channel.md](whatsapp-channel.md); таблицю §7.3 нижче вже поправлено.** Документ описує, як влаштовані чати в CRM- і
+**Статус: дизайн зафіксовано; збудовано `CHAT-0.1` (REST), `CHAT-0.2a` (живі зміни), `CHAT-0.2b` (кімнати, typing, прочитане, §4.8), `CHAT-0.2c` (сповіщення), `CHAT-2a` (вхідне з каналу) і `CHAT-2b` (відповідь, доставка, робочий процес, §4.10) — **план каналів і звужені фази (2026-10-13) — [whatsapp-channel.md](whatsapp-channel.md); таблицю §7.3 нижче вже поправлено.** Документ описує, як влаштовані чати в CRM- і
 support-системах, і як цю модель покласти на вже наявні шари скелетона (realtime, messaging,
 RLS, files, notifications, activities) без другого механізму асинхронної роботи і без другого
 джерела правди. **План робіт — §7**: перший зріз (`CHAT-0.1`) — повний екран на REST без
@@ -556,6 +556,7 @@ interface ChannelAdapter {
 | `chat.message-created.v1` | особисті room-и **всіх активних учасників**, автора включно (його інші вкладки) | `{ conversationId, message, occurredAt }` — `message` це **той самий** вихід мапера, що в REST, з `seq` і `clientMessageId` |
 | `chat.conversation-changed.v1` | `created` — усі члени нової розмови; `membership` — усі активні учасники; `read` — **лише власник курсора**, усі його вкладки | `{ conversationId, change: 'created' \| 'membership' \| 'read', occurredAt }` — сигнал «перечитай», без лічильників і прев'ю |
 
+| `chat.message-updated.v1` (CHAT-2b) | room **тенанта**, з воркера (квитанція, відмова, підмітання) і з API (повторна відправка) | `{ conversationId, messageId, occurredAt }` — «перечитай повідомлення», **без** стану; правило №15 не потрібне |
 | `chat.inbox-changed.v1` (CHAT-2a) | room **тенанта** (усі підключені сокети), з воркера через headless-емітер | `{ conversationId, occurredAt }` — сигнал «перечитай» для скриньки клієнтських розмов, **без** повідомлення й лічильників (тому правило AGENTS.md №15 його не стосується) |
 
 Рішення, на яких усе тримається (у коді — `apps/api/src/chat/chat-realtime.ts`):
@@ -759,6 +760,32 @@ POST /conversations/:id/messages
 > помилки провайдера класифікуються (`WINDOW_CLOSED`, `PERMANENT`, `POLICY`, `RATE_LIMITED`, `AUTH`,
 > `TRANSIENT`, `HUMAN`); `key_strict_fifo` лишається, якщо обробник сам переводить рядок у `FAILED`
 > після N спроб — тоді EDA-2 не жорстка передумова.
+
+**Як збудовано в CHAT-2b** (клієнтські розмови; внутрішні репліки лишились `SENT` одразу):
+
+- **Відповідь** — `CustomerChatService.post` в одній `withTenantTx`: системні записи «призначено»/«відкрито» (умовні
+  `UPDATE`, див. нижче) → рядок `QUEUED/OUTBOUND` → `publish(channels.deliver-outbound, { messageId }, { singletonKey: conversationId })`
+  → after-commit `chat.inbox-changed.v1` у room тенанта. Вікно (`replyWindow`, від часу провайдера останнього вхідного)
+  перевіряється двічі: в API (`422 CHANNEL_WINDOW_CLOSED`, нічого не записано) і у воркері (авторитетно).
+- **Доставка** — `ChannelDeliveryService` у воркері, **без** `inbox.runOnce` (виклик провайдера не сидить у транзакції,
+  ідемпотентність тримає рядок: умовне `QUEUED → SENDING`). Черга `channels-deliver` — `key_strict_fifo` по розмові, а
+  обробник не завершується помилкою ні на чому, крім повтору з лишком спроб: решта стає `FAILED` у рядку, тож ключ не
+  зависає (O-W3). Спроби — лічильник у рядку (межа 5), `retryLimit` черги 6. Таймаут `send` — 15 с.
+- **Помилки** — клас (`WINDOW_CLOSED`, `PERMANENT`, `POLICY`, `RATE_LIMITED`, `AUTH`, `TRANSIENT`, `HUMAN`) задає адаптер
+  (`ChannelSendError`); `RATE_LIMITED`/`TRANSIENT` повторюються, решта — `FAILED` із `failure { class, code, title }`.
+  `AUTH` додатково ставить акаунт у `NEEDS_REAUTH` і **не** паркує повідомлення (відхилення від whatsapp-channel.md §4.5,
+  причина — паркування потребує здоров'я акаунта з CHAT-3c).
+- **Дірка «впав між викликом і записом id»** — повторна робота на `SENDING` без `external_id` не шле; до 60 с чекає квитанцію
+  з нашим id, далі `FAILED` з `outcome_unknown` (`unconfirmed`), у UI «не вдалося підтвердити — надіслати ще раз?».
+- **Квитанції** — `ChannelStatusService`: один умовний `UPDATE … WHERE` на вид (шкала `QUEUED<SENDING<SENT=FAILED<DELIVERED<READ`);
+  невідоме паркується в `channel_pending_statuses`, застосовується при записі id і хвилинним кроном `channels-sweep-pending`
+  (5 спроб, далі відкидається з логом). Браузеру — `chat.message-updated.v1 { conversationId, messageId }`, лише «перечитай».
+- **Робочий процес** — `ConversationWorkflow` (`libs/shared/src/chat/`): статус `OPEN/PENDING/RESOLVED`, призначення, привласнення
+  відповіддю (`UPDATE … WHERE assignee_id IS NULL`), повторне відкриття відповіддю. Кожна реальна зміна пише системний запис
+  (`conversation.assigned` / `conversation.status_changed`, `visibility = INTERNAL`) і активність на розмові та на клієнті.
+  **Учасник клієнтської розмови — її відповідальний**: звідси лічильник непрочитаного, фільтр «мої» і сповіщення про вхідне
+  (`chat.customer_message_received`, лише відповідальному, не тому, хто дивиться, і не про повідомлення, на яке вже відповіли).
+- **Нотатки** — `visibility = INTERNAL` у клієнтській розмові: без вікна й черги, не чіпають `last_message_*` та `awaitingReply`.
 
 ### 4.11. Інтеграція з готовими шарами
 
@@ -1074,7 +1101,7 @@ Telegram / WhatsApp / iMessage), а не рядком `MessageFooter` під н�
 | **CHAT-0.2c — сповіщення** (звужена 2026-10-13; **збудовано 2026-10-13**) | `chat.message_received` із колапсом по `groupKey`, подія `chat.message-posted.v1` і перший підписник у воркері (дивиться = у room-і з `0.2b`). **Presence-крапку знято.** Цей шов потім використовує вхідне з каналу | `0.2b` |
 | ~~CHAT-0.3~~ — **знято 2026-10-13** | вкладення → `CHAT-2c`; керування учасниками замінює призначення (`CHAT-2b`); згадки, `notification_level`, редагування/видалення внутрішніх реплік — відкинуто | — |
 | ~~CHAT-1~~ — **знято як окрема фаза** | мінімум (`open/pending/resolved`, призначення, нотатки, черга «нерозібраних») входить у `CHAT-2b`; `snoozed`, SLA, авто-маршрутизація → `CHAT-4` | — |
-| **CHAT-2a / 2b / 2c — канальне ядро на fake-адаптері** | **2a** — вхід: вебхук із підписом і сирим сховищем, ingest із дедупом, контакти й адреси, привʼязка до клієнта, `access = 'tenant'` для `CUSTOMER`, симулятор; **2b** — відповідь: черга `QUEUED→SENDING→SENT`, вікно, класи помилок, статуси вперед, reopen, призначення, нотатки; **2c** — медіа, журнал викликів, перегляд подій для оператора, replay, контракт-тести адаптера. Деталі — [whatsapp-channel.md](whatsapp-channel.md) §6 | `customers` (є); EDA-2 — бажана, не жорстка (там §4.5) |
+| **CHAT-2a / 2b / 2c — канальне ядро на fake-адаптері** (**2a і 2b збудовано 2026-10-13**) | **2a** — вхід: вебхук із підписом і сирим сховищем, ingest із дедупом, контакти й адреси, привʼязка до клієнта, `access = 'tenant'` для `CUSTOMER`, симулятор; **2b** — відповідь: черга `QUEUED→SENDING→SENT`, вікно, класи помилок, статуси вперед, reopen, призначення, нотатки; **2c** — медіа, журнал викликів, перегляд подій для оператора, replay, контракт-тести адаптера. Деталі — [whatsapp-channel.md](whatsapp-channel.md) §6 | `customers` (є); EDA-2 — бажана, не жорстка (там §4.5) |
 | **CHAT-3a / 3b / 3c — WhatsApp Cloud API** | **3a** — підключення, підпис, усі вхідні типи, статуси й `pricing`, текст, `context`, mark-as-read; **3b** — шаблони (кеш, вибір, змінні, медіа-хедер) і медіа Meta; **3c** — здоров'я каналу, згода/відписка, ідентичність (BSUID, аліаси), `referral`. Каталог фіч — [whatsapp-channel.md](whatsapp-channel.md) §5 | `CHAT-2c` |
 | **CHAT-4 — зрілість** | пошук по транскрипту (`tsvector` + GIN), швидкі відповіді, автопривітання/робочі години, SLA, `snoozed`, розсилки, CSAT, бот/AI-підписники, облік вартості, Embedded Signup | — |
 

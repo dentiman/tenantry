@@ -1,6 +1,12 @@
 import type { z } from 'zod';
 import type {
+  ChannelErrorClassSchema,
   ChatMemberRefSchema,
+  ChatMessageDirectionSchema,
+  ChatMessageFailureSchema,
+  SetConversationAssigneeSchema,
+  SetConversationStatusSchema,
+  SettableConversationStatusSchema,
   ChatMessageKindSchema,
   ChatMessageListQuerySchema,
   ChatMessageListResponseSchema,
@@ -46,3 +52,10 @@ export type ConversationListQuery = z.infer<typeof ConversationListQuerySchema>;
 export type ChatMessageListQuery = z.infer<typeof ChatMessageListQuerySchema>;
 export type ConversationListResponse = z.infer<typeof ConversationListResponseSchema>;
 export type ChatMessageListResponse = z.infer<typeof ChatMessageListResponseSchema>;
+
+export type ChannelErrorClass = z.infer<typeof ChannelErrorClassSchema>;
+export type ChatMessageFailure = z.infer<typeof ChatMessageFailureSchema>;
+export type ChatMessageDirection = z.infer<typeof ChatMessageDirectionSchema>;
+export type SettableConversationStatus = z.infer<typeof SettableConversationStatusSchema>;
+export type SetConversationStatus = z.infer<typeof SetConversationStatusSchema>;
+export type SetConversationAssignee = z.infer<typeof SetConversationAssigneeSchema>;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from '@tanstack/react-router';
 import {
@@ -17,12 +17,14 @@ import { useChatFindOne } from '../../../api/generated/api';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 import { ChatComposer } from '../components/chat-composer';
+import { ConversationControls } from '../components/conversation-controls';
+import { effectiveMode, type ComposerMode } from '../components/delivery-state';
 import { ChatTranscript } from '../components/chat-transcript';
 import { ContactPanel } from '../components/contact-panel';
 import { NewConversationDialog } from '../components/new-conversation-dialog';
 import { conversationLabel } from '../components/chat-labels';
 import { TypingIndicator } from '../components/typing-indicator';
-import { useSendMessage } from '../components/use-chat';
+import { useResendMessage, useSendMessage } from '../components/use-chat';
 import { emitChatEvent } from '../realtime/chat-socket';
 import { watchConversation } from '../realtime/chat-subscriptions';
 import { randomUUID } from '../../../lib/uuid';
@@ -41,13 +43,23 @@ export function ChatConversationPage() {
 
   const query = useChatFindOne(conversationId, { query: { meta: { silentError: true } } });
   const { send, retry } = useSendMessage(conversationId);
+  const resend = useResendMessage(conversationId);
   const discard = useChatOutboxStore((state) => state.discard);
+  // Режим композера в клієнтській розмові; діє через `effectiveMode` (закрите вікно → нотатка)
+  const [requestedMode, setRequestedMode] = useState<ComposerMode>('reply');
 
+  const mode = effectiveMode(requestedMode, query.data?.canReply ?? true);
   const onSend = useCallback(
     (body: string) => {
-      send(body, randomUUID());
+      send(body, randomUUID(), mode === 'note' ? 'INTERNAL' : 'PUBLIC');
     },
-    [send],
+    [send, mode],
+  );
+  const onResend = useCallback(
+    (messageId: string) => {
+      resend.mutate(messageId);
+    },
+    [resend],
   );
 
   // Розмова відкрита → сервер знає, що її дивляться (`chat.subscribe.v1`); закрита чи змінена
@@ -97,7 +109,6 @@ export function ChatConversationPage() {
 
   const conversation = query.data;
   const label = conversationLabel(conversation, viewerId, t);
-  // Клієнтська розмова: контакт є, відповідати ще нічим (CHAT-2a) — стрічка лише для читання
   const isCustomer = conversation.contact !== null;
 
   return (
@@ -116,7 +127,7 @@ export function ChatConversationPage() {
             ? (conversation.contact.channelNumber ?? undefined)
             : t('page.participants', { count: conversation.participants.length })
         }
-        actions={<NewConversationDialog />}
+        actions={isCustomer ? undefined : <NewConversationDialog />}
       />
       {/* `h-[calc(100vh-3.5rem)]` компенсує `h-14` хедера шела — той самий
           прийом, що в календарі. Без нього сторінка
@@ -124,16 +135,30 @@ export function ChatConversationPage() {
           вмістом, і композер повисає посеред екрана замість того, щоб
           триматись низу, а стрічка не отримує власної області прокрутки */}
       <div className="flex h-[calc(100vh-3.5rem)] min-h-[20rem] flex-col">
+        {/* Статус і відповідальний — над стрічкою, а не в хедері шела: там для них немає місця поруч
+            з меню користувача, а до розмови вони належать (CHAT-2b) */}
+        {isCustomer && (
+          <div className="flex shrink-0 justify-end border-b px-4 py-2">
+            <ConversationControls conversation={conversation} />
+          </div>
+        )}
         <ChatTranscript
           conversation={conversation}
           viewerId={viewerId}
           onRetry={retry}
           onDiscard={onDiscard}
+          onResend={onResend}
         />
         {isCustomer ? (
-          <p className="border-t px-4 py-3 text-sm text-muted-foreground">
-            {t('contact.readOnly')}
-          </p>
+          <ChatComposer
+            onSend={onSend}
+            customer={{
+              mode,
+              canReply: conversation.canReply,
+              windowEndsAt: conversation.replyWindowEndsAt,
+              onModeChange: setRequestedMode,
+            }}
+          />
         ) : (
           <>
             <TypingIndicator conversation={conversation} />

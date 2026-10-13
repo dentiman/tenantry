@@ -19,6 +19,9 @@ import { NotificationDispatcherRegistry, type NotificationDispatcher } from '@sa
 
 const DEFAULT_REDIS_URL = 'redis://:saas-realtime@localhost:6379';
 
+/** Стеля очікування відповіді adapter-а на запит про сокети room-а */
+const ROOM_QUERY_TIMEOUT_MS = 1000;
+
 /**
  * Міст «воркер → браузер».
  *
@@ -113,6 +116,39 @@ export class WorkerRealtimeEmitter
       return;
     }
     this.namespace.to(tenantRoom(tenantId)).emit(event, ...payload);
+  }
+
+  /**
+   * Хто зараз у room-і (CHAT-2b, design.md D9): різні `userId` сокетів. Той самий контракт, що
+   * `RealtimeEmitter.userIdsInRoom` в api: запит іде через adapter (тобто бачить сокети будь-якої
+   * репліки api), таймаут 1 с, і FAIL-OPEN — збій дає `[]`, тобто сповіщаємо всіх, а не нікого.
+   * Кличеться ДО транзакції: це зовнішній виклик.
+   */
+  async userIdsInRoom(room: string): Promise<string[]> {
+    if (!this.namespace) {
+      return [];
+    }
+    const namespace = this.namespace;
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error('timed out after 1000 ms'));
+        }, ROOM_QUERY_TIMEOUT_MS);
+      });
+      const sockets = await Promise.race([namespace.in(room).fetchSockets(), timeout]);
+      const ids = sockets.map((socket) => (socket.data as { userId?: string }).userId);
+      return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id !== ''))];
+    } catch (error) {
+      this.logger.warn(
+        `Could not list sockets of room "${room}", assuming nobody is viewing: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return [];
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async onApplicationShutdown(): Promise<void> {

@@ -4,8 +4,10 @@ import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import {
   ChannelIngestService,
   MessageInboxService,
+  MessagePublisher,
   MessageSubscriber,
   channelsIngestWebhookCommand,
+  chatCustomerMessageReceivedEvent,
   type MessageData,
   type MessageEnvelope,
   type MessageSubscriberContract,
@@ -38,6 +40,7 @@ export class ChannelsIngestSubscriber
     private readonly transactions: TenantTransactions,
     private readonly ingest: ChannelIngestService,
     private readonly realtime: WorkerRealtimeEmitter,
+    private readonly messages: MessagePublisher,
   ) {}
 
   async handle(data: IngestWebhook, envelope: MessageEnvelope): Promise<void> {
@@ -52,6 +55,28 @@ export class ChannelsIngestSubscriber
       if (outcome.state === 'FAILED' || outcome.state === 'UNROUTABLE') {
         this.logger.warn(`Webhook event ${data.eventId} ${outcome.state}: ${outcome.error ?? 'n/a'}`);
       }
+
+      // Сповіщення призначеному агентові — подією в тій самій транзакції (durable), не after-commit
+      for (const stored of outcome.storedMessages) {
+        await this.messages.publish(tx, chatCustomerMessageReceivedEvent, {
+          conversationId: stored.conversationId,
+          messageId: stored.messageId,
+        });
+      }
+
+      // Квитанції змінили стан вихідних: браузер перечитує повідомлення (сигнал без стану)
+      if (outcome.updatedMessages.length > 0) {
+        this.transactions.onCommit(tx, () => {
+          for (const updated of outcome.updatedMessages) {
+            this.realtime.toTenant(tenantId, REALTIME_EVENTS.chatMessageUpdated, {
+              conversationId: updated.conversationId,
+              messageId: updated.messageId,
+              occurredAt: new Date().toISOString(),
+            });
+          }
+        });
+      }
+
       if (outcome.changedConversationIds.length === 0) return;
 
       this.transactions.onCommit(tx, () => {

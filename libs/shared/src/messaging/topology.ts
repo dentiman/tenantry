@@ -5,7 +5,13 @@ import {
   reconcileAiUsageCostsCommand,
   syncAiModelPricesCommand,
 } from './definitions/ai.messages';
-import { channelsIngestWebhookCommand, chatMessagePostedEvent } from './definitions/chat.messages';
+import {
+  channelsDeliverOutboundCommand,
+  channelsIngestWebhookCommand,
+  channelsSweepPendingStatusesCommand,
+  chatCustomerMessageReceivedEvent,
+  chatMessagePostedEvent,
+} from './definitions/chat.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
@@ -101,6 +107,36 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     // (дедуп за external_id, одна відкрита розмова на контакт), а не черга.
     definition: channelsIngestWebhookCommand,
     consumers: [{ id: 'channels-ingest', retryLimit: 3, retryDelaySeconds: 2, retryBackoff: true, pollingIntervalSeconds: 0.5 }],
+  },
+  {
+    // CHAT-2b: відправка вихідного. СУВОРИЙ порядок по розмові (O-W3): клієнт має бачити репліки в
+    // порядку написання. Ціна політики — впала назавжди робота блокує свій ключ, тому обробник
+    // (ChannelDeliveryService) НЕ завершується помилкою ні на чому, крім повтору, що має шанс
+    // вдатися: решта стає FAILED у рядку. Лічильник спроб — у рядку (чергу обробник не бачить),
+    // тож retryLimit більший за межу обробника (5): pg-boss не вичерпає повторів раніше за нього.
+    definition: channelsDeliverOutboundCommand,
+    consumers: [
+      {
+        id: 'channels-deliver',
+        policy: 'key_strict_fifo',
+        retryLimit: 6,
+        retryDelaySeconds: 2,
+        retryBackoff: true,
+        pollingIntervalSeconds: 0.5,
+        localConcurrency: 4,
+      },
+    ],
+  },
+  {
+    // CHAT-2b: квитанції, що випередили запис external_id. Раз на хвилину; після 5 спроб — відкидаємо з логом
+    definition: channelsSweepPendingStatusesCommand,
+    consumers: [{ id: 'channels-sweep-pending', retryLimit: 1 }],
+    cron: '* * * * *',
+  },
+  {
+    // CHAT-2b: сповіщення призначеному агентові про вхідне від клієнта
+    definition: chatCustomerMessageReceivedEvent,
+    consumers: [{ id: 'chat-notify-customer', pollingIntervalSeconds: 0.5 }],
   },
   {
     // CHAT-0.2c: сповіщення учасникам внутрішньої розмови. 0.5 с, як у ai-generator: затримку

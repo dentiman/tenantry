@@ -3,7 +3,9 @@ import type { Prisma } from '@saas-skeleton/database';
 import type { NormalizedMessageEvent } from '@saas-skeleton/contracts';
 import { toPreview } from '../chat/preview';
 import { NonRetryableMessageError } from '../messaging/messaging.errors';
+import { ConversationWorkflow } from '../chat/conversation-workflow';
 import { ChannelAdapterRegistry } from './channel-adapter-registry';
+import { ChannelStatusService, type MessageRef } from './channel-status.service';
 import { phoneDigits, phoneLookupValues, normalizeE164 } from './phone';
 
 /** Вікно, у межах якого вхідне повертає РОЗВ'ЯЗАНУ розмову у роботу (O-W4); `channels.settings.reopenHours` */
@@ -14,6 +16,10 @@ export interface IngestOutcome {
   stored: number;
   /** Розмови, у яких щось змінилося: за ними браузер перечитує скриньку */
   changedConversationIds: string[];
+  /** Нові вхідні повідомлення: за ними викликач публікує подію для сповіщень (CHAT-2b) */
+  storedMessages: MessageRef[];
+  /** Вихідні, чий стан змінила квитанція: за ними браузер перечитує повідомлення (CHAT-2b) */
+  updatedMessages: MessageRef[];
   state: 'PROCESSED' | 'FAILED' | 'UNROUTABLE' | 'SKIPPED';
   error?: string;
 }
@@ -41,7 +47,11 @@ interface ChannelRow {
 export class ChannelIngestService {
   private readonly logger = new Logger(ChannelIngestService.name);
 
-  constructor(private readonly registry: ChannelAdapterRegistry) {}
+  constructor(
+    private readonly registry: ChannelAdapterRegistry,
+    private readonly statuses: ChannelStatusService,
+    private readonly workflow: ConversationWorkflow,
+  ) {}
 
   /** Розібрати збережений вебхук і застосувати його повідомлення; позначити стан рядка події */
   async ingestEvent(tx: Prisma.TransactionClient, eventId: string): Promise<IngestOutcome> {
@@ -51,7 +61,7 @@ export class ChannelIngestService {
       throw new NonRetryableMessageError(`Webhook event ${eventId} not found`);
     }
     if (event.state !== 'RECEIVED') {
-      return { stored: 0, changedConversationIds: [], state: 'SKIPPED' };
+      return emptyOutcome('SKIPPED');
     }
 
     const account = await tx.messagingAccount.findUnique({
@@ -60,53 +70,68 @@ export class ChannelIngestService {
     });
     const adapter = account ? this.registry.get(account.provider) : undefined;
     if (!account || !adapter) {
-      return this.finish(tx, eventId, { stored: 0, changedConversationIds: [], state: 'FAILED', error: 'no_adapter' });
+      return this.finish(tx, eventId, { ...emptyOutcome('FAILED'), error: 'no_adapter' });
     }
 
     const parsed = adapter.parseWebhook(Buffer.from(event.body, 'utf8'));
     if (parsed.error !== undefined) {
-      return this.finish(tx, eventId, { stored: 0, changedConversationIds: [], state: 'FAILED', error: parsed.error });
+      return this.finish(tx, eventId, { ...emptyOutcome('FAILED'), error: parsed.error });
     }
 
     const changed = new Set<string>();
+    const stored: MessageRef[] = [];
+    const updated: MessageRef[] = [];
     const unroutable: string[] = [];
-    let stored = 0;
 
     for (const item of parsed.events) {
-      if (item.kind !== 'message') continue;
+      if (item.kind !== 'message' && item.kind !== 'status') continue;
 
-      const channel = await tx.channel.findFirst({
-        where: { provider: account.provider, externalId: item.channelExternalId, providerMissingAt: null },
-        select: { id: true, accountId: true, isEnabled: true, settings: true },
-      });
-      if (!channel) {
-        unroutable.push('unknown_channel');
-        continue;
-      }
-      if (channel.accountId !== account.id) {
-        unroutable.push('foreign_channel');
-        continue;
-      }
-      if (!channel.isEnabled) {
-        unroutable.push('channel_disabled');
+      const route = await this.routeChannel(tx, account, item.channelExternalId);
+      if (!route.ok) {
+        unroutable.push(route.reason);
         continue;
       }
 
-      const conversationId = await this.ingestMessage(tx, channel, item);
-      if (conversationId) {
-        stored += 1;
-        changed.add(conversationId);
+      if (item.kind === 'status') {
+        const fold = await this.statuses.foldOrPark(tx, route.channel, item);
+        if (fold.changed) updated.push(fold.changed);
+        continue;
+      }
+
+      const ingested = await this.ingestMessage(tx, route.channel, item);
+      if (ingested) {
+        stored.push(ingested);
+        changed.add(ingested.conversationId);
       }
     }
 
     // Усе, що було повідомленнями, виявилось нероутованим — подія нічого не дала
-    const onlyUnroutable = stored === 0 && changed.size === 0 && unroutable.length > 0;
+    const onlyUnroutable =
+      stored.length === 0 && updated.length === 0 && changed.size === 0 && unroutable.length > 0;
     return this.finish(tx, eventId, {
-      stored,
+      stored: stored.length,
       changedConversationIds: [...changed],
+      storedMessages: stored,
+      updatedMessages: updated,
       state: onlyUnroutable ? 'UNROUTABLE' : 'PROCESSED',
       ...(unroutable.length > 0 && { error: [...new Set(unroutable)].join(',') }),
     });
+  }
+
+  /** Канал події: належить акаунтові з підписаного вебхука, увімкнений і досі існує у провайдера */
+  private async routeChannel(
+    tx: Prisma.TransactionClient,
+    account: { id: string; provider: string },
+    channelExternalId: string,
+  ): Promise<{ ok: true; channel: ChannelRow } | { ok: false; reason: string }> {
+    const channel = await tx.channel.findFirst({
+      where: { provider: account.provider, externalId: channelExternalId, providerMissingAt: null },
+      select: { id: true, accountId: true, isEnabled: true, settings: true },
+    });
+    if (!channel) return { ok: false, reason: 'unknown_channel' };
+    if (channel.accountId !== account.id) return { ok: false, reason: 'foreign_channel' };
+    if (!channel.isEnabled) return { ok: false, reason: 'channel_disabled' };
+    return { ok: true, channel };
   }
 
   private async finish(
@@ -121,20 +146,34 @@ export class ChannelIngestService {
     return outcome;
   }
 
-  /** Одне повідомлення → `conversationId` або `null`, якщо це повтор уже збереженого */
+  /** Одне повідомлення → посилання на збережене або `null`, якщо це повтор уже збереженого */
   private async ingestMessage(
     tx: Prisma.TransactionClient,
     channel: ChannelRow,
     event: NormalizedMessageEvent,
-  ): Promise<string | null> {
+  ): Promise<MessageRef | null> {
     const { contactId, created: contactCreated } = await this.resolveContact(tx, channel.id, event);
     const sentAt = new Date(event.sentAt);
-    const conversationId = await this.resolveConversation(tx, channel, contactId, sentAt);
+    const { id: conversationId, reopened } = await this.resolveConversation(tx, channel, contactId, sentAt);
 
     // Рядок розмови блокується ДО перевірки дубліката: два паралельні опрацювання одного
     // повідомлення серіалізуються тут, і другий бачить уже закомічений рядок першого.
     // Тому дублікат не бере `seq` (дірка в нумерації ловилась би детектором дірок вічно)
-    await tx.$queryRaw`SELECT id FROM conversations WHERE id = ${conversationId} FOR UPDATE`;
+    const locked = await tx.$queryRaw<{ status: string }[]>`
+      SELECT status FROM conversations WHERE id = ${conversationId} FOR UPDATE`;
+
+    const contact = await tx.channelContact.findUniqueOrThrow({
+      where: { id: contactId },
+      select: { displayName: true },
+    });
+    const addressLabel = event.from.value;
+    const customerActor = { type: 'customer' as const, label: contact.displayName ?? addressLabel };
+
+    // Повернення розв'язаної розмови в роботу — подія робочого процесу, навіть якщо саме це
+    // повідомлення виявиться повтором: розмова вже відкрита, і слід має лишитись
+    if (reopened) {
+      await this.workflow.recordStatusChange(tx, conversationId, 'RESOLVED', 'OPEN', customerActor);
+    }
 
     const duplicate = await tx.chatMessage.findFirst({
       where: { channelId: channel.id, externalId: event.externalMessageId },
@@ -142,11 +181,11 @@ export class ChannelIngestService {
     });
     if (duplicate) return null;
 
-    const contact = await tx.channelContact.findUniqueOrThrow({
-      where: { id: contactId },
-      select: { displayName: true },
-    });
-    const addressLabel = event.from.value;
+    // Клієнт відповів — «чекаємо на клієнта» закінчилось
+    if (locked[0]?.status === 'PENDING') {
+      await this.workflow.setStatus(tx, conversationId, 'OPEN', customerActor);
+    }
+
     const body = event.content.body;
 
     const { lastSeq } = await tx.conversation.update({
@@ -160,7 +199,7 @@ export class ChannelIngestService {
       select: { lastSeq: true },
     });
 
-    await tx.chatMessage.create({
+    const message = await tx.chatMessage.create({
       data: {
         conversationId,
         seq: lastSeq,
@@ -188,8 +227,14 @@ export class ChannelIngestService {
       },
     });
 
+    // Учасник клієнтської розмови — її відповідальний (design.md D7): непрочитане рахується лише йому
+    await tx.conversationParticipant.updateMany({
+      where: { conversationId, leftAt: null },
+      data: { unreadCount: { increment: 1 } },
+    });
+
     if (contactCreated) await this.autoLinkCustomer(tx, contactId, event.from.value);
-    return conversationId;
+    return { conversationId, messageId: message.id };
   }
 
   // -------------------------------------------------------------------------
@@ -279,12 +324,12 @@ export class ChannelIngestService {
     channel: ChannelRow,
     contactId: string,
     sentAt: Date,
-  ): Promise<string> {
+  ): Promise<{ id: string; reopened: boolean }> {
     const open = await tx.conversation.findFirst({
       where: { contactId, status: { not: 'RESOLVED' } },
       select: { id: true },
     });
-    if (open) return open.id;
+    if (open) return { id: open.id, reopened: false };
 
     // Розв'язана розмова всередині вікна повертається в роботу замість нової
     const windowMs = reopenHours(channel.settings) * 3_600_000;
@@ -303,14 +348,14 @@ export class ChannelIngestService {
           data: { status: 'OPEN', resolvedAt: null },
         });
         await tx.$executeRaw`RELEASE SAVEPOINT reopen_conversation`;
-        return resolved.id;
+        return { id: resolved.id, reopened: true };
       } catch {
         await tx.$executeRaw`ROLLBACK TO SAVEPOINT reopen_conversation`;
         const winner = await tx.conversation.findFirst({
           where: { contactId, status: { not: 'RESOLVED' } },
           select: { id: true },
         });
-        if (winner) return winner.id;
+        if (winner) return { id: winner.id, reopened: false };
         throw new Error(`Could not reopen conversation for contact ${contactId}`);
       }
     }
@@ -320,15 +365,19 @@ export class ChannelIngestService {
       VALUES (gen_random_uuid()::text, 'CUSTOMER', 'tenant', ${channel.id}, ${contactId}, now())
       ON CONFLICT (contact_id) WHERE contact_id IS NOT NULL AND status <> 'RESOLVED' DO NOTHING
       RETURNING id`;
-    if (created[0]) return created[0].id;
+    if (created[0]) return { id: created[0].id, reopened: false };
 
     const winner = await tx.conversation.findFirst({
       where: { contactId, status: { not: 'RESOLVED' } },
       select: { id: true },
     });
     if (!winner) throw new Error(`Conversation race for contact ${contactId}`);
-    return winner.id;
+    return { id: winner.id, reopened: false };
   }
+}
+
+function emptyOutcome(state: IngestOutcome['state']): IngestOutcome {
+  return { stored: 0, changedConversationIds: [], storedMessages: [], updatedMessages: [], state };
 }
 
 function reopenHours(settings: unknown): number {

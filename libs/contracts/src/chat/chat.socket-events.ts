@@ -73,6 +73,19 @@ export const ChatInboxChangedSchema = z.object({
 
 export type ChatInboxChanged = z.infer<typeof ChatInboxChangedSchema>;
 
+/**
+ * Стан доставки вихідного змінився (CHAT-2b, design.md D10): «перечитай повідомлення». Летить у
+ * room тенанта (клієнтську розмову бачать усі) і не несе ні статусу, ні лічильників — правило
+ * AGENTS.md №15 його не стосується: втрата сигналу нічого не губить, стан у Postgres.
+ */
+export const ChatMessageUpdatedSchema = z.object({
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
+  occurredAt: z.iso.datetime(),
+});
+
+export type ChatMessageUpdated = z.infer<typeof ChatMessageUpdatedSchema>;
+
 /** Події сокета чату (docs/chat.md §4.8); збирає root `socket-events.ts` */
 export const CHAT_SOCKET_EVENTS = {
   chatMessageCreated: defineSocketEvent('chat.message-created.v1', ChatMessageCreatedSchema),
@@ -82,4 +95,5 @@ export const CHAT_SOCKET_EVENTS = {
   ),
   chatTypingChanged: defineSocketEvent('chat.typing-changed.v1', ChatTypingChangedSchema),
   chatInboxChanged: defineSocketEvent('chat.inbox-changed.v1', ChatInboxChangedSchema),
+  chatMessageUpdated: defineSocketEvent('chat.message-updated.v1', ChatMessageUpdatedSchema),
 };

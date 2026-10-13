@@ -61,13 +61,13 @@ model AiMessage {
 
   // Резерв під AI-1 (облік токенів). Nullable-колонки зараз коштують нічого і
   // економлять міграцію на таблиці, у якої на той час уже будуть рядки
-  model            String?
-  promptTokens     Int?    @map("prompt_tokens")
-  completionTokens Int?    @map("completion_tokens")
+  model              String?
+  promptTokens       Int?    @map("prompt_tokens")
+  completionTokens   Int?    @map("completion_tokens")
   // Підмножина promptTokens (не додається зверху) — скільки токенів промпту прочитано
   // з кешу провайдера. Раніше лише в лозі воркера (ai-1a); ai-1d зберігає окремою
   // колонкою й рахує в ai_usage_counters — єдиний спосіб побачити, чи працює кеш
-  cachedPromptTokens Int? @map("cached_prompt_tokens")
+  cachedPromptTokens Int?    @map("cached_prompt_tokens")
 
   // Версія корпусу знань, якою відповідали (ai-1b, design.md D7): хеш артефакту
   // `pnpm ai:knowledge`. Повний промпт НЕ зберігається — він відтворюється з цієї
@@ -78,28 +78,28 @@ model AiMessage {
   // Фрагменти retrieval, РЕАЛЬНО надіслані моделі в цій спробі (AI-2a.3, design.md D6):
   // лише метадані (n, chunk/document id, джерело, ревізія, назва, шлях, розділ), без
   // тексту. З них API рахує перевірені цитати; NULL — статичний корпус або до AI-2a.3
-  knowledgeChunks Json? @map("knowledge_chunks")
+  knowledgeChunks  Json?   @map("knowledge_chunks")
 
   // ВЛАСНІСТЬ ГЕНЕРАЦІЇ (AI-0.1, design.md D1). Захоплюється умовним UPDATE, що
   // збільшує `attempt` і виставляє оренду; кожен наступний запис — теж умовний
   // UPDATE з `WHERE attempt = <моя спроба>`. Нуль оновлених рядків = спробу
   // випереджено — генерація припиняється мовчки, нічого не фіналізується
-  attempt Int @default(0)
+  attempt           Int       @default(0)
   // Оренда власності: PENDING отримує її при створенні (design.md D3), STREAMING —
   // при захопленні. NULL або минула — відповідь "покинута", закривається на
   // наступному читанні розмови, а не сканером-кроном
-  leaseExpiresAt DateTime? @map("lease_expires_at")
+  leaseExpiresAt    DateTime? @map("lease_expires_at")
   // Стрічка знає позицію потоку: скільки кадрів дельт уже увійшло в `content`.
   // Разом з `attempt` це дає клієнту точку, з якої продовжувати після одного
   // перечитування, без вгадування по `chunkSeq === 0` (design.md D6)
-  chunkCount Int @default(0) @map("chunk_count")
+  chunkCount        Int       @default(0) @map("chunk_count")
   // Факт Stop, записаний у БД РАНІШЕ за pub/sub-сигнал (design.md D4): доставляє
   // скасування, навіть якщо сигнал загублено або надійшов до підписки воркера
   cancelRequestedAt DateTime? @map("cancel_requested_at")
   // Id запиту поточної спроби в провайдера (`gen-…`, AI-5b design.md R3) — пишеться разом із
   // частковим текстом. Не вартість: потрібен, щоб спробу впалого воркера можна було
   // дооцінити через добір, коли наступна доставка перезахопить рядок
-  providerRequestId String? @map("provider_request_id")
+  providerRequestId String?   @map("provider_request_id")
 
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
@@ -134,14 +134,14 @@ model AiUsageCounter {
   // Початок доби UTC, якій належить рядок (design.md D2)
   periodStart DateTime @map("period_start")
 
-  promptTokens Int @default(0) @map("prompt_tokens")
+  promptTokens       Int @default(0) @map("prompt_tokens")
   // Підмножина promptTokens, НЕ додається зверху (design.md D5) — лише видимість кеша
   cachedPromptTokens Int @default(0) @map("cached_prompt_tokens")
   completionTokens   Int @default(0) @map("completion_tokens")
   // Скільки ПИТАНЬ юзер поставив за добу — для ліміту `AI_QUOTA_USER_DAILY_MESSAGES` (демо-стенд).
   // Окремо від токенів: токени вимірюють вартість і пишуться після відповіді, а кількість питань
   // резервується атомарно в самому `ask()`
-  messageCount Int @default(0) @map("message_count")
+  messageCount       Int @default(0) @map("message_count")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -167,20 +167,20 @@ enum AiMessageStatus {
 // AI-2a foundation: tenant-owned retrieval index. Global publishing is a later
 // control-plane step; tenant_id stays required, with the standard RLS boundary.
 model AiKnowledgeSource {
-  id             String   @id @default(uuid())
-  tenantId       String   @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
-  key            String
-  product        String
-  isEnabled      Boolean  @default(false) @map("is_enabled")
+  id              String    @id @default(uuid())
+  tenantId        String    @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  key             String
+  product         String
+  isEnabled       Boolean   @default(false) @map("is_enabled")
   // Ingest stages a complete revision, then atomically switches this pointer.
   // Null means unpublished. No automatic publication on document/chunk insert.
-  activeRevision String?  @map("active_revision")
-  ingestRunId String? @map("ingest_run_id")
-  ingestStatus String @default("idle") @map("ingest_status")
+  activeRevision  String?   @map("active_revision")
+  ingestRunId     String?   @map("ingest_run_id")
+  ingestStatus    String    @default("idle") @map("ingest_status")
   ingestStartedAt DateTime? @map("ingest_started_at")
-  manifestHash String? @map("manifest_hash") @db.Char(64)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  manifestHash    String?   @map("manifest_hash") @db.Char(64)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   documents AiKnowledgeDocument[]

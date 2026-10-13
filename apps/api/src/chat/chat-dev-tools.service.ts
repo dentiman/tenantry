@@ -5,6 +5,7 @@ import type {
   FakeChannelSetupResponse,
   NormalizedEvent,
   SimulateInbound,
+  SimulateStatus,
   SimulateInboundResponse,
 } from '@saas-skeleton/contracts';
 import {
@@ -68,13 +69,7 @@ export class ChatDevToolsService {
   }
 
   async simulate(input: SimulateInbound, baseUrl: string): Promise<SimulateInboundResponse> {
-    const account = await this.prisma.messagingAccount.findFirst({ where: { provider: 'fake' } });
-    const channel = account
-      ? await this.prisma.channel.findFirst({ where: { accountId: account.id, isEnabled: true } })
-      : null;
-    if (!account?.appSecret || !channel) {
-      throw new ConflictException('Create the fake channel first (POST /dev/chat/fake-channel)');
-    }
+    const { account, channel } = await this.fakeChannel();
 
     const externalMessageId = input.externalMessageId ?? `sim-${randomUUID()}`;
     const event: NormalizedEvent = {
@@ -87,15 +82,74 @@ export class ChatDevToolsService {
       content: { type: 'text', body: input.text },
       providerMeta: { simulated: true },
     };
-    const body = Buffer.from(buildFakeWebhookBody([event]));
-    const secret = this.crypto.decrypt(account.appSecret);
+    const webhookStatus = await this.postSigned(account, [event], baseUrl);
+    return { externalMessageId, webhookStatus };
+  }
 
+  /** Квитанція про вихідне — тим самим підписаним шляхом, що й вхідне (CHAT-2b) */
+  async simulateStatus(input: SimulateStatus, baseUrl: string): Promise<SimulateInboundResponse> {
+    const { account, channel } = await this.fakeChannel();
+
+    let externalMessageId = input.externalMessageId;
+    let opaqueId: string | null = null;
+    if (input.messageId) {
+      const message = await this.prisma.chatMessage.findFirst({
+        where: { id: input.messageId, direction: 'OUTBOUND' },
+        select: { id: true, externalId: true },
+      });
+      if (!message) throw new ConflictException('Outbound message not found');
+      opaqueId = message.id;
+      // Квитанція може випередити запис id: тоді шлемо id, який дав би fake (`fake-out-<id>`)
+      externalMessageId ??= message.externalId ?? `fake-out-${message.id}`;
+    }
+    if (!externalMessageId) {
+      throw new ConflictException('Give messageId or externalMessageId');
+    }
+
+    const event: NormalizedEvent = {
+      kind: 'status',
+      channelExternalId: channel.externalId,
+      externalMessageId,
+      opaqueId,
+      status: input.status,
+      occurredAt: new Date().toISOString(),
+      failure:
+        input.status === 'failed'
+          ? { class: 'PERMANENT', code: input.failure?.code ?? '131026', title: input.failure?.title ?? 'Simulated failure' }
+          : null,
+      providerMeta: { simulated: true },
+    };
+    const webhookStatus = await this.postSigned(account, [event], baseUrl);
+    return { externalMessageId, webhookStatus };
+  }
+
+  private async fakeChannel(): Promise<{
+    account: { webhookKey: string; appSecret: string };
+    channel: { externalId: string };
+  }> {
+    const account = await this.prisma.messagingAccount.findFirst({ where: { provider: 'fake' } });
+    const channel = account
+      ? await this.prisma.channel.findFirst({ where: { accountId: account.id, isEnabled: true } })
+      : null;
+    if (!account?.appSecret || !channel) {
+      throw new ConflictException('Create the fake channel first (POST /dev/chat/fake-channel)');
+    }
+    return { account: { webhookKey: account.webhookKey, appSecret: account.appSecret }, channel };
+  }
+
+  private async postSigned(
+    account: { webhookKey: string; appSecret: string },
+    events: NormalizedEvent[],
+    baseUrl: string,
+  ): Promise<number> {
+    const body = Buffer.from(buildFakeWebhookBody(events));
+    const secret = this.crypto.decrypt(account.appSecret);
     const response = await fetch(`${baseUrl}/api/public/channels/fake/${account.webhookKey}`, {
       method: 'POST',
       // Не JSON: підпис рахується над точними байтами, а тип тіла вебхукові байдужий
       headers: { 'Content-Type': 'application/octet-stream', [FAKE_SIGNATURE_HEADER]: signFakeBody(secret, body) },
       body,
     });
-    return { externalMessageId, webhookStatus: response.status };
+    return response.status;
   }
 }

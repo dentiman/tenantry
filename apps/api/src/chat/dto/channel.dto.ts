@@ -10,6 +10,7 @@ import {
   MessagingAccountResponseSchema,
   SimulateInboundResponseSchema,
   SimulateInboundSchema,
+  SimulateStatusSchema,
 } from '@saas-skeleton/contracts';
 
 export class InboxQueryDto extends createZodDto(InboxQuerySchema) {}
@@ -24,3 +25,4 @@ export class SimulateInboundResponseDto extends createZodDto(SimulateInboundResp
 export class MessagingAccountListResponseDto extends createZodDto(
   MessagingAccountListResponseSchema,
 ) {}
+export class SimulateStatusDto extends createZodDto(SimulateStatusSchema) {}

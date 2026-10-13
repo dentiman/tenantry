@@ -37,6 +37,11 @@
 
 ---
 
+> **Доменний код** (CHAT-2b): виняток може назвати свій код явно (`new UnprocessableEntityException({ code: 'CHANNEL_WINDOW_CLOSED', message })`);
+> `AllExceptionsFilter` приймає лише коди з закритої множини `ApiErrorCodeSchema`, будь-що інше ігнорується й код
+> виводиться зі статусу. Новий код = зміна контракту: додається в `libs/contracts/src/error/error.schema.ts` і
+> перегенеровуються обидва клієнти.
+
 ## 1. Контракт `ApiError` (`libs/contracts/src/error/`)
 
 Фронт імпортує тип напряму з `@saas-skeleton/contracts` — без OpenAPI-шляху.
@@ -65,6 +70,7 @@
 | `FORBIDDEN`           | 403  | Немає прав (RBAC — у беклозі)                       | —                  |
 | `NOT_FOUND`           | 404  | Ресурс не знайдено (явно або Prisma P2025)          | —                  |
 | `CONFLICT`            | 409  | Унікальність/конфлікт стану (P2002, явний конфлікт) | так, якщо відоме поле |
+| `CHANNEL_WINDOW_CLOSED` | 422 | Вікно вільного тексту каналу закрите (CHAT-2b); фронт пояснює правило й пропонує нотатку | — |
 | `INTERNAL_ERROR`      | 500  | Невідомий виняток; message завжди замаскований      | —                  |
 | `SERVICE_UNAVAILABLE` | 503  | БД/залежність недоступна — клієнту можна ретраїти   | —                  |
 

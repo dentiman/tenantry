@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -21,13 +22,15 @@ import type {
   ConversationListResponse,
   ConversationResponse,
 } from '@saas-skeleton/contracts';
-import { StorageService } from '@saas-skeleton/shared';
+import { ChannelAdapterRegistry, StorageService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
 import type { ConversationWithParticipants } from './chat.service';
 import { toChatMessageResponse, toConversationResponse } from './chat.mapper';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { PostChatMessageDto } from './dto/post-chat-message.dto';
+import { SetConversationAssigneeDto } from './dto/set-conversation-assignee.dto';
+import { SetConversationStatusDto } from './dto/set-conversation-status.dto';
 import { MarkConversationReadDto } from './dto/mark-conversation-read.dto';
 import { ChatMessageListQueryDto, ConversationListQueryDto } from './dto/chat-query.dto';
 import {
@@ -51,6 +54,7 @@ export class ChatController {
   constructor(
     private readonly chat: ChatService,
     private readonly storage: StorageService,
+    private readonly registry: ChannelAdapterRegistry,
   ) {}
 
   @Get()
@@ -69,7 +73,7 @@ export class ChatController {
     @Body() dto: CreateConversationDto,
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
-    return toConversationResponse(await this.chat.create(actor, dto), actor.sub, this.storage);
+    return toConversationResponse(await this.chat.create(actor, dto), actor.sub, this.storage, this.registry);
   }
 
   @Get(':id')
@@ -78,7 +82,7 @@ export class ChatController {
     @Param('id') id: string,
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
-    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage);
+    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
   }
 
   /**
@@ -107,6 +111,41 @@ export class ChatController {
     return toChatMessageResponse(await this.chat.post(actor, id, dto));
   }
 
+  /** Повторити відправку невдалого вихідного (лише клієнтські розмови); 201 — як і сама відправка */
+  @Post(':id/messages/:messageId/resend')
+  @ApiCreatedResponse({ type: ChatMessageResponseDto.Output })
+  async resend(
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<ChatMessageResponse> {
+    return toChatMessageResponse(await this.chat.resend(actor, id, messageId));
+  }
+
+  /** Статус клієнтської розмови: `OPEN` / `PENDING` / `RESOLVED` */
+  @Put(':id/status')
+  @ApiOkResponse({ type: ConversationResponseDto.Output })
+  async setStatus(
+    @Param('id') id: string,
+    @Body() dto: SetConversationStatusDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<ConversationResponse> {
+    await this.chat.setStatus(actor, id, dto);
+    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
+  }
+
+  /** Відповідальний за клієнтську розмову; `userId: null` знімає призначення */
+  @Put(':id/assignee')
+  @ApiOkResponse({ type: ConversationResponseDto.Output })
+  async setAssignee(
+    @Param('id') id: string,
+    @Body() dto: SetConversationAssigneeDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<ConversationResponse> {
+    await this.chat.setAssignee(actor, id, dto);
+    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
+  }
+
   /**
    * Рух курсора прочитаного. 204: клієнт і так перечитує список, а тіло тут
    * означало б, що курсор можна «не застосувати» — а він або рухається вперед,
@@ -129,7 +168,7 @@ export class ChatController {
   ): Promise<ConversationResponse[]> {
     return Promise.all(
       conversations.map((conversation) =>
-        toConversationResponse(conversation, viewerId, this.storage),
+        toConversationResponse(conversation, viewerId, this.storage, this.registry),
       ),
     );
   }

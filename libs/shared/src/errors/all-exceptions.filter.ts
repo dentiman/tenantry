@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ZodValidationException } from 'nestjs-zod';
 import type { Request, Response } from 'express';
+import { ApiErrorCodeSchema } from '@saas-skeleton/contracts';
 import type { ApiError, ApiErrorCode, FieldError } from '@saas-skeleton/contracts';
 
 interface PrismaError {
@@ -173,11 +174,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const raw = exception.getResponse();
     let message = exception.message;
     let fieldErrors: FieldError[] | undefined;
+    let explicitCode: ApiError['code'] | undefined;
 
     if (typeof raw === 'string') {
       message = raw;
     } else if (typeof raw === 'object') {
-      const obj = raw as { message?: string | string[]; fieldErrors?: FieldError[] };
+      const obj = raw as { message?: string | string[]; fieldErrors?: FieldError[]; code?: unknown };
+      // Доменна помилка може назвати свій код явно (`CHANNEL_WINDOW_CLOSED`); код поза закритою
+      // множиною ігнорується — інакше сервіс міг би вигадати код, якого фронт не вміє
+      const parsedCode = ApiErrorCodeSchema.safeParse(obj.code);
+      if (parsedCode.success) {
+        explicitCode = parsedCode.data;
+      }
       if (Array.isArray(obj.message)) {
         message = obj.message.join('; ');
       } else if (typeof obj.message === 'string') {
@@ -193,7 +201,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = 'Internal server error';
     }
 
-    const body: ApiError = { statusCode: status, code: codeFromStatus(status), message };
+    const body: ApiError = {
+      statusCode: status,
+      code: explicitCode ?? codeFromStatus(status),
+      message,
+    };
     if (fieldErrors) {
       body.fieldErrors = fieldErrors;
     }

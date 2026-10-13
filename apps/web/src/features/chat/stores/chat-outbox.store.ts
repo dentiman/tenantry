@@ -6,12 +6,19 @@ export interface OutboxMessage {
   body: string;
   state: 'sending' | 'failed';
   createdAt: string;
+  /** `INTERNAL` — нотатка колегам у клієнтській розмові; повтор мусить лишитись нотаткою (CHAT-2b) */
+  visibility: 'PUBLIC' | 'INTERNAL';
 }
 
 interface ChatOutboxState {
   /** conversationId → надіслані, але ще не підтверджені репліки (у порядку надсилання) */
   pending: Record<string, OutboxMessage[]>;
-  enqueue: (conversationId: string, body: string, clientMessageId: string) => void;
+  enqueue: (
+    conversationId: string,
+    body: string,
+    clientMessageId: string,
+    visibility?: OutboxMessage['visibility'],
+  ) => void;
   markFailed: (conversationId: string, clientMessageId: string) => void;
   markSending: (conversationId: string, clientMessageId: string) => void;
   /** Сервер підтвердив — рядок зникає звідси і зʼявляється у стрічці з кеша */
@@ -38,13 +45,19 @@ interface ChatOutboxState {
 export const useChatOutboxStore = create<ChatOutboxState>()((set) => ({
   pending: {},
 
-  enqueue: (conversationId, body, clientMessageId) => {
+  enqueue: (conversationId, body, clientMessageId, visibility = 'PUBLIC') => {
     set((state) => ({
       pending: {
         ...state.pending,
         [conversationId]: [
           ...(state.pending[conversationId] ?? []),
-          { clientMessageId, body, state: 'sending', createdAt: new Date().toISOString() },
+          {
+            clientMessageId,
+            body,
+            state: 'sending',
+            createdAt: new Date().toISOString(),
+            visibility,
+          },
         ],
       },
     }));

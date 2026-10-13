@@ -21,6 +21,7 @@ you submitted.
 | `FORBIDDEN` | "Access denied" | Your role does not allow this action (for example changing organization settings without the Admin role, or changing an event you do not organize). Ask an administrator or the event organizer. |
 | `NOT_FOUND` | "Not found" | The item does not exist, was deleted, or you are not allowed to see it (for example someone else's private event or a chat you are not part of). |
 | `CONFLICT` | "Conflict" | The change clashes with existing data — for example the email is already used by another account ("Already exists"), or the assistant is still answering your previous question. |
+| `CHANNEL_WINDOW_CLOSED` | "The 24-hour reply window is closed" | You tried to reply to a customer more than 24 hours after their last message. The messaging channel only allows free-text replies within 24 hours. Add an internal note instead, or wait for the customer to write again. |
 | `TOO_MANY_REQUESTS` | "Wait a minute and try again." | You did the same action too many times in a short period. Wait and try again. |
 | `INTERNAL_ERROR` | "Internal server error" | An unexpected problem on the server. Try again; if it repeats, tell your administrator what you did and when. |
 | `SERVICE_UNAVAILABLE` | "Service temporarily unavailable, please try again" | The server or one of its services is temporarily unreachable. Try again in a moment. |

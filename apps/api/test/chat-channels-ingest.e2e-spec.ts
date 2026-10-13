@@ -6,7 +6,10 @@ import { Test } from '@nestjs/testing';
 import { SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import {
   ChannelAdapterRegistry,
+  ActivityRecorder,
   ChannelIngestService,
+  ChannelStatusService,
+  ConversationWorkflow,
   FakeChannelAdapter,
   buildFakeWebhookBody,
   type IngestOutcome,
@@ -40,7 +43,11 @@ describe('Channel ingest (e2e, CHAT-2a)', () => {
     prisma = app.get(SystemPrismaService);
     tenantContext = app.get(TenantContextService);
     transactions = app.get(TenantTransactions);
-    ingest = new ChannelIngestService(new ChannelAdapterRegistry().register(new FakeChannelAdapter()));
+    ingest = new ChannelIngestService(
+      new ChannelAdapterRegistry().register(new FakeChannelAdapter()),
+      new ChannelStatusService(),
+      new ConversationWorkflow(new ActivityRecorder()),
+    );
   });
 
   beforeEach(async () => {

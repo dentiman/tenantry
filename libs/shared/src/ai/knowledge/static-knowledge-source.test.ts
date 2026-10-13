@@ -74,9 +74,9 @@ describe('StaticKnowledgeSource', () => {
 });
 
 describe('закомічений корпус (docs/ai-knowledge → knowledge-corpus.json)', () => {
-  it('вантажиться, вкладається в бюджет, має 13 документів', async () => {
+  it('вантажиться, вкладається в бюджет, має 14 документів', async () => {
     const selection = await new StaticKnowledgeSource().select({ role: 'ADMIN', question: '' });
-    expect(selection.documents).toHaveLength(13);
+    expect(selection.documents).toHaveLength(14);
     expect(bundledCorpus.totalChars).toBeLessThanOrEqual(AI_KNOWLEDGE_CHAR_BUDGET);
   });
 
@@ -85,7 +85,7 @@ describe('закомічений корпус (docs/ai-knowledge → knowledge-c
     const slugs = selection.documents.map((d) => d.slug);
     expect(slugs).not.toContain('users-and-roles');
     expect(slugs).not.toContain('settings-organization');
-    expect(slugs).toHaveLength(11);
+    expect(slugs).toHaveLength(12);
   });
 
   /**

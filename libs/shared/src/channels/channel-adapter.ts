@@ -1,4 +1,5 @@
 import type { ChannelProvider, ChannelType, NormalizedEvent } from '@saas-skeleton/contracts';
+import type { OutboundContext } from './channel-send';
 
 /**
  * Контракт адаптера каналу (docs/whatsapp-channel.md §4.2). Ядро вимагає мінімум; решта
@@ -53,4 +54,10 @@ export interface ChannelAdapter {
 
   /** 0..N подій: провайдери батчать. Ніколи не кидає */
   parseWebhook(raw: Buffer): ParseResult;
+
+  /**
+   * Надіслати текст (CHAT-2b). Успіх повертає id повідомлення в провайдера; відмову кидає як
+   * `ChannelSendError` із класом. Поважає `ctx.signal`: після таймауту має перервати запит.
+   */
+  send(ctx: OutboundContext, creds: ChannelCredentials): Promise<{ externalId: string }>;
 }

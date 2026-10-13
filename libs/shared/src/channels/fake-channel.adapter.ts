@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NormalizedEventSchema, type NormalizedEvent } from '@saas-skeleton/contracts';
+import { ChannelSendError, type OutboundContext } from './channel-send';
 import type {
   ChannelAdapter,
   ChannelCapabilities,
@@ -20,6 +21,13 @@ export function signFakeBody(secret: string, body: Buffer | string): string {
 export function buildFakeWebhookBody(events: readonly NormalizedEvent[]): string {
   return JSON.stringify({ events });
 }
+
+/**
+ * Сценарій відправки задається маркером на початку тексту: `[[fake:<сценарій>]] текст`. Маркери діють
+ * лише тому, що сам fake-адаптер існує тільки під `CHAT_DEV_TOOLS` (design.md D4). Без маркера —
+ * успіх із id `fake-out-<messageId>`.
+ */
+const FAKE_SCENARIO = /^\[\[fake:([a-z-]+)\]\]/;
 
 /**
  * Fake-провайдер: детермінований, без мережі. Єдина мета — обкатати ВЕСЬ публічний шлях
@@ -78,5 +86,44 @@ export class FakeChannelAdapter implements ChannelAdapter {
           };
     });
     return { events };
+  }
+
+  // Облікові дані fake-провайдеру не потрібні: він нічого не автентифікує
+  async send(ctx: OutboundContext, _creds?: ChannelCredentials): Promise<{ externalId: string }> {
+    const scenario = FAKE_SCENARIO.exec(ctx.body)?.[1];
+    switch (scenario) {
+      case 'window':
+        throw new ChannelSendError('WINDOW_CLOSED', '131047', 'Re-engagement message required');
+      case 'permanent':
+        throw new ChannelSendError('PERMANENT', '131026', 'Recipient cannot receive this message');
+      case 'policy':
+        throw new ChannelSendError('POLICY', '131049', 'Not delivered to maintain engagement');
+      case 'ratelimit':
+        throw new ChannelSendError('RATE_LIMITED', '130429', 'Rate limit hit', 1);
+      case 'auth':
+        throw new ChannelSendError('AUTH', '190', 'Access token is invalid or expired');
+      case 'human':
+        throw new ChannelSendError('HUMAN', '131031', 'Account locked');
+      case 'transient':
+        throw new ChannelSendError('TRANSIENT', '131000', 'Something went wrong');
+      case 'transient-once':
+        if (ctx.attempt === 1) {
+          throw new ChannelSendError('TRANSIENT', '131000', 'Something went wrong');
+        }
+        break;
+      case 'slow':
+        // Чекає на таймаут відправки: перевіряє, що ядро справді його задає і що адаптер його поважає
+        await new Promise<void>((_, reject) => {
+          const abort = (): void => {
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+          };
+          if (ctx.signal.aborted) abort();
+          else ctx.signal.addEventListener('abort', abort, { once: true });
+        });
+        break;
+      default:
+        break;
+    }
+    return { externalId: `fake-out-${ctx.messageId}` };
   }
 }

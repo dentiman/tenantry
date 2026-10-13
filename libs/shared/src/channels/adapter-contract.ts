@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalizedEvent } from '@saas-skeleton/contracts';
 import type { ChannelAdapter, ChannelCredentials } from './channel-adapter';
+import type { OutboundContext } from './channel-send';
 
 /**
  * Контракт-тести, які мусить пройти БУДЬ-ЯКИЙ адаптер (fake тут, Meta в CHAT-3a): сюди
@@ -19,6 +20,11 @@ export interface AdapterFixtures {
   batchBody(ids: [string, string]): Buffer;
   /** Параметри валідного рукостискання з даним challenge */
   handshakeQuery(challenge: string): Record<string, string>;
+  /**
+   * Контекст відправки, яку адаптер у тесті обробить УСПІШНО (для fake — звичайний текст; для
+   * справжнього — мок транспорту). Секція `send` контракту без нього пропускається.
+   */
+  okSend?(): OutboundContext;
 }
 
 export function describeChannelAdapterContract(
@@ -98,6 +104,22 @@ export function describeChannelAdapterContract(
           failed: true,
         });
       }
+    });
+  });
+
+  describe(`контракт адаптера (send): ${name}`, () => {
+    const { adapter, fixtures } = make();
+
+    it('успішна відправка повертає непорожній id провайдера', async () => {
+      if (!fixtures.okSend) return;
+      const { externalId } = await adapter.send(fixtures.okSend(), fixtures.creds);
+      expect(externalId.length).toBeGreaterThan(0);
+    });
+
+    it('оголошує ліміт довжини тексту і вікно (або його відсутність)', () => {
+      expect(adapter.capabilities.maxTextLength).toBeGreaterThan(0);
+      const window = adapter.capabilities.freeformWindowHours;
+      expect(window === undefined || window > 0).toBe(true);
     });
   });
 }

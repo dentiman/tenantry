@@ -8,8 +8,11 @@ import {
   AiLlmModule,
   AiModule,
   ChannelAdapterRegistry,
+  ChannelDeliveryService,
+  ChannelPendingSweeper,
   ChannelIngestService,
-  ChatNotifierModule,
+  ChannelStatusService,
+  ChatSharedModule,
   CryptoModule,
   MessagingModule,
   NotificationsModule,
@@ -20,6 +23,9 @@ import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
+import { ChannelsDeliverSubscriber } from './chat/channels-deliver.subscriber';
+import { ChannelsSweepPendingSubscriber } from './chat/channels-sweep-pending.subscriber';
+import { ChatNotifyCustomerSubscriber } from './chat/chat-notify-customer.subscriber';
 import { ChatNotifySubscriber } from './chat/chat-notify.subscriber';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { AiPurgeConversationsSubscriber } from './subscribers/ai-purge-conversations.subscriber';
@@ -54,7 +60,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     CryptoModule,
     ActivitiesModule,
     NotificationsModule,
-    ChatNotifierModule,
+    ChatSharedModule,
     AiModule,
     // ai-1a: провайдер LLM (і його ключ) — лише тут, api його не будує (design.md D5)
     AiLlmModule,
@@ -65,9 +71,15 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     WorkerRealtimeEmitter,
     // CHAT-2a: розбір вебхуків каналів (fake-провайдер — лише з CHAT_DEV_TOOLS)
     { provide: ChannelAdapterRegistry, useFactory: (): ChannelAdapterRegistry => createChannelAdapterRegistry() },
+    ChannelStatusService,
     ChannelIngestService,
+    ChannelDeliveryService,
+    ChannelPendingSweeper,
+    ChannelsSweepPendingSubscriber,
     ChannelsIngestSubscriber,
+    ChannelsDeliverSubscriber,
     ChatNotifySubscriber,
+    ChatNotifyCustomerSubscriber,
     AiLeaseGuard,
     AiGenerateReplySubscriber,
     AiPurgeConversationsSubscriber,

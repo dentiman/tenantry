@@ -26,6 +26,8 @@ const TENANT_TABLES = [
   'channel_contacts',
   'channel_contact_addresses',
   'channel_webhook_events',
+  // CHAT-2b: квитанції, що випередили external_id
+  'channel_pending_statuses',
 ];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
@@ -223,6 +225,7 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
 
     const cleanup = async (): Promise<void> => {
       await inTenant(tenantA, async () => {
+        await db.query(`DELETE FROM channel_pending_statuses WHERE account_id = $1`, [accountId]);
         await db.query(`DELETE FROM channel_webhook_events WHERE account_id = $1`, [accountId]);
         await db.query(`DELETE FROM channel_contacts WHERE id = $1`, [contactId]);
         await db.query(`DELETE FROM channels WHERE id = $1`, [channelId]);
@@ -253,6 +256,11 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
            VALUES ('rls-chan-event', $1, $2, '{}', 'hash')`,
           [tenantA, accountId],
         );
+        await db.query(
+          `INSERT INTO channel_pending_statuses (id, tenant_id, account_id, channel_external_id, external_id, status, occurred_at)
+           VALUES ('rls-chan-pending', $1, $2, 'rls-chan-ext', 'wamid.x', 'delivered', now())`,
+          [tenantA, accountId],
+        );
       });
     });
 
@@ -264,12 +272,12 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
         return r.rows[0]?.count;
       };
       await inTenant(tenantA, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events']) {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses']) {
           expect({ table, seen: Number(await count(table)) > 0 }).toEqual({ table, seen: true });
         }
       });
       await inTenant(tenantB, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events']) {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses']) {
           expect({ table, count: await count(table) }).toEqual({ table, count: '0' });
         }
       });

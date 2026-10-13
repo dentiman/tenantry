@@ -38,12 +38,21 @@
   },
   "message": {
     "sending": "Sending…",
-    "failed": "Not sent"
+    "failed": "Not sent",
+    "internalNote": "Internal note"
   },
   "composer": {
     "label": "Message",
     "placeholder": "Write a message…",
-    "send": "Send"
+    "send": "Send",
+    "modeLabel": "Message type",
+    "modeReply": "Reply to customer",
+    "modeNote": "Internal note",
+    "noteHint": "Only your team sees this. It is not sent to the customer.",
+    "notePlaceholder": "Write a note for your team…",
+    "windowClosedSince": "The 24-hour reply window closed on {{date}}. You can add an internal note; the customer can write again to reopen the window.",
+    "windowClosedNever": "The customer has not written yet, so there is nothing to reply to. You can add an internal note.",
+    "windowClosedToast": "The 24-hour reply window has just closed — the message was not sent."
   },
   "typing": {
     "one": "{{name}} is typing…",
@@ -64,14 +73,18 @@
   "system": {
     "actorSystem": "System",
     "conversationCreated": "{{actor}} created the conversation",
-    "memberAdded": "{{actor}} added {{member}}"
+    "memberAdded": "{{actor}} added {{member}}",
+    "assigned": "{{actor}} assigned the conversation to {{assignee}}",
+    "unassigned": "{{actor}} removed the assignee",
+    "statusChanged": "{{actor}} set the status to {{status}}"
   },
   "actions": {
     "newConversation": "New conversation",
     "create": "Create",
     "cancel": "Cancel",
     "retry": "Retry",
-    "discard": "Discard"
+    "discard": "Discard",
+    "resend": "Resend"
   },
   "inbox": {
     "filter": {
@@ -126,8 +139,7 @@
     "errors": {
       "alreadyLinked": "This contact is already linked to a customer.",
       "failed": "Could not update the contact."
-    },
-    "readOnly": "Replies to customers arrive with the next channel update."
+    }
   },
   "settings": {
     "nav": "Messaging",
@@ -178,16 +190,58 @@
     "type": {
       "chat": {
         "message_received_one": "<b>{{actor}}</b> wrote in <a>{{conversation}}</a>: {{preview}}",
-        "message_received_other": "{{count}} new messages in <a>{{conversation}}</a>, latest from <b>{{actor}}</b>: {{preview}}"
+        "message_received_other": "{{count}} new messages in <a>{{conversation}}</a>, latest from <b>{{actor}}</b>: {{preview}}",
+        "customer_message_received_one": "New message from <a>{{conversation}}</a>: {{preview}}",
+        "customer_message_received_other": "{{count}} new messages from <a>{{conversation}}</a>: {{preview}}"
       }
     },
     "label": {
       "chat": {
-        "message_received": "New chat messages"
+        "message_received": "New chat messages",
+        "customer_message_received": "New customer messages"
       }
     },
     "category": {
       "chat": "Chat"
+    }
+  },
+  "delivery": {
+    "pending": "Sending",
+    "sent": "Sent",
+    "delivered": "Delivered",
+    "read": "Read",
+    "failed": "Not delivered"
+  },
+  "failure": {
+    "WINDOW_CLOSED": "The 24-hour reply window is closed",
+    "PERMANENT": "The message cannot be delivered to this number",
+    "POLICY": "Blocked by the channel's messaging policy",
+    "RATE_LIMITED": "Too many messages — delivery gave up",
+    "AUTH": "The channel needs to be reconnected",
+    "TRANSIENT": "Delivery failed after several attempts",
+    "HUMAN": "The channel account needs attention",
+    "unconfirmed": "Could not confirm delivery — resend?"
+  },
+  "status": {
+    "open": "Open",
+    "pending": "Pending",
+    "resolved": "Resolved"
+  },
+  "controls": {
+    "status": "Status",
+    "unassigned": "Unassigned",
+    "errors": {
+      "statusConflict": "This contact already has another open conversation.",
+      "failed": "Could not update the conversation."
+    }
+  },
+  "activity": {
+    "conversation": {
+      "assigned": "<b>{{actor}}</b> assigned <b>{{conversation}}</b> to <b>{{assignee}}</b>",
+      "unassigned": "<b>{{actor}}</b> removed the assignee of <b>{{conversation}}</b>",
+      "status_changed": "<b>{{actor}}</b> reopened <b>{{conversation}}</b>",
+      "resolved": "<b>{{actor}}</b> resolved <b>{{conversation}}</b>",
+      "set_pending": "<b>{{actor}}</b> marked <b>{{conversation}}</b> as pending"
     }
   }
 }

@@ -58,8 +58,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   panels (rail, area sidebar, context panel) for both frontends;
   `docs/frontend/ui-known-issues.md` — open vendored-code issues
 - `docs/chat.md` — **the** reference for chat (human conversations). §7 is the phase plan,
-  §7.6 the invariants later phases build on — don't break them. The built slice is REST-only
-  **by design**: no realtime yet, the screen re-reads on window focus and after sending.
+  §7.6 the invariants later phases build on — don't break them. Built: internal conversations (REST + realtime, notifications) and the customer channel core on a fake
+  provider — inbound, replies with ordered delivery, receipts, workflow (CHAT-0.1…2b); the real WhatsApp adapter is CHAT-3a…3c.
   `docs/bulk-operations.md` — **design only, not implemented** (a disabled demo slot on `/users`).
 - `docs/whatsapp-channel.md` — **the** plan for the first external channel, WhatsApp Cloud API (design
   only, nothing built): decisions of 2026-10-13 (WhatsApp only, provider-neutral core so a second

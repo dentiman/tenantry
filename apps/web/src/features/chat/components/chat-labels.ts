@@ -71,7 +71,13 @@ export function initialsOf(value: string): string {
  * версією сервера, і порожній рядок краще за викид.
  */
 export function systemEntryText(message: ChatMessage, t: TFunction<'chat'>): string {
-  const payload = message.payload as { type?: string; member?: { label?: string } };
+  const payload = message.payload as {
+    type?: string;
+    member?: { label?: string };
+    assignee?: { label?: string } | null;
+    from?: string;
+    to?: string;
+  };
   const actor = message.senderLabel ?? t('system.actorSystem');
 
   switch (payload.type) {
@@ -79,6 +85,15 @@ export function systemEntryText(message: ChatMessage, t: TFunction<'chat'>): str
       return t('system.conversationCreated', { actor });
     case 'member.added':
       return t('system.memberAdded', { actor, member: payload.member?.label ?? '' });
+    case 'conversation.assigned':
+      return payload.assignee
+        ? t('system.assigned', { actor, assignee: payload.assignee.label ?? '' })
+        : t('system.unassigned', { actor });
+    case 'conversation.status_changed':
+      return t('system.statusChanged', {
+        actor,
+        status: t(`status.${(payload.to ?? 'OPEN').toLowerCase()}`),
+      });
     default:
       return '';
   }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, Clock, RotateCw } from 'lucide-react';
+import { AlertCircle, Check, CheckCheck, Clock, RotateCw } from 'lucide-react';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -34,6 +34,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 import { CHAT_COLUMN } from './chat-layout';
 import { useChatOutboxStore, type OutboxMessage } from '../stores/chat-outbox.store';
 import { initialsOf, systemEntryText } from './chat-labels';
+import { canResend, deliveryIcon, failureKey, isDeliverable } from './delivery-state';
 import { ReadOnViewTracker } from './read-on-view-tracker';
 import { flattenTranscript, useMarkRead, useTranscript, type ChatMessage } from './use-chat';
 import type { Conversation } from './use-chat';
@@ -43,6 +44,8 @@ interface ChatTranscriptProps {
   viewerId: string;
   onRetry: (body: string, clientMessageId: string) => void;
   onDiscard: (clientMessageId: string) => void;
+  /** Повторити відправку невдалого вихідного клієнтові (CHAT-2b) */
+  onResend: (messageId: string) => void;
 }
 
 /** Рядок стрічки: або серверне повідомлення, або ще ненадіслане з черги */
@@ -63,6 +66,7 @@ export function ChatTranscript({
   viewerId,
   onRetry,
   onDiscard,
+  onResend,
 }: ChatTranscriptProps) {
   const { t } = useTranslation('chat');
   const query = useTranscript(conversation.id);
@@ -146,6 +150,7 @@ export function ChatTranscript({
               viewerId={viewerId}
               onRetry={onRetry}
               onDiscard={onDiscard}
+              onResend={onResend}
             />
           </MessageScrollerContent>
         </MessageScrollerViewport>
@@ -164,7 +169,9 @@ const EMPTY_OUTBOX: OutboxMessage[] = [];
 export function isOwnRow(row: Row, viewerId: string): boolean {
   return (
     row.kind === 'outbox' ||
-    (row.kind === 'message' && row.message.kind === 'TEXT' && row.message.senderId === viewerId)
+    (row.kind === 'message' &&
+      row.message.kind === 'TEXT' &&
+      (row.message.senderId === viewerId || row.message.direction === 'OUTBOUND'))
   );
 }
 
@@ -187,12 +194,14 @@ function TranscriptRows({
   viewerId,
   onRetry,
   onDiscard,
+  onResend,
 }: {
   rows: Row[];
   conversation: Conversation;
   viewerId: string;
   onRetry: ChatTranscriptProps['onRetry'];
   onDiscard: ChatTranscriptProps['onDiscard'];
+  onResend: ChatTranscriptProps['onResend'];
 }) {
   const { scrollToEnd } = useMessageScroller();
   const last = rows.at(-1);
@@ -229,6 +238,7 @@ function TranscriptRows({
         viewerId={viewerId}
         onRetry={onRetry}
         onDiscard={onDiscard}
+        onResend={onResend}
       />
     </MessageScrollerItem>
   ));
@@ -299,12 +309,14 @@ function TranscriptRow({
   viewerId,
   onRetry,
   onDiscard,
+  onResend,
 }: {
   row: Row;
   conversation: Conversation;
   viewerId: string;
   onRetry: (body: string, clientMessageId: string) => void;
   onDiscard: (clientMessageId: string) => void;
+  onResend: (messageId: string) => void;
 }) {
   const { t } = useTranslation('chat');
 
@@ -388,9 +400,14 @@ function TranscriptRow({
     ) : null;
   }
 
-  const isOwn = message.senderId === viewerId;
+  // Вихідне клієнтові лежить на боці команди незалежно від того, хто з колег його написав
+  const isOutbound = message.direction === 'OUTBOUND';
+  const isOwn = message.senderId === viewerId || isOutbound;
+  const isNote = message.visibility === 'INTERNAL';
+  const deliverable = isDeliverable(message);
   const author = conversation.participants.find((p) => p.id === message.senderId);
   const label = author?.name ?? author?.email ?? message.senderLabel ?? '';
+  const showFailure = deliverable && message.status === 'FAILED' && message.failure !== null;
 
   return (
     <MessageGroup>
@@ -404,18 +421,74 @@ function TranscriptRow({
           </MessageAvatar>
         )}
         <MessageContent>
-          {/* Автор підписується один раз на групу підряд ідучих реплік */}
-          {!isOwn && !groupedWithPrevious && <MessageHeader>{label}</MessageHeader>}
-          <Bubble align={isOwn ? 'end' : 'start'} variant={isOwn ? 'default' : 'muted'}>
+          {/* Автор підписується один раз на групу підряд ідучих реплік; нотатка — завжди, з позначкою */}
+          {isNote ? (
+            <MessageHeader>
+              {t('message.internalNote')} · {label}
+            </MessageHeader>
+          ) : (
+            (!isOwn || (isOutbound && message.senderId !== viewerId)) &&
+            !groupedWithPrevious && <MessageHeader>{label}</MessageHeader>
+          )}
+          <Bubble
+            align={isOwn ? 'end' : 'start'}
+            variant={isNote ? 'muted' : isOwn ? 'default' : 'muted'}
+            className={isNote ? 'border border-dashed border-border' : undefined}
+          >
             <BubbleBody
               body={message.body ?? ''}
-              tone={isOwn ? 'own' : 'other'}
-              meta={<MessageTime iso={message.createdAt} />}
+              tone={isNote ? 'other' : isOwn ? 'own' : 'other'}
+              meta={
+                <>
+                  <MessageTime iso={message.createdAt} />
+                  {deliverable && <DeliveryMark status={message.status} />}
+                </>
+              }
             />
           </Bubble>
+          {showFailure && message.failure && (
+            <MessageFooter>
+              <span className="flex items-center gap-2">
+                <AlertCircle className="text-destructive" />
+                {t(failureKey(message.failure), { defaultValue: message.failure.title })}
+                {canResend(message) && (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => {
+                      onResend(message.id);
+                    }}
+                  >
+                    {t('actions.resend')}
+                  </Button>
+                )}
+              </span>
+            </MessageFooter>
+          )}
         </MessageContent>
       </Message>
     </MessageGroup>
+  );
+}
+
+/**
+ * Стан доставки вихідного поруч із часом (CHAT-2b): годинник — у черзі/відправляється, одна галочка —
+ * прийнято провайдером, дві — доставлено, дві акцентні — прочитано, знак — не доставлено. Іконка
+ * німа для диктора, тому текст стану лишається в sr-only.
+ */
+function DeliveryMark({ status }: { status: ChatMessage['status'] }) {
+  const { t } = useTranslation('chat');
+  const icon = deliveryIcon(status);
+  const text = t(`delivery.${icon}`);
+  return (
+    <>
+      {icon === 'pending' && <Clock className="size-3" />}
+      {icon === 'sent' && <Check className="size-3" />}
+      {icon === 'delivered' && <CheckCheck className="size-3" />}
+      {icon === 'read' && <CheckCheck className="size-3 text-sky-300" />}
+      {icon === 'failed' && <AlertCircle className="size-3 text-destructive" />}
+      <span className="sr-only">{text}</span>
+    </>
   );
 }
 

@@ -5,6 +5,8 @@
  *
  *   pnpm chat:simulate --text "Доброго дня" --from +380501234567 --name "Олена"
  *   pnpm chat:simulate --text "ще раз" --id sim-1        # той самий --id двічі = повтор доставки (дедуп)
+ *   pnpm chat:simulate --status delivered --message <id повідомлення>   # квитанція про вихідне (CHAT-2b)
+ *     (--status sent|delivered|read|failed; без --message можна задати --id провайдера)
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -26,12 +28,17 @@ const { values } = parseArgs({
     text: { type: 'string' },
     name: { type: 'string' },
     id: { type: 'string' },
+    status: { type: 'string' },
+    message: { type: 'string' },
     help: { type: 'boolean' },
   },
 });
 
 if (values.help) {
-  console.log('pnpm chat:simulate --text <текст> [--from <номер>] [--name <імʼя>] [--id <id провайдера>] [--api <url>] [--email] [--password] [--tenant]');
+  console.log(
+    'pnpm chat:simulate --text <текст> [--from <номер>] [--name <імʼя>] [--id <id провайдера>] [--api <url>] [--email] [--password] [--tenant]\n' +
+      'pnpm chat:simulate --status <sent|delivered|read|failed> [--message <id повідомлення> | --id <id провайдера>]',
+  );
   process.exit(0);
 }
 
@@ -60,6 +67,24 @@ async function main(): Promise<void> {
     throw new Error('Dev-інструменти вимкнені: додайте CHAT_DEV_TOOLS=true у .env і перезапустіть api та worker');
   }
   if (setup.status !== 200) throw new Error(`Не вдалося підготувати fake-канал (HTTP ${String(setup.status)})`);
+
+  if (values.status) {
+    const receipt = await call(
+      '/api/dev/chat/simulate-status',
+      {
+        status: values.status,
+        ...(values.message ? { messageId: values.message } : {}),
+        ...(values.id ? { externalMessageId: values.id } : {}),
+      },
+      token,
+    );
+    const answer = receipt.json as { externalMessageId?: string; webhookStatus?: number } | null;
+    if (receipt.status !== 200 || answer?.webhookStatus !== 200) {
+      throw new Error(`Квитанцію не прийнято (HTTP ${String(receipt.status)}, вебхук ${String(answer?.webhookStatus)})`);
+    }
+    console.log(`OK: квитанція ${values.status} для ${String(answer.externalMessageId)} прийнята вебхуком`);
+    return;
+  }
 
   const sent = await call(
     '/api/dev/chat/simulate',

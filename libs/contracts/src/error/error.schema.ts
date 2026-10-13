@@ -11,6 +11,7 @@ export const ApiErrorCodeSchema = z.enum([
   'FORBIDDEN', // 403
   'NOT_FOUND', // 404
   'CONFLICT', // 409 (унікальність — з fieldErrors, якщо відоме поле)
+  'CHANNEL_WINDOW_CLOSED', // 422 — вікно вільного тексту каналу закрите (CHAT-2b); фронт пояснює правило
   'TOO_MANY_REQUESTS', // 429 — обмеження частоти (AUTH-0); заголовок Retry-After
   'INTERNAL_ERROR', // 500 — деталі тільки в логах
   'SERVICE_UNAVAILABLE', // 503 — БД/залежність недоступна, можна ретраїти

@@ -217,11 +217,9 @@ message; who is "on duty" is a CHAT-4 concept.
 The worker already has a headless Socket.IO server on the same Valkey adapter (`WorkerRealtimeEmitter`).
 `fetchSockets()` on a room goes through the adapter, so the worker can ask the same question the API
 does. `WorkerRealtimeEmitter` gains `userIdsInRoom(room)` with the API's contract (1 s timeout,
-fail-open `[]`). **This is unverified for a headless server and is the first task of the group**: if
-`fetchSockets` does not answer from the worker, the fallback is to carry the question through the API
-(a tiny internal call) or to accept "notify even if viewing, cleared on read" for inbound only — the
-spec's suppression scenario then moves to a follow-up. The decision is made on that evidence, not
-assumed.
+fail-open `[]`). **Verified 2026-10-13** with a throwaway script that builds the worker's exact headless server
+(same Valkey streams adapter, no HTTP) beside a real client socket subscribed through the dev API:
+`fetchSockets()` returned that user's id in 29 ms. No fallback is needed.
 
 ### D10. Receipts are folded in SQL; unknown ones are parked
 
