@@ -12,6 +12,21 @@ import { NotificationDispatcherRegistry, type NotificationDispatcher } from '@sa
 import { sessionRoom, tenantRoom, userRoom } from './realtime.constants';
 import type { TenantNamespace } from './realtime.types';
 
+/** Стеля очікування відповіді adapter-а на запит про сокети room-а */
+const ROOM_QUERY_TIMEOUT_MS = 1000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`timed out after ${String(ms)} ms`));
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
 /**
  * Тонкий шар між доменною логікою realtime (presence) і Socket.IO namespace-ом.
  * Потрібен рівно з однієї причини: gateway отримує namespace лише в `afterInit`,
@@ -92,6 +107,33 @@ export class RealtimeEmitter implements NotificationDispatcher {
   ): void {
     for (const userId of userIds) {
       this.emit(userRoom(tenantId, userId), event, ...payload);
+    }
+  }
+
+  /**
+   * Хто зараз у room-і (CHAT-0.2c, docs/chat.md §4.11): різні `userId` сокетів, що в ньому сидять.
+   * Для чату це відповідь «хто дивиться на розмову»: сокет потрапляє в room розмови лише після
+   * `chat.subscribe.v1`, тож просто підключена вкладка — не глядач.
+   *
+   * Запит іде через adapter, тобто бачить і репліки api. FAIL-OPEN: таймаут, помилка чи ще не
+   * готовий namespace дають `[]`, і тоді сповіщення отримають усі — краще зайве, ніж мовчки
+   * пропущене. Кличеться ДО транзакції, бо це зовнішній виклик (backend-conventions §5).
+   */
+  async userIdsInRoom(room: string): Promise<string[]> {
+    if (!this.namespace) {
+      return [];
+    }
+    const namespace = this.namespace;
+    try {
+      const sockets = await withTimeout(namespace.in(room).fetchSockets(), ROOM_QUERY_TIMEOUT_MS);
+      return [...new Set(sockets.map((socket) => socket.data.userId))];
+    } catch (error) {
+      this.logger.warn(
+        `Could not list sockets of room "${room}", assuming nobody is viewing: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return [];
     }
   }
 

@@ -109,6 +109,60 @@ export class NotificationRecorder {
   }
 
   /**
+   * Прочитати сповіщення юзера за ЦІЛЛЮ (CHAT-0.2c, docs/notifications.md): людина відкрила
+   * розмову — рядок «нове повідомлення» в інбоксі більше не актуальний. Та сама форма, що в
+   * `NotificationsService.update`: ревізія вперед і `notification.changed` після коміту, тож
+   * зникає й дзвінок, і лічильник у кожній вкладці.
+   *
+   * Нічого не збіглося — нічого не пишемо й не шлемо (повторне читання не має гойдати вкладки).
+   * Рядки вибираються й оновлюються в тій самій транзакції; `read_at IS NULL` в умові
+   * оновлення не дає двом паралельним читанням порахувати той самий рядок двічі.
+   */
+  async markReadByTarget(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    target: NotificationTarget,
+  ): Promise<void> {
+    const rows = await tx.notification.findMany({
+      where: {
+        recipientId: userId,
+        targetKind: target.kind,
+        targetId: target.id,
+        readAt: null,
+        archivedAt: null,
+      },
+      select: { id: true },
+    });
+    if (rows.length === 0) {
+      return;
+    }
+    const ids = rows.map((row) => row.id);
+
+    const { count } = await tx.notification.updateMany({
+      where: { id: { in: ids }, recipientId: userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    if (count === 0) {
+      return;
+    }
+
+    await this.state.bumpRevision(tx, userId);
+
+    const tenantId = this.tenantContext.requireTenantId();
+    this.tenantTx.onCommit(tx, async () => {
+      const summary = await this.state.summary(userId);
+      this.dispatcher.changed(tenantId, userId, {
+        change: 'read',
+        scope: { kind: 'ids', ids },
+        unreadCount: summary.unreadCount,
+        newCount: summary.newCount,
+        revision: summary.revision,
+        occurredAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  /**
    * Два фільтри, які живуть тут, а не в домені: «не сповіщати про власну дію» і
    * преференси. Домен вирішує, КОГО стосується подія; чи не є отримувач її автором
    * і чи не вимкнув він тип — властивості інбокса. Продубльовані по модулях, вони

@@ -13,7 +13,8 @@
 export type EntityLink =
   | { to: '/workspace/users/$userId'; params: { userId: string } }
   | { to: '/workspace/customers/$customerId'; params: { customerId: string } }
-  | { to: '/calendar/events/$eventId'; params: { eventId: string } };
+  | { to: '/calendar/events/$eventId'; params: { eventId: string } }
+  | { to: '/chat/$conversationId'; params: { conversationId: string } };
 
 const ENTITY_LINKS: Record<string, (id: string) => EntityLink> = {
   user: (id) => ({ to: '/workspace/users/$userId', params: { userId: id } }),
@@ -21,6 +22,7 @@ const ENTITY_LINKS: Record<string, (id: string) => EntityLink> = {
   // Подія відкривається ПОВЕРХ сітки того тижня, у якому лежить — тому окремий
   // роут, а не `?eventId=` (docs/calendar.md §11.1)
   calendar_event: (id) => ({ to: '/calendar/events/$eventId', params: { eventId: id } }),
+  conversation: (id) => ({ to: '/chat/$conversationId', params: { conversationId: id } }),
 };
 
 export function entityLink(kind: string, id: string): EntityLink | null {

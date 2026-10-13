@@ -487,7 +487,7 @@ not assumed to exist:
   reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline has no failure-visibility surface yet.
-- **Chat** beyond the live slice (notifications, then the WhatsApp channel: CHAT-2a…3c) —
+- **Chat** beyond inbound (replies and media: CHAT-2b/2c, then the WhatsApp provider: CHAT-3a…3c) —
   `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
 - **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
   platform controls — `docs/ai-platform-controls.md`.

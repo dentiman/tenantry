@@ -8714,7 +8714,8 @@
                     "calendar_event.rsvp_changed",
                     "calendar_event.reminder",
                     "auth.new_device",
-                    "auth.session_reuse_detected"
+                    "auth.session_reuse_detected",
+                    "chat.message_received"
                   ]
                 },
                 "payload": {
@@ -8867,7 +8868,8 @@
                     "calendar_event.rsvp_changed",
                     "calendar_event.reminder",
                     "auth.new_device",
-                    "auth.session_reuse_detected"
+                    "auth.session_reuse_detected",
+                    "chat.message_received"
                   ]
                 },
                 "channel": {
@@ -8884,7 +8886,8 @@
                   "enum": [
                     "organization",
                     "security",
-                    "calendar"
+                    "calendar",
+                    "chat"
                   ]
                 },
                 "muteable": {
@@ -8929,7 +8932,8 @@
                     "calendar_event.rsvp_changed",
                     "calendar_event.reminder",
                     "auth.new_device",
-                    "auth.session_reuse_detected"
+                    "auth.session_reuse_detected",
+                    "chat.message_received"
                   ]
                 },
                 "channel": {
@@ -8986,7 +8990,8 @@
               "calendar_event.rsvp_changed",
               "calendar_event.reminder",
               "auth.new_device",
-              "auth.session_reuse_detected"
+              "auth.session_reuse_detected",
+              "chat.message_received"
             ]
           },
           "payload": {

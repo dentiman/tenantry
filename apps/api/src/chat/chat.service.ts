@@ -4,15 +4,22 @@ import {
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
+import { PrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import type { ChatMessage, Prisma } from '@saas-skeleton/database';
 import {
+  conversationRoom,
   type CreateConversation,
   type CursorQuery,
   type PostChatMessage,
 } from '@saas-skeleton/contracts';
-import { toPreview } from '@saas-skeleton/shared';
+import {
+  chatMessagePostedEvent,
+  MessagePublisher,
+  NotificationRecorder,
+  toPreview,
+} from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
+import { RealtimeEmitter } from '../realtime/realtime.emitter';
 import { ChatRealtime } from './chat-realtime';
 import { ConversationAccessService } from './conversation-access.service';
 
@@ -92,7 +99,8 @@ function decodeSeqCursor(cursor: string | undefined): number | null {
  *
  * Сокет — лише прискорення: кожна зміна, що змінює стрічку чи курсор, реєструє емісію
  * після коміту тієї ж транзакції (`ChatRealtime`), а джерелом правди лишається Postgres.
- * Черг і сповіщень тут ще немає: місце під `publish` позначено коментарем у `insert()`.
+ * Сповіщення (CHAT-0.2c): `insert()` публікує `chat.message-posted.v1` у тій самій транзакції, а
+ * воркер (`chat-notify`) пише їх тим, хто не дивиться на розмову; читання розмови їх гасить.
  */
 @Injectable()
 export class ChatService {
@@ -103,6 +111,10 @@ export class ChatService {
     private readonly transactions: TenantTransactions,
     private readonly access: ConversationAccessService,
     private readonly chatRealtime: ChatRealtime,
+    private readonly messages: MessagePublisher,
+    private readonly realtime: RealtimeEmitter,
+    private readonly tenantContext: TenantContextService,
+    private readonly notificationRecorder: NotificationRecorder,
   ) {}
 
   /**
@@ -302,8 +314,20 @@ export class ChatService {
       return replayed;
     }
 
+    // Хто дивиться на розмову ЗАРАЗ — до транзакції: запит до adapter-а це зовнішній виклик, а
+    // рядок розмови далі буде заблоковано (design.md D2). Повтор і відмова доступу сюди не доходять
+    const viewerIds = await this.realtime.userIdsInRoom(
+      conversationRoom(this.tenantContext.requireTenantId(), conversation.id),
+    );
+
     try {
-      return await this.insert(conversation.id, conversation.membership.label, actor.sub, dto);
+      return await this.insert(
+        conversation.id,
+        conversation.membership.label,
+        actor.sub,
+        dto,
+        viewerIds,
+      );
     } catch (error) {
       if (!isClientMessageIdConflict(error)) {
         throw error;
@@ -350,6 +374,11 @@ export class ChatService {
       // гойдали б одна одну подіями (design.md D2). Чужі позиції прочитаного нікому не шлемо
       if (count > 0) {
         await this.chatRealtime.conversationChanged(tx, conversationId, 'read', [userId]);
+        // Прочитав — сповіщення про цю розмову втратило сенс, у кожній вкладці (design.md D5)
+        await this.notificationRecorder.markReadByTarget(tx, userId, {
+          kind: 'conversation',
+          id: conversationId,
+        });
       }
     });
   }
@@ -366,6 +395,7 @@ export class ChatService {
     senderLabel: string,
     senderUserId: string,
     dto: PostChatMessage,
+    viewerIds: string[],
   ): Promise<ChatMessage> {
     return this.transactions.withTenantTx(async (tx) => {
       const now = new Date();
@@ -412,9 +442,15 @@ export class ChatService {
       // індекс, і транзакція програвшого відкочується разом із реєстрацією емісії
       await this.chatRealtime.messageCreated(tx, message);
 
-      // Шов під CHAT-0.2b+: тут стане `publish(tx, chatMessagePostedEvent, …)` — подія для
-      // майбутніх підписників (auto-assign, SLA, AI-чернетка, docs/chat.md §4.11). Її немає,
-      // доки немає першого підписника: запис у MESSAGE_TOPOLOGY без споживача — мертва конфігурація
+      // Сповіщення не пишемо тут: це per-отримувач upsert під замком розмови, а збій у ньому відкотив
+      // би САМУ репліку. Подія в тій самій транзакції — воркер (`chat-notify`) напише їх після коміту,
+      // і відкочена репліка подію теж не залишає (design.md D1)
+      await this.messages.publish(
+        tx,
+        chatMessagePostedEvent,
+        { conversationId, messageId: message.id, viewerIds },
+        { actor: { type: 'user', id: senderUserId, label: senderLabel } },
+      );
 
       return message;
     });
@@ -449,8 +485,19 @@ function isClientMessageIdConflict(error: unknown): boolean {
   if (error.code !== 'P2002') {
     return false;
   }
-  const target =
-    'meta' in error ? (error.meta as { target?: unknown } | undefined)?.target : undefined;
-  const targets = Array.isArray(target) ? target : [target];
-  return targets.some((entry) => String(entry).includes('client_message_id'));
+  const meta = 'meta' in error ? (error.meta as PrismaUniqueMeta | undefined) : undefined;
+  // Прямий рушій дає `target` (імена колонок), а `adapter-pg` — лише текст помилки драйвера з
+  // назвою індексу: без другої гілки гонка двох однакових запитів повертала б 409 замість
+  // рядка переможця
+  const targets = Array.isArray(meta?.target) ? meta.target : [meta?.target];
+  const driverMessage = meta?.driverAdapterError?.cause?.originalMessage ?? '';
+  return (
+    targets.some((entry) => String(entry).includes('client_message_id')) ||
+    driverMessage.includes('client_message_id')
+  );
+}
+
+interface PrismaUniqueMeta {
+  target?: unknown;
+  driverAdapterError?: { cause?: { originalMessage?: string } };
 }

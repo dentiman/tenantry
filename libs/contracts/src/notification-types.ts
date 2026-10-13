@@ -5,6 +5,7 @@ import { USER_NOTIFICATIONS } from './user/user.notifications';
 import { CUSTOMER_NOTIFICATIONS } from './customer/customer.notifications';
 import { CALENDAR_NOTIFICATIONS } from './calendar/calendar.notifications';
 import { AUTH_NOTIFICATIONS } from './auth/auth.notifications';
+import { CHAT_NOTIFICATIONS } from './chat/chat.notifications';
 
 /**
  * Composition root типів сповіщень (docs/modules.md §7.1): єдине місце, що знає,
@@ -16,6 +17,7 @@ export const NOTIFICATION_DEFINITIONS = mergeTypeGroups(
   CUSTOMER_NOTIFICATIONS,
   CALENDAR_NOTIFICATIONS,
   AUTH_NOTIFICATIONS,
+  CHAT_NOTIFICATIONS,
 );
 
 export type NotificationType = Extract<keyof typeof NOTIFICATION_DEFINITIONS, string>;

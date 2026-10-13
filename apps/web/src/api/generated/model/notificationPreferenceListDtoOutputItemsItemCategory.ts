@@ -14,4 +14,5 @@ export const NotificationPreferenceListDtoOutputItemsItemCategory = {
   organization: 'organization',
   security: 'security',
   calendar: 'calendar',
+  chat: 'chat',
 } as const;

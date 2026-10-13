@@ -22,4 +22,5 @@ export const NotificationResponseDtoOutputType = {
   calendar_eventreminder: 'calendar_event.reminder',
   authnew_device: 'auth.new_device',
   authsession_reuse_detected: 'auth.session_reuse_detected',
+  chatmessage_received: 'chat.message_received',
 } as const;

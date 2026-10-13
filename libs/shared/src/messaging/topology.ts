@@ -5,7 +5,7 @@ import {
   reconcileAiUsageCostsCommand,
   syncAiModelPricesCommand,
 } from './definitions/ai.messages';
-import { channelsIngestWebhookCommand } from './definitions/chat.messages';
+import { channelsIngestWebhookCommand, chatMessagePostedEvent } from './definitions/chat.messages';
 import {
   emailChangedEvent,
   emailChangeRequestedEvent,
@@ -101,6 +101,12 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     // (дедуп за external_id, одна відкрита розмова на контакт), а не черга.
     definition: channelsIngestWebhookCommand,
     consumers: [{ id: 'channels-ingest', retryLimit: 3, retryDelaySeconds: 2, retryBackoff: true, pollingIntervalSeconds: 0.5 }],
+  },
+  {
+    // CHAT-0.2c: сповіщення учасникам внутрішньої розмови. 0.5 с, як у ai-generator: затримку
+    // бачить людина (дзвінок у шапці), а живу репліку відкриті вкладки вже отримали сокетом.
+    definition: chatMessagePostedEvent,
+    consumers: [{ id: 'chat-notify', pollingIntervalSeconds: 0.5 }],
   },
   {
     definition: userRegisteredEvent,

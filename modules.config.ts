@@ -284,11 +284,13 @@ export const MODULES = {
   chat: {
     tier: 'feature',
     dependsOn: [
+      'activities',
       'app',
       'auth',
       'customers',
       'files',
       'messaging',
+      'notifications',
       'realtime',
       'settings',
       'tenants',

@@ -646,6 +646,16 @@ job-а не продублює рядок в інбоксі (на відміну
 }
 ```
 
+### Приклад із чату: сповіщення від воркера і прочитання за ціллю (CHAT-0.2c)
+
+`chat.message_received` (категорія `chat`, колапс по `conversation:{id}`) пишеться воркером: підписник
+`chat-notify` викликає `ChatNotifier.notifyMessagePosted` у `runOnce`, а той — `NotificationRecorder.notify` по
+одному разу на отримувача (шлях такий самий, як у welcome: `created` доходить у браузер через headless-емітер
+воркера). Зворотний бік — `NotificationRecorder.markReadByTarget(tx, userId, target)`: читає непрочитані
+неархівовані рядки юзера за `{ kind, id }`, позначає прочитаними, рухає ревізію і після коміту шле
+`notification.changed` (`read`, `scope: ids`); не знайшов рядків — нічого не пише й не шле. Його кличе
+`ChatService.markRead`, коли курсор справді зрушив. Деталі — `docs/chat.md` §4.11.
+
 ## Тести (e2e, `apps/api/test/notifications.e2e-spec.ts`)
 
 - `POST /users` → рядок кожному адміну, **крім автора**; отримувач бачить його в

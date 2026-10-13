@@ -173,5 +173,21 @@
       "set": "Credentials set",
       "notSet": "Credentials not set"
     }
+  },
+  "notifications": {
+    "type": {
+      "chat": {
+        "message_received_one": "<b>{{actor}}</b> wrote in <a>{{conversation}}</a>: {{preview}}",
+        "message_received_other": "{{count}} new messages in <a>{{conversation}}</a>, latest from <b>{{actor}}</b>: {{preview}}"
+      }
+    },
+    "label": {
+      "chat": {
+        "message_received": "New chat messages"
+      }
+    },
+    "category": {
+      "chat": "Chat"
+    }
   }
 }

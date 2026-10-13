@@ -9,6 +9,7 @@ import {
   AiModule,
   ChannelAdapterRegistry,
   ChannelIngestService,
+  ChatNotifierModule,
   CryptoModule,
   MessagingModule,
   NotificationsModule,
@@ -19,6 +20,7 @@ import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
+import { ChatNotifySubscriber } from './chat/chat-notify.subscriber';
 import { AiGenerateReplySubscriber } from './subscribers/ai-generate-reply.subscriber';
 import { AiPurgeConversationsSubscriber } from './subscribers/ai-purge-conversations.subscriber';
 import { AiReconcileUsageCostsSubscriber } from './subscribers/ai-reconcile-usage-costs.subscriber';
@@ -52,6 +54,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     CryptoModule,
     ActivitiesModule,
     NotificationsModule,
+    ChatNotifierModule,
     AiModule,
     // ai-1a: провайдер LLM (і його ключ) — лише тут, api його не будує (design.md D5)
     AiLlmModule,
@@ -64,6 +67,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     { provide: ChannelAdapterRegistry, useFactory: (): ChannelAdapterRegistry => createChannelAdapterRegistry() },
     ChannelIngestService,
     ChannelsIngestSubscriber,
+    ChatNotifySubscriber,
     AiLeaseGuard,
     AiGenerateReplySubscriber,
     AiPurgeConversationsSubscriber,
