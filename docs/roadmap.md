@@ -42,8 +42,9 @@
 | **Граф модулів**               | 2026-10-05    | Модуль = домен через усі застосунки й бібліотеки; рівні `infra → platform → core → feature`, явні ребра в `modules.config.ts`, перевірка `pnpm modules:check --strict` у `pnpm lint` (резолвить символи крізь barrel-и). Сім видимих порушень закрито: слоти фронтенду (`lib/slots.tsx`, `slot-fills.ts`), реєстри бекенду (`UserLifecycleHooks`, `BootstrapRegistry`, `SettingsService.updateSection` під `FOR UPDATE`), секції `ai` і `calendar` переїхали у свої модулі, platform-контракти розділено; Prisma-схема — файл на модуль (`prisma/schema/`). Невидимі для скрипта звʼязки — у плані | `modules.md` |
 
 Проєктні документи без реалізації (готові до роботи):
-фази чату `CHAT-0.2c` (сповіщення, presence), `CHAT-0.3` (учасники, згадки, вкладення) і
-`CHAT-1…4` у [chat.md](chat.md) §7.3 — інваріанти, на які вони спираються, перелічені в §7.6,
+фази чату `CHAT-0.2c` (сповіщення, звужена), `CHAT-2a…c` (канальне ядро на fake-адаптері),
+`CHAT-3a…c` (WhatsApp Cloud API) і `CHAT-4` — [whatsapp-channel.md](whatsapp-channel.md) §6 і
+[chat.md](chat.md) §7.3 (`0.3` і `CHAT-1` зняті 2026-10-13); інваріанти, на які вони спираються, — в §7.6,
 беклог MT-4 у `multi-tenancy-architecture.md`,
 фази EDA-2 і EDA-3 у [event-driven-architecture.md](event-driven-architecture.md),
 фази CAL-2…CAL-4 у [calendar.md](calendar.md) (інтерактивність, командний перегляд,

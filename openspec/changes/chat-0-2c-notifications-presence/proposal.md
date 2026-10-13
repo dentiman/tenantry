@@ -9,11 +9,8 @@ the toast and the inbox stay silent. `docs/chat.md` §4.11 designed the missing 
 who is already reading — and 0.2b built its prerequisite: the server now knows who is viewing a
 conversation, because a viewing socket is in the conversation room.
 
-The same phase closes the last item of the old "0.2": a presence dot next to the person you are
-talking to. `usePresence()` and the `PresenceDot` already exist for the users list; the chat has
-simply never used them.
-
-This is **CHAT-0.2c**, the last slice of CHAT-0.2. It touches the notification inbox and the
+This is **CHAT-0.2c**, the last slice of CHAT-0.2. The presence dot that used to be part of it was
+dropped on 2026-10-13 (`docs/whatsapp-channel.md` §0): it does not bring the customer channel closer. It touches the notification inbox and the
 messaging topology, which is why it is its own change rather than part of 0.2b.
 
 ## What Changes
@@ -36,9 +33,6 @@ messaging topology, which is why it is its own change rather than part of 0.2b.
   recipient's unread `chat.message_received` rows for that conversation are marked read and every
   open tab is told (`notification.changed`). A new `markReadByTarget` on the shared
   `NotificationRecorder` does this.
-- **Presence dot.** Next to the other person in a direct (two-participant) conversation, in the
-  list and in the header: the existing `PresenceDot` for online users, nothing for offline or
-  unknown. No dot in group conversations.
 - **Texts and routing:** the notification texts and preference labels in `locales/en/chat.json`
   under the chat namespace, and a `conversation` entry in `entity-routes.ts` so the notification
   opens the conversation.
@@ -55,8 +49,7 @@ messaging topology, which is why it is its own change rather than part of 0.2b.
 
 ### Modified Capabilities
 
-- `chat/area`: gains a requirement that a direct conversation shows whether the other person is
-  online, in the conversation list and in the open conversation.
+None.
 
 ## Impact
 
@@ -72,14 +65,11 @@ messaging topology, which is why it is its own change rather than part of 0.2b.
   `ChatService.post/insert` computes `viewerIds` before the transaction and publishes the event;
   `ChatService.markRead` clears the conversation's notifications.
 - **Worker:** new `apps/worker/src/chat/chat-notify.subscriber.ts`, registered in `worker.module.ts`.
-- **Web:** the presence dot in `conversation-list.tsx` and the conversation header;
-  `locales/en/chat.json`; `entity-routes.ts`.
+- **Web:** `locales/en/chat.json`; `entity-routes.ts`.
 - **Module graph:** `chat` gains `messaging` and `notifications` in `dependsOn`; its `paths` gain
   `apps/worker/src/chat/` and `libs/shared/src/messaging/definitions/chat.messages.ts`.
 - **Tests:** unit tests for the notifier and the subscriber, an API e2e for the publish (same
   transaction, rolled back with it, `viewerIds`) and the read-clears-notification path, a real-DB
-  test of `ChatNotifier` (recipients, collapse, preferences), and web tests for the dot rule.
-- **Not touched, deliberately:** mentions and per-conversation notification levels (CHAT-0.3: a
-  mention is its own, non-collapsing type); a "last seen" line for the other person (the
-  conversation card carries no `lastSeenAt`, so it would be a contract change — recorded as a
-  follow-up); customer-facing channels (CHAT-2).
+  test of `ChatNotifier` (recipients, collapse, preferences).
+- **Not touched, deliberately:** mentions, per-conversation notification levels and the presence
+  dot (all dropped, `docs/whatsapp-channel.md` §0); customer-facing channels (CHAT-2a…3c).

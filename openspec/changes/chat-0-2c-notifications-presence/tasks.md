@@ -30,7 +30,6 @@
 ## 5. Web
 
 - [ ] 5.1 Add the texts to `apps/web/src/locales/en/chat.json` under `notifications` (`type.chat.message_received_one`/`_other`, `label.chat.message_received`, `category.chat`) and the `conversation` entry to `apps/web/src/lib/entity-routes.ts` (`/chat/$conversationId`). Verify that `registry-texts.test.ts` passes for the new type and that following a notification of kind `conversation` resolves a link.
-- [ ] 5.2 Add a pure `directPeerId(participants, viewerId)` (the other participant when there are exactly two and one is the viewer, else `null`) and render the existing user presence dot on the peer's avatar in `conversation-list.tsx` and in the conversation header when it returns an id. Verify with Vitest on `directPeerId` (two people, a group, a conversation with just the viewer, a viewer not among the participants) and by eye in 6.1.
 
 ## 6. Live verification
 
@@ -39,11 +38,10 @@
   - while the user has the conversation open, the colleague's message produces no notification;
   - several messages while the user is away collapse into one notification with a count;
   - opening the conversation clears the notification and the bell count in every tab;
-  - turning the chat category off in the preferences stops new notifications;
-  - the online dot appears next to a direct conversation's other person and disappears when they go offline, and is absent in a group conversation.
+  - turning the chat category off in the preferences stops new notifications.
 
 ## 7. Documentation (promote before archiving)
 
-- [ ] 7.1 Update `docs/chat.md` (§4.8 intro and §7.3/§7.5: 0.2c built; §4.11: the subscriber, `viewerIds`, the label rule and read-clears as built; the follow-up for a "last seen" line), `docs/notifications.md` (the `chat.message_received` type, its category and the worker-born path), `docs/event-driven-architecture.md` (the `chat.message-posted.v1` topology row and the `chat-notify` consumer) and `docs/roadmap.md`. Verify with a grep that no doc still lists the notification or the presence dot as pending for 0.2.
-- [ ] 7.2 Add the end-user lines (a chat notification appears in the bell when you are not looking at the conversation; reading it clears the notification; the chat category in the preferences; the online dot in direct conversations) to `docs/ai-knowledge/` and run `pnpm ai:knowledge`.
+- [ ] 7.1 Update `docs/chat.md` (§4.8 intro and §7.3/§7.5: 0.2c built; §4.11: the subscriber, `viewerIds`, the label rule and read-clears as built), `docs/notifications.md` (the `chat.message_received` type, its category and the worker-born path), `docs/event-driven-architecture.md` (the `chat.message-posted.v1` topology row and the `chat-notify` consumer) and `docs/roadmap.md`. Verify with a grep that no doc still lists the notification as pending for 0.2, and that the presence dot is recorded as dropped, not pending.
+- [ ] 7.2 Add the end-user lines (a chat notification appears in the bell when you are not looking at the conversation; reading it clears the notification; the chat category in the preferences) to `docs/ai-knowledge/` and run `pnpm ai:knowledge`.
 - [ ] 7.3 Run the full gate `bash scripts/ci-verify.sh` and confirm it is green before commit.

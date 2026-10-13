@@ -61,6 +61,14 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   §7.6 the invariants later phases build on — don't break them. The built slice is REST-only
   **by design**: no realtime yet, the screen re-reads on window focus and after sending.
   `docs/bulk-operations.md` — **design only, not implemented** (a disabled demo slot on `/users`).
+- `docs/whatsapp-channel.md` — **the** plan for the first external channel, WhatsApp Cloud API (design
+  only, nothing built): decisions of 2026-10-13 (WhatsApp only, provider-neutral core so a second
+  provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
+  raw event store → ingest, outbox `QUEUED→SENDING→SENT`, status folding, identity with BSUID,
+  templates), WhatsApp feature catalogue with levels, phases CHAT-2a…3c, open questions O-W1…9.
+  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` — what a live test account verified; `pnpm whatsapp:probe`) is in `docs/whatsapp-research/`.
+  `docs/whatsapp-feature-flows.md` — per-feature flows (UI, system steps, Graph calls, webhooks) and the
+  one-time Meta setup runbook (app, WABA, system-user token, webhook, test number).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
   why (OpenAI-compat is lossy, provider strategies, tool-calling, files), budget, privacy,
   phases AI-0…AI-4 (§0 decision sequence). Distinct from `docs/chat.md`.
@@ -479,8 +487,8 @@ not assumed to exist:
   reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline has no failure-visibility surface yet.
-- **Chat** beyond the REST slice (realtime, notifications, participants, mentions,
-  attachments) — `docs/chat.md` §7.3. **Bulk operations** — design only.
+- **Chat** beyond the live slice (notifications, then the WhatsApp channel: CHAT-2a…3c) —
+  `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
 - **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
   platform controls — `docs/ai-platform-controls.md`.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →

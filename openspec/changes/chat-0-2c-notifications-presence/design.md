@@ -31,8 +31,6 @@ Observed in the code after CHAT-0.2b:
   makes the effects idempotent per message. `pgboss.*` lives outside RLS, so payloads carry ids,
   never content (`generateAiReplyCommand` is the precedent). The API e2e mocks pg-boss and records
   every `send` (`sentJobs`).
-- **Presence on the web.** `usePresence()` (online set from `GET /presence` plus socket deltas) and
-  `PresenceDot` exist. `ConversationParticipantResponse` has no `lastSeenAt`.
 
 ## Goals / Non-Goals
 
@@ -44,12 +42,11 @@ Observed in the code after CHAT-0.2b:
 - "Not looking" is the fact 0.2b established — a socket in the conversation room — evaluated at the
   moment of posting.
 - Reading clears the notification everywhere.
-- A presence dot for direct conversations.
 
 **Non-Goals:**
-- Mentions and per-conversation notification levels (CHAT-0.3).
-- A "last seen" line for the other person (it needs `lastSeenAt` on the participant contract).
-- Notifications for customer-facing channels (CHAT-2) and for event entries.
+- Mentions, per-conversation notification levels and a presence dot — dropped on 2026-10-13
+  (`docs/whatsapp-channel.md` §0); they do not bring the customer channel closer.
+- Notifications for customer-facing channels (CHAT-2a…3c) and for event entries.
 - Push or email delivery (the inbox is the only channel).
 
 ## Decisions
@@ -149,16 +146,7 @@ Both the REST and the socket paths go through `markRead`, so both clear it.
 `chat` therefore depends on `notifications` and `messaging`; both are platform-tier, so the edges are
 downward, and `modules.config.ts` gains the two names.
 
-### D6. Presence dot
-
-`conversation-list.tsx` and the conversation header render the existing user presence dot for the
-other participant when `participants.length === 2`, on the avatar, and nothing otherwise. The
-component already draws nothing for offline and for `isUnknown`. A pure `directPeerId(participants,
-viewerId)` selects the peer (null for anything but exactly two participants where one is the viewer),
-so the rule is unit-tested without a DOM. Presence deltas already invalidate the shared query, so the
-dot follows without new wiring. A "last seen" line is a recorded follow-up (Non-Goals).
-
-### D7. Docs
+### D6. Docs
 
 `docs/chat.md` §4.8 (0.2c row, built), §4.11 (as built: the subscriber, `viewerIds`, label rule,
 read-clears) and §7; `docs/notifications.md` (the type and the worker-born path);

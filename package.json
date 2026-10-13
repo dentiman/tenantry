@@ -56,6 +56,7 @@
     "logs:tail": "tail -f apps/api/logs/api-pretty.log",
     "logs:clean": "rm -rf apps/api/logs/*.log*",
     "prepare": "husky",
+    "whatsapp:probe": "tsx scripts/whatsapp-probe.ts",
     "ai:docs:preview": "tsx scripts/ai-docs-preview.ts",
     "ai:docs:ingest": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-docs-ingest.ts",
     "ai:knowledge:index": "tsx --tsconfig libs/shared/tsconfig.json scripts/ai-knowledge-index.ts",
