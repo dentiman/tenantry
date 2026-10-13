@@ -1,8 +1,6 @@
 # Tasks
 
-Load the `backend-change` skill before sections 2, 5, 6 and 7. Archive `chat-2a-channel-inbound` and
-`chat-0-2c-notifications-presence` first (their specs are what this change builds on); if that is
-not done yet, nothing below depends on it except task 12.3.
+Load the `backend-change` skill before sections 2, 5, 6 and 7. `chat-2a-channel-inbound` and `chat-0-2c-notifications-presence` are archived (2026-10-13); their specs are in `openspec/specs/chat/`.
 
 ## 1. Spike: can the worker ask who is viewing a room? (design D9)
 
