@@ -215,6 +215,10 @@ services:
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
       # AUTH-3: шифрує токени одноразових посилань перед публікацією (план D-11)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      # CHAT-3b1: публічна база адреси вебхука каналів (порожня — UI каже «адреса недоступна») і політика
+      # підпису (`enforce` типово; `record` — приймати й зберігати з результатом перевірки)
+      CHANNEL_WEBHOOK_BASE_URL: ${CHANNEL_WEBHOOK_BASE_URL:-}
+      CHANNEL_WEBHOOK_SIGNATURE: ${CHANNEL_WEBHOOK_SIGNATURE:-enforce}
     networks: [saas_net]
     logging: *logging
     # RT-1: на SIGTERM api звільняє presence-leases і закриває sockets. Дефолтних 10 с

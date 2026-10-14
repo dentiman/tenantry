@@ -181,7 +181,7 @@
       },
       "copy": "Copy",
       "copied": "Copied",
-      "notConnected": "Incoming messages and delivery receipts need the webhook, which arrives in the next phase. For now this account only sends."
+      "notConnected": "This account receives webhooks only after you subscribe a number below. Hooks are stored exactly as received; incoming messages and delivery receipts are not processed yet."
     },
     "credentials": {
       "set": "Credentials set",
@@ -244,6 +244,32 @@
         "show": "Show recent provider calls",
         "hide": "Hide provider calls",
         "empty": "No calls recorded yet."
+      }
+    },
+    "webhookNumber": {
+      "label": "Webhooks",
+      "ours": "Delivered to this system",
+      "none": "Not delivered anywhere",
+      "elsewhere": "Delivered to {{host}}",
+      "subscribe": "Subscribe",
+      "unsubscribe": "Unsubscribe",
+      "takeOver": "Take over",
+      "noAddress": "No public address is configured on the server.",
+      "takeOverTitle": "Take over this number's webhooks from {{host}}?",
+      "takeOverBody": "Events for this number now go to {{host}}. While you are subscribed, that service stops receiving this number's webhooks. Unsubscribing returns them.",
+      "failed": "The webhook action failed",
+      "unreadable": "Could not read the webhook state."
+    },
+    "webhookEvents": {
+      "show": "Show received webhooks",
+      "hide": "Hide received webhooks",
+      "empty": "Nothing has been received yet.",
+      "showBody": "Show body",
+      "hideBody": "Hide body",
+      "signature": {
+        "valid": "Signature valid",
+        "invalid": "Signature invalid",
+        "unchecked": "Not checked"
       }
     }
   },

@@ -16,6 +16,8 @@ import { ChannelInboxService } from './channel-inbox.service';
 import { ChannelWebhookController } from './channel-webhook.controller';
 import { MessagingAccountService } from './messaging-account.service';
 import { WhatsAppConnectionService } from './whatsapp-connection.service';
+import { WebhookEventsService } from './webhook-events.service';
+import { WebhookSubscriptionService } from './webhook-subscription.service';
 import { OutreachService } from './outreach.service';
 import { ChannelWebhookService } from './channel-webhook.service';
 import { ChatController } from './chat.controller';
@@ -50,6 +52,8 @@ import { DefaultChannelService } from './default-channel.service';
     ChannelInboxService,
     MessagingAccountService,
     WhatsAppConnectionService,
+    WebhookSubscriptionService,
+    WebhookEventsService,
     OutreachService,
     ChannelContactService,
     ChatDevToolsGuard,

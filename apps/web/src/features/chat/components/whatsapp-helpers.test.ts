@@ -7,6 +7,8 @@ import {
   DEFAULT_TEMPLATE,
   formatCountdown,
   readLastTemplate,
+  summarizeWebhookBody,
+  webhookAction,
   saveLastTemplate,
   TEMPLATE_LANGUAGE_PATTERN,
   TEMPLATE_NAME_PATTERN,
@@ -164,6 +166,57 @@ describe('запамʼятований шаблон', () => {
       },
     };
     expect(readLastTemplate(broken)).toEqual(DEFAULT_TEMPLATE);
-    expect(() => { saveLastTemplate(broken, DEFAULT_TEMPLATE); }).not.toThrow();
+    expect(() => {
+      saveLastTemplate(broken, DEFAULT_TEMPLATE);
+    }).not.toThrow();
+  });
+});
+
+describe('webhookAction', () => {
+  it('наші → відписати; без адреси → «немає адреси»; чужі → забрати з назвою хоста; нічиї → підписати', () => {
+    expect(webhookAction({ state: 'ours', host: 'a', address: 'x' })).toEqual({
+      kind: 'unsubscribe',
+    });
+    expect(webhookAction({ state: 'none', host: null, address: null })).toEqual({
+      kind: 'no-address',
+    });
+    expect(webhookAction({ state: 'elsewhere', host: 'fms.example', address: 'x' })).toEqual({
+      kind: 'takeover',
+      host: 'fms.example',
+    });
+    expect(webhookAction({ state: 'none', host: null, address: 'x' })).toEqual({
+      kind: 'subscribe',
+    });
+  });
+});
+
+describe('summarizeWebhookBody', () => {
+  const wrap = (field: string, value: unknown): string =>
+    JSON.stringify({
+      object: 'whatsapp_business_account',
+      entry: [{ id: '1', changes: [{ field, value }] }],
+    });
+
+  it('статуси, повідомлення, шаблон, акаунт, невідоме, порожнє, не JSON', () => {
+    expect(
+      summarizeWebhookBody(
+        wrap('messages', { statuses: [{ status: 'delivered' }, { status: 'read' }] }),
+      ),
+    ).toBe('status delivered, status read');
+    expect(
+      summarizeWebhookBody(
+        wrap('messages', { messages: [{ type: 'text' }, { type: 'reaction' }] }),
+      ),
+    ).toBe('message text, message reaction');
+    expect(
+      summarizeWebhookBody(wrap('message_template_status_update', { event: 'APPROVED' })),
+    ).toBe('template_status APPROVED');
+    expect(summarizeWebhookBody(wrap('account_update', { event: 'PHONE_NUMBER_ADDED' }))).toBe(
+      'account PHONE_NUMBER_ADDED',
+    );
+    expect(summarizeWebhookBody(wrap('flows', {}))).toBe('flows');
+    expect(summarizeWebhookBody(wrap('messages', {}))).toBe('empty');
+    expect(summarizeWebhookBody('{"hello":1}')).toBe('unknown payload');
+    expect(summarizeWebhookBody('<<>>')).toBe('not JSON');
   });
 });

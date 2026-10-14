@@ -71,7 +71,7 @@ export const SyncResultSchema = z.object({
 
 export const ChannelLogEntrySchema = z.object({
   id: z.uuid(),
-  operation: z.enum(['verify', 'sync', 'send']),
+  operation: z.enum(['verify', 'sync', 'send', 'webhook']),
   ok: z.boolean(),
   httpStatus: z.number().int().nullable(),
   errorCode: z.string().nullable(),
@@ -85,6 +85,47 @@ export const ChannelLogEntrySchema = z.object({
 
 export const ChannelLogQuerySchema = CursorQuerySchema;
 export const ChannelLogListResponseSchema = cursorResponseSchema(ChannelLogEntrySchema);
+
+/** Де зараз доставляються вебхуки номера (CHAT-3b1, chat/webhook-subscription). Лише хости: чужі адреси можуть нести секрет */
+export const WebhookLevelSchema = z.enum(['phone_number', 'whatsapp_business_account', 'application']);
+
+export const WebhookStatusSchema = z.object({
+  /** `ours` — діюче призначення збігається з адресою цього акаунта; `none` — ніхто; `elsewhere` — інший хост */
+  state: z.enum(['ours', 'none', 'elsewhere']),
+  /** Рівень, що діє (перший наявний: номер → WABA → застосунок) */
+  level: WebhookLevelSchema.nullable(),
+  /** Хост діючого призначення (для `ours` — наш) */
+  host: z.string().nullable(),
+  configured: z.object({
+    phoneNumber: z.string().nullable(),
+    whatsappBusinessAccount: z.string().nullable(),
+    application: z.string().nullable(),
+  }),
+  /** Наша адреса для цього акаунта; `null` — публічну базу не налаштовано */
+  address: z.string().nullable(),
+  subscribedAt: z.iso.datetime().nullable(),
+});
+
+/** Підписати номер; `replaceHost` — хост, чиї події забираємо (обовʼязковий, якщо вони зараз ідуть деінде) */
+export const SubscribeWebhookSchema = z.object({
+  replaceHost: z.string().trim().min(1).max(255).optional(),
+});
+
+/** Захоплений вебхук як збережено (CHAT-3b1, chat/webhook-events); адмін-доступ — у тілі є номери й імена клієнтів */
+export const WebhookEventSchema = z.object({
+  id: z.uuid(),
+  receivedAt: z.iso.datetime(),
+  state: z.enum(['RECEIVED', 'PROCESSED', 'FAILED', 'UNROUTABLE', 'SKIPPED']),
+  error: z.string().nullable(),
+  /** `null` — нічим було перевірити (немає app secret) */
+  signatureValid: z.boolean().nullable(),
+  headers: z.record(z.string(), z.string()),
+  /** Тіло байт-в-байт як прийшло */
+  body: z.string(),
+});
+
+export const WebhookEventsQuerySchema = CursorQuerySchema;
+export const WebhookEventListResponseSchema = cursorResponseSchema(WebhookEventSchema);
 
 /** Агент починає розмову з номера (CHAT-3a, chat/outreach) */
 export const StartConversationSchema = z.object({
@@ -122,5 +163,8 @@ export type UpdateChannel = z.infer<typeof UpdateChannelSchema>;
 export type AccountToken = z.infer<typeof AccountTokenSchema>;
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 export type ChannelLogEntry = z.infer<typeof ChannelLogEntrySchema>;
+export type WebhookStatus = z.infer<typeof WebhookStatusSchema>;
+export type SubscribeWebhook = z.infer<typeof SubscribeWebhookSchema>;
+export type WebhookEvent = z.infer<typeof WebhookEventSchema>;
 export type StartConversation = z.infer<typeof StartConversationSchema>;
 export type PostTemplateMessage = z.infer<typeof PostTemplateMessageSchema>;

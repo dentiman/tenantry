@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { describeChannelAdapterContract, type AdapterFixtures } from '../adapter-contract';
 import { ChannelSendError, type OutboundContext } from '../channel-send';
@@ -134,12 +135,6 @@ describe('MetaCloudAdapter.send', () => {
     expect(error).toMatchObject({ errorClass: 'TRANSIENT' });
   });
 
-  it('вхідний шлях відмовляє, а не вгадує (вебхуки — CHAT-3b)', () => {
-    expect(adapter.verifyWebhook({ headers: {}, body: Buffer.from('{}') }, creds)).toBe(false);
-    expect(adapter.handshake()).toBeNull();
-    expect(adapter.parseWebhook()).toEqual({ events: [], error: 'webhooks_not_enabled' });
-  });
-
   it('заявляє шаблони й провайдерське вікно', () => {
     expect(adapter.capabilities).toMatchObject({
       templates: true,
@@ -156,5 +151,40 @@ describe('реєстр адаптерів', () => {
     const withTools = createChannelAdapterRegistry({ CHAT_DEV_TOOLS: 'true' });
     expect(without.providers()).toEqual(['meta_cloud']);
     expect(withTools.providers().sort()).toEqual(['fake', 'meta_cloud']);
+  });
+});
+
+describe('MetaCloudAdapter webhooks (CHAT-3b1)', () => {
+  const adapter = new MetaCloudAdapter();
+  const creds = { appSecret: 'shh-secret', verifyToken: 'vt-123', accessToken: null };
+  // Форма справжнього статусу з експорту fms-dev (значення вигадані)
+  const body = Buffer.from(
+    '{"object":"whatsapp_business_account","entry":[{"id":"1","changes":[{"field":"messages","value":{"statuses":[{"id":"wamid.X","status":"sent","pricing":{"billable":true}}]}}]}]}',
+  );
+  const sign = (secret: string, bytes: Buffer): string =>
+    `sha256=${createHmac('sha256', secret).update(bytes).digest('hex')}`;
+
+  it('handshake: правильний режим і токен повертають challenge, решта — null', () => {
+    const ok = { 'hub.mode': 'subscribe', 'hub.verify_token': 'vt-123', 'hub.challenge': '777' };
+    expect(adapter.handshake(ok, creds)).toBe('777');
+    expect(adapter.handshake({ ...ok, 'hub.verify_token': 'other' }, creds)).toBeNull();
+    expect(adapter.handshake({ ...ok, 'hub.mode': 'unsubscribe' }, creds)).toBeNull();
+    expect(adapter.handshake({ 'hub.mode': 'subscribe', 'hub.verify_token': 'vt-123' }, creds)).toBeNull();
+  });
+
+  it('підпис: дійсний над сирими байтами проходить; чужий секрет, зміна байта, sha1, відсутній і без секрету — ні', () => {
+    const headers = (value?: string): { headers: Record<string, string>; body: Buffer } => ({ headers: value ? { 'x-hub-signature-256': value } : {}, body });
+    expect(adapter.verifyWebhook(headers(sign('shh-secret', body)), creds)).toBe(true);
+    expect(adapter.verifyWebhook(headers(sign('wrong', body)), creds)).toBe(false);
+    expect(adapter.verifyWebhook({ headers: { 'x-hub-signature-256': sign('shh-secret', body) }, body: Buffer.concat([body, Buffer.from(' ')]) }, creds)).toBe(false);
+    expect(adapter.verifyWebhook({ headers: { 'x-hub-signature': 'sha1=abcd' }, body }, creds)).toBe(false);
+    expect(adapter.verifyWebhook(headers('sha256=zz'), creds)).toBe(false);
+    expect(adapter.verifyWebhook(headers(), creds)).toBe(false);
+    expect(adapter.verifyWebhook(headers(sign('shh-secret', body)), { ...creds, appSecret: null })).toBe(false);
+  });
+
+  it('розбір нічого не інтерпретує: валідний JSON → без подій, не-JSON → invalid_json', () => {
+    expect(adapter.parseWebhook(body)).toEqual({ events: [] });
+    expect(adapter.parseWebhook(Buffer.from('not json'))).toEqual({ events: [], error: 'invalid_json' });
   });
 });

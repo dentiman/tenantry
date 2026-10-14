@@ -120,10 +120,68 @@ export function readLastTemplate(storage: Pick<Storage, 'getItem'> | null): Temp
   return DEFAULT_TEMPLATE;
 }
 
-export function saveLastTemplate(storage: Pick<Storage, 'setItem'> | null, choice: TemplateChoice): void {
+export function saveLastTemplate(
+  storage: Pick<Storage, 'setItem'> | null,
+  choice: TemplateChoice,
+): void {
   try {
     storage?.setItem(LAST_TEMPLATE_KEY, JSON.stringify(choice));
   } catch {
     // квота чи приватне вікно: наступного разу буде типовий
   }
+}
+
+export interface WebhookStatusLike {
+  state: 'ours' | 'none' | 'elsewhere';
+  host: string | null;
+  address: string | null;
+}
+
+export type WebhookAction =
+  | { kind: 'no-address' }
+  | { kind: 'subscribe' }
+  | { kind: 'takeover'; host: string }
+  | { kind: 'unsubscribe' };
+
+/** Що можна зробити з номером: підписати, забрати чужі події (з названим хостом) чи відписати */
+export function webhookAction(status: WebhookStatusLike): WebhookAction {
+  if (status.state === 'ours') return { kind: 'unsubscribe' };
+  if (!status.address) return { kind: 'no-address' };
+  if (status.state === 'elsewhere') return { kind: 'takeover', host: status.host ?? 'unknown' };
+  return { kind: 'subscribe' };
+}
+
+/**
+ * Один рядок про захоплений вебхук, щоб список читався без розгортання: `status delivered`, `message text`,
+ * `template_status APPROVED`, `account PHONE_NUMBER_ADDED`. Лише форма (типи подій), без номерів і тексту.
+ */
+export function summarizeWebhookBody(body: string): string {
+  let json: unknown;
+  try {
+    json = JSON.parse(body);
+  } catch {
+    return 'not JSON';
+  }
+  const parts: string[] = [];
+  const entries = (json as { entry?: unknown }).entry;
+  if (!Array.isArray(entries)) return 'unknown payload';
+  for (const entry of entries as { changes?: unknown }[]) {
+    if (!Array.isArray(entry.changes)) continue;
+    for (const change of entry.changes as { field?: unknown; value?: Record<string, unknown> }[]) {
+      const value = change.value ?? {};
+      if (change.field === 'messages') {
+        for (const s of (value.statuses as { status?: string }[] | undefined) ?? [])
+          parts.push(`status ${s.status ?? '?'}`);
+        for (const m of (value.messages as { type?: string }[] | undefined) ?? [])
+          parts.push(`message ${m.type ?? '?'}`);
+      } else if (change.field === 'message_template_status_update') {
+        parts.push(`template_status ${typeof value.event === 'string' ? value.event : '?'}`);
+      } else if (change.field === 'account_update') {
+        parts.push(`account ${typeof value.event === 'string' ? value.event : '?'}`);
+      } else {
+        parts.push(typeof change.field === 'string' ? change.field : 'unknown');
+      }
+    }
+  }
+  return parts.length > 0 ? parts.join(', ') : 'empty';
 }

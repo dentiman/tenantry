@@ -6,7 +6,11 @@ import {
   ChannelLogQuerySchema,
   ConnectMessagingAccountSchema,
   StartConversationSchema,
+  SubscribeWebhookSchema,
   SyncResultSchema,
+  WebhookEventListResponseSchema,
+  WebhookEventsQuerySchema,
+  WebhookStatusSchema,
   UpdateAccountCredentialsSchema,
   UpdateChannelSchema,
   ChannelListResponseSchema,
@@ -42,3 +46,7 @@ export class SyncResultDto extends createZodDto(SyncResultSchema) {}
 export class ChannelLogQueryDto extends createZodDto(ChannelLogQuerySchema) {}
 export class ChannelLogListResponseDto extends createZodDto(ChannelLogListResponseSchema) {}
 export class StartConversationDto extends createZodDto(StartConversationSchema) {}
+export class WebhookStatusDto extends createZodDto(WebhookStatusSchema) {}
+export class SubscribeWebhookDto extends createZodDto(SubscribeWebhookSchema) {}
+export class WebhookEventsQueryDto extends createZodDto(WebhookEventsQuerySchema) {}
+export class WebhookEventListResponseDto extends createZodDto(WebhookEventListResponseSchema) {}

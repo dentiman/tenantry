@@ -29,6 +29,12 @@ load_stack_env() {
   # shellcheck disable=SC1090
   . "$SERVER_ENV"
   set +a
+  # CHAT-3b1: публічна адреса вебхуків каналів — адреса самого стенду (nginx web проксить /api, шлях
+  # /api/public/channels відкритий). Серверний файл перекриває.
+  export CHANNEL_WEBHOOK_BASE_URL="${CHANNEL_WEBHOOK_BASE_URL:-${APP_PUBLIC_URL:-}}"
+  # Поки вхідні й квитанції не збудовані, вебхуки лише ЗАХОПЛЮЮТЬСЯ: підпис записується, але не вимагається.
+  # Повернути `enforce` у серверному файлі або тут, коли Meta-вебхук почне щось робити.
+  export CHANNEL_WEBHOOK_SIGNATURE="${CHANNEL_WEBHOOK_SIGNATURE:-record}"
 }
 
 # wait_for <опис> <таймаут_с> <команда…> — повторює команду раз на 5 с, доки вона не вдасться

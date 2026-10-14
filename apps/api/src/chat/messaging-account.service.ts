@@ -23,6 +23,12 @@ export class MessagingAccountService {
     return raw ? raw.replace(/\/+$/, '') : null;
   }
 
+  /** Публічна адреса вебхука акаунта; `null`, якщо базу не налаштовано (CHAT-3b1: нею підписується номер) */
+  webhookAddress(provider: string, webhookKey: string): string | null {
+    const base = this.webhookBase();
+    return base ? `${base}/api/public/channels/${provider}/${webhookKey}` : null;
+  }
+
   async list(includeSecrets: boolean): Promise<MessagingAccountResponse[]> {
     const accounts = await this.prisma.messagingAccount.findMany({
       orderBy: { createdAt: 'asc' },

@@ -95,6 +95,13 @@ Administrators connect a WhatsApp Business account here.
 - The account card shows "Access token", the numbers synced from Meta with their quality, a switch
   "Enabled" for each number and "Make default" (one default number per account). "Refresh" re-reads the
   numbers, "Update token" replaces the token, "Disconnect" removes it and stops sending.
+- Under each number, "Webhooks" shows where WhatsApp currently delivers that number's events: "Delivered to this
+  system", "Not delivered anywhere" or "Delivered to …" another host. "Subscribe" sends them here (a server
+  address must be configured, otherwise "No public address is configured on the server."); for events that
+  go to another host "Take over" asks you to confirm, because that service stops receiving the number's
+  webhooks until you press "Unsubscribe". Nothing is subscribed automatically.
+- "Show received webhooks" lists what WhatsApp has sent, with "Signature valid", "Signature invalid" or
+  "Not checked", and "Show body" for the raw text. Received webhooks are stored but not processed yet.
 - "Show recent provider calls" lists the latest calls to Meta (without message text or tokens).
 - Delivery and read receipts are not tracked yet, and incoming WhatsApp messages are not received yet:
   "Delivery and read receipts are not tracked yet: a sent message stays at “sent”."

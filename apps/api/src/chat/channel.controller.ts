@@ -18,9 +18,13 @@ import type {
   ChannelContactResponse,
   ChannelLogEntry,
   SyncResult,
+  WebhookEvent,
+  WebhookStatus,
   InboxListResponse,
   MessagingAccountResponse,
 } from '@saas-skeleton/contracts';
+import { WebhookEventsService } from './webhook-events.service';
+import { WebhookSubscriptionService } from './webhook-subscription.service';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
@@ -43,6 +47,10 @@ import {
   ChannelContactResponseDto,
   ChannelLogListResponseDto,
   ChannelLogQueryDto,
+  SubscribeWebhookDto,
+  WebhookEventListResponseDto,
+  WebhookEventsQueryDto,
+  WebhookStatusDto,
   ConnectMessagingAccountDto,
   MessagingAccountResponseDto,
   StartConversationDto,
@@ -153,6 +161,8 @@ export class MessagingSettingsController {
   constructor(
     private readonly accounts: MessagingAccountService,
     private readonly connection: WhatsAppConnectionService,
+    private readonly subscription: WebhookSubscriptionService,
+    private readonly webhookEvents: WebhookEventsService,
   ) {}
 
   @Get()
@@ -220,5 +230,46 @@ export class MessagingSettingsController {
     @Query() query: ChannelLogQueryDto,
   ): Promise<{ items: ChannelLogEntry[]; nextCursor: string | null }> {
     return this.connection.logsOf(id, { cursor: query.cursor, limit: query.limit });
+  }
+
+  /** Куди зараз ідуть вебхуки номера: живе читання з Meta, лише хости (CHAT-3b1) */
+  @Get('channels/:id/webhook')
+  @Roles(Role.ADMIN)
+  @ApiOkResponse({ type: WebhookStatusDto.Output })
+  webhookStatus(@Param('id') id: string): Promise<WebhookStatus> {
+    return this.subscription.status(id);
+  }
+
+  /** Явна підписка номера на адресу цього акаунта; чужі події — лише з названим хостом */
+  @Post('channels/:id/webhook/subscribe')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.ADMIN)
+  @RateLimit(RATE_LIMITS.messagingConnect)
+  @ApiOkResponse({ type: WebhookStatusDto.Output })
+  subscribeWebhook(
+    @Param('id') id: string,
+    @Body() dto: SubscribeWebhookDto,
+  ): Promise<WebhookStatus> {
+    return this.subscription.subscribe(id, dto);
+  }
+
+  @Post('channels/:id/webhook/unsubscribe')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.ADMIN)
+  @RateLimit(RATE_LIMITS.messagingConnect)
+  @ApiOkResponse({ type: WebhookStatusDto.Output })
+  unsubscribeWebhook(@Param('id') id: string): Promise<WebhookStatus> {
+    return this.subscription.unsubscribe(id);
+  }
+
+  /** Захоплені вебхуки акаунта як збережено: тіло, заголовки, результат підпису (CHAT-3b1) */
+  @Get('accounts/:id/webhook-events')
+  @Roles(Role.ADMIN)
+  @ApiOkResponse({ type: WebhookEventListResponseDto.Output })
+  webhookEventList(
+    @Param('id') id: string,
+    @Query() query: WebhookEventsQueryDto,
+  ): Promise<{ items: WebhookEvent[]; nextCursor: string | null }> {
+    return this.webhookEvents.list(id, { cursor: query.cursor, limit: query.limit });
   }
 }

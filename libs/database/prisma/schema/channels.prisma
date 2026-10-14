@@ -104,11 +104,13 @@ model Channel {
   // Решта метаданих номера від провайдера (nameStatus, codeVerificationStatus, status, platformType, throughput)
   providerMeta       Json    @default("{}") @map("provider_meta")
 
-  isEnabled         Boolean   @default(false) @map("is_enabled")
-  isDefault         Boolean   @default(false) @map("is_default")
+  isEnabled           Boolean   @default(false) @map("is_enabled")
+  isDefault           Boolean   @default(false) @map("is_default")
   // Зник у провайдера: канал із розмовами НЕ видаляємо (каскад знищив би розмови)
-  providerMissingAt DateTime? @map("provider_missing_at")
-  syncedAt          DateTime? @map("synced_at")
+  providerMissingAt   DateTime? @map("provider_missing_at")
+  // Коли АДМІН підписав цей номер на наш вебхук (CHAT-3b1); істина — живе читання з Meta, це лише зручність
+  webhookSubscribedAt DateTime? @map("webhook_subscribed_at")
+  syncedAt            DateTime? @map("synced_at")
 
   // reopen-вікно (години, за замовчуванням 24), підпис тощо
   settings Json @default("{}")
@@ -196,14 +198,17 @@ model ChannelWebhookEvent {
   tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
   accountId String @map("account_id")
 
-  receivedAt  DateTime          @default(now()) @map("received_at")
-  processedAt DateTime?         @map("processed_at")
+  receivedAt     DateTime          @default(now()) @map("received_at")
+  processedAt    DateTime?         @map("processed_at")
   // Тіло як рядок: підпис рахується над байтами, JSON.parse може впасти, а текст лишається
-  body        String            @db.Text
+  body           String            @db.Text
   // Дешевий захист від дослівного повтору: UNIQUE (account_id, payload_hash)
-  payloadHash String            @map("payload_hash")
-  state       WebhookEventState @default(RECEIVED)
-  error       String?
+  payloadHash    String            @map("payload_hash")
+  state          WebhookEventState @default(RECEIVED)
+  error          String?
+  // Заголовки запиту (нижній регістр; без cookie/authorization) і результат перевірки підпису: true/false, null — нічим перевірити (CHAT-3b1)
+  headers        Json?
+  signatureValid Boolean?          @map("signature_valid")
 
   tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   account MessagingAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Cascade)

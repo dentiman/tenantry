@@ -16,6 +16,18 @@ import {
   type RawWebhookRequest,
 } from '@saas-skeleton/shared';
 
+/** Заголовки, які не зберігаємо: вони можуть нести облікові дані */
+const SECRET_HEADERS = new Set(['cookie', 'authorization', 'proxy-authorization']);
+
+/**
+ * Політика підпису (CHAT-3b1): `enforce` (типово) — без дійсного підпису 401 і нічого не зберігається;
+ * `record` — результат перевірки лишається на події, а запит приймається. `record` ставить лише стенд, поки
+ * вхідні й квитанції не збудовані; решта провайдерів і тести живуть на `enforce`.
+ */
+function enforceSignature(): boolean {
+  return process.env.CHANNEL_WEBHOOK_SIGNATURE?.trim().toLowerCase() !== 'record';
+}
+
 /** Результат POST-у вебхука для контролера: що відповісти провайдеру */
 export type WebhookOutcome = { status: 'accepted' } | { status: 'bad-signature' };
 
@@ -74,7 +86,9 @@ export class ChannelWebhookService {
     }
 
     const creds = await this.credentials(account);
-    if (!account.adapter.verifyWebhook(raw, creds)) {
+    // null — нічим перевірити (немає app secret); це не «дійсний», тож `enforce` такий запит відхилить
+    const signatureValid = creds.appSecret ? account.adapter.verifyWebhook(raw, creds) : null;
+    if (enforceSignature() && signatureValid !== true) {
       return { status: 'bad-signature' };
     }
 
@@ -97,6 +111,13 @@ export class ChannelWebhookService {
             payloadHash,
             state: poisoned ? 'FAILED' : 'RECEIVED',
             error: parsed.error ?? null,
+            headers: Object.fromEntries(
+              Object.entries(raw.headers).filter(
+                (entry): entry is [string, string] =>
+                  entry[1] !== undefined && !SECRET_HEADERS.has(entry[0]),
+              ),
+            ),
+            signatureValid,
           },
         ],
         skipDuplicates: true,
@@ -107,7 +128,7 @@ export class ChannelWebhookService {
     });
 
     if (poisoned) {
-      this.logger.warn(`Unparsable signed webhook stored as FAILED (account ${account.accountId})`);
+      this.logger.warn(`Unparsable webhook stored as FAILED (account ${account.accountId})`);
     }
     return { status: 'accepted' };
   }

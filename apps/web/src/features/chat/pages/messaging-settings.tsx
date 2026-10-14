@@ -43,6 +43,7 @@ import {
   useMessagingSettingsUpdateChannel,
 } from '../../../api/generated/api';
 import { ConnectWhatsAppDialog } from '../components/connect-whatsapp-dialog';
+import { CapturedEvents, NumberWebhook } from '../components/webhook-panels';
 import { channelState, formatCountdown, tokenState } from '../components/whatsapp-helpers';
 import type { MessagingAccountListResponseDtoOutputItemsItem } from '../../../api/generated/model/messagingAccountListResponseDtoOutputItemsItem';
 
@@ -420,6 +421,9 @@ function WhatsAppSection({ account }: { account: MessagingAccountListResponseDto
                 >
                   {t('settings.whatsapp.makeDefault')}
                 </Button>
+                <div className="basis-full">
+                  <NumberWebhook channelId={channel.id} />
+                </div>
               </li>
             );
           })}
@@ -432,6 +436,7 @@ function WhatsAppSection({ account }: { account: MessagingAccountListResponseDto
       </section>
 
       <CallLog accountId={account.id} />
+      <CapturedEvents accountId={account.id} />
     </>
   );
 }

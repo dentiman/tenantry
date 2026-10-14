@@ -66,7 +66,7 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
   raw event store → ingest, outbox `QUEUED→SENDING→SENT`, status folding, identity with BSUID,
   templates), WhatsApp feature catalogue with levels, phases CHAT-2a…3c, open questions O-W1…9.
-  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`) is in `docs/whatsapp-research/`.
+  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`; `fms-webhook-sample-2026-10-14.md` — shapes of 300 real webhooks) is in `docs/whatsapp-research/`.
   `docs/whatsapp-feature-flows.md` — per-feature flows (UI, system steps, Graph calls, webhooks) and the
   one-time Meta setup runbook (app, WABA, system-user token, webhook, test number).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and

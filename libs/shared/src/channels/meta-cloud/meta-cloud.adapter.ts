@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type {
   ChannelAdapter,
   ChannelCapabilities,
@@ -11,9 +12,8 @@ import { MetaApiError, MetaGraphClient } from './graph-client';
 
 /**
  * Адаптер WhatsApp Cloud API (CHAT-3a: лише вихід). Відправка тексту й схваленого шаблону за іменем;
- * успіх — 2xx із `messages[0].id` (поле `message_status` є лише в шаблону й не потрібне). Вебхуки —
- * CHAT-3b: до того методи вхідного шляху відмовляють, а не вгадують, тож випадковий запит на публічну
- * адресу акаунта не буде прийнятий за дійсний.
+ * успіх — 2xx із `messages[0].id` (поле `message_status` є лише в шаблону й не потрібне). Вебхуки
+ * (CHAT-3b1) лише захоплюються: рукостискання й підпис справжні, а розбір подій порожній.
  *
  * Відповідь 2xx означає «прийнято», а не «доставлено» (docs/whatsapp-research/live-probe-2026-10-13.md п.1).
  */
@@ -30,16 +30,42 @@ export class MetaCloudAdapter implements ChannelAdapter {
 
   constructor(private readonly client: MetaGraphClient = new MetaGraphClient()) {}
 
-  verifyWebhook(_req: RawWebhookRequest, _creds: ChannelCredentials): boolean {
-    return false;
+  /**
+   * `X-Hub-Signature-256: sha256=<hex>` = HMAC-SHA256(app secret, сирі байти). Перевірено на 215 справжніх
+   * хуках fms-dev: збіглись усі. Старий `X-Hub-Signature` (sha1) ігноруємо.
+   */
+  verifyWebhook(req: RawWebhookRequest, creds: ChannelCredentials): boolean {
+    const header = req.headers['x-hub-signature-256'];
+    if (!creds.appSecret || !header?.startsWith('sha256=')) return false;
+    const expected = createHmac('sha256', creds.appSecret).update(req.body).digest();
+    const given = Buffer.from(header.slice('sha256='.length), 'hex');
+    // timingSafeEqual кидає на різну довжину; нечитабельний hex дає коротший буфер
+    return given.length === expected.length && timingSafeEqual(given, expected);
   }
 
-  handshake(): string | null {
-    return null;
+  /** GET-рукостискання Meta: `hub.mode=subscribe` і наш verify token → відлуння `hub.challenge` */
+  handshake(
+    query: Readonly<Record<string, string | undefined>>,
+    creds: ChannelCredentials,
+  ): string | null {
+    if (query['hub.mode'] !== 'subscribe') return null;
+    const token = query['hub.verify_token'];
+    const challenge = query['hub.challenge'];
+    if (!token || !challenge || token !== creds.verifyToken) return null;
+    return challenge;
   }
 
-  parseWebhook(): ParseResult {
-    return { events: [], error: 'webhooks_not_enabled' };
+  /**
+   * CHAT-3b1: лише захоплення — нічого не інтерпретуємо, тож подій немає (ingest позначить рядок
+   * обробленим і не зачепить розмов). Не-JSON тіло — «отруйне»: зберігається як FAILED, відповідь 200.
+   */
+  parseWebhook(raw: Buffer): ParseResult {
+    try {
+      JSON.parse(raw.toString('utf8'));
+    } catch {
+      return { events: [], error: 'invalid_json' };
+    }
+    return { events: [] };
   }
 
   async send(ctx: OutboundContext, creds: ChannelCredentials): Promise<{ externalId: string }> {

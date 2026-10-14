@@ -84,6 +84,7 @@ import type {
   MessagingAccountListResponseDtoOutput,
   MessagingAccountResponseDtoOutput,
   MessagingSettingsLogsParams,
+  MessagingSettingsWebhookEventListParams,
   NotificationListResponseDtoOutput,
   NotificationPreferenceListDtoOutput,
   NotificationResponseDtoOutput,
@@ -110,6 +111,7 @@ import type {
   SettingsActivityParams,
   SettingsBootstrapDtoOutput,
   StartConversationDto,
+  SubscribeWebhookDto,
   SyncResultDtoOutput,
   UpdateAccountCredentialsDto,
   UpdateAccountProfileDto,
@@ -124,6 +126,8 @@ import type {
   UserListResponseDtoOutput,
   UserResponseDtoOutput,
   UsersFindAllParams,
+  WebhookEventListResponseDtoOutput,
+  WebhookStatusDtoOutput,
 } from './model';
 
 import { customInstance } from '../http-client';
@@ -7886,6 +7890,430 @@ export function useMessagingSettingsLogs<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getMessagingSettingsLogsQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const messagingSettingsWebhookStatus = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<WebhookStatusDtoOutput>(
+    { url: `/api/settings/messaging/channels/${id}/webhook`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsWebhookStatusQueryKey = (id?: string) => {
+  return [`/api/settings/messaging/channels/${id}/webhook`] as const;
+};
+
+export const getMessagingSettingsWebhookStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getMessagingSettingsWebhookStatusQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>> = ({
+    signal,
+  }) => messagingSettingsWebhookStatus(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type MessagingSettingsWebhookStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>
+>;
+export type MessagingSettingsWebhookStatusQueryError = unknown;
+
+export function useMessagingSettingsWebhookStatus<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+  TError = unknown,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsWebhookStatus<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsWebhookStatus<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useMessagingSettingsWebhookStatus<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>,
+  TError = unknown,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookStatus>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getMessagingSettingsWebhookStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const messagingSettingsSubscribeWebhook = (
+  id: string,
+  subscribeWebhookDto: SubscribeWebhookDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<WebhookStatusDtoOutput>(
+    {
+      url: `/api/settings/messaging/channels/${id}/webhook/subscribe`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: subscribeWebhookDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getMessagingSettingsSubscribeWebhookMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>,
+    TError,
+    { id: string; data: SubscribeWebhookDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>,
+  TError,
+  { id: string; data: SubscribeWebhookDto },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsSubscribeWebhook'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>,
+    { id: string; data: SubscribeWebhookDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return messagingSettingsSubscribeWebhook(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsSubscribeWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>
+>;
+export type MessagingSettingsSubscribeWebhookMutationBody = SubscribeWebhookDto;
+export type MessagingSettingsSubscribeWebhookMutationError = unknown;
+
+export const useMessagingSettingsSubscribeWebhook = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>,
+      TError,
+      { id: string; data: SubscribeWebhookDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsSubscribeWebhook>>,
+  TError,
+  { id: string; data: SubscribeWebhookDto },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsSubscribeWebhookMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsUnsubscribeWebhook = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<WebhookStatusDtoOutput>(
+    { url: `/api/settings/messaging/channels/${id}/webhook/unsubscribe`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsUnsubscribeWebhookMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsUnsubscribeWebhook'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return messagingSettingsUnsubscribeWebhook(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsUnsubscribeWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>
+>;
+
+export type MessagingSettingsUnsubscribeWebhookMutationError = unknown;
+
+export const useMessagingSettingsUnsubscribeWebhook = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsUnsubscribeWebhook>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsUnsubscribeWebhookMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsWebhookEventList = (
+  id: string,
+  params?: MessagingSettingsWebhookEventListParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<WebhookEventListResponseDtoOutput>(
+    { url: `/api/settings/messaging/accounts/${id}/webhook-events`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsWebhookEventListQueryKey = (
+  id?: string,
+  params?: MessagingSettingsWebhookEventListParams,
+) => {
+  return [
+    `/api/settings/messaging/accounts/${id}/webhook-events`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getMessagingSettingsWebhookEventListQueryOptions = <
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsWebhookEventListParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getMessagingSettingsWebhookEventListQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>> = ({
+    signal,
+  }) => messagingSettingsWebhookEventList(id, params, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type MessagingSettingsWebhookEventListQueryResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>
+>;
+export type MessagingSettingsWebhookEventListQueryError = unknown;
+
+export function useMessagingSettingsWebhookEventList<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+  TError = unknown,
+>(
+  id: string,
+  params: undefined | MessagingSettingsWebhookEventListParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsWebhookEventList<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsWebhookEventListParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsWebhookEventList<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsWebhookEventListParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useMessagingSettingsWebhookEventList<
+  TData = Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsWebhookEventListParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsWebhookEventList>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getMessagingSettingsWebhookEventListQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
