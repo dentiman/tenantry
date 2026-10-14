@@ -51,9 +51,19 @@ describe('parseMetaWebhook — повідомлення', () => {
     });
   });
 
+  it('знята реакція (без емодзі) — reaction.emoji: null', () => {
+    const removed = tweak(reactionHook({ id: 'wamid.R2', target: 'wamid.X' }), (value) => {
+      for (const m of value.messages as { reaction: Record<string, unknown> }[]) delete m.reaction.emoji;
+    });
+    const [event] = parse(removed).events;
+    expect(event).toMatchObject({ content: { unsupportedType: 'reaction', reaction: { emoji: null } } });
+  });
+
   it('реакція і невідомий тип — теж заглушки', () => {
     const [reaction] = parse(reactionHook({ id: 'wamid.R', target: 'wamid.X' })).events;
-    expect(reaction).toMatchObject({ content: { body: '[reaction]', unsupportedType: 'reaction' } });
+    expect(reaction).toMatchObject({
+      content: { body: '[reaction]', unsupportedType: 'reaction', reaction: { emoji: '👍' } },
+    });
 
     const weird = tweak(textHook({ id: 'wamid.W' }), (value) => {
       for (const m of value.messages as { type: string }[]) m.type = 'hologram';

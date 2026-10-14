@@ -51,6 +51,11 @@ export const NormalizedMessageEventSchema = z.object({
      * лягає в `payload.unsupported`, з якого інтерфейс робить локалізований текст.
      */
     unsupportedType: z.string().min(1).max(64).optional(),
+    /**
+     * Реакція клієнта на повідомлення (CHAT-3b3): `emoji: null` — реакцію зняли. Реакція не відкриває
+     * вікно відповіді, на відміну від решти вхідних.
+     */
+    reaction: z.object({ emoji: z.string().min(1).max(32).nullable() }).optional(),
   }),
   providerMeta: z.record(z.string(), z.unknown()),
 });

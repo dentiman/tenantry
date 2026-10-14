@@ -17,6 +17,7 @@ import {
   type SetConversationStatus,
 } from '@saas-skeleton/contracts';
 import {
+  channelsMarkReadCommand,
   chatMessagePostedEvent,
   MessagePublisher,
   NotificationRecorder,
@@ -438,6 +439,28 @@ export class ChatService {
       // Курсор справді зрушився — кажемо його власнику, в УСІ його вкладки. Застарілий чи
       // повторний запит (`count = 0`) мовчить: інакше дві вкладки, що читають одне й те саме,
       // гойдали б одна одну подіями (design.md D2). Чужі позиції прочитаного нікому не шлемо
+      // CHAT-3b3: вхідні клієнта до цього місця «забираємо» для провайдера й ставимо одну роботу «прочитано».
+      // Умовне UPDATE … IS NULL — дедуп: повторний рух курсора чи другий агент нічого не забере. Лише
+      // клієнтські розмови (JOIN), вхідні з id провайдера й не старші за 30 днів (старіше Meta відхилить)
+      const claimed = await tx.$queryRaw<{ id: string; seq: number }[]>`
+        UPDATE chat_messages m SET provider_read_at = now()
+        FROM conversations c
+        WHERE c.id = ${conversationId} AND m.conversation_id = c.id AND c.kind = 'CUSTOMER'
+          AND m.direction = 'INBOUND' AND m.seq <= ${seq}::int AND m.provider_read_at IS NULL
+          AND m.external_id IS NOT NULL AND m.deleted_at IS NULL
+          AND m.provider_sent_at > now() - interval '30 days'
+        RETURNING m.id, m.seq`;
+      const newest = claimed.reduce<{ id: string; seq: number } | null>(
+        (best, row) => (best === null || row.seq > best.seq ? row : best),
+        null,
+      );
+      if (newest) {
+        await this.messages.publish(tx, channelsMarkReadCommand, {
+          conversationId,
+          messageId: newest.id,
+        });
+      }
+
       if (count > 0) {
         await this.chatRealtime.conversationChanged(tx, conversationId, 'read', [userId]);
         // Прочитав — сповіщення про цю розмову втратило сенс, у кожній вкладці (design.md D5)

@@ -21,6 +21,7 @@ import {
   accountUpdateHook,
   failedHook,
   mediaHook,
+  reactionHook,
   statusHook,
   templateStatusHook,
   textHook,
@@ -195,6 +196,18 @@ describe('Meta inbound and receipts (e2e, CHAT-3b2)', () => {
 
       await deliver(mediaHook({ id: 'wamid.DOC', type: 'document', phoneId: PHONE }));
       expect((await messages()).map((m) => m.body)).toEqual(['[image]', '[document]']);
+    });
+
+    it('реакція зберігається з емодзі, але не відкриває вікно відповіді (CHAT-3b3)', async () => {
+      await deliver(reactionHook({ id: 'wamid.REACT', target: 'wamid.OUR', timestamp: nowSeconds(), phoneId: PHONE }));
+      const [reaction] = await messages();
+      expect(reaction?.payload).toEqual({ unsupported: { type: 'reaction' }, reaction: { emoji: '👍' } });
+      const conversation = await prisma.conversation.findUniqueOrThrow({ where: { id: reaction?.conversationId ?? '' } });
+      expect(conversation.customerLastMessageAt).toBeNull();
+
+      // Справжнє повідомлення вікно відкриває
+      await deliver(textHook({ id: 'wamid.AFTER', timestamp: nowSeconds(), phoneId: PHONE }));
+      expect((await prisma.conversation.findUniqueOrThrow({ where: { id: conversation.id } })).customerLastMessageAt).not.toBeNull();
     });
 
     it('шаблон і оновлення акаунта зберігаються й нічого не змінюють', async () => {

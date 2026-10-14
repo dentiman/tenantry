@@ -5,6 +5,7 @@ import type {
   ChannelCredentials,
   ParseResult,
   RawWebhookRequest,
+  ReadReceiptContext,
 } from '../channel-adapter';
 import { ChannelSendError, type OutboundContext } from '../channel-send';
 import { classifyMetaError } from './errors';
@@ -108,5 +109,23 @@ export class MetaCloudAdapter implements ChannelAdapter {
       if (error instanceof MetaApiError) throw classifyMetaError(error);
       throw error;
     }
+  }
+
+  /**
+   * Прочитане агентом (CHAT-3b3): `status: "read"` з id вхідного; Meta відзначає й попередні. Помилку
+   * (`131009` для повідомлення старше 30 днів, `190`, мережа) віддаємо як є: викликач її лише логує.
+   */
+  async markRead(ctx: ReadReceiptContext, creds: ChannelCredentials): Promise<void> {
+    if (!creds.accessToken) {
+      throw new ChannelSendError('AUTH', 'no_credentials', 'The account has no access token');
+    }
+    await this.client.request({
+      method: 'POST',
+      path: `${ctx.channelExternalId}/messages`,
+      body: { messaging_product: 'whatsapp', status: 'read', message_id: ctx.externalMessageId },
+      token: creds.accessToken,
+      operation: 'read',
+      signal: ctx.signal,
+    });
   }
 }

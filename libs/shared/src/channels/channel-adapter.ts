@@ -1,6 +1,15 @@
 import type { ChannelProvider, ChannelType, NormalizedEvent } from '@saas-skeleton/contracts';
 import type { OutboundContext } from './channel-send';
 
+/** Що потрібно адаптеру, щоб відзначити вхідне прочитаним (CHAT-3b3) */
+export interface ReadReceiptContext {
+  /** Ідентифікатор нашого номера в провайдера */
+  channelExternalId: string;
+  /** Ідентифікатор вхідного повідомлення в провайдера */
+  externalMessageId: string;
+  signal: AbortSignal;
+}
+
 /**
  * Контракт адаптера каналу (docs/whatsapp-channel.md §4.2). Ядро вимагає мінімум; решта
  * можливостей (шаблони, медіа, здоров'я, підключення, прочитано) — окремі опційні
@@ -72,4 +81,10 @@ export interface ChannelAdapter {
    * `ChannelSendError` із класом. Поважає `ctx.signal`: після таймауту має перервати запит.
    */
   send(ctx: OutboundContext, creds: ChannelCredentials): Promise<{ externalId: string }>;
+
+  /**
+   * Сказати провайдеру, що вхідне прочитане агентом (CHAT-3b3). Необов'язкове: адаптер без нього (fake)
+   * пропускається. Кидає на відмову; викликач пише її в журнал і НЕ повторює.
+   */
+  markRead?(ctx: ReadReceiptContext, creds: ChannelCredentials): Promise<void>;
 }

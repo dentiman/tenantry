@@ -73,3 +73,17 @@ export const channelsSweepPendingStatusesCommand = defineCommand(
  * природно ідемпотентне. Термін — `CHANNEL_LOG_RETENTION_DAYS`.
  */
 export const channelsPurgeLogsCommand = defineCommand('channels.purge-logs', z.object({}));
+
+/**
+ * Повідомити провайдеру, що вхідне прочитане агентом (CHAT-3b3, design.md D2). Публікується в
+ * транзакції, що зсунула курсор прочитаного й «забрала» вхідні (`provider_read_at`); у payload лише id.
+ * Найкраще-що-вдасться: помилка пишеться в журнал викликів і не повторюється.
+ */
+export const channelsMarkReadCommand = defineCommand(
+  'channels.mark-read',
+  z.object({
+    conversationId: z.uuid(),
+    /** Найновіше «забране» вхідне: Meta відзначає прочитаними й попередні */
+    messageId: z.uuid(),
+  }),
+);

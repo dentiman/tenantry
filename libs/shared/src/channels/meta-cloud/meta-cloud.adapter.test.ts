@@ -146,6 +146,30 @@ describe('MetaCloudAdapter.send', () => {
   });
 });
 
+describe('MetaCloudAdapter.markRead (CHAT-3b3)', () => {
+  const read = { channelExternalId: '111222333', externalMessageId: 'wamid.IN1', signal: new AbortController().signal };
+
+  it('status=read з id вхідного; токен лише в заголовку', async () => {
+    stub.route('POST', '111222333/messages', { body: { success: true } });
+
+    await adapter.markRead(read, creds);
+
+    const call = stub.requests.find((r) => r.path === '111222333/messages');
+    expect(call?.body).toEqual({ messaging_product: 'whatsapp', status: 'read', message_id: 'wamid.IN1' });
+    expect(call?.headers.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(call?.url).not.toContain(TOKEN);
+  });
+
+  it('помилка Meta кидається (викликач її логує), без токена — AUTH і жодного виклику', async () => {
+    stub.route('POST', '111222333/messages', graphError(131009, 'Parameter value is not valid'));
+    await expect(adapter.markRead(read, creds)).rejects.toMatchObject({ code: 131009 });
+
+    stub.reset();
+    await expect(adapter.markRead(read, { ...creds, accessToken: null })).rejects.toBeInstanceOf(ChannelSendError);
+    expect(stub.requests).toHaveLength(0);
+  });
+});
+
 describe('реєстр адаптерів', () => {
   it('meta_cloud є завжди, fake — лише під CHAT_DEV_TOOLS', () => {
     const without = createChannelAdapterRegistry({});

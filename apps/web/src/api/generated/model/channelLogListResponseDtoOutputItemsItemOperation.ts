@@ -15,4 +15,5 @@ export const ChannelLogListResponseDtoOutputItemsItemOperation = {
   sync: 'sync',
   send: 'send',
   webhook: 'webhook',
+  read: 'read',
 } as const;

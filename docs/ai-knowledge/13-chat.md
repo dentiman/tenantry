@@ -45,8 +45,7 @@ Customer conversations need a connected messaging channel; an administrator conn
 Settings → "Messaging". Once a number is subscribed there ("Webhooks" → "Subscribe"), a customer's WhatsApp
 message creates a conversation (or adds to the open one) under "Customers", and your replies show their
 delivery state: one tick (sent), two ticks (delivered), two highlighted ticks (read). A reply WhatsApp could not
-deliver shows the reason and "Resend". A customer's message that is not text (a photo, document, voice note,
-reaction…) appears as "Message not supported (image)" — it is not downloaded yet. Without a subscription a sent
+deliver shows the reason and "Resend". A customer's message that is not text (a photo, document, voice note…) appears as "Message not supported (image)" — it is not downloaded yet. A customer's reaction to a message appears as "Reacted 👍" (or "Removed a reaction") and does not reopen the 24-hour window. When you open a customer's message in a WhatsApp conversation, the customer sees it as read (blue ticks) on their phone. Without a subscription a sent
 message stays at "sent" and the composer says "Delivery and read receipts are not tracked on this channel yet:
 a message stays at “sent”."
 

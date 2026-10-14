@@ -329,7 +329,7 @@ function TranscriptRow({
       <MessageGroup>
         <Message align="end">
           <MessageContent>
-            <Bubble align="end" variant={isFailed ? 'destructive' : 'default'}>
+            <Bubble align="end" variant={isFailed ? 'destructive' : 'tinted'}>
               <BubbleBody
                 body={row.entry.body}
                 tone={isFailed ? 'failed' : 'own'}
@@ -427,7 +427,7 @@ function TranscriptRow({
           )}
           <Bubble
             align={isOwn ? 'end' : 'start'}
-            variant={isNote ? 'muted' : isOwn ? 'default' : 'muted'}
+            variant={isNote ? 'muted' : isOwn ? 'tinted' : 'muted'}
             className={isNote ? 'border border-dashed border-border' : undefined}
           >
             <BubbleBody
@@ -480,7 +480,7 @@ function DeliveryMark({ status }: { status: ChatMessage['status'] }) {
       {icon === 'pending' && <Clock className="size-3" />}
       {icon === 'sent' && <Check className="size-3" />}
       {icon === 'delivered' && <CheckCheck className="size-3" />}
-      {icon === 'read' && <CheckCheck className="size-3 text-sky-300" />}
+      {icon === 'read' && <CheckCheck className="size-3 text-sky-600 dark:text-sky-400" />}
       {icon === 'failed' && <AlertCircle className="size-3 text-destructive" />}
       <span className="sr-only">{text}</span>
     </>
@@ -491,7 +491,9 @@ function DeliveryMark({ status }: { status: ChatMessage['status'] }) {
 const META_CLASS = 'text-[0.6875rem] leading-none font-normal tabular-nums';
 
 const META_TONE = {
-  own: 'text-primary-foreground/70',
+  // Своя бульбашка — блідий відтінок primary (`tinted`), а не суцільний: сині «прочитано» на суцільному
+  // синьому не видно. Мітки читаються як у чужій бульбашці
+  own: 'text-muted-foreground',
   other: 'text-muted-foreground',
   failed: 'text-destructive/70',
 } as const;

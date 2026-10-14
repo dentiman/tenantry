@@ -71,7 +71,7 @@ export const SyncResultSchema = z.object({
 
 export const ChannelLogEntrySchema = z.object({
   id: z.uuid(),
-  operation: z.enum(['verify', 'sync', 'send', 'webhook']),
+  operation: z.enum(['verify', 'sync', 'send', 'webhook', 'read']),
   ok: z.boolean(),
   httpStatus: z.number().int().nullable(),
   errorCode: z.string().nullable(),

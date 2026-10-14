@@ -149,11 +149,22 @@ function parseMessage(
     // Тип, якого не вміємо показати, лишає нейтральну заглушку; текст для людини робить інтерфейс
     content: isText
       ? { type: 'text', body: text }
-      : { type: 'text', body: `[${type}]`.slice(0, 66), unsupportedType: type.slice(0, 64) },
+      : {
+          type: 'text',
+          body: `[${type}]`.slice(0, 66),
+          unsupportedType: type.slice(0, 64),
+          // Реакція (CHAT-3b3): емодзі зберігаємо; без нього реакцію зняли
+          ...(type === 'reaction' && { reaction: { emoji: reactionEmoji(message) } }),
+        },
     providerMeta: {
       from_user_id: str(message.from_user_id),
       user_id: contact?.userId ?? null,
       context: isObject(message.context) ? message.context : null,
     },
   };
+}
+
+function reactionEmoji(message: Json): string | null {
+  const emoji = isObject(message.reaction) ? str(message.reaction.emoji) : null;
+  return emoji ? emoji.slice(0, 32) : null;
 }

@@ -9958,7 +9958,8 @@
                     "verify",
                     "sync",
                     "send",
-                    "webhook"
+                    "webhook",
+                    "read"
                   ]
                 },
                 "ok": {

@@ -10,6 +10,7 @@ import {
   ChannelAdapterRegistry,
   ChannelDeliveryService,
   ChannelPendingSweeper,
+  ChannelReadReceiptService,
   ChannelIngestService,
   ChannelStatusService,
   ChatSharedModule,
@@ -24,6 +25,7 @@ import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
 import { ChannelsDeliverSubscriber } from './chat/channels-deliver.subscriber';
+import { ChannelsMarkReadSubscriber } from './chat/channels-mark-read.subscriber';
 import { ChannelsPurgeLogsSubscriber } from './chat/channels-purge-logs.subscriber';
 import { ChannelsSweepPendingSubscriber } from './chat/channels-sweep-pending.subscriber';
 import { ChatNotifyCustomerSubscriber } from './chat/chat-notify-customer.subscriber';
@@ -76,6 +78,8 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     ChannelIngestService,
     ChannelDeliveryService,
     ChannelPendingSweeper,
+    ChannelReadReceiptService,
+    ChannelsMarkReadSubscriber,
     ChannelsSweepPendingSubscriber,
     ChannelsPurgeLogsSubscriber,
     ChannelsIngestSubscriber,

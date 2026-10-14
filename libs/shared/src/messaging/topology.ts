@@ -9,6 +9,7 @@ import {
   channelsDeliverOutboundCommand,
   channelsPurgeLogsCommand,
   channelsIngestWebhookCommand,
+  channelsMarkReadCommand,
   channelsSweepPendingStatusesCommand,
   chatCustomerMessageReceivedEvent,
   chatMessagePostedEvent,
@@ -127,6 +128,12 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
         localConcurrency: 4,
       },
     ],
+  },
+  {
+    // CHAT-3b3: «прочитано агентом» провайдеру. Найкраще-що-вдасться: порядок не потрібен, а помилка
+    // лише логується (обробник її не кидає), тож `standard` і один повтор на випадок падіння воркера
+    definition: channelsMarkReadCommand,
+    consumers: [{ id: 'channels-mark-read', retryLimit: 1, retryDelaySeconds: 2 }],
   },
   {
     // CHAT-3a: журнал викликів до провайдера. 04:30 — після нічних чисток 03:xx і цін AI (04:15)

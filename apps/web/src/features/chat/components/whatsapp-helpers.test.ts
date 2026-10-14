@@ -242,4 +242,14 @@ describe('тексти повідомлень із payload', () => {
     expect(unsupportedText({ payload: { unsupported: {} } }, t)).toBeNull();
     expect(unsupportedText({ payload: null }, t)).toBeNull();
   });
+
+  it('реакція — з емодзі; знята реакція — окремий текст, а не «не підтримується»', () => {
+    const reaction = { unsupported: { type: 'reaction' } };
+    expect(unsupportedText({ payload: { ...reaction, reaction: { emoji: '👍' } } }, t)).toBe(
+      'message.reaction:{"emoji":"👍"}',
+    );
+    expect(unsupportedText({ payload: { ...reaction, reaction: { emoji: null } } }, t)).toBe(
+      'message.reactionRemoved:{}',
+    );
+  });
 });

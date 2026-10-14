@@ -40,7 +40,9 @@
     "sending": "Sending…",
     "failed": "Not sent",
     "internalNote": "Internal note",
-    "unsupported": "Message not supported ({{type}})"
+    "unsupported": "Message not supported ({{type}})",
+    "reaction": "Reacted {{emoji}}",
+    "reactionRemoved": "Removed a reaction"
   },
   "composer": {
     "label": "Message",

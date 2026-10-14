@@ -4,6 +4,7 @@ export type {
   ChannelCredentials,
   ParseResult,
   RawWebhookRequest,
+  ReadReceiptContext,
 } from './channel-adapter';
 export {
   ChannelAdapterRegistry,
@@ -61,3 +62,4 @@ export {
   type LogEntryInput,
 } from './channel-log.service';
 export { ChannelContactService, type ContactAddressInput } from './channel-contact.service';
+export { ChannelReadReceiptService, READ_RECEIPT_TIMEOUT_MS } from './channel-read-receipt.service';

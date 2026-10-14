@@ -25,7 +25,7 @@ export interface LogDetail {
 
 export interface LogEntryInput {
   accountId: string;
-  operation: 'verify' | 'sync' | 'send' | 'webhook';
+  operation: 'verify' | 'sync' | 'send' | 'webhook' | 'read';
   ok: boolean;
   httpStatus?: number | null;
   errorCode?: string | null;

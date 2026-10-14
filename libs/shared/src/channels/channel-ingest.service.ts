@@ -219,7 +219,8 @@ export class ChannelIngestService {
         lastSeq: { increment: 1 },
         lastMessageAt: new Date(),
         lastMessagePreview: toPreview(body),
-        customerLastMessageAt: sentAt,
+        // Реакція не відкриває й не продовжує вікно відповіді (CHAT-3b3)
+        ...(event.content.reaction === undefined && { customerLastMessageAt: sentAt }),
       },
       select: { lastSeq: true },
     });
@@ -240,7 +241,10 @@ export class ChannelIngestService {
         senderContactId: contactId,
         providerSentAt: sentAt,
         ...(event.content.unsupportedType !== undefined && {
-          payload: { unsupported: { type: event.content.unsupportedType } },
+          payload: {
+            unsupported: { type: event.content.unsupportedType },
+            ...(event.content.reaction !== undefined && { reaction: event.content.reaction }),
+          },
         }),
         providerMeta: event.providerMeta as Prisma.InputJsonValue,
       },

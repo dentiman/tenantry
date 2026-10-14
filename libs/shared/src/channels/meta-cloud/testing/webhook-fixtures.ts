@@ -80,18 +80,24 @@ export function mediaHook(opts: {
   });
 }
 
-export function reactionHook(opts: { id: string; target: string; from?: string }): string {
+export function reactionHook(opts: {
+  id: string;
+  target: string;
+  from?: string;
+  phoneId?: string;
+  timestamp?: string;
+}): string {
   const from = opts.from ?? '380000000001';
   return envelope('messages', {
     messaging_product: 'whatsapp',
-    metadata: metadata(),
+    metadata: metadata(opts.phoneId),
     contacts: [{ profile: { name: 'Sample Reactor' }, wa_id: from, user_id: 'UA.1' }],
     messages: [
       {
         from,
         from_user_id: 'UA.1',
         id: opts.id,
-        timestamp: '1791961401',
+        timestamp: opts.timestamp ?? '1791961401',
         type: 'reaction',
         reaction: { message_id: opts.target, emoji: '👍' },
       },

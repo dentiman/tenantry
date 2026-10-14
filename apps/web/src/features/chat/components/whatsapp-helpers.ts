@@ -198,12 +198,22 @@ export function templateText(
   return t('template.bubble', { name: template.name, language: template.language ?? '' });
 }
 
-/** Тип провайдера, який ми не вміємо показати (CHAT-3b2): текст робить інтерфейс із `payload.unsupported`, а не бекенд */
+/**
+ * Тип провайдера, який ми не вміємо показати (CHAT-3b3): текст робить інтерфейс із `payload.unsupported`,
+ * а не бекенд. Реакція — окремий випадок: показуємо емодзі, а не «не підтримується»
+ */
 export function unsupportedText(
   message: { payload?: unknown },
   t: (key: string, options: Record<string, string>) => string,
 ): string | null {
-  const payload = message.payload as { unsupported?: { type?: string } } | null | undefined;
+  const payload = message.payload as
+    | { unsupported?: { type?: string }; reaction?: { emoji?: string | null } }
+    | null
+    | undefined;
+  if (payload?.reaction !== undefined) {
+    const emoji = payload.reaction.emoji;
+    return emoji ? t('message.reaction', { emoji }) : t('message.reactionRemoved', {});
+  }
   const type = payload?.unsupported?.type;
   return type ? t('message.unsupported', { type }) : null;
 }
