@@ -21,7 +21,10 @@ const createRotatingStream = (): ReturnType<typeof createStream> | null => {
   if (isDevelopment) {
     return null;
   }
-  return createStream(jsonLogPath, {
+  // path + basename, not the absolute file: without `path` the rotated name becomes a relative
+  // "<date>-<abs path>" and its mkdir resolves against cwd (root-owned in the container) → EACCES
+  return createStream(basename(jsonLogPath), {
+    path: logsDir,
     size: '10M', // Rotate when file reaches 10MB
     interval: '1d', // Rotate daily
     maxFiles: 30, // Keep 30 files (30 days of logs)
