@@ -426,7 +426,7 @@ magic bytes (`file-type`, як у Files v1), `StorageService.putObject` + `File`
 `webhook_configuration { override_callback_uri, verify_token }`, читання — `GET /{phone-id}?fields=webhook_configuration`,
 ключі `phone_number` / `whatsapp_business_account` / `application`), тож решта номерів спільного WABA не зачіпається.
 Стан читається з Meta на льоту (`ours` / `none` / `elsewhere`, назовні лише хост); чужі події забираються, лише коли
-адмін назвав їхній хост. «Unsubscribe» скидає перевизначення номера (порожнє значення — перевіряється живою пробою).
+адмін назвав їхній хост. «Unsubscribe» скидає перевизначення номера: порожній `override_callback_uri` знімає рівень номера, рівень WABA (fms-dev) лишається недоторканим — перевірено наживо на стенді 2026-10-14.
 `deliveryReceipts` лишається `false`: захоплений статус ще не стає галочкою. Захоплені події читає адмін:
 `GET /settings/messaging/accounts/:id/webhook-events` (тіло, заголовки, підпис; у тілі є номери й імена клієнтів).
 
@@ -669,6 +669,8 @@ Meta (`access-tokens.md`) розрізняє: **тимчасовий токен 
 | `GET /{waba}/subscribed_apps` | повертає `override_callback_uri` на рівні WABA — **поле існує і читається**. Запис (`POST`) на цьому WABA ще не перевірено |
 | `GET /{waba}/message_templates` | 25 шаблонів, усі `APPROVED` (+ `hello_world`, `jaspers_market_*`) |
 | `health_status` | `can_send_message: BLOCKED` на рівні WABA, код **141006**: помилка способу оплати, «блокує розмови, ініційовані бізнесом». Бізнес і app — `AVAILABLE`. Тобто **надсилання шаблонів (поза вікном) на цьому WABA, найімовірніше, не спрацює**, доки не додано спосіб оплати; відповіді у відкритому вікні 24 год — не перевірено |
+
+**Вебхуки на стенді (2026-10-14, CHAT-3b1).** Перевизначення на рівні **номера** Meta приймає (рукостискання на `https://web.2-29-1-13.sslip.io/api/public/channels/meta_cloud/<ключ>` пройшло), WABA-рівень і застосунок лишаються на fms-dev; повернення — порожнім значенням. Прочитано через API стенду: вхідне `text` з телефону, потім після відправки зі стенду `sent` і `delivered` з нашим `biz_opaque_callback_data`, підпис завжди `valid`, `user-agent: facebookexternalua`; безкоштовний сервісний `pricing` (`free_customer_service`) у межах вікна.
 
 **Через наш код (2026-10-14, CHAT-3a)** — повна таблиця в [whatsapp-research/live-probe-2026-10-14.md](whatsapp-research/live-probe-2026-10-14.md):
 підключення з перевіркою токена й синхронізація номера працюють; `hello_world` і текст прийняті (`SENT`); `biz_opaque_callback_data`

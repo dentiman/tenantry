@@ -6,7 +6,7 @@ and a worker ingests it. `MetaCloudAdapter` currently refuses every webhook (`we
 WABA is shared with fms-dev, whose address is set at the WABA and application levels; the same number
 (`120000000000001`) is used by both. A read of the live configuration on 2026-10-14 shows the number-level
 object `webhook_configuration { whatsapp_business_account, application }` — a `phone_number` key appears when a
-number-level override exists (R: confirmed by this change's live run).
+number-level override exists (confirmed live on 2026-10-14).
 
 An export of fms-dev's own `whatsapp_webhook_log` (310 rows, kept out of git) was analysed: 215 of 215 signed
 Meta requests match HMAC-SHA256(app secret, raw body) with our app secret; our two live sends of 2026-10-14
@@ -45,7 +45,7 @@ Meta resolves the destination as phone number → WABA → application. We set o
 shared WABA are untouched. Reading is `GET /{phone-id}?fields=webhook_configuration`. The state compares the
 effective destination (first present of the three) with this account's address. A number whose events go
 elsewhere is taken over only when the request carries `replaceHost` equal to that host. Unsubscribe clears the
-number-level override (R: the exact clearing call — empty `override_callback_uri` — is verified live) and does
+number-level override (an empty `override_callback_uri` clears it — verified live on the stand) and does
 not try to restore an earlier number-level value, because its verify token is unknown to us.
 
 ### D5. The subscription time lives on the channel; receipts stay off
