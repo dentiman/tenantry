@@ -8,6 +8,7 @@ import type { ChannelAdapter, ChannelCredentials } from './channel-adapter';
 import { ChannelAdapterRegistry } from './channel-adapter-registry';
 import { classifySendFailure, type OutboundContext } from './channel-send';
 import { replyWindow } from './reply-window';
+import { ChannelLogService, last4 } from './channel-log.service';
 import { ChannelStatusService, type MessageRef } from './channel-status.service';
 
 /** Скільки разів воркер пробує надіслати одне повідомлення, перш ніж воно стане FAILED */
@@ -39,6 +40,7 @@ interface ClaimedMessage {
   conversation_id: string;
   channel_id: string;
   body: string | null;
+  payload: unknown;
   attempts: number;
 }
 
@@ -49,6 +51,8 @@ interface SendPlan {
   creds: ChannelCredentials;
   ctx: Omit<OutboundContext, 'signal'>;
   accountId: string;
+  /** Секрети акаунта: їх не має бути в тексті помилки, що йде в журнал */
+  secrets: string[];
   channelId: string;
   attempts: number;
 }
@@ -77,6 +81,7 @@ export class ChannelDeliveryService {
     private readonly transactions: TenantTransactions,
     private readonly crypto: CryptoService,
     private readonly statuses: ChannelStatusService,
+    private readonly logs: ChannelLogService,
   ) {}
 
   async deliver(messageId: string): Promise<DeliveryResult> {
@@ -85,7 +90,9 @@ export class ChannelDeliveryService {
       return claim.result;
     }
 
-    let outcome: { externalId: string } | { failure: Awaited<ReturnType<typeof classifyForStorage>> };
+    let outcome:
+      { externalId: string } | { failure: Awaited<ReturnType<typeof classifyForStorage>> };
+    const started = Date.now();
     try {
       const { externalId } = await claim.adapter.send(
         { ...claim.ctx, signal: AbortSignal.timeout(SEND_TIMEOUT_MS) },
@@ -96,7 +103,10 @@ export class ChannelDeliveryService {
       outcome = { failure: classifyForStorage(error) };
     }
 
-    const settled = await this.transactions.withTenantTx((tx) => this.settle(tx, claim, outcome));
+    const durationMs = Date.now() - started;
+    const settled = await this.transactions.withTenantTx((tx) =>
+      this.settle(tx, claim, outcome, durationMs),
+    );
     if (settled.retry) {
       // Поза транзакцією: повернення в QUEUED уже закомічено, і виняток його не відкотить
       throw settled.retry;
@@ -113,7 +123,7 @@ export class ChannelDeliveryService {
       UPDATE chat_messages
       SET status = 'SENDING', attempts = attempts + 1, sending_started_at = now()
       WHERE id = ${messageId} AND status = 'QUEUED' AND direction = 'OUTBOUND'
-      RETURNING id, conversation_id, channel_id, body, attempts`;
+      RETURNING id, conversation_id, channel_id, body, payload, attempts`;
     const claimed = rows[0];
     if (!claimed) {
       return { kind: 'done', result: await this.notClaimable(tx, messageId) };
@@ -139,8 +149,11 @@ export class ChannelDeliveryService {
       return { kind: 'done', result: { updated: [ref] } };
     }
 
+    // Шаблон — єдиний спосіб писати поза вікном (CHAT-3a): для нього вікно не перевіряється
+    const template = templateOf(claimed.payload);
+
     // Авторитетна перевірка вікна: робота могла простояти в черзі повз межу (design.md D3)
-    if (!isFreeformAllowed(adapter, conversation.customerLastMessageAt, new Date())) {
+    if (!template && !isFreeformAllowed(adapter, conversation.customerLastMessageAt, new Date())) {
       await this.markFailed(tx, claimed.id, {
         class: 'WINDOW_CLOSED',
         code: 'window_closed',
@@ -165,19 +178,24 @@ export class ChannelDeliveryService {
       return { kind: 'done', result: { updated: [ref] } };
     }
 
+    const creds = await this.credentials(tx, channel.accountId);
     return {
       kind: 'send',
       ref,
       adapter,
-      creds: await this.credentials(tx, channel.accountId),
+      creds,
       ctx: {
         channelExternalId: channel.externalId,
         to: { kind: address.kind as ContactAddressKind, value: address.value },
         messageId: claimed.id,
         body: claimed.body,
+        ...(template && { template }),
         attempt: claimed.attempts,
       },
       accountId: channel.accountId,
+      secrets: [creds.accessToken, creds.appSecret].filter(
+        (value): value is string => value !== null,
+      ),
       channelId: claimed.channel_id,
       attempts: claimed.attempts,
     };
@@ -212,7 +230,9 @@ export class ChannelDeliveryService {
     const startedAt = row.sendingStartedAt?.getTime() ?? 0;
     if (Date.now() - startedAt < UNCONFIRMED_WAIT_MS) {
       // Це очікування і є повтор: квитанція з нашим id може встигнути й виставити external_id
-      throw new RetryableDeliveryError(`Delivery of ${messageId} is unconfirmed; waiting for a receipt`);
+      throw new RetryableDeliveryError(
+        `Delivery of ${messageId} is unconfirmed; waiting for a receipt`,
+      );
     }
 
     const failed = await tx.$executeRaw`
@@ -237,7 +257,26 @@ export class ChannelDeliveryService {
     tx: Prisma.TransactionClient,
     plan: SendPlan,
     outcome: { externalId: string } | { failure: StoredFailure },
+    durationMs: number,
   ): Promise<DeliveryResult & { retry: RetryableDeliveryError | null }> {
+    // Кожна спроба — один запис журналу викликів: що відбулося, але не що було сказано (CHAT-3a)
+    await this.logs.record(tx, {
+      accountId: plan.accountId,
+      operation: 'send',
+      ok: 'externalId' in outcome,
+      httpStatus: 'externalId' in outcome ? 200 : (outcome.failure.httpStatus ?? null),
+      errorCode: 'externalId' in outcome ? null : outcome.failure.failure.code,
+      errorTitle: 'externalId' in outcome ? null : outcome.failure.failure.title,
+      durationMs,
+      messageId: plan.ref.messageId,
+      detail: {
+        endpoint: `${plan.ctx.channelExternalId}/messages`,
+        recipientLast4: last4(plan.ctx.to.value),
+        ...('externalId' in outcome && { providerMessageId: outcome.externalId }),
+      },
+      secrets: plan.secrets,
+    });
+
     if ('externalId' in outcome) {
       // Статус піднімається до SENT лише з QUEUED/SENDING: квитанція за нашим opaque id могла
       // встигнути раніше (DELIVERED/FAILED) — її результат не відкочуємо
@@ -313,6 +352,7 @@ export class ChannelDeliveryService {
 interface StoredFailure {
   failure: ChatMessageFailure;
   retryAfterSeconds?: number;
+  httpStatus?: number;
 }
 
 function classifyForStorage(error: unknown): StoredFailure {
@@ -322,7 +362,17 @@ function classifyForStorage(error: unknown): StoredFailure {
     ...(classified.retryAfterSeconds !== undefined && {
       retryAfterSeconds: classified.retryAfterSeconds,
     }),
+    ...(classified.httpStatus !== undefined && { httpStatus: classified.httpStatus }),
   };
+}
+
+/** Шаблон повідомлення (`payload.template`), якщо це шаблон, а не текст */
+function templateOf(payload: unknown): { name: string; language: string } | undefined {
+  const template = (payload as { template?: { name?: unknown; language?: unknown } } | null)
+    ?.template;
+  return typeof template?.name === 'string' && typeof template.language === 'string'
+    ? { name: template.name, language: template.language }
+    : undefined;
 }
 
 /** Вікно вільного тексту від ЧАСУ ПРОВАЙДЕРА останнього вхідного; без вікна в провайдера — завжди можна */

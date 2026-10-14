@@ -1,3 +1,4 @@
+import { MetaCloudAdapter } from './meta-cloud/meta-cloud.adapter';
 import type { ChannelProvider } from '@saas-skeleton/contracts';
 import type { ChannelAdapter } from './channel-adapter';
 import { FakeChannelAdapter } from './fake-channel.adapter';
@@ -34,11 +35,14 @@ export function isChatDevToolsEnabled(env: NodeJS.ProcessEnv = process.env): boo
   return value === 'true' || value === '1';
 }
 
-/** `fake` реєструється тільки з `CHAT_DEV_TOOLS`; реальні адаптери додасть CHAT-3a */
+/**
+ * `fake` реєструється тільки з `CHAT_DEV_TOOLS`; `meta_cloud` — завжди: йому не потрібне ні середовище, ні
+ * секрет (облікові дані — на рівні акаунта тенанта, CHAT-3a).
+ */
 export function createChannelAdapterRegistry(
   env: NodeJS.ProcessEnv = process.env,
 ): ChannelAdapterRegistry {
-  const registry = new ChannelAdapterRegistry();
+  const registry = new ChannelAdapterRegistry().register(new MetaCloudAdapter());
   if (isChatDevToolsEnabled(env)) registry.register(new FakeChannelAdapter());
   return registry;
 }

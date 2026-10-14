@@ -5,6 +5,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import {
+  PrismaService,
   SystemPrismaService,
   TenantContextService,
   TenantTransactions,
@@ -14,6 +15,7 @@ import {
   ChannelAdapterRegistry,
   ChannelDeliveryService,
   ChannelIngestService,
+  ChannelLogService,
   ChannelPendingSweeper,
   ChannelStatusService,
   ChatNotifier,
@@ -73,7 +75,13 @@ describe('Delivery, receipts and inbound workflow (e2e, CHAT-2b)', () => {
     const registry = new ChannelAdapterRegistry().register(adapter);
     const statuses = new ChannelStatusService();
     const workflow = new ConversationWorkflow(new ActivityRecorder());
-    delivery = new ChannelDeliveryService(registry, transactions, app.get(CryptoService), statuses);
+    delivery = new ChannelDeliveryService(
+      registry,
+      transactions,
+      app.get(CryptoService),
+      statuses,
+      new ChannelLogService(app.get(PrismaService)),
+    );
     ingest = new ChannelIngestService(registry, statuses, workflow);
     sweeper = new ChannelPendingSweeper(prisma, tenantContext, transactions, statuses);
     notifier = new ChatNotifier(app.get(NotificationRecorder));
@@ -113,6 +121,7 @@ describe('Delivery, receipts and inbound workflow (e2e, CHAT-2b)', () => {
   });
 
   afterEach(async () => {
+    await prisma.channelLog.deleteMany({ where: { accountId } });
     await prisma.channelPendingStatus.deleteMany({ where: { accountId } });
     await prisma.conversation.deleteMany({ where: { channelId } });
     await prisma.channelWebhookEvent.deleteMany({ where: { accountId } });
@@ -351,6 +360,99 @@ describe('Delivery, receipts and inbound workflow (e2e, CHAT-2b)', () => {
 
       expect((await row(id)).status).toBe('DELIVERED');
       expect(await prisma.channelPendingStatus.count({ where: { accountId } })).toBe(0);
+    });
+  });
+
+  // ------------------------------------------------- журнал викликів (CHAT-3a)
+
+  describe('журнал викликів до провайдера (4.3)', () => {
+    const logs = () => prisma.channelLog.findMany({ where: { accountId }, orderBy: { createdAt: 'asc' } });
+
+    it('успіх: один запис із id провайдера, замаскованим отримувачем і без тексту повідомлення', async () => {
+      const { conversationId, contactId } = await scene();
+      const id = await outbound(conversationId, 'ТАЄМНИЙ ТЕКСТ ЛИСТУВАННЯ');
+      await deliver(id);
+
+      const rows = await logs();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ operation: 'send', ok: true, httpStatus: 200, messageId: id, errorCode: null });
+      const detail = rows[0]?.detail as Record<string, string>;
+      expect(detail.providerMessageId).toBe(`fake-out-${id}`);
+      expect(detail.endpoint).toBe(`${CHANNEL_EXT}/messages`);
+      expect(detail.recipientLast4).toMatch(/^\d{4}$/);
+
+      const address = await prisma.channelContactAddress.findFirstOrThrow({ where: { contactId } });
+      const serialised = JSON.stringify(rows);
+      expect(serialised).not.toContain('ТАЄМНИЙ');
+      expect(serialised).not.toContain(address.value); // повного номера немає, лише чотири останні
+    });
+
+    it('кожна невдала спроба — окремий запис із кодом провайдера; повтор дає два записи', async () => {
+      const { conversationId } = await scene();
+      const failing = await outbound(conversationId, '[[fake:permanent]] x');
+      await deliver(failing);
+      const retrying = await outbound(conversationId, '[[fake:transient-once]] x');
+      await deliver(retrying).catch(() => undefined);
+      await deliver(retrying);
+
+      const rows = await logs();
+      expect(rows.map((r) => [r.messageId === failing ? 'failing' : 'retrying', r.ok, r.errorCode])).toEqual([
+        ['failing', false, '131026'],
+        ['retrying', false, '131000'],
+        ['retrying', true, null],
+      ]);
+      expect(rows[0]?.errorTitle).toMatch(/cannot receive/);
+    });
+
+    it('назва помилки очищається від секретів акаунта', async () => {
+      const { conversationId } = await scene();
+      const secret = 'EAAGsecretTOKENvalue1234567890abcdef';
+      const id = await outbound(conversationId, 'x');
+      const log = new ChannelLogService(app.get(PrismaService));
+      await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
+        transactions.withTenantTx((tx) =>
+          log.record(tx, {
+            accountId,
+            operation: 'send',
+            ok: false,
+            errorCode: '190',
+            errorTitle: `Invalid token ${secret.slice(0, 20)} for ${id}`,
+            durationMs: 5,
+            secrets: [secret],
+          }),
+        ),
+      );
+      const [row] = await logs();
+      expect(row?.errorTitle).not.toContain(secret.slice(0, 20));
+      expect(row?.errorTitle).toContain('***');
+    });
+
+    it('список: новіші спершу, курсорна пагінація без повторів і втрат', async () => {
+      const log = new ChannelLogService(app.get(PrismaService));
+      await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
+        transactions.withTenantTx(async (tx) => {
+          for (let i = 0; i < 5; i += 1) {
+            await log.record(tx, { accountId, operation: 'sync', ok: true, durationMs: i, detail: { pages: i } });
+            await new Promise((resolve) => setTimeout(resolve, 5));
+          }
+        }),
+      );
+      const first = await tenantContext.runWith(DEFAULT_TENANT_ID, () => log.list(accountId, { limit: 2 }));
+      const second = await tenantContext.runWith(DEFAULT_TENANT_ID, () => log.list(accountId, { limit: 2, cursor: first.nextCursor ?? undefined }));
+      const third = await tenantContext.runWith(DEFAULT_TENANT_ID, () => log.list(accountId, { limit: 2, cursor: second.nextCursor ?? undefined }));
+
+      const durations = [...first.items, ...second.items, ...third.items].map((e) => e.durationMs);
+      expect(durations).toEqual([4, 3, 2, 1, 0]);
+      expect(third.nextCursor).toBeNull();
+    });
+
+    it('чужий тенант не бачить записів', async () => {
+      const log = new ChannelLogService(app.get(PrismaService));
+      await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
+        transactions.withTenantTx((tx) => log.record(tx, { accountId, operation: 'verify', ok: true, durationMs: 1 })),
+      );
+      const asOther = await tenantContext.runWith(TENANT_B_ID, () => log.list(accountId, { limit: 10 }));
+      expect(asOther.items).toHaveLength(0);
     });
   });
 

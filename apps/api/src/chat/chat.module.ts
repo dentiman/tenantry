@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import {
   ChannelAdapterRegistry,
+  ChannelContactService,
   ChatSharedModule,
   createChannelAdapterRegistry,
 } from '@saas-skeleton/shared';
@@ -14,6 +15,8 @@ import { ChatDevToolsService } from './chat-dev-tools.service';
 import { ChannelInboxService } from './channel-inbox.service';
 import { ChannelWebhookController } from './channel-webhook.controller';
 import { MessagingAccountService } from './messaging-account.service';
+import { WhatsAppConnectionService } from './whatsapp-connection.service';
+import { OutreachService } from './outreach.service';
 import { ChannelWebhookService } from './channel-webhook.service';
 import { ChatController } from './chat.controller';
 import { ChatRealtime } from './chat-realtime';
@@ -46,6 +49,9 @@ import { DefaultChannelService } from './default-channel.service';
     ChannelWebhookService,
     ChannelInboxService,
     MessagingAccountService,
+    WhatsAppConnectionService,
+    OutreachService,
+    ChannelContactService,
     ChatDevToolsGuard,
     ChatDevToolsService,
     ChatService,

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
 import { ChatMessageFailureSchema, ConversationStatusSchema } from './chat.schema';
+import { AccountTokenSchema } from './chat.whatsapp';
 
 /**
  * Контракти каналів зв'язку з клієнтами (CHAT-2a). Модель — docs/whatsapp-channel.md §4.1;
@@ -106,6 +107,20 @@ export const ChannelResponseSchema = z.object({
   verifiedName: z.string().nullable(),
   isEnabled: z.boolean(),
   isDefault: z.boolean(),
+  /**
+   * Чи приходять квитанції доставки (CHAT-3a): fake — так; WhatsApp — лише з підпискою на вебхук (3b).
+   * Без них повідомлення не йде далі «прийнято», і екран про це чесно каже.
+   */
+  deliveryReceipts: z.boolean(),
+});
+
+/** Канал для адміна в налаштуваннях: те, що синхронізовано з провайдера (CHAT-3a) */
+export const AdminChannelResponseSchema = ChannelResponseSchema.extend({
+  qualityRating: z.string().nullable(),
+  mode: z.string().nullable(),
+  nameStatus: z.string().nullable(),
+  /** Номер зник у провайдера: канал лишається (там розмови), але не пропонується */
+  isMissing: z.boolean(),
 });
 
 /** Облікові дані в клартексті не повертаються ніколи: лише «задано / ні» */
@@ -116,7 +131,13 @@ export const MessagingAccountResponseSchema = z.object({
   status: MessagingAccountStatusSchema,
   credentialsSet: z.boolean(),
   appSecretSet: z.boolean(),
-  channels: z.array(ChannelResponseSchema),
+  appIdSet: z.boolean(),
+  /** `null` — токена немає (fake-акаунт чи відключений) */
+  token: AccountTokenSchema.nullable(),
+  lastSyncAt: z.iso.datetime().nullable(),
+  /** Остання помилка підключення/синхронізації (без секретів) */
+  lastError: z.string().nullable(),
+  channels: z.array(AdminChannelResponseSchema),
   webhook: MessagingWebhookBlockSchema,
 });
 
@@ -231,6 +252,7 @@ export type NormalizedMessageEvent = z.infer<typeof NormalizedMessageEventSchema
 export type NormalizedStatusEvent = z.infer<typeof NormalizedStatusEventSchema>;
 export type MessagingWebhookBlock = z.infer<typeof MessagingWebhookBlockSchema>;
 export type ChannelResponse = z.infer<typeof ChannelResponseSchema>;
+export type AdminChannelResponse = z.infer<typeof AdminChannelResponseSchema>;
 export type MessagingAccountResponse = z.infer<typeof MessagingAccountResponseSchema>;
 export type ChannelContactResponse = z.infer<typeof ChannelContactResponseSchema>;
 export type LinkContactCustomer = z.infer<typeof LinkContactCustomerSchema>;

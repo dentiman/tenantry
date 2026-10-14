@@ -1,5 +1,6 @@
 import type { Prisma } from '@saas-skeleton/database';
 import type {
+  AdminChannelResponse,
   ChannelContactResponse,
   ChannelResponse,
   InboxEntry,
@@ -15,9 +16,30 @@ export const CHANNEL_SELECT = {
   verifiedName: true,
   isEnabled: true,
   isDefault: true,
+  // Для `deliveryReceipts`: квитанції приходять лише при підписці акаунта на вебхук (CHAT-3a/3b)
+  account: { select: { webhookSubscribedAt: true } },
 } satisfies Prisma.ChannelSelect;
 
 export type ChannelRow = Prisma.ChannelGetPayload<{ select: typeof CHANNEL_SELECT }>;
+
+/** Те, що адмін бачить про номер, синхронізований із провайдера (CHAT-3a) */
+export const ADMIN_CHANNEL_SELECT = {
+  ...CHANNEL_SELECT,
+  qualityRating: true,
+  accountMode: true,
+  providerMeta: true,
+  providerMissingAt: true,
+} satisfies Prisma.ChannelSelect;
+
+export type AdminChannelRow = Prisma.ChannelGetPayload<{ select: typeof ADMIN_CHANNEL_SELECT }>;
+
+/**
+ * Чи приходять квитанції доставки: fake — так (їх шле симулятор); справжній провайдер — лише з
+ * підпискою на вебхук. Без них повідомлення не йде далі «прийнято» (CHAT-3a, design.md D10).
+ */
+export function hasDeliveryReceipts(provider: string, webhookSubscribedAt: Date | null): boolean {
+  return provider === 'fake' || webhookSubscribedAt !== null;
+}
 
 export const INBOX_SELECT = {
   id: true,
@@ -60,6 +82,18 @@ export function toChannelResponse(channel: ChannelRow): ChannelResponse {
     verifiedName: channel.verifiedName,
     isEnabled: channel.isEnabled,
     isDefault: channel.isDefault,
+    deliveryReceipts: hasDeliveryReceipts(channel.provider, channel.account.webhookSubscribedAt),
+  };
+}
+
+export function toAdminChannelResponse(channel: AdminChannelRow): AdminChannelResponse {
+  const meta = channel.providerMeta as { nameStatus?: unknown } | null;
+  return {
+    ...toChannelResponse(channel),
+    qualityRating: channel.qualityRating,
+    mode: channel.accountMode,
+    nameStatus: typeof meta?.nameStatus === 'string' ? meta.nameStatus : null,
+    isMissing: channel.providerMissingAt !== null,
   };
 }
 
@@ -112,9 +146,32 @@ export interface AccountRow {
   status: MessagingAccountResponse['status'];
   credentials: string | null;
   appSecret: string | null;
+  appId: string | null;
   verifyToken: string;
   webhookKey: string;
-  channels: ChannelRow[];
+  tokenKind: string | null;
+  tokenExpiresAt: Date | null;
+  tokenCheckedAt: Date | null;
+  scopes: string[];
+  lastSyncAt: Date | null;
+  lastError: string | null;
+  channels: AdminChannelRow[];
+}
+
+function toToken(account: AccountRow, mask: string | null): MessagingAccountResponse['token'] {
+  if (account.credentials === null || mask === null) return null;
+  const kind =
+    account.tokenKind === 'SYSTEM_USER' || account.tokenKind === 'USER'
+      ? account.tokenKind
+      : 'UNKNOWN';
+  return {
+    mask,
+    kind,
+    expiresAt: account.tokenExpiresAt?.toISOString() ?? null,
+    scopes: account.scopes,
+    verified: kind !== 'UNKNOWN',
+    checkedAt: account.tokenCheckedAt?.toISOString() ?? null,
+  };
 }
 
 /** Облікові дані віддаються лише як «задано / ні» — у клартексті не повертаються ніколи */
@@ -126,6 +183,8 @@ export function toMessagingAccountResponse(
     last24h: MessagingAccountResponse['webhook']['last24h'];
   },
   includeSecrets: boolean,
+  /** Останні чотири символи токена, розшифрованого сервісом; `null` — токена немає */
+  tokenMask: string | null,
 ): MessagingAccountResponse {
   return {
     id: account.id,
@@ -134,7 +193,11 @@ export function toMessagingAccountResponse(
     status: account.status,
     credentialsSet: account.credentials !== null,
     appSecretSet: account.appSecret !== null,
-    channels: account.channels.map(toChannelResponse),
+    appIdSet: account.appId !== null,
+    token: toToken(account, tokenMask),
+    lastSyncAt: account.lastSyncAt?.toISOString() ?? null,
+    lastError: account.lastError,
+    channels: account.channels.map(toAdminChannelResponse),
     webhook: {
       // Адреса й verify token — лише адміну (design.md D3a)
       address: includeSecrets ? webhook.address : null,

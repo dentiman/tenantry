@@ -73,20 +73,14 @@ export function ChatTranscript({
   const markRead = useMarkRead(conversation.id);
   const pending = useChatOutboxStore((state) => state.pending[conversation.id] ?? EMPTY_OUTBOX);
 
-  const messages = useMemo(
-    () => flattenTranscript(query.data?.pages),
-    [query.data?.pages],
-  );
+  const messages = useMemo(() => flattenTranscript(query.data?.pages), [query.data?.pages]);
 
   // Курсор прочитаного рухає `ReadOnViewTracker` (нижче), а не зміна даних: «прочитано» —
   // це «дивилась людина», а не «репліка долетіла» (docs/chat.md §4.8.2). Стартова позиція —
   // та, що вже підтвердив сервер, щоб її не повторювати
   const newestSeq = messages.at(-1)?.seq ?? 0;
 
-  const rows = useMemo(
-    () => buildRows(messages, pending),
-    [messages, pending],
-  );
+  const rows = useMemo(() => buildRows(messages, pending), [messages, pending]);
 
   if (query.isLoading) {
     return (
@@ -436,7 +430,7 @@ function TranscriptRow({
             className={isNote ? 'border border-dashed border-border' : undefined}
           >
             <BubbleBody
-              body={message.body ?? ''}
+              body={templateText(message, t) ?? message.body ?? ''}
               tone={isNote ? 'other' : isOwn ? 'own' : 'other'}
               meta={
                 <>
@@ -608,4 +602,16 @@ export function buildRows(messages: ChatMessage[], pending: OutboxMessage[]): Ro
   }
 
   return rows;
+}
+
+/** Шаблонне повідомлення (CHAT-3a) показується як «Template: імʼя (мова)», а не голим імʼям */
+function templateText(
+  message: { payload?: unknown },
+  t: (key: string, options: Record<string, string>) => string,
+): string | null {
+  const payload = message.payload as
+    { template?: { name?: string; language?: string } } | null | undefined;
+  const template = payload?.template;
+  if (!template?.name) return null;
+  return t('template.bubble', { name: template.name, language: template.language ?? '' });
 }

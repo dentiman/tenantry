@@ -19,4 +19,12 @@ export type MessagingAccountListResponseDtoOutputItemsItemChannelsItem = {
   verifiedName: string | null;
   isEnabled: boolean;
   isDefault: boolean;
+  deliveryReceipts: boolean;
+  /** @nullable */
+  qualityRating: string | null;
+  /** @nullable */
+  mode: string | null;
+  /** @nullable */
+  nameStatus: string | null;
+  isMissing: boolean;
 };

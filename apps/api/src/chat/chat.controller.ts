@@ -29,6 +29,7 @@ import type { ConversationWithParticipants } from './chat.service';
 import { toChatMessageResponse, toConversationResponse } from './chat.mapper';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { PostChatMessageDto } from './dto/post-chat-message.dto';
+import { PostTemplateMessageDto } from './dto/post-template-message.dto';
 import { SetConversationAssigneeDto } from './dto/set-conversation-assignee.dto';
 import { SetConversationStatusDto } from './dto/set-conversation-status.dto';
 import { MarkConversationReadDto } from './dto/mark-conversation-read.dto';
@@ -73,7 +74,12 @@ export class ChatController {
     @Body() dto: CreateConversationDto,
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
-    return toConversationResponse(await this.chat.create(actor, dto), actor.sub, this.storage, this.registry);
+    return toConversationResponse(
+      await this.chat.create(actor, dto),
+      actor.sub,
+      this.storage,
+      this.registry,
+    );
   }
 
   @Get(':id')
@@ -82,7 +88,12 @@ export class ChatController {
     @Param('id') id: string,
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
-    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
+    return toConversationResponse(
+      await this.chat.findOne(actor, id),
+      actor.sub,
+      this.storage,
+      this.registry,
+    );
   }
 
   /**
@@ -111,6 +122,17 @@ export class ChatController {
     return toChatMessageResponse(await this.chat.post(actor, id, dto));
   }
 
+  /** Схвалений шаблон за іменем і мовою (CHAT-3a): без перевірки вікна; змінні — CHAT-3c */
+  @Post(':id/template-messages')
+  @ApiCreatedResponse({ type: ChatMessageResponseDto.Output })
+  async postTemplate(
+    @Param('id') id: string,
+    @Body() dto: PostTemplateMessageDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<ChatMessageResponse> {
+    return toChatMessageResponse(await this.chat.postTemplate(actor, id, dto));
+  }
+
   /** Повторити відправку невдалого вихідного (лише клієнтські розмови); 201 — як і сама відправка */
   @Post(':id/messages/:messageId/resend')
   @ApiCreatedResponse({ type: ChatMessageResponseDto.Output })
@@ -131,7 +153,12 @@ export class ChatController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
     await this.chat.setStatus(actor, id, dto);
-    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
+    return toConversationResponse(
+      await this.chat.findOne(actor, id),
+      actor.sub,
+      this.storage,
+      this.registry,
+    );
   }
 
   /** Відповідальний за клієнтську розмову; `userId: null` знімає призначення */
@@ -143,7 +170,12 @@ export class ChatController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<ConversationResponse> {
     await this.chat.setAssignee(actor, id, dto);
-    return toConversationResponse(await this.chat.findOne(actor, id), actor.sub, this.storage, this.registry);
+    return toConversationResponse(
+      await this.chat.findOne(actor, id),
+      actor.sub,
+      this.storage,
+      this.registry,
+    );
   }
 
   /**

@@ -5,8 +5,8 @@ import { toPreview } from '../chat/preview';
 import { NonRetryableMessageError } from '../messaging/messaging.errors';
 import { ConversationWorkflow } from '../chat/conversation-workflow';
 import { ChannelAdapterRegistry } from './channel-adapter-registry';
+import { ChannelContactService } from './channel-contact.service';
 import { ChannelStatusService, type MessageRef } from './channel-status.service';
-import { phoneDigits, phoneLookupValues, normalizeE164 } from './phone';
 
 /** Вікно, у межах якого вхідне повертає РОЗВ'ЯЗАНУ розмову у роботу (O-W4); `channels.settings.reopenHours` */
 export const DEFAULT_REOPEN_HOURS = 24;
@@ -46,6 +46,9 @@ interface ChannelRow {
 @Injectable()
 export class ChannelIngestService {
   private readonly logger = new Logger(ChannelIngestService.name);
+
+  // Без стану й залежностей: створюється тут, а не через DI, щоб конструктор ingest не змінювався
+  private readonly contacts = new ChannelContactService();
 
   constructor(
     private readonly registry: ChannelAdapterRegistry,
@@ -141,7 +144,11 @@ export class ChannelIngestService {
   ): Promise<IngestOutcome> {
     await tx.channelWebhookEvent.update({
       where: { id: eventId },
-      data: { state: outcome.state === 'SKIPPED' ? 'PROCESSED' : outcome.state, processedAt: new Date(), error: outcome.error ?? null },
+      data: {
+        state: outcome.state === 'SKIPPED' ? 'PROCESSED' : outcome.state,
+        processedAt: new Date(),
+        error: outcome.error ?? null,
+      },
     });
     return outcome;
   }
@@ -152,9 +159,24 @@ export class ChannelIngestService {
     channel: ChannelRow,
     event: NormalizedMessageEvent,
   ): Promise<MessageRef | null> {
-    const { contactId, created: contactCreated } = await this.resolveContact(tx, channel.id, event);
+    const { contactId, created: contactCreated } = await this.contacts.resolveContact(
+      tx,
+      channel.id,
+      event.from,
+      {
+        displayName: event.profileName,
+        at: new Date(event.sentAt),
+        // Вхідне від клієнта — згода на сервісні повідомлення (O-W9, рекомендація)
+        optInSource: 'inbound_message',
+      },
+    );
     const sentAt = new Date(event.sentAt);
-    const { id: conversationId, reopened } = await this.resolveConversation(tx, channel, contactId, sentAt);
+    const { id: conversationId, reopened } = await this.resolveConversation(
+      tx,
+      channel,
+      contactId,
+      sentAt,
+    );
 
     // Рядок розмови блокується ДО перевірки дубліката: два паралельні опрацювання одного
     // повідомлення серіалізуються тут, і другий бачить уже закомічений рядок першого.
@@ -233,86 +255,8 @@ export class ChannelIngestService {
       data: { unreadCount: { increment: 1 } },
     });
 
-    if (contactCreated) await this.autoLinkCustomer(tx, contactId, event.from.value);
+    if (contactCreated) await this.contacts.autoLinkCustomer(tx, contactId, event.from.value);
     return { conversationId, messageId: message.id };
-  }
-
-  // -------------------------------------------------------------------------
-  // Контакт і адреса (design.md D5)
-  // -------------------------------------------------------------------------
-
-  private async resolveContact(
-    tx: Prisma.TransactionClient,
-    channelId: string,
-    event: NormalizedMessageEvent,
-  ): Promise<{ contactId: string; created: boolean }> {
-    const { kind, value } = event.from;
-    const candidates = kind === 'phone' ? phoneLookupValues(value) : [value];
-
-    const find = (): Promise<{ contactId: string } | null> =>
-      tx.channelContactAddress.findFirst({
-        where: {
-          channelId,
-          kind,
-          OR: [{ value: { in: candidates } }, { normalized: { in: candidates } }],
-        },
-        select: { contactId: true },
-      });
-
-    const existing = await find();
-    if (existing) return { contactId: existing.contactId, created: false };
-
-    // Контакт створюється першим, адреса — `ON CONFLICT DO NOTHING`: у транзакції Postgres
-    // помилка унікальності відмінила б усе, а так програвший паралельної гонки просто
-    // бачить 0 рядків, прибирає свій контакт і бере переможця
-    const contact = await tx.channelContact.create({
-      data: {
-        channelId,
-        displayName: event.profileName,
-        // Вхідне від клієнта — згода на сервісні повідомлення (O-W9, рекомендація);
-        // маркетингова згода — окремий запис і сюди не потрапляє
-        optInAt: new Date(event.sentAt),
-        optInSource: 'inbound_message',
-        lastInboundAt: new Date(event.sentAt),
-      },
-      select: { id: true },
-    });
-    const normalized = kind === 'phone' ? normalizeE164(value) : null;
-    const inserted = await tx.$queryRaw<{ id: string }[]>`
-      INSERT INTO channel_contact_addresses (id, contact_id, channel_id, kind, value, normalized)
-      VALUES (gen_random_uuid()::text, ${contact.id}, ${channelId}, ${kind}, ${value}, ${normalized})
-      ON CONFLICT (channel_id, kind, value) DO NOTHING
-      RETURNING id`;
-    if (inserted.length > 0) return { contactId: contact.id, created: true };
-
-    await tx.channelContact.delete({ where: { id: contact.id } });
-    const winner = await find();
-    if (!winner) {
-      // Адресу вставив інший, але вже відкотив: нехай job повториться
-      throw new Error(`Contact address race for channel ${channelId}`);
-    }
-    return { contactId: winner.contactId, created: false };
-  }
-
-  /** Привʼязка лише коли номер належить РІВНО одному клієнтові тенанта (клієнт або його контактна особа) */
-  private async autoLinkCustomer(
-    tx: Prisma.TransactionClient,
-    contactId: string,
-    rawPhone: string,
-  ): Promise<void> {
-    const digits = phoneDigits(rawPhone);
-    if (digits.length < 5) return;
-
-    const matches = await tx.$queryRaw<{ id: string }[]>`
-      SELECT DISTINCT c.id
-        FROM customers c
-        LEFT JOIN customer_contacts cc ON cc.customer_id = c.id
-       WHERE regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') = ${digits}
-          OR regexp_replace(coalesce(cc.phone, ''), '\\D', '', 'g') = ${digits}`;
-    const [only, ...rest] = matches;
-    if (only && rest.length === 0) {
-      await tx.channelContact.update({ where: { id: contactId }, data: { customerId: only.id } });
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -338,7 +282,10 @@ export class ChannelIngestService {
       orderBy: { lastMessageAt: 'desc' },
       select: { id: true, lastMessageAt: true },
     });
-    if (resolved?.lastMessageAt && sentAt.getTime() - resolved.lastMessageAt.getTime() <= windowMs) {
+    if (
+      resolved?.lastMessageAt &&
+      sentAt.getTime() - resolved.lastMessageAt.getTime() <= windowMs
+    ) {
       // Умовний UPDATE під індекс: якщо хтось уже відкрив іншу розмову цього контакта, частковий UNIQUE
       // не дасть — тоді береться та
       try {

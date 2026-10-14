@@ -16,4 +16,6 @@ export type ConversationResponseDtoOutputContact = {
   displayName: string | null;
   /** @nullable */
   channelNumber: string | null;
+  deliveryReceipts: boolean;
+  templates: boolean;
 } | null;

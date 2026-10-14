@@ -25,6 +25,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
 import type { ChannelInboxListFilter } from '../../../api/generated/model/channelInboxListFilter';
 import { compactTime, initialsOf } from './chat-labels';
 import { SimulateInboundPopover } from './simulate-inbound';
+import { StartCustomerConversationDialog } from './start-customer-conversation-dialog';
 import { flattenInbox, inboxTitle, useInboxList, type InboxEntry } from './use-inbox';
 
 const FILTERS: ChannelInboxListFilter[] = ['all', 'unassigned', 'mine'];
@@ -43,6 +44,9 @@ export function InboxList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 px-2 pt-2">
+        <StartCustomerConversationDialog />
+      </div>
       <div className="flex shrink-0 items-center gap-2 border-b border-sidebar-border p-2">
         <ToggleGroup
           value={[filter]}

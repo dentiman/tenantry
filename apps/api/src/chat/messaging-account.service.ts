@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@saas-skeleton/database';
 import type { MessagingAccountResponse } from '@saas-skeleton/contracts';
-import { CHANNEL_SELECT, toMessagingAccountResponse } from './channel.mapper';
+import { CryptoService } from '@saas-skeleton/shared';
+import { ADMIN_CHANNEL_SELECT, toMessagingAccountResponse } from './channel.mapper';
 
 const DAY_MS = 24 * 3_600_000;
 
@@ -11,7 +12,10 @@ const DAY_MS = 24 * 3_600_000;
  */
 @Injectable()
 export class MessagingAccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly crypto: CryptoService,
+  ) {}
 
   /** База публічної адреси вебхука; без неї адреса «недоступна», а не вгадана */
   private webhookBase(): string | null {
@@ -29,13 +33,17 @@ export class MessagingAccountService {
         status: true,
         credentials: true,
         appSecret: true,
+        appId: true,
         verifyToken: true,
         webhookKey: true,
-        channels: {
-          where: { providerMissingAt: null },
-          orderBy: { createdAt: 'asc' },
-          select: CHANNEL_SELECT,
-        },
+        tokenKind: true,
+        tokenExpiresAt: true,
+        tokenCheckedAt: true,
+        scopes: true,
+        lastSyncAt: true,
+        lastError: true,
+        // Зниклі в провайдера лишаються в списку адміна з позначкою (там можуть бути розмови)
+        channels: { orderBy: { createdAt: 'asc' }, select: ADMIN_CHANNEL_SELECT },
       },
     });
 
@@ -74,8 +82,27 @@ export class MessagingAccountService {
             },
           },
           includeSecrets,
+          includeSecrets ? this.maskOf(account.credentials) : null,
         );
       }),
     );
+  }
+
+  /** Один акаунт у формі відповіді адміна (після підключення, оновлення токена, відключення) */
+  async getOne(id: string): Promise<MessagingAccountResponse> {
+    const found = (await this.list(true)).find((account) => account.id === id);
+    if (!found) throw new NotFoundException('Messaging account not found');
+    return found;
+  }
+
+  /** Маска токена — останні чотири символи; сам токен не залишає цього методу */
+  private maskOf(encrypted: string | null): string | null {
+    if (encrypted === null) return null;
+    try {
+      return `••••${this.crypto.decrypt(encrypted).slice(-4)}`;
+    } catch {
+      // Ключ шифрування змінився чи значення зіпсовано: краще показати «задано», ніж впасти
+      return '••••';
+    }
   }
 }

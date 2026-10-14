@@ -28,6 +28,8 @@ const ThrottleEnvSchema = z.object({
   // CHAT-2a: вебхук провайдера на пару (ключ каналу, ip). Щедрий: статусів приходить у ~3 рази більше
   // за повідомлення, а ретрай провайдера після нашого 429 лише множить трафік
   CHANNEL_WEBHOOK_LIMIT_PER_MINUTE: intFromEnv(600),
+  // CHAT-3a: підключення/синхронізація WhatsApp викликають Graph API; рідкісна дія адміна, тож ліміт малий
+  MESSAGING_CONNECT_LIMIT_PER_MINUTE: intFromEnv(10),
 });
 
 /**
@@ -44,6 +46,7 @@ export interface ThrottleConfig {
   accountSensitivePerHour: number;
   aiAskPerMinute: number;
   channelWebhookPerMinute: number;
+  messagingConnectPerMinute: number;
   storageTimeoutMs: number;
 }
 
@@ -64,6 +67,7 @@ export function loadThrottleConfig(env: NodeJS.ProcessEnv = process.env): Thrott
     accountSensitivePerHour: e.ACCOUNT_SENSITIVE_LIMIT_PER_HOUR,
     aiAskPerMinute: e.AI_ASK_LIMIT_PER_MINUTE,
     channelWebhookPerMinute: e.CHANNEL_WEBHOOK_LIMIT_PER_MINUTE,
+    messagingConnectPerMinute: e.MESSAGING_CONNECT_LIMIT_PER_MINUTE,
     storageTimeoutMs: STORAGE_TIMEOUT_MS,
   };
 }

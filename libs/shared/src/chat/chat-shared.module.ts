@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ChatNotifier } from './chat-notifier.service';
+import { ChannelLogService } from '../channels/channel-log.service';
 import { ConversationWorkflow } from './conversation-workflow';
 
 /**
@@ -8,5 +9,6 @@ import { ConversationWorkflow } from './conversation-workflow';
  * `NotificationsModule`/`ActivitiesModule`. Окремий модуль, а не рядок у тих: інбокс і журнал —
  * платформа й не знають про чат (docs/modules.md, залежності лише вниз).
  */
-@Module({ providers: [ChatNotifier, ConversationWorkflow], exports: [ChatNotifier, ConversationWorkflow] })
+@Module({ providers: [ChatNotifier, ConversationWorkflow, ChannelLogService],
+  exports: [ChatNotifier, ConversationWorkflow, ChannelLogService], })
 export class ChatSharedModule {}

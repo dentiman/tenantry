@@ -1,6 +1,14 @@
 import { createZodDto } from 'nestjs-zod';
 import {
+  AdminChannelResponseSchema,
   ChannelContactResponseSchema,
+  ChannelLogListResponseSchema,
+  ChannelLogQuerySchema,
+  ConnectMessagingAccountSchema,
+  StartConversationSchema,
+  SyncResultSchema,
+  UpdateAccountCredentialsSchema,
+  UpdateChannelSchema,
   ChannelListResponseSchema,
   FakeChannelSetupResponseSchema,
   InboxListResponseSchema,
@@ -26,3 +34,11 @@ export class MessagingAccountListResponseDto extends createZodDto(
   MessagingAccountListResponseSchema,
 ) {}
 export class SimulateStatusDto extends createZodDto(SimulateStatusSchema) {}
+export class ConnectMessagingAccountDto extends createZodDto(ConnectMessagingAccountSchema) {}
+export class UpdateAccountCredentialsDto extends createZodDto(UpdateAccountCredentialsSchema) {}
+export class UpdateChannelDto extends createZodDto(UpdateChannelSchema) {}
+export class AdminChannelResponseDto extends createZodDto(AdminChannelResponseSchema) {}
+export class SyncResultDto extends createZodDto(SyncResultSchema) {}
+export class ChannelLogQueryDto extends createZodDto(ChannelLogQuerySchema) {}
+export class ChannelLogListResponseDto extends createZodDto(ChannelLogListResponseSchema) {}
+export class StartConversationDto extends createZodDto(StartConversationSchema) {}

@@ -12,6 +12,7 @@ import {
   type CreateConversation,
   type CursorQuery,
   type PostChatMessage,
+  type PostTemplateMessage,
   type SetConversationAssignee,
   type SetConversationStatus,
 } from '@saas-skeleton/contracts';
@@ -39,7 +40,13 @@ const CONVERSATION_SELECT = {
   // CHAT-2a: клієнтська розмова — з ким і з якого номера
   contact: { select: { id: true, displayName: true } },
   assignee: { select: { id: true, name: true, email: true } },
-  channel: { select: { displayPhoneNumber: true, provider: true } },
+  channel: {
+    select: {
+      displayPhoneNumber: true,
+      provider: true,
+      account: { select: { webhookSubscribedAt: true } },
+    },
+  },
   customerLastMessageAt: true,
   lastSeq: true,
   lastMessageAt: true,
@@ -317,10 +324,15 @@ export class ChatService {
       return this.customer.post(actor, conversation, dto);
     }
     if (dto.visibility === 'INTERNAL') {
-      throw fieldValidationException('visibility', 'Internal notes exist only in customer conversations');
+      throw fieldValidationException(
+        'visibility',
+        'Internal notes exist only in customer conversations',
+      );
     }
     if (!conversation.membership) {
-      throw new UnprocessableEntityException('Only participants can post to an internal conversation');
+      throw new UnprocessableEntityException(
+        'Only participants can post to an internal conversation',
+      );
     }
 
     const replayed = await this.findByClientMessageId(conversationId, dto.clientMessageId);
@@ -356,6 +368,19 @@ export class ChatService {
     }
   }
 
+  /** Шаблон у клієнтську розмову (CHAT-3a): єдиний спосіб писати поза вікном */
+  async postTemplate(
+    actor: JwtPayload,
+    conversationId: string,
+    dto: PostTemplateMessage,
+  ): Promise<ChatMessage> {
+    const conversation = await this.access.assertAccess(conversationId, actor.sub);
+    if (conversation.kind !== 'CUSTOMER') {
+      throw new NotFoundException('Conversation not found');
+    }
+    return this.customer.postTemplate(actor, conversation, dto);
+  }
+
   /** Повторити відправку невдалого вихідного повідомлення клієнтської розмови (CHAT-2b) */
   async resend(actor: JwtPayload, conversationId: string, messageId: string): Promise<ChatMessage> {
     const conversation = await this.access.assertAccess(conversationId, actor.sub);
@@ -365,7 +390,11 @@ export class ChatService {
     return this.customer.resend(actor, conversation, messageId);
   }
 
-  async setStatus(actor: JwtPayload, conversationId: string, dto: SetConversationStatus): Promise<void> {
+  async setStatus(
+    actor: JwtPayload,
+    conversationId: string,
+    dto: SetConversationStatus,
+  ): Promise<void> {
     const conversation = await this.access.assertAccess(conversationId, actor.sub);
     await this.customer.setStatus(actor, conversation, dto);
   }

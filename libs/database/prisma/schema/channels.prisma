@@ -50,6 +50,8 @@ model MessagingAccount {
   // Зашифровано CryptoService (AES-256-GCM, `v1:`); у відповідях — лише «задано / ні»
   credentials String?
   appSecret   String? @map("app_secret")
+  // Ідентифікатор застосунку Meta (CHAT-3a): потрібен разом із секретом для `debug_token`
+  appId       String? @map("app_id")
   // Токен рукостискання GET (hub.verify_token) — свій у кожного акаунта
   verifyToken String  @map("verify_token")
   // Випадковий, унікальний між тенантами: частина публічної адреси вебхука
@@ -72,6 +74,7 @@ model MessagingAccount {
   channels        Channel[]
   webhookEvents   ChannelWebhookEvent[]
   pendingStatuses ChannelPendingStatus[]
+  logs            ChannelLog[]
 
   // Один акаунт на провайдера на тенанта; обмеження знімається, коли знадобиться другий WABA
   @@unique([tenantId, provider])
@@ -98,6 +101,8 @@ model Channel {
   qualityRating      String? @map("quality_rating")
   accountMode        String? @map("account_mode")
   limits             Json    @default("{}")
+  // Решта метаданих номера від провайдера (nameStatus, codeVerificationStatus, status, platformType, throughput)
+  providerMeta       Json    @default("{}") @map("provider_meta")
 
   isEnabled         Boolean   @default(false) @map("is_enabled")
   isDefault         Boolean   @default(false) @map("is_default")
@@ -233,6 +238,33 @@ model ChannelPendingStatus {
   @@index([tenantId, opaqueId])
   @@index([createdAt])
   @@map("channel_pending_statuses")
+}
+
+// Журнал викликів до провайдера (CHAT-3a, design.md D8): що сталося, а не що написано. У `detail` лише
+// білий список ключів (endpoint без query, recipientLast4, providerMessageId, pages, numbers); ні токена,
+// ні тексту, ні повного номера. Retention — щодобовий cron `channels.purge-logs`.
+model ChannelLog {
+  id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  accountId String @map("account_id")
+
+  messageId  String?  @map("message_id")
+  // verify | sync | send
+  operation  String
+  ok         Boolean
+  httpStatus Int?     @map("http_status")
+  errorCode  String?  @map("error_code")
+  errorTitle String?  @map("error_title")
+  durationMs Int      @map("duration_ms")
+  detail     Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account MessagingAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, accountId, createdAt(sort: Desc)])
+  @@index([createdAt])
+  @@map("channel_logs")
 }
 
 // ВИНЯТОК: без tenant_id і без RLS. Сюди потрапляє те, що не вдалося привʼязати до

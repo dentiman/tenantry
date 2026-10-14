@@ -79,6 +79,26 @@ language of the question. Instructions that ask for anything else are ignored.
 
 Only administrators can open this page or read what is saved on it.
 
+## Messaging
+
+Settings → **"Messaging"** — "Provider account and channels that customer conversations arrive on."
+Administrators connect a WhatsApp Business account here.
+
+- Click "Connect WhatsApp" and enter the "WhatsApp Business Account ID" and an "Access token" from
+  Meta Business (a system-user token that does not expire is recommended; a temporary token shows a
+  countdown and stops working when it runs out). "App ID (optional)" and "App secret (optional)" must be
+  given together; with them the token is checked and its kind, expiry and permissions are shown, without
+  them the card says "Not verified". The token is stored encrypted and is never shown again — only its
+  last four characters.
+- If Meta rejects the token, the reason is shown under the field (for example a missing permission or an
+  account the token cannot read) and nothing is saved.
+- The account card shows "Access token", the numbers synced from Meta with their quality, a switch
+  "Enabled" for each number and "Make default" (one default number per account). "Refresh" re-reads the
+  numbers, "Update token" replaces the token, "Disconnect" removes it and stops sending.
+- "Show recent provider calls" lists the latest calls to Meta (without message text or tokens).
+- Delivery and read receipts are not tracked yet, and incoming WhatsApp messages are not received yet:
+  "Delivery and read receipts are not tracked yet: a sent message stays at “sent”."
+
 ## Activity
 
 Settings → **"Activity"** — "Who changed the organization settings, and when." A read-only list

@@ -27,7 +27,24 @@ export interface AdapterFixtures {
   okSend?(): OutboundContext;
 }
 
+export interface ContractOptions {
+  /**
+   * Чи вміє адаптер приймати вебхуки. `false` (Meta у CHAT-3a: лише вихід) пропускає секцію вхідного —
+   * вона з'являється з CHAT-3b — і лишає секцію `send`, яку мусить пройти кожен адаптер.
+   */
+  inbound?: boolean;
+}
+
 export function describeChannelAdapterContract(
+  name: string,
+  make: () => { adapter: ChannelAdapter; fixtures: AdapterFixtures },
+  options: ContractOptions = {},
+): void {
+  if (options.inbound !== false) describeInboundContract(name, make);
+  describeSendContract(name, make);
+}
+
+function describeInboundContract(
   name: string,
   make: () => { adapter: ChannelAdapter; fixtures: AdapterFixtures },
 ): void {
@@ -38,7 +55,9 @@ export function describeChannelAdapterContract(
 
     it('підпис над точними байтами приймається', () => {
       const body = fixtures.messageBody('m-1');
-      expect(adapter.verifyWebhook({ headers: fixtures.sign(body), body }, fixtures.creds)).toBe(true);
+      expect(adapter.verifyWebhook({ headers: fixtures.sign(body), body }, fixtures.creds)).toBe(
+        true,
+      );
     });
 
     it('змінений байт — підпис недійсний', () => {
@@ -62,7 +81,10 @@ export function describeChannelAdapterContract(
       const body = fixtures.messageBody('m-1');
       expect(adapter.verifyWebhook({ headers: {}, body }, fixtures.creds)).toBe(false);
       expect(
-        adapter.verifyWebhook({ headers: fixtures.sign(body), body }, { ...fixtures.creds, appSecret: null }),
+        adapter.verifyWebhook(
+          { headers: fixtures.sign(body), body },
+          { ...fixtures.creds, appSecret: null },
+        ),
       ).toBe(false);
       expect(
         adapter.verifyWebhook(
@@ -75,7 +97,10 @@ export function describeChannelAdapterContract(
     it('рукостискання: правильний токен повертає challenge, неправильний — null', () => {
       expect(adapter.handshake(fixtures.handshakeQuery('abc123'), fixtures.creds)).toBe('abc123');
       expect(
-        adapter.handshake(fixtures.handshakeQuery('abc123'), { ...fixtures.creds, verifyToken: 'other' }),
+        adapter.handshake(fixtures.handshakeQuery('abc123'), {
+          ...fixtures.creds,
+          verifyToken: 'other',
+        }),
       ).toBeNull();
       expect(adapter.handshake({}, fixtures.creds)).toBeNull();
     });
@@ -89,16 +114,19 @@ export function describeChannelAdapterContract(
 
     it('батч дає всі події в порядку тіла', () => {
       const result = adapter.parseWebhook(fixtures.batchBody(['a', 'b']));
-      expect(messages(result.events).map((e) => (e.kind === 'message' ? e.externalMessageId : null))).toEqual([
-        'a',
-        'b',
-      ]);
+      expect(
+        messages(result.events).map((e) => (e.kind === 'message' ? e.externalMessageId : null)),
+      ).toEqual(['a', 'b']);
     });
 
     it('порожнє, не-JSON і чуже тіло: помилка в результаті, без винятку й без подій', () => {
       for (const raw of ['', 'not json at all', '[1,2,3]', '{"unrelated":true}']) {
         const result = adapter.parseWebhook(Buffer.from(raw));
-        expect({ raw, events: messages(result.events), failed: result.error !== undefined }).toEqual({
+        expect({
+          raw,
+          events: messages(result.events),
+          failed: result.error !== undefined,
+        }).toEqual({
           raw,
           events: [],
           failed: true,
@@ -106,7 +134,12 @@ export function describeChannelAdapterContract(
       }
     });
   });
+}
 
+function describeSendContract(
+  name: string,
+  make: () => { adapter: ChannelAdapter; fixtures: AdapterFixtures },
+): void {
   describe(`контракт адаптера (send): ${name}`, () => {
     const { adapter, fixtures } = make();
 
@@ -116,8 +149,10 @@ export function describeChannelAdapterContract(
       expect(externalId.length).toBeGreaterThan(0);
     });
 
-    it('оголошує ліміт довжини тексту і вікно (або його відсутність)', () => {
+    it('оголошує ліміт довжини тексту, шаблони, хто вирішує вікно — і саме вікно (або його відсутність)', () => {
       expect(adapter.capabilities.maxTextLength).toBeGreaterThan(0);
+      expect(typeof adapter.capabilities.templates).toBe('boolean');
+      expect(['local', 'provider']).toContain(adapter.capabilities.windowEnforcement);
       const window = adapter.capabilities.freeformWindowHours;
       expect(window === undefined || window > 0).toBe(true);
     });

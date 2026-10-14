@@ -7,6 +7,7 @@ import {
 } from './definitions/ai.messages';
 import {
   channelsDeliverOutboundCommand,
+  channelsPurgeLogsCommand,
   channelsIngestWebhookCommand,
   channelsSweepPendingStatusesCommand,
   chatCustomerMessageReceivedEvent,
@@ -126,6 +127,12 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
         localConcurrency: 4,
       },
     ],
+  },
+  {
+    // CHAT-3a: журнал викликів до провайдера. 04:30 — після нічних чисток 03:xx і цін AI (04:15)
+    definition: channelsPurgeLogsCommand,
+    consumers: [{ id: 'channels-purge-logs', retryLimit: 1 }],
+    cron: '30 4 * * *',
   },
   {
     // CHAT-2b: квитанції, що випередили запис external_id. Раз на хвилину; після 5 спроб — відкидаємо з логом

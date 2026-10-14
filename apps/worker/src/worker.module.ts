@@ -24,6 +24,7 @@ import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
 import { ChannelsDeliverSubscriber } from './chat/channels-deliver.subscriber';
+import { ChannelsPurgeLogsSubscriber } from './chat/channels-purge-logs.subscriber';
 import { ChannelsSweepPendingSubscriber } from './chat/channels-sweep-pending.subscriber';
 import { ChatNotifyCustomerSubscriber } from './chat/chat-notify-customer.subscriber';
 import { ChatNotifySubscriber } from './chat/chat-notify.subscriber';
@@ -76,6 +77,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     ChannelDeliveryService,
     ChannelPendingSweeper,
     ChannelsSweepPendingSubscriber,
+    ChannelsPurgeLogsSubscriber,
     ChannelsIngestSubscriber,
     ChannelsDeliverSubscriber,
     ChatNotifySubscriber,

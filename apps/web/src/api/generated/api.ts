@@ -25,6 +25,7 @@ import type {
   ActivitiesFindAllParams,
   ActivitiesFindWorkspaceParams,
   ActivityListResponseDtoOutput,
+  AdminChannelResponseDtoOutput,
   AiCitationContentResponseDtoOutput,
   AiConversationListResponseDtoOutput,
   AiConversationResponseDtoOutput,
@@ -47,10 +48,12 @@ import type {
   ChannelContactResponseDtoOutput,
   ChannelInboxListParams,
   ChannelListResponseDtoOutput,
+  ChannelLogListResponseDtoOutput,
   ChatFindAllParams,
   ChatMessageListResponseDtoOutput,
   ChatMessageResponseDtoOutput,
   ChatTranscriptParams,
+  ConnectMessagingAccountDto,
   ConversationListResponseDtoOutput,
   ConversationResponseDtoOutput,
   CreateCalendarEventDto,
@@ -79,6 +82,8 @@ import type {
   MarkConversationReadDto,
   MeResponseDtoOutput,
   MessagingAccountListResponseDtoOutput,
+  MessagingAccountResponseDtoOutput,
+  MessagingSettingsLogsParams,
   NotificationListResponseDtoOutput,
   NotificationPreferenceListDtoOutput,
   NotificationResponseDtoOutput,
@@ -89,6 +94,7 @@ import type {
   PasswordResetConfirmDto,
   PasswordResetRequestDto,
   PostChatMessageDto,
+  PostTemplateMessageDto,
   PresenceSnapshotDtoOutput,
   RefreshDto,
   SetCalendarAttendeesDto,
@@ -103,8 +109,12 @@ import type {
   SetUserStatusDto,
   SettingsActivityParams,
   SettingsBootstrapDtoOutput,
+  StartConversationDto,
+  SyncResultDtoOutput,
+  UpdateAccountCredentialsDto,
   UpdateAccountProfileDto,
   UpdateCalendarEventDto,
+  UpdateChannelDto,
   UpdateCustomerContactDto,
   UpdateCustomerDto,
   UpdateNotificationDto,
@@ -6217,6 +6227,85 @@ export const useChatPost = <TError = unknown, TContext = unknown>(
   return useMutation(mutationOptions, queryClient);
 };
 
+export const chatPostTemplate = (
+  id: string,
+  postTemplateMessageDto: PostTemplateMessageDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChatMessageResponseDtoOutput>(
+    {
+      url: `/api/conversations/${id}/template-messages`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: postTemplateMessageDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChatPostTemplateMutationOptions = <TError = unknown, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chatPostTemplate>>,
+    TError,
+    { id: string; data: PostTemplateMessageDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chatPostTemplate>>,
+  TError,
+  { id: string; data: PostTemplateMessageDto },
+  TContext
+> => {
+  const mutationKey = ['chatPostTemplate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chatPostTemplate>>,
+    { id: string; data: PostTemplateMessageDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return chatPostTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatPostTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof chatPostTemplate>>
+>;
+export type ChatPostTemplateMutationBody = PostTemplateMessageDto;
+export type ChatPostTemplateMutationError = unknown;
+
+export const useChatPostTemplate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof chatPostTemplate>>,
+      TError,
+      { id: string; data: PostTemplateMessageDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof chatPostTemplate>>,
+  TError,
+  { id: string; data: PostTemplateMessageDto },
+  TContext
+> => {
+  const mutationOptions = getChatPostTemplateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
 export const chatResend = (
   id: string,
   messageId: string,
@@ -6737,6 +6826,87 @@ export function useChannelChannels<
   return query;
 }
 
+export const channelStartConversation = (
+  startConversationDto: StartConversationDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ConversationResponseDtoOutput>(
+    {
+      url: `/api/chat/outreach`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: startConversationDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getChannelStartConversationMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof channelStartConversation>>,
+    TError,
+    { data: StartConversationDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof channelStartConversation>>,
+  TError,
+  { data: StartConversationDto },
+  TContext
+> => {
+  const mutationKey = ['channelStartConversation'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof channelStartConversation>>,
+    { data: StartConversationDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return channelStartConversation(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChannelStartConversationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof channelStartConversation>>
+>;
+export type ChannelStartConversationMutationBody = StartConversationDto;
+export type ChannelStartConversationMutationError = unknown;
+
+export const useChannelStartConversation = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof channelStartConversation>>,
+      TError,
+      { data: StartConversationDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof channelStartConversation>>,
+  TError,
+  { data: StartConversationDto },
+  TContext
+> => {
+  const mutationOptions = getChannelStartConversationMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
 export const channelContact = (
   id: string,
   options?: SecondParameter<typeof customInstance>,
@@ -7190,6 +7360,532 @@ export function useMessagingSettingsList<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getMessagingSettingsListQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const messagingSettingsConnect = (
+  connectMessagingAccountDto: ConnectMessagingAccountDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<MessagingAccountResponseDtoOutput>(
+    {
+      url: `/api/settings/messaging/accounts`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: connectMessagingAccountDto,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getMessagingSettingsConnectMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsConnect>>,
+    TError,
+    { data: ConnectMessagingAccountDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsConnect>>,
+  TError,
+  { data: ConnectMessagingAccountDto },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsConnect'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsConnect>>,
+    { data: ConnectMessagingAccountDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return messagingSettingsConnect(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsConnectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsConnect>>
+>;
+export type MessagingSettingsConnectMutationBody = ConnectMessagingAccountDto;
+export type MessagingSettingsConnectMutationError = unknown;
+
+export const useMessagingSettingsConnect = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsConnect>>,
+      TError,
+      { data: ConnectMessagingAccountDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsConnect>>,
+  TError,
+  { data: ConnectMessagingAccountDto },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsConnectMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsReauthenticate = (
+  id: string,
+  updateAccountCredentialsDto: UpdateAccountCredentialsDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<MessagingAccountResponseDtoOutput>(
+    {
+      url: `/api/settings/messaging/accounts/${id}/credentials`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: updateAccountCredentialsDto,
+    },
+    options,
+  );
+};
+
+export const getMessagingSettingsReauthenticateMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsReauthenticate>>,
+    TError,
+    { id: string; data: UpdateAccountCredentialsDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsReauthenticate>>,
+  TError,
+  { id: string; data: UpdateAccountCredentialsDto },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsReauthenticate'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsReauthenticate>>,
+    { id: string; data: UpdateAccountCredentialsDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return messagingSettingsReauthenticate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsReauthenticateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsReauthenticate>>
+>;
+export type MessagingSettingsReauthenticateMutationBody = UpdateAccountCredentialsDto;
+export type MessagingSettingsReauthenticateMutationError = unknown;
+
+export const useMessagingSettingsReauthenticate = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsReauthenticate>>,
+      TError,
+      { id: string; data: UpdateAccountCredentialsDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsReauthenticate>>,
+  TError,
+  { id: string; data: UpdateAccountCredentialsDto },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsReauthenticateMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsSync = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<SyncResultDtoOutput>(
+    { url: `/api/settings/messaging/accounts/${id}/sync`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsSyncMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsSync>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsSync>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsSync'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsSync>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return messagingSettingsSync(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsSyncMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsSync>>
+>;
+
+export type MessagingSettingsSyncMutationError = unknown;
+
+export const useMessagingSettingsSync = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsSync>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsSync>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsSyncMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsDisconnect = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<MessagingAccountResponseDtoOutput>(
+    { url: `/api/settings/messaging/accounts/${id}/disconnect`, method: 'POST', signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsDisconnectMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsDisconnect>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsDisconnect>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsDisconnect'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsDisconnect>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return messagingSettingsDisconnect(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsDisconnectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsDisconnect>>
+>;
+
+export type MessagingSettingsDisconnectMutationError = unknown;
+
+export const useMessagingSettingsDisconnect = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsDisconnect>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsDisconnect>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsDisconnectMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsUpdateChannel = (
+  id: string,
+  updateChannelDto: UpdateChannelDto,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<AdminChannelResponseDtoOutput>(
+    {
+      url: `/api/settings/messaging/channels/${id}`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: updateChannelDto,
+    },
+    options,
+  );
+};
+
+export const getMessagingSettingsUpdateChannelMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>,
+    TError,
+    { id: string; data: UpdateChannelDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>,
+  TError,
+  { id: string; data: UpdateChannelDto },
+  TContext
+> => {
+  const mutationKey = ['messagingSettingsUpdateChannel'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>,
+    { id: string; data: UpdateChannelDto }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return messagingSettingsUpdateChannel(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MessagingSettingsUpdateChannelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>
+>;
+export type MessagingSettingsUpdateChannelMutationBody = UpdateChannelDto;
+export type MessagingSettingsUpdateChannelMutationError = unknown;
+
+export const useMessagingSettingsUpdateChannel = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>,
+      TError,
+      { id: string; data: UpdateChannelDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof messagingSettingsUpdateChannel>>,
+  TError,
+  { id: string; data: UpdateChannelDto },
+  TContext
+> => {
+  const mutationOptions = getMessagingSettingsUpdateChannelMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const messagingSettingsLogs = (
+  id: string,
+  params?: MessagingSettingsLogsParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ChannelLogListResponseDtoOutput>(
+    { url: `/api/settings/messaging/accounts/${id}/logs`, method: 'GET', params, signal },
+    options,
+  );
+};
+
+export const getMessagingSettingsLogsQueryKey = (
+  id?: string,
+  params?: MessagingSettingsLogsParams,
+) => {
+  return [`/api/settings/messaging/accounts/${id}/logs`, ...(params ? [params] : [])] as const;
+};
+
+export const getMessagingSettingsLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof messagingSettingsLogs>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsLogsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsLogs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getMessagingSettingsLogsQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof messagingSettingsLogs>>> = ({ signal }) =>
+    messagingSettingsLogs(id, params, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof messagingSettingsLogs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type MessagingSettingsLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof messagingSettingsLogs>>
+>;
+export type MessagingSettingsLogsQueryError = unknown;
+
+export function useMessagingSettingsLogs<
+  TData = Awaited<ReturnType<typeof messagingSettingsLogs>>,
+  TError = unknown,
+>(
+  id: string,
+  params: undefined | MessagingSettingsLogsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsLogs>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsLogs>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsLogs>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsLogs<
+  TData = Awaited<ReturnType<typeof messagingSettingsLogs>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsLogsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsLogs>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagingSettingsLogs>>,
+          TError,
+          Awaited<ReturnType<typeof messagingSettingsLogs>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMessagingSettingsLogs<
+  TData = Awaited<ReturnType<typeof messagingSettingsLogs>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsLogsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsLogs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useMessagingSettingsLogs<
+  TData = Awaited<ReturnType<typeof messagingSettingsLogs>>,
+  TError = unknown,
+>(
+  id: string,
+  params?: MessagingSettingsLogsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof messagingSettingsLogs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getMessagingSettingsLogsQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

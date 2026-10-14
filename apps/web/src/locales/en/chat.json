@@ -52,7 +52,8 @@
     "notePlaceholder": "Write a note for your team…",
     "windowClosedSince": "The 24-hour reply window closed on {{date}}. You can add an internal note; the customer can write again to reopen the window.",
     "windowClosedNever": "The customer has not written yet, so there is nothing to reply to. You can add an internal note.",
-    "windowClosedToast": "The 24-hour reply window has just closed — the message was not sent."
+    "windowClosedToast": "The 24-hour reply window has just closed — the message was not sent.",
+    "receiptsMissing": "Delivery and read receipts are not tracked on this channel yet: a message stays at “sent”."
   },
   "typing": {
     "one": "{{name}} is typing…",
@@ -179,11 +180,71 @@
         "unroutable": "unroutable"
       },
       "copy": "Copy",
-      "copied": "Copied"
+      "copied": "Copied",
+      "notConnected": "Incoming messages and delivery receipts need the webhook, which arrives in the next phase. For now this account only sends."
     },
     "credentials": {
       "set": "Credentials set",
       "notSet": "Credentials not set"
+    },
+    "connect": {
+      "open": "Connect WhatsApp",
+      "title": "Connect WhatsApp Business",
+      "updateTitle": "Update access token",
+      "description": "Paste the WhatsApp Business Account ID and a system-user access token from Meta Business. The token is stored encrypted and is never shown again.",
+      "wabaId": "WhatsApp Business Account ID",
+      "accessToken": "Access token",
+      "accessTokenHint": "Use a system-user token with whatsapp_business_management and whatsapp_business_messaging. Temporary tokens expire within hours.",
+      "appId": "App ID (optional)",
+      "appSecret": "App secret (optional)",
+      "unverifiedNote": "Without the app ID and secret the token cannot be inspected: its kind, expiry and permissions are shown as unverified.",
+      "submit": "Connect",
+      "save": "Save token",
+      "connected": "WhatsApp account connected",
+      "updated": "Token updated",
+      "errors": {
+        "generic": "Could not reach the provider. Try again.",
+        "token_invalid": "Meta rejected this token. Check that it is copied completely and has not expired.",
+        "token_missing_scope": "The token lacks the {{scope}} permission.",
+        "token_wrong_app": "The token belongs to a different app than the App ID given.",
+        "waba_no_access": "This token cannot read the WhatsApp Business Account. Add the account to the system user's assets.",
+        "app_secret_invalid": "The app ID and secret do not match."
+      }
+    },
+    "whatsapp": {
+      "refresh": "Refresh",
+      "updateToken": "Update token",
+      "disconnect": "Disconnect",
+      "disconnectTitle": "Disconnect this account?",
+      "disconnectBody": "The token is deleted and sending stops. Conversations and history stay.",
+      "actionFailed": "The action failed. Try again.",
+      "synced": "Numbers synced: {{created}} new, {{updated}} updated, {{missing}} missing",
+      "lastSync": "Last synced {{when}}",
+      "quality": "quality {{value}}",
+      "missing": "Missing at provider",
+      "makeDefault": "Make default",
+      "receiptsNotice": "Delivery and read receipts are not tracked yet: a sent message stays at “sent”.",
+      "token": {
+        "title": "Access token",
+        "value": "Token",
+        "kind": "Kind",
+        "scopes": "Permissions",
+        "scopesUnverified": "Not verified",
+        "unverified": "Not verified",
+        "temporary": "Temporary, {{left}} left",
+        "expired": "Expired",
+        "none": "No token stored.",
+        "kinds": {
+          "SYSTEM_USER": "System user, no expiry",
+          "USER": "User token",
+          "UNKNOWN": "Unknown kind"
+        }
+      },
+      "log": {
+        "show": "Show recent provider calls",
+        "hide": "Hide provider calls",
+        "empty": "No calls recorded yet."
+      }
     }
   },
   "notifications": {
@@ -243,5 +304,27 @@
       "resolved": "<b>{{actor}}</b> resolved <b>{{conversation}}</b>",
       "set_pending": "<b>{{actor}}</b> marked <b>{{conversation}}</b> as pending"
     }
+  },
+  "outreach": {
+    "open": "New customer conversation",
+    "title": "Start a customer conversation",
+    "channel": "WhatsApp number",
+    "phone": "Customer phone",
+    "phoneHint": "International format, for example +380501234567.",
+    "name": "Name (optional)",
+    "submit": "Start",
+    "invalidPhone": "This phone number is not valid.",
+    "failed": "Could not start the conversation.",
+    "noChannel": "No enabled WhatsApp number. Connect one in Settings → Messaging."
+  },
+  "template": {
+    "send": "Send template",
+    "title": "Send an approved template",
+    "description": "Outside the 24-hour window only an approved template can be sent. Templates with variables are not supported yet.",
+    "name": "Template name",
+    "language": "Language code",
+    "submit": "Send",
+    "bubble": "Template: {{name}} ({{language}})",
+    "failed": "Could not send the template."
   }
 }

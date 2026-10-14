@@ -567,6 +567,7 @@ Provisioning підписується на `invoice-posted`, а не на `invoi
 (6) більший за межу обробника (5). Жива перевірка на dev-стенді: дві швидкі відповіді відправились у порядку написання, а
 `FAILED(PERMANENT)` наступну не заблокував. Рядом — хвилинний cron `channels.sweep-pending-statuses` (запаркованi квитанції,
 системний scope, кожен рядок під контекстом свого тенанта) і подія `chat.customer-message-received.v1` → `chat-notify-customer`.
+Щоденний cron `channels.purge-logs` (04:30, системний scope) стирає `channel_logs` старші за 30 днів (CHAT-3a).
 
 **Приклад свідомої відмови від порядку черги — вхідні вебхуки каналів (CHAT-2a).** Команда
 `channels.ingest-webhook` (споживач `channels-ingest` у воркері) іде **`standard`**-чергою, без `key_strict_fifo`

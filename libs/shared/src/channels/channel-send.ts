@@ -8,6 +8,8 @@ export interface OutboundContext {
   /** Наш id повідомлення; провайдеру йде як opaque-значення, за яким він повертає квитанцію */
   messageId: string;
   body: string;
+  /** Схвалений шаблон замість тексту (`body` лишається підписом для логів/прев'ю) */
+  template?: { name: string; language: string };
   /** З 1; береться з рядка — fake за ним вміє «впасти один раз» */
   attempt: number;
   /** Жорсткий таймаут відправки: адаптер зобовʼязаний його поважати */
@@ -27,6 +29,8 @@ export class ChannelSendError extends Error {
     /** Людська назва причини; не секрет і не сирий текст провайдера з даними клієнта */
     readonly title: string,
     readonly retryAfterSeconds?: number,
+    /** HTTP-статус відповіді провайдера, якщо була — для журналу викликів */
+    readonly httpStatus?: number,
   ) {
     super(`${errorClass}: ${code} ${title}`);
     this.name = 'ChannelSendError';
@@ -38,6 +42,7 @@ export interface ClassifiedSendFailure {
   code: string;
   title: string;
   retryAfterSeconds?: number;
+  httpStatus?: number;
 }
 
 /**
@@ -51,9 +56,11 @@ export function classifySendFailure(error: unknown): ClassifiedSendFailure {
       code: error.code,
       title: error.title,
       ...(error.retryAfterSeconds !== undefined && { retryAfterSeconds: error.retryAfterSeconds }),
+      ...(error.httpStatus !== undefined && { httpStatus: error.httpStatus }),
     };
   }
-  const aborted = error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
+  const aborted =
+    error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
   return {
     errorClass: 'TRANSIENT',
     code: aborted ? 'timeout' : 'unclassified',

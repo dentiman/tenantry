@@ -39,7 +39,13 @@ describe('conversationLabel для клієнтської розмови', () =>
   it('показує людину по той бік каналу, а не «Just you»', () => {
     const conversation = {
       ...base,
-      contact: { id: 'c', displayName: 'Олена', channelNumber: '+1 555' },
+      contact: {
+        id: 'c',
+        displayName: 'Олена',
+        channelNumber: '+1 555',
+        deliveryReceipts: true,
+        templates: true,
+      },
     } as Conversation;
     expect(conversationLabel(conversation, 'viewer', t)).toBe('Олена');
   });
@@ -47,14 +53,32 @@ describe('conversationLabel для клієнтської розмови', () =>
   it('без імені — номер каналу, без нього — «невідомий контакт»', () => {
     expect(
       conversationLabel(
-        { ...base, contact: { id: 'c', displayName: null, channelNumber: '+1 555' } },
+        {
+          ...base,
+          contact: {
+            id: 'c',
+            displayName: null,
+            channelNumber: '+1 555',
+            deliveryReceipts: true,
+            templates: true,
+          },
+        },
         'v',
         t,
       ),
     ).toBe('+1 555');
     expect(
       conversationLabel(
-        { ...base, contact: { id: 'c', displayName: null, channelNumber: null } },
+        {
+          ...base,
+          contact: {
+            id: 'c',
+            displayName: null,
+            channelNumber: null,
+            deliveryReceipts: true,
+            templates: true,
+          },
+        },
         'v',
         t,
       ),

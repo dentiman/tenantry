@@ -66,7 +66,7 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
   raw event store → ingest, outbox `QUEUED→SENDING→SENT`, status folding, identity with BSUID,
   templates), WhatsApp feature catalogue with levels, phases CHAT-2a…3c, open questions O-W1…9.
-  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` — what a live test account verified; `pnpm whatsapp:probe`) is in `docs/whatsapp-research/`.
+  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`) is in `docs/whatsapp-research/`.
   `docs/whatsapp-feature-flows.md` — per-feature flows (UI, system steps, Graph calls, webhooks) and the
   one-time Meta setup runbook (app, WABA, system-user token, webhook, test number).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
@@ -487,7 +487,7 @@ not assumed to exist:
   reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline has no failure-visibility surface yet.
-- **Chat** beyond inbound (CHAT-3a WhatsApp send-only, 3b webhooks and checks, 3c templates and operations; media and operator tools CHAT-2c come after WhatsApp) —
+- **Chat** beyond WhatsApp send-only (CHAT-3b webhooks and checks, 3c templates and operations; media and operator tools CHAT-2c come after WhatsApp) —
   `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
 - **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
   platform controls — `docs/ai-platform-controls.md`.

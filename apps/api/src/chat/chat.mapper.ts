@@ -4,8 +4,13 @@ import type {
   ConversationResponse,
   ConversationParticipantResponse,
 } from '@saas-skeleton/contracts';
-import { replyWindow, type ChannelAdapterRegistry, type StorageService } from '@saas-skeleton/shared';
+import {
+  replyWindow,
+  type ChannelAdapterRegistry,
+  type StorageService,
+} from '@saas-skeleton/shared';
 import type { ConversationWithParticipants } from './chat.service';
+import { hasDeliveryReceipts } from './channel.mapper';
 
 /**
  * Prisma → відповідь. Явно, поле в поле: мапер — єдина межа, що не дає рядку
@@ -30,7 +35,10 @@ export function toChatMessageResponse(message: ChatMessage): ChatMessageResponse
     body: message.body,
     payload: (message.payload ?? {}) as Record<string, unknown>,
     clientMessageId: message.clientMessageId,
-    direction: message.direction === 'INBOUND' || message.direction === 'OUTBOUND' ? message.direction : null,
+    direction:
+      message.direction === 'INBOUND' || message.direction === 'OUTBOUND'
+        ? message.direction
+        : null,
     sentAt: message.sentAt?.toISOString() ?? null,
     deliveredAt: message.deliveredAt?.toISOString() ?? null,
     readAt: message.readAt?.toISOString() ?? null,
@@ -92,7 +100,10 @@ export async function toConversationResponse(
     title: conversation.title,
     participants,
     assignee: conversation.assignee
-      ? { id: conversation.assignee.id, label: conversation.assignee.name ?? conversation.assignee.email }
+      ? {
+          id: conversation.assignee.id,
+          label: conversation.assignee.name ?? conversation.assignee.email,
+        }
       : null,
     canReply: window.canReply,
     replyWindowEndsAt: window.endsAt?.toISOString() ?? null,
@@ -101,6 +112,15 @@ export async function toConversationResponse(
           id: conversation.contact.id,
           displayName: conversation.contact.displayName,
           channelNumber: conversation.channel?.displayPhoneNumber ?? null,
+          deliveryReceipts: conversation.channel
+            ? hasDeliveryReceipts(
+                conversation.channel.provider,
+                conversation.channel.account.webhookSubscribedAt,
+              )
+            : false,
+          templates: conversation.channel
+            ? (registry.get(conversation.channel.provider)?.capabilities.templates ?? false)
+            : false,
         }
       : null,
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,

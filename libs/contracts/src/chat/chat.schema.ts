@@ -208,6 +208,10 @@ export const ConversationResponseSchema = z.object({
       id: z.uuid(),
       displayName: z.string().nullable(),
       channelNumber: z.string().nullable(),
+      /** Чи приходять квитанції доставки на цьому каналі (CHAT-3a); без них — «прийнято» і край */
+      deliveryReceipts: z.boolean(),
+      /** Провайдер приймає шаблони за імʼям (CHAT-3a): композер показує «Send template» */
+      templates: z.boolean(),
     })
     .nullable(),
   lastMessageAt: z.iso.datetime().nullable(),

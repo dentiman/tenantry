@@ -19,4 +19,5 @@ export type ChannelListResponseDtoOutputItemsItem = {
   verifiedName: string | null;
   isEnabled: boolean;
   isDefault: boolean;
+  deliveryReceipts: boolean;
 };

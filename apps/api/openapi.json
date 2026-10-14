@@ -2786,6 +2786,51 @@
         ]
       }
     },
+    "/api/conversations/{id}/template-messages": {
+      "post": {
+        "operationId": "chatPostTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTemplateMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/conversations/{id}/messages/{messageId}/resend": {
       "post": {
         "operationId": "chatResend",
@@ -3043,6 +3088,42 @@
         ]
       }
     },
+    "/api/chat/outreach": {
+      "post": {
+        "operationId": "channelStartConversation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartConversationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/chat/contacts/{id}": {
       "get": {
         "operationId": "channelContact",
@@ -3204,6 +3285,256 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MessagingAccountListResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/accounts": {
+      "post": {
+        "operationId": "messagingSettingsConnect",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectMessagingAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagingAccountResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/accounts/{id}/credentials": {
+      "put": {
+        "operationId": "messagingSettingsReauthenticate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountCredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagingAccountResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/accounts/{id}/sync": {
+      "post": {
+        "operationId": "messagingSettingsSync",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResultDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/accounts/{id}/disconnect": {
+      "post": {
+        "operationId": "messagingSettingsDisconnect",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagingAccountResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/channels/{id}": {
+      "patch": {
+        "operationId": "messagingSettingsUpdateChannel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChannelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChannelResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/messaging/accounts/{id}/logs": {
+      "get": {
+        "operationId": "messagingSettingsLogs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelLogListResponseDto_Output"
                 }
               }
             }
@@ -7671,12 +8002,20 @@
                     "channelNumber": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "deliveryReceipts": {
+                      "type": "boolean"
+                    },
+                    "templates": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "id",
                     "displayName",
-                    "channelNumber"
+                    "channelNumber",
+                    "deliveryReceipts",
+                    "templates"
                   ],
                   "additionalProperties": false,
                   "nullable": true
@@ -7887,12 +8226,20 @@
               "channelNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "deliveryReceipts": {
+                "type": "boolean"
+              },
+              "templates": {
+                "type": "boolean"
               }
             },
             "required": [
               "id",
               "displayName",
-              "channelNumber"
+              "channelNumber",
+              "deliveryReceipts",
+              "templates"
             ],
             "additionalProperties": false,
             "nullable": true
@@ -8335,6 +8682,29 @@
         ],
         "additionalProperties": false
       },
+      "PostTemplateMessageDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,512}$"
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(_[A-Za-z]{2,4})?$"
+          },
+          "clientMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "name",
+          "language",
+          "clientMessageId"
+        ]
+      },
       "SetConversationStatusDto": {
         "type": "object",
         "properties": {
@@ -8434,6 +8804,9 @@
                     },
                     "isDefault": {
                       "type": "boolean"
+                    },
+                    "deliveryReceipts": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -8443,7 +8816,8 @@
                     "displayPhoneNumber",
                     "verifiedName",
                     "isEnabled",
-                    "isDefault"
+                    "isDefault",
+                    "deliveryReceipts"
                   ],
                   "additionalProperties": false
                 },
@@ -8575,6 +8949,9 @@
                 },
                 "isDefault": {
                   "type": "boolean"
+                },
+                "deliveryReceipts": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -8584,7 +8961,8 @@
                 "displayPhoneNumber",
                 "verifiedName",
                 "isEnabled",
-                "isDefault"
+                "isDefault",
+                "deliveryReceipts"
               ],
               "additionalProperties": false
             }
@@ -8594,6 +8972,30 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "StartConversationDto": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 32
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "channelId",
+          "phone"
+        ]
       },
       "ChannelContactResponseDto_Output": {
         "type": "object",
@@ -8722,6 +9124,66 @@
                 "appSecretSet": {
                   "type": "boolean"
                 },
+                "appIdSet": {
+                  "type": "boolean"
+                },
+                "token": {
+                  "type": "object",
+                  "properties": {
+                    "mask": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "SYSTEM_USER",
+                        "USER",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "checkedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "mask",
+                    "kind",
+                    "expiresAt",
+                    "scopes",
+                    "verified",
+                    "checkedAt"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "lastSyncAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "lastError": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "channels": {
                   "type": "array",
                   "items": {
@@ -8758,6 +9220,24 @@
                       },
                       "isDefault": {
                         "type": "boolean"
+                      },
+                      "deliveryReceipts": {
+                        "type": "boolean"
+                      },
+                      "qualityRating": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "mode": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "nameStatus": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "isMissing": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -8767,7 +9247,12 @@
                       "displayPhoneNumber",
                       "verifiedName",
                       "isEnabled",
-                      "isDefault"
+                      "isDefault",
+                      "deliveryReceipts",
+                      "qualityRating",
+                      "mode",
+                      "nameStatus",
+                      "isMissing"
                     ],
                     "additionalProperties": false
                   }
@@ -8842,6 +9327,10 @@
                 "status",
                 "credentialsSet",
                 "appSecretSet",
+                "appIdSet",
+                "token",
+                "lastSyncAt",
+                "lastError",
                 "channels",
                 "webhook"
               ],
@@ -8851,6 +9340,518 @@
         },
         "required": [
           "items"
+        ],
+        "additionalProperties": false
+      },
+      "ConnectMessagingAccountDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "meta_cloud"
+            ]
+          },
+          "wabaId": {
+            "type": "string",
+            "pattern": "^\\d{5,32}$"
+          },
+          "accessToken": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 2048
+          },
+          "appId": {
+            "type": "string",
+            "pattern": "^\\d{5,32}$"
+          },
+          "appSecret": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "provider",
+          "wabaId",
+          "accessToken"
+        ]
+      },
+      "MessagingAccountResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fake",
+              "meta_cloud"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONNECTED",
+              "NEEDS_REAUTH",
+              "DISABLED"
+            ]
+          },
+          "credentialsSet": {
+            "type": "boolean"
+          },
+          "appSecretSet": {
+            "type": "boolean"
+          },
+          "appIdSet": {
+            "type": "boolean"
+          },
+          "token": {
+            "type": "object",
+            "properties": {
+              "mask": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "SYSTEM_USER",
+                  "USER",
+                  "UNKNOWN"
+                ]
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verified": {
+                "type": "boolean"
+              },
+              "checkedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              }
+            },
+            "required": [
+              "mask",
+              "kind",
+              "expiresAt",
+              "scopes",
+              "verified",
+              "checkedAt"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "lastSyncAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "WHATSAPP"
+                  ]
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "fake",
+                    "meta_cloud"
+                  ]
+                },
+                "displayPhoneNumber": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "verifiedName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isEnabled": {
+                  "type": "boolean"
+                },
+                "isDefault": {
+                  "type": "boolean"
+                },
+                "deliveryReceipts": {
+                  "type": "boolean"
+                },
+                "qualityRating": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "nameStatus": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isMissing": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "provider",
+                "displayPhoneNumber",
+                "verifiedName",
+                "isEnabled",
+                "isDefault",
+                "deliveryReceipts",
+                "qualityRating",
+                "mode",
+                "nameStatus",
+                "isMissing"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "webhook": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "nullable": true
+              },
+              "verifyToken": {
+                "type": "string",
+                "nullable": true
+              },
+              "signingSecretSet": {
+                "type": "boolean"
+              },
+              "lastDeliveryAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              },
+              "last24h": {
+                "type": "object",
+                "properties": {
+                  "received": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "processed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "failed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "unroutable": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "received",
+                  "processed",
+                  "failed",
+                  "unroutable"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "address",
+              "verifyToken",
+              "signingSecretSet",
+              "lastDeliveryAt",
+              "last24h"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "name",
+          "status",
+          "credentialsSet",
+          "appSecretSet",
+          "appIdSet",
+          "token",
+          "lastSyncAt",
+          "lastError",
+          "channels",
+          "webhook"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateAccountCredentialsDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 2048
+          },
+          "appId": {
+            "type": "string",
+            "pattern": "^\\d{5,32}$"
+          },
+          "appSecret": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "SyncResultDto_Output": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "updated": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "missing": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "externalId": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "externalId",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "missing",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateChannelDto": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AdminChannelResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "WHATSAPP"
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fake",
+              "meta_cloud"
+            ]
+          },
+          "displayPhoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "deliveryReceipts": {
+            "type": "boolean"
+          },
+          "qualityRating": {
+            "type": "string",
+            "nullable": true
+          },
+          "mode": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "isMissing": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "provider",
+          "displayPhoneNumber",
+          "verifiedName",
+          "isEnabled",
+          "isDefault",
+          "deliveryReceipts",
+          "qualityRating",
+          "mode",
+          "nameStatus",
+          "isMissing"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelLogListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "verify",
+                    "sync",
+                    "send"
+                  ]
+                },
+                "ok": {
+                  "type": "boolean"
+                },
+                "httpStatus": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "nullable": true
+                },
+                "errorCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "errorTitle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "messageId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "detail": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "operation",
+                "ok",
+                "httpStatus",
+                "errorCode",
+                "errorTitle",
+                "durationMs",
+                "messageId",
+                "detail",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ],
         "additionalProperties": false
       },

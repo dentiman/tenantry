@@ -37,6 +37,8 @@ export const RATE_LIMITS = {
   aiAsk: 'ai-ask',
   /** CHAT-2a: вебхук провайдера, на пару (ключ каналу, ip) — рахує і відмови підпису */
   channelWebhook: 'channel-webhook',
+  /** CHAT-3a: дії адміна, що ходять у Meta (підключення, оновлення токена, синхронізація) — на КОРИСТУВАЧА */
+  messagingConnect: 'messaging-connect',
 } as const;
 
 export type RateLimitName = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];

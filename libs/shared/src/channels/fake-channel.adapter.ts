@@ -37,7 +37,12 @@ const FAKE_SCENARIO = /^\[\[fake:([a-z-]+)\]\]/;
 export class FakeChannelAdapter implements ChannelAdapter {
   readonly provider = 'fake' as const;
   readonly type = 'WHATSAPP' as const;
-  readonly capabilities: ChannelCapabilities = { freeformWindowHours: 24, maxTextLength: 4096 };
+  readonly capabilities: ChannelCapabilities = {
+    freeformWindowHours: 24,
+    maxTextLength: 4096,
+    templates: true,
+    windowEnforcement: 'local',
+  };
 
   verifyWebhook(req: RawWebhookRequest, creds: ChannelCredentials): boolean {
     const secret = creds.appSecret;
@@ -90,6 +95,13 @@ export class FakeChannelAdapter implements ChannelAdapter {
 
   // Облікові дані fake-провайдеру не потрібні: він нічого не автентифікує
   async send(ctx: OutboundContext, _creds?: ChannelCredentials): Promise<{ externalId: string }> {
+    // Шаблон fake-провайдер приймає завжди (за винятком імені `fail_*`, щоб перевірити відмову)
+    if (ctx.template) {
+      if (ctx.template.name.startsWith('fail_')) {
+        throw new ChannelSendError('PERMANENT', '132001', 'Template does not exist');
+      }
+      return { externalId: `fake-out-${ctx.messageId}` };
+    }
     const scenario = FAKE_SCENARIO.exec(ctx.body)?.[1];
     switch (scenario) {
       case 'window':

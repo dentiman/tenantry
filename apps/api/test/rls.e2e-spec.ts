@@ -28,6 +28,8 @@ const TENANT_TABLES = [
   'channel_webhook_events',
   // CHAT-2b: квитанції, що випередили external_id
   'channel_pending_statuses',
+  // CHAT-3a: журнал викликів до провайдера
+  'channel_logs',
 ];
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
@@ -225,6 +227,7 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
 
     const cleanup = async (): Promise<void> => {
       await inTenant(tenantA, async () => {
+        await db.query(`DELETE FROM channel_logs WHERE account_id = $1`, [accountId]);
         await db.query(`DELETE FROM channel_pending_statuses WHERE account_id = $1`, [accountId]);
         await db.query(`DELETE FROM channel_webhook_events WHERE account_id = $1`, [accountId]);
         await db.query(`DELETE FROM channel_contacts WHERE id = $1`, [contactId]);
@@ -257,6 +260,11 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
           [tenantA, accountId],
         );
         await db.query(
+          `INSERT INTO channel_logs (id, tenant_id, account_id, operation, ok, duration_ms)
+           VALUES ('rls-chan-log', $1, $2, 'send', true, 12)`,
+          [tenantA, accountId],
+        );
+        await db.query(
           `INSERT INTO channel_pending_statuses (id, tenant_id, account_id, channel_external_id, external_id, status, occurred_at)
            VALUES ('rls-chan-pending', $1, $2, 'rls-chan-ext', 'wamid.x', 'delivered', now())`,
           [tenantA, accountId],
@@ -272,14 +280,37 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
         return r.rows[0]?.count;
       };
       await inTenant(tenantA, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses']) {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses', 'channel_logs']) {
           expect({ table, seen: Number(await count(table)) > 0 }).toEqual({ table, seen: true });
         }
       });
       await inTenant(tenantB, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses']) {
+        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses', 'channel_logs']) {
           expect({ table, count: await count(table) }).toEqual({ table, count: '0' });
         }
+      });
+    });
+
+    it('один default-канал на акаунт: другий у тому самому акаунті — порушення унікальності', async () => {
+      const make = (id: string, ext: string, def: boolean) =>
+        db.query(
+          `INSERT INTO channels (id, tenant_id, account_id, type, provider, external_id, is_default, updated_at)
+           VALUES ($1, $2, $3, 'WHATSAPP', 'fake', $4, $5, now())`,
+          [id, tenantA, accountId, ext, def],
+        );
+      await inTenant(tenantA, async () => {
+        await db.query(`UPDATE channels SET is_default = false WHERE account_id = $1`, [accountId]);
+        await make('rls-chan-def-1', 'rls-def-ext-1', true);
+      });
+      await expect(inTenant(tenantA, async () => { await make('rls-chan-def-2', 'rls-def-ext-2', true); })).rejects.toThrow(
+        /channels_account_default_key/,
+      );
+      // не-default у тому самому акаунті — можна
+      await inTenant(tenantA, async () => {
+        await make('rls-chan-def-3', 'rls-def-ext-3', false);
+      });
+      await inTenant(tenantA, async () => {
+        await db.query(`DELETE FROM channels WHERE id IN ('rls-chan-def-1', 'rls-chan-def-3')`);
       });
     });
 

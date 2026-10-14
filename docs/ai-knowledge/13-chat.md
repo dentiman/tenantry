@@ -38,8 +38,18 @@ status ("Open", "Pending", "Resolved") and an optional assignee.
   unless they already have the conversation open.
 - In a conversation's contact panel you can link the contact to a customer or create one.
 
-Customer conversations need a connected messaging channel; connecting a real WhatsApp number is not
-available yet.
+Customer conversations need a connected messaging channel; an administrator connects WhatsApp under
+Settings → "Messaging". Messages that customers send to a real WhatsApp number are not received yet,
+and delivery and read receipts are not tracked: a sent message stays at "sent" and the composer says
+"Delivery and read receipts are not tracked on this channel yet: a message stays at “sent”."
+
+To write to a customer first, open the "Customers" tab, click "New customer conversation", pick the
+"WhatsApp number", enter the "Customer phone" in international format (for example +380501234567) and
+click "Start". If that number already has an open conversation, it opens instead. Outside the 24-hour
+window only an approved template can be sent: click "Send template", enter the "Template name" and
+"Language code" (for example hello_world and en_US) and click "Send". Templates with variables are not
+supported yet; if the template does not exist in that language, or the number is not allowed on a test
+account, the message shows as failed with "Resend".
 
 ## Notifications
 

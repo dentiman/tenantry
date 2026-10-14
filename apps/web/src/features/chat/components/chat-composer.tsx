@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SendHorizontal } from 'lucide-react';
 import { CHAT_MAX_MESSAGE_CHARS, CHAT_TYPING_PULSE_MS } from '@saas-skeleton/contracts';
@@ -35,11 +35,7 @@ export function shouldSendOnKey(event: {
  * (`CHAT_TYPING_PULSE_MS`, менший за термін індикатора, тож безперервний набір не блимає).
  * Чиста функція — правило перевіряється тестом без DOM, як і `shouldSendOnKey`.
  */
-export function shouldPulseTyping(
-  lastPulseAt: number | null,
-  now: number,
-  value: string,
-): boolean {
+export function shouldPulseTyping(lastPulseAt: number | null, now: number, value: string): boolean {
   if (value.trim().length === 0) {
     return false;
   }
@@ -54,6 +50,10 @@ export interface CustomerComposerState {
   /** Коли вікно закрилось (або закриється); `null` — клієнт ще не писав */
   windowEndsAt: string | null;
   onModeChange: (mode: ComposerMode) => void;
+  /** Провайдер приймає шаблони (WhatsApp): поза вікном це єдина відповідь, що дозволена */
+  templateSlot?: ReactNode;
+  /** Квитанцій доставки на цьому каналі немає: повідомлення не піде далі «надіслано» */
+  receiptsMissing?: boolean;
 }
 
 interface ChatComposerProps {
@@ -143,6 +143,7 @@ export function ChatComposer({
             >
               {t('composer.modeNote')}
             </Button>
+            {customer.templateSlot}
           </div>
           {!customer.canReply && (
             <p className="text-sm text-muted-foreground">
@@ -150,6 +151,9 @@ export function ChatComposer({
                 ? t('composer.windowClosedSince', { date: formatDateTime(customer.windowEndsAt) })
                 : t('composer.windowClosedNever')}
             </p>
+          )}
+          {customer.receiptsMissing && customer.mode === 'reply' && (
+            <p className="text-xs text-muted-foreground">{t('composer.receiptsMissing')}</p>
           )}
           {customer.mode === 'note' && customer.canReply && (
             <p className="text-xs text-muted-foreground">{t('composer.noteHint')}</p>
@@ -163,7 +167,9 @@ export function ChatComposer({
           value={value}
           maxLength={CHAT_MAX_MESSAGE_CHARS}
           disabled={isDisabled}
-          placeholder={customer?.mode === 'note' ? t('composer.notePlaceholder') : t('composer.placeholder')}
+          placeholder={
+            customer?.mode === 'note' ? t('composer.notePlaceholder') : t('composer.placeholder')
+          }
           aria-label={t('composer.label')}
           className="max-h-40 min-h-9 resize-none"
           onChange={(event) => {

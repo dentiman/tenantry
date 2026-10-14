@@ -178,6 +178,14 @@ export function createAppThrottlerModule(options: CreateAppThrottlerModuleOption
           getTracker: webhookKeyAndIpTracker,
         },
         {
+          // CHAT-3a: на КОРИСТУВАЧА (адмін), не на ip — звичайна логіка адмінських дій
+          name: RATE_LIMITS.messagingConnect,
+          ttl: MINUTE_MS,
+          limit: config.messagingConnectPerMinute,
+          skipIf: optIn(RATE_LIMITS.messagingConnect),
+          getTracker: options.principalTracker,
+        },
+        {
           name: RATE_LIMITS.verificationConfirm,
           ttl: MINUTE_MS,
           limit: VERIFICATION_CONFIRM_LIMIT_PER_MINUTE,

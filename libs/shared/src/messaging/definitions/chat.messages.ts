@@ -67,3 +67,9 @@ export const channelsSweepPendingStatusesCommand = defineCommand(
   'channels.sweep-pending-statuses',
   z.object({}),
 );
+
+/**
+ * Щодобове прибирання журналу викликів до провайдера (CHAT-3a, design.md D8): cron, системний scope,
+ * природно ідемпотентне. Термін — `CHANNEL_LOG_RETENTION_DAYS`.
+ */
+export const channelsPurgeLogsCommand = defineCommand('channels.purge-logs', z.object({}));

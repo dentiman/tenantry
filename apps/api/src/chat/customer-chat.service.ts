@@ -9,11 +9,13 @@ import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { ChatMessage, Prisma } from '@saas-skeleton/database';
 import type {
   PostChatMessage,
+  PostTemplateMessage,
   SetConversationAssignee,
   SetConversationStatus,
 } from '@saas-skeleton/contracts';
 import {
   ChannelAdapterRegistry,
+  type ChannelAdapter,
   ConversationWorkflow,
   MessagePublisher,
   channelsDeliverOutboundCommand,
@@ -31,7 +33,14 @@ interface CustomerConversationRow {
   status: 'OPEN' | 'PENDING' | 'SNOOZED' | 'RESOLVED';
   channelId: string | null;
   customerLastMessageAt: Date | null;
-  channel: { provider: string; isEnabled: boolean } | null;
+  channel: { provider: string; isEnabled: boolean; providerMissingAt: Date | null } | null;
+}
+
+/** Що кладемо в `chat_messages` для відповіді клієнтові: текст або шаблон (`payload.template`) */
+interface ReplyInput {
+  body: string;
+  clientMessageId: string;
+  payload?: Prisma.InputJsonObject;
 }
 
 /**
@@ -98,6 +107,46 @@ export class CustomerChatService {
     }
   }
 
+  /**
+   * Схвалений шаблон за іменем і мовою (CHAT-3a, design.md D7): звичайна відповідь у черзі, але без
+   * перевірки вікна. У `payload.template` — що слати, у `body` — імʼя (для прев'ю й пошуку).
+   */
+  async postTemplate(
+    actor: JwtPayload,
+    conversation: ConversationWithMembership,
+    dto: PostTemplateMessage,
+  ): Promise<ChatMessage> {
+    const replayed = await this.prisma.chatMessage.findFirst({
+      where: { conversationId: conversation.id, clientMessageId: dto.clientMessageId },
+    });
+    if (replayed) {
+      return replayed;
+    }
+    const row = await this.loadConversation(conversation.id);
+    this.assertCanSendTemplate(row);
+    const label = await this.actorLabel(actor);
+    const input: ReplyInput = {
+      body: dto.name,
+      clientMessageId: dto.clientMessageId,
+      payload: { template: { name: dto.name, language: dto.language } },
+    };
+
+    try {
+      return await this.transactions.withTenantTx((tx) =>
+        this.insertReply(tx, row, actor, label, input),
+      );
+    } catch (error) {
+      if (!isClientMessageIdConflict(error)) {
+        throw error;
+      }
+      const existing = await this.prisma.chatMessage.findFirst({
+        where: { conversationId: conversation.id, clientMessageId: dto.clientMessageId },
+      });
+      if (!existing) throw error;
+      return existing;
+    }
+  }
+
   /** Повторити відправку невдалого вихідного: те саме повідомлення знову в `QUEUED` */
   async resend(
     actor: JwtPayload,
@@ -111,13 +160,17 @@ export class CustomerChatService {
         direction: 'OUTBOUND',
         visibility: 'PUBLIC',
       },
-      select: { id: true, body: true },
+      select: { id: true, body: true, payload: true },
     });
     if (!message) {
       throw new NotFoundException('Message not found');
     }
     const row = await this.loadConversation(conversation.id);
-    this.assertCanReply(row, message.body ?? '');
+    if ((message.payload as { template?: unknown } | null)?.template) {
+      this.assertCanSendTemplate(row);
+    } else {
+      this.assertCanReply(row, message.body ?? '');
+    }
 
     return this.transactions.withTenantTx(async (tx) => {
       // Умовний UPDATE — арбітр: два одночасні «повторити» ставлять у чергу одну доставку
@@ -142,7 +195,12 @@ export class CustomerChatService {
     this.assertCustomerConversation(conversation);
     const label = await this.actorLabel(actor);
     await this.transactions.withTenantTx(async (tx) => {
-      const result = await this.workflow.setStatus(tx, conversation.id, dto.status, userActor(actor, label));
+      const result = await this.workflow.setStatus(
+        tx,
+        conversation.id,
+        dto.status,
+        userActor(actor, label),
+      );
       if (result === 'blocked') {
         throw new ConflictException('The contact already has another open conversation');
       }
@@ -172,7 +230,9 @@ export class CustomerChatService {
       if (!user.isActive) {
         throw new BadRequestException({
           message: 'The user is deactivated',
-          fieldErrors: [{ field: 'userId', message: 'The user is deactivated', code: 'invalid_value' }],
+          fieldErrors: [
+            { field: 'userId', message: 'The user is deactivated', code: 'invalid_value' },
+          ],
         });
       }
       assignee = { id: user.id, label: user.name ?? user.email };
@@ -180,7 +240,12 @@ export class CustomerChatService {
 
     const label = await this.actorLabel(actor);
     await this.transactions.withTenantTx(async (tx) => {
-      const changed = await this.workflow.assign(tx, conversation.id, assignee, userActor(actor, label));
+      const changed = await this.workflow.assign(
+        tx,
+        conversation.id,
+        assignee,
+        userActor(actor, label),
+      );
       if (changed) {
         this.chatRealtime.inboxChanged(tx, conversation.id);
       }
@@ -194,7 +259,7 @@ export class CustomerChatService {
     row: CustomerConversationRow,
     actor: JwtPayload,
     label: string,
-    dto: PostChatMessage,
+    dto: ReplyInput,
   ): Promise<ChatMessage> {
     const author = userActor(actor, label);
 
@@ -228,6 +293,7 @@ export class CustomerChatService {
         senderUserId: actor.sub,
         senderLabel: label,
         body: dto.body,
+        ...(dto.payload && { payload: dto.payload }),
         clientMessageId: dto.clientMessageId,
         direction: 'OUTBOUND',
         channelId: row.channelId,
@@ -293,7 +359,7 @@ export class CustomerChatService {
         status: true,
         channelId: true,
         customerLastMessageAt: true,
-        channel: { select: { provider: true, isEnabled: true } },
+        channel: { select: { provider: true, isEnabled: true, providerMissingAt: true } },
       },
     });
     if (!row) {
@@ -302,15 +368,21 @@ export class CustomerChatService {
     return row;
   }
 
-  /** Швидка відмова до запису: канал увімкнений, довжина в межах, вікно відкрите (D3) */
-  private assertCanReply(row: CustomerConversationRow, body: string): void {
+  /** Канал існує, увімкнений, не зник у провайдера й має адаптер; повертає адаптер */
+  private usableAdapter(row: CustomerConversationRow): ChannelAdapter {
     const adapter = row.channel ? this.registry.get(row.channel.provider) : undefined;
     if (!row.channel || !row.channelId || !adapter) {
       throw new UnprocessableEntityException('The conversation has no usable channel');
     }
-    if (!row.channel.isEnabled) {
+    if (!row.channel.isEnabled || row.channel.providerMissingAt !== null) {
       throw new ConflictException('The channel is disabled');
     }
+    return adapter;
+  }
+
+  /** Швидка відмова до запису: канал увімкнений, довжина в межах, вікно відкрите (D3) */
+  private assertCanReply(row: CustomerConversationRow, body: string): void {
+    const adapter = this.usableAdapter(row);
     if (body.length > adapter.capabilities.maxTextLength) {
       throw new BadRequestException({
         message: 'The message is too long for this channel',
@@ -324,6 +396,14 @@ export class CustomerChatService {
         code: 'CHANNEL_WINDOW_CLOSED',
         message: 'The freeform reply window of this channel is closed',
       });
+    }
+  }
+
+  /** Шаблон — єдиний спосіб писати поза вікном: вікно не перевіряється, але адаптер має вміти шаблони */
+  private assertCanSendTemplate(row: CustomerConversationRow): void {
+    const adapter = this.usableAdapter(row);
+    if (!adapter.capabilities.templates) {
+      throw new UnprocessableEntityException('This channel cannot send templates');
     }
   }
 

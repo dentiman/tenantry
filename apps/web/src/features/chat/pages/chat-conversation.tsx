@@ -17,6 +17,7 @@ import { useChatFindOne } from '../../../api/generated/api';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useChatOutboxStore } from '../stores/chat-outbox.store';
 import { ChatComposer } from '../components/chat-composer';
+import { TemplateDialog } from '../components/template-dialog';
 import { ConversationControls } from '../components/conversation-controls';
 import { effectiveMode, type ComposerMode } from '../components/delivery-state';
 import { ChatTranscript } from '../components/chat-transcript';
@@ -157,6 +158,10 @@ export function ChatConversationPage() {
               canReply: conversation.canReply,
               windowEndsAt: conversation.replyWindowEndsAt,
               onModeChange: setRequestedMode,
+              receiptsMissing: conversation.contact ? !conversation.contact.deliveryReceipts : false,
+              ...(conversation.contact?.templates && {
+                templateSlot: <TemplateDialog conversationId={conversationId} />,
+              }),
             }}
           />
         ) : (

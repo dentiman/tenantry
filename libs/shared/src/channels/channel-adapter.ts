@@ -39,6 +39,15 @@ export interface ChannelCapabilities {
   /** Вікно вільного тексту, годин; відсутнє — вікна немає */
   freeformWindowHours?: number;
   maxTextLength: number;
+  /** Чи вміє адаптер слати схвалений шаблон за іменем і мовою (CHAT-3a) */
+  templates: boolean;
+  /**
+   * Хто вирішує, чи вікно вільного тексту закрите, поки нема даних про останнє повідомлення клієнта
+   * (CHAT-3a, design.md D6): `local` — ми (немає вхідного → закрите); `provider` — провайдер: нашу
+   * перевірку пропускаємо, а його відмову класифікуємо як `WINDOW_CLOSED`. Коли час останнього
+   * повідомлення клієнта відомий, діє локальне правило для всіх.
+   */
+  windowEnforcement: 'local' | 'provider';
 }
 
 export interface ChannelAdapter {
@@ -50,7 +59,10 @@ export interface ChannelAdapter {
   verifyWebhook(req: RawWebhookRequest, creds: ChannelCredentials): boolean;
 
   /** Рукостискання GET: рядок-відповідь або `null`, якщо запит недійсний */
-  handshake(query: Readonly<Record<string, string | undefined>>, creds: ChannelCredentials): string | null;
+  handshake(
+    query: Readonly<Record<string, string | undefined>>,
+    creds: ChannelCredentials,
+  ): string | null;
 
   /** 0..N подій: провайдери батчать. Ніколи не кидає */
   parseWebhook(raw: Buffer): ParseResult;

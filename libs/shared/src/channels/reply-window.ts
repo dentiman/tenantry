@@ -8,7 +8,8 @@ export interface ReplyWindow {
 }
 
 /**
- * Вікно вільного тексту від ЧАСУ ПРОВАЙДЕРА останнього вхідного (CHAT-2b, design.md D3). Одне
+ * Вікно вільного тексту від ЧАСУ ПРОВАЙДЕРА останнього вхідного (CHAT-2b, design.md D3). Для каналу з
+ * `windowEnforcement: 'provider'` без жодного відомого вхідного ми нічого не знаємо й не блокуємо (CHAT-3a, D6). Одне
  * правило для API (швидка відмова), воркера (авторитетна перевірка) і відповіді розмови (екран
  * пояснює закрите вікно, а не показує мертве поле).
  */
@@ -22,7 +23,8 @@ export function replyWindow(
     return { canReply: adapter !== undefined, endsAt: null };
   }
   if (!customerLastMessageAt) {
-    return { canReply: false, endsAt: null };
+    // Провайдер сам вирішує, поки нема даних про вхідне (CHAT-3a, design.md D6): не блокуємо
+    return { canReply: adapter?.capabilities.windowEnforcement === 'provider', endsAt: null };
   }
   const endsAt = new Date(customerLastMessageAt.getTime() + hours * 3_600_000);
   return { canReply: now.getTime() < endsAt.getTime(), endsAt };
