@@ -102,7 +102,7 @@ export function CustomerContactsTab() {
           ) : (
             customer.contacts.map((contact) => (
               <Item key={contact.id} variant="outline">
-                <ItemContent>
+                <ItemContent className="min-w-0">
                   <ItemTitle className="flex items-center gap-2">
                     {contact.name}
                     {contact.isPrimary && (
@@ -110,7 +110,8 @@ export function CustomerContactsTab() {
                     )}
                   </ItemTitle>
                   {/* ItemDescription уже є <p> — власного абзацу всередині не кладемо */}
-                  <ItemDescription>
+                  {/* break-all: email без пробілів інакше виштовхує ItemActions за край рядка */}
+                  <ItemDescription className="break-all">
                     {[contact.position, contact.email, formatForDisplay(contact.phone)]
                       .filter(Boolean)
                       .join(' · ') || t('detail.contact.empty')}

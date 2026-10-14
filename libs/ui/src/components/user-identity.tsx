@@ -96,7 +96,9 @@ export function UserIdentity({
     // (згорнутий сайдбар) текст падав би під аватар замість того, щоб обрізатись
     <Item
       size="sm"
-      className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
+      className={['w-auto min-w-0 max-w-full flex-nowrap gap-3 p-0', className]
+        .filter(Boolean)
+        .join(' ')}
     >
       {/* Аватар по центру блоку: стоковий ItemMedia притискає медіа до верху і зсуває
           на 2px, бо розрахований на багаторядковий опис — тут рядків рівно два.
@@ -115,11 +117,17 @@ export function UserIdentity({
       <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
         {/* Стискання рядків замість стокових snug/normal: між іменем і поштою не
             має бути повітря, якого не витримує ні рядок таблиці, ні тригер поля */}
-        <ItemTitle className={TEXT[size].title} title={primary}>
+        {/* `truncate` + `line-clamp-none`: `line-clamp` обрізає лише по вертикалі, тож
+            довга пошта без пробілів вилазила за межі попапа без «…». `w-fit` на заголовку
+            теж тримаємо в межах контейнера через `max-w-full` */}
+        <ItemTitle className={[TEXT[size].title, 'max-w-full truncate'].join(' ')} title={primary}>
           {primary}
         </ItemTitle>
         {secondary && (
-          <ItemDescription className={TEXT[size].description} title={secondary}>
+          <ItemDescription
+            className={[TEXT[size].description, 'line-clamp-none truncate'].join(' ')}
+            title={secondary}
+          >
             {secondary}
           </ItemDescription>
         )}

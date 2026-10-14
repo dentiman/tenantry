@@ -116,7 +116,7 @@ export function CustomerIdentity({
     // падав би під медіа замість того, щоб обрізатись
     <Item
       size="sm"
-      className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
+      className={['w-auto min-w-0 max-w-full flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}
     >
       {/* Медіа по центру блоку: стоковий ItemMedia притискає його до верху,
           бо розрахований на багаторядковий опис — тут рядків рівно два.
@@ -152,13 +152,13 @@ export function CustomerIdentity({
             // він росте разом із кеглем, тож на text-2xl читається як зайвий відступ,
             // а на text-sm у рядку гріда — ні. Тому в `em`, а не в пікселях: правило
             // лишається правильним за будь-якого розміру заголовка
-            className="line-clamp-1 -mb-[0.12em] text-2xl leading-tight font-bold tracking-tight text-foreground"
+            className="truncate max-w-full -mb-[0.12em] text-2xl leading-tight font-bold tracking-tight text-foreground"
             title={name}
           >
             {name}
           </h1>
         ) : (
-          <ItemTitle className={TEXT[size].title} title={name}>
+          <ItemTitle className={[TEXT[size].title, 'max-w-full truncate'].join(' ')} title={name}>
             {name}
           </ItemTitle>
         )}
@@ -166,10 +166,12 @@ export function CustomerIdentity({
           <ItemDescription
             // Номер моноширинним — той самий вигляд, що в колонці «Number» гріда:
             // одне й те саме значення не має виглядати на двох екранах по-різному
+            // `line-clamp-none truncate`: клямп обрізає лише по вертикалі, а довгий email
+            // без пробілів вилазив би за межі рядка без «…» (див. `UserIdentity`)
             className={
               isHeader
-                ? `font-mono tabular-nums ${TEXT[size].description}`
-                : TEXT[size].description
+                ? `font-mono tabular-nums ${TEXT[size].description} line-clamp-none truncate`
+                : `${TEXT[size].description} line-clamp-none truncate`
             }
             title={secondary}
           >

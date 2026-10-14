@@ -39,7 +39,7 @@ const TEXT = {
  */
 export function TenantIdentity({ id, name, slug, size = 'default', className }: TenantIdentityProps) {
   return (
-    <Item size="sm" className={['w-auto flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}>
+    <Item size="sm" className={['w-auto min-w-0 max-w-full flex-nowrap gap-3 p-0', className].filter(Boolean).join(' ')}>
       <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
         <Avatar size={size} className="rounded-md after:rounded-md">
           <AvatarFallback colorSeed={id} className="rounded-md">
@@ -48,10 +48,13 @@ export function TenantIdentity({ id, name, slug, size = 'default', className }: 
         </Avatar>
       </ItemMedia>
       <ItemContent className="min-w-0 gap-0">
-        <ItemTitle className={TEXT[size].title} title={name}>
+        <ItemTitle className={[TEXT[size].title, 'max-w-full truncate'].join(' ')} title={name}>
           {name}
         </ItemTitle>
-        <ItemDescription className={`font-mono ${TEXT[size].description}`} title={slug}>
+        <ItemDescription
+          className={`font-mono ${TEXT[size].description} line-clamp-none truncate`}
+          title={slug}
+        >
           {slug}
         </ItemDescription>
       </ItemContent>
