@@ -167,6 +167,17 @@ describe('Meta inbound and receipts (e2e, CHAT-3b2)', () => {
       expect(reply.status).toBe(201);
     });
 
+    it('контакт, якого агент завів без імені, отримує імʼя з першого вхідного — і в підписі відправника', async () => {
+      const contact = await prisma.channelContact.create({ data: { tenantId: DEFAULT_TENANT_ID, channelId } });
+      await prisma.channelContactAddress.create({ data: { tenantId: DEFAULT_TENANT_ID, contactId: contact.id, channelId, kind: 'phone', value: '380501119999' } });
+
+      await deliver(textHook({ id: 'wamid.NAME', from: '380501119999', name: 'Денис', timestamp: nowSeconds(), phoneId: PHONE }));
+
+      const [message] = await messages();
+      expect(message?.senderLabel).toBe('Денис');
+      expect((await prisma.channelContact.findUniqueOrThrow({ where: { id: contact.id } })).displayName).toBe('Денис');
+    });
+
     it('повторна доставка того самого повідомлення (інші байти) нічого не додає', async () => {
       await deliver(textHook({ id: 'wamid.DUP', timestamp: nowSeconds(), phoneId: PHONE }));
       const again = await deliver(textHook({ id: 'wamid.DUP', timestamp: nowSeconds(), phoneId: PHONE, body: 'ще раз' }));

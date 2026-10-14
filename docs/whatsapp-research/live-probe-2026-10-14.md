@@ -35,3 +35,13 @@
 | Вхідний текст з телефону | `messages[].type = text` з `from_user_id` (BSUID) і `contacts[].user_id`; `x-hub-signature-256` валідний над сирими байтами |
 | Статуси нашого відправлення | `sent`, `delivered` з нашим id у `biz_opaque_callback_data`; `pricing` = `service` / `free_customer_service` (вікно відкрите вхідним) |
 | Заголовки запиту Meta | `user-agent: facebookexternalua`, `x-hub-signature` і `x-hub-signature-256`, `content-type: application/json` |
+
+## Вхідні й квитанції на стенді (CHAT-3b2)
+
+| Що | Результат |
+| --- | --- |
+| Вхідний текст | розбір → контакт, відкрита розмова, повідомлення; `customerLastMessageAt` = час Meta, вікно +24 год; BSUID у `providerMeta` |
+| Вхідне зображення | `type: image` з `id`/`mime_type`/`sha256`/`url` → повідомлення `[image]` + `payload.unsupported.type`; у стрічці «Message not supported (image)» |
+| Відповідь зі стенду | `sent` → `delivered` → `read` (час `read` — момент відкриття на телефоні); два `delivered` на одне повідомлення Meta шле нерідко — другий нічого не міняє |
+| Підпис | POST без підпису й з хибним — 401 (`enforce`); справжні Meta-хуки — `valid` |
+| Старі захоплення (3b1) | не перепроцесуються: повідомлення, відправлене до 3b2, лишається на одній галочці |

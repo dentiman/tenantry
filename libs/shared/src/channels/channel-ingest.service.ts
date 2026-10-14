@@ -189,7 +189,10 @@ export class ChannelIngestService {
       select: { displayName: true },
     });
     const addressLabel = event.from.value;
-    const customerActor = { type: 'customer' as const, label: contact.displayName ?? addressLabel };
+    // Імʼя з профілю, що приходить із цим самим повідомленням, головніше за збережене: контакт міг з'явитися
+    // без імені (агент почав розмову з номера), і перше вхідне не має підписуватись номером
+    const senderName = event.profileName ?? contact.displayName ?? addressLabel;
+    const customerActor = { type: 'customer' as const, label: senderName };
 
     // Повернення розв'язаної розмови в роботу — подія робочого процесу, навіть якщо саме це
     // повідомлення виявиться повтором: розмова вже відкрита, і слід має лишитись
@@ -229,7 +232,7 @@ export class ChannelIngestService {
         visibility: 'PUBLIC',
         status: 'SENT',
         senderType: 'customer',
-        senderLabel: contact.displayName ?? addressLabel,
+        senderLabel: senderName,
         body,
         direction: 'INBOUND',
         channelId: channel.id,
