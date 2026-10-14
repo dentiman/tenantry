@@ -44,7 +44,7 @@ const CONVERSATION_SELECT = {
     select: {
       displayPhoneNumber: true,
       provider: true,
-      account: { select: { webhookSubscribedAt: true } },
+      webhookSubscribedAt: true,
     },
   },
   customerLastMessageAt: true,

@@ -39,7 +39,8 @@
   "message": {
     "sending": "Sending…",
     "failed": "Not sent",
-    "internalNote": "Internal note"
+    "internalNote": "Internal note",
+    "unsupported": "Message not supported ({{type}})"
   },
   "composer": {
     "label": "Message",
@@ -181,7 +182,7 @@
       },
       "copy": "Copy",
       "copied": "Copied",
-      "notConnected": "This account receives webhooks only after you subscribe a number below. Hooks are stored exactly as received; incoming messages and delivery receipts are not processed yet."
+      "notConnected": "This account receives webhooks only after you subscribe a number below. Once a number is subscribed, incoming messages create conversations and delivery receipts update your messages; everything received is also kept exactly as sent."
     },
     "credentials": {
       "set": "Credentials set",
@@ -223,7 +224,7 @@
       "quality": "quality {{value}}",
       "missing": "Missing at provider",
       "makeDefault": "Make default",
-      "receiptsNotice": "Delivery and read receipts are not tracked yet: a sent message stays at “sent”.",
+      "receiptsNotice": "Delivery and read receipts arrive only for numbers subscribed to this system (see “Webhooks” on each number); otherwise a sent message stays at “sent”.",
       "token": {
         "title": "Access token",
         "value": "Token",

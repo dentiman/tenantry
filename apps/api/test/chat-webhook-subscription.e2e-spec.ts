@@ -172,10 +172,14 @@ describe('Webhook subscription and captured events (e2e, CHAT-3b1)', () => {
       expect(logs.length).toBeGreaterThanOrEqual(3);
       expect(JSON.stringify(logs)).not.toContain(VERIFY_TOKEN);
       expect(JSON.stringify(logs)).not.toContain(TOKEN);
-      // квитанцій як не було, так і немає: вебхук лише захоплюється
-      const channels = await http().get('/api/chat/channels').set(admin.headers).expect(200);
-      const item = (channels.body as { items: { id: string; deliveryReceipts: boolean }[] }).items.find((c) => c.id === channelId);
-      expect(item?.deliveryReceipts).toBe(false);
+      // CHAT-3b2: підписаний номер отримує квитанції, а після зняття підписки — знову ні
+      const receipts = async (): Promise<boolean | undefined> => {
+        const channels = await http().get('/api/chat/channels').set(admin.headers).expect(200);
+        return (channels.body as { items: { id: string; deliveryReceipts: boolean }[] }).items.find((c) => c.id === channelId)?.deliveryReceipts;
+      };
+      expect(await receipts()).toBe(true);
+      await unsubscribe().expect(200);
+      expect(await receipts()).toBe(false);
     });
 
     it('чужі події: без назви хоста 409 і жодного запису в Meta; з чужою назвою 409; з правильною — підписано', async () => {

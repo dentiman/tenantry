@@ -185,3 +185,25 @@ export function summarizeWebhookBody(body: string): string {
   }
   return parts.length > 0 ? parts.join(', ') : 'empty';
 }
+
+/** Шаблонне повідомлення (CHAT-3a) показується як «Template: імʼя (мова)», а не голим імʼям */
+export function templateText(
+  message: { payload?: unknown },
+  t: (key: string, options: Record<string, string>) => string,
+): string | null {
+  const payload = message.payload as
+    { template?: { name?: string; language?: string } } | null | undefined;
+  const template = payload?.template;
+  if (!template?.name) return null;
+  return t('template.bubble', { name: template.name, language: template.language ?? '' });
+}
+
+/** Тип провайдера, який ми не вміємо показати (CHAT-3b2): текст робить інтерфейс із `payload.unsupported`, а не бекенд */
+export function unsupportedText(
+  message: { payload?: unknown },
+  t: (key: string, options: Record<string, string>) => string,
+): string | null {
+  const payload = message.payload as { unsupported?: { type?: string } } | null | undefined;
+  const type = payload?.unsupported?.type;
+  return type ? t('message.unsupported', { type }) : null;
+}

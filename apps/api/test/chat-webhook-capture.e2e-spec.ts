@@ -113,7 +113,7 @@ describe('Meta webhook capture (e2e, CHAT-3b1)', () => {
   });
 
   describe('POST', () => {
-    it('зберігає байти як є, заголовки без cookie, результат підпису; розмови не чіпає; ingest позначає обробленим', async () => {
+    it('зберігає байти як є, заголовки без cookie, результат підпису; ingest статусу без каналу — нероутоване, розмов не чіпає', async () => {
       const conversations = await prisma.conversation.count();
       const messages = await prisma.chatMessage.count();
 
@@ -133,7 +133,8 @@ describe('Meta webhook capture (e2e, CHAT-3b1)', () => {
       const outcome = await tenantContext.runWith(DEFAULT_TENANT_ID, () =>
         transactions.withTenantTx((tx) => ingest.ingestEvent(tx, eventId)),
       );
-      expect(outcome.state).toBe('PROCESSED');
+      // Канал із phone_number_id тіла в цього акаунта не заведено: подія нероутована (3b2), а не мовчки «оброблена»
+      expect(outcome.state).toBe('UNROUTABLE');
       expect(outcome.stored).toBe(0);
       expect(await prisma.conversation.count()).toBe(conversations);
       expect(await prisma.chatMessage.count()).toBe(messages);

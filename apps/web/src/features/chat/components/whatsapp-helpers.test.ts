@@ -8,6 +8,8 @@ import {
   formatCountdown,
   readLastTemplate,
   summarizeWebhookBody,
+  templateText,
+  unsupportedText,
   webhookAction,
   saveLastTemplate,
   TEMPLATE_LANGUAGE_PATTERN,
@@ -218,5 +220,26 @@ describe('summarizeWebhookBody', () => {
     expect(summarizeWebhookBody(wrap('messages', {}))).toBe('empty');
     expect(summarizeWebhookBody('{"hello":1}')).toBe('unknown payload');
     expect(summarizeWebhookBody('<<>>')).toBe('not JSON');
+  });
+});
+
+describe('тексти повідомлень із payload', () => {
+  const t = (key: string, options: Record<string, string>): string =>
+    `${key}:${JSON.stringify(options)}`;
+
+  it('шаблон — з payload.template; без нього null', () => {
+    expect(
+      templateText({ payload: { template: { name: 'hello_world', language: 'en_US' } } }, t),
+    ).toBe('template.bubble:{"name":"hello_world","language":"en_US"}');
+    expect(templateText({ payload: {} }, t)).toBeNull();
+    expect(templateText({}, t)).toBeNull();
+  });
+
+  it('непідтримуваний тип — з payload.unsupported; без нього null', () => {
+    expect(unsupportedText({ payload: { unsupported: { type: 'image' } } }, t)).toBe(
+      'message.unsupported:{"type":"image"}',
+    );
+    expect(unsupportedText({ payload: { unsupported: {} } }, t)).toBeNull();
+    expect(unsupportedText({ payload: null }, t)).toBeNull();
   });
 });

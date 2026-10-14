@@ -69,6 +69,24 @@ const TABLE: Readonly<Record<number, Row>> = {
   131045: { errorClass: 'HUMAN' },
 };
 
+/**
+ * Невдача зі статусу вебхука `failed` (CHAT-3b2): той самий клас за таблицею, що й для відправки. Це ФІНАЛЬНИЙ
+ * статус, тож невідомий код — `PERMANENT` (повторювати нема чого), а не `TRANSIENT`, як при помилці виклику.
+ */
+export function classifyWebhookFailure(
+  code: number | null,
+  title: string,
+  details: string | null,
+): { class: ChannelErrorClass; code: string; title: string; details?: string } {
+  const row = code !== null ? TABLE[code] : undefined;
+  return {
+    class: row?.errorClass ?? 'PERMANENT',
+    code: code !== null ? String(code) : 'unknown',
+    title: (row?.title ?? title).slice(0, 200),
+    ...(details ? { details: details.slice(0, 500) } : {}),
+  };
+}
+
 /** Коди таблиці (для тесту, що фіксує кожен рядок) */
 export const META_ERROR_CODES: readonly number[] = Object.keys(TABLE).map(Number);
 

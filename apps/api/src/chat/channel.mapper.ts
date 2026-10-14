@@ -16,8 +16,8 @@ export const CHANNEL_SELECT = {
   verifiedName: true,
   isEnabled: true,
   isDefault: true,
-  // Для `deliveryReceipts`: квитанції приходять лише при підписці акаунта на вебхук (CHAT-3a/3b)
-  account: { select: { webhookSubscribedAt: true } },
+  // Для `deliveryReceipts`: квитанції приходять, поки номер підписаний на цю систему (CHAT-3b2)
+  webhookSubscribedAt: true,
 } satisfies Prisma.ChannelSelect;
 
 export type ChannelRow = Prisma.ChannelGetPayload<{ select: typeof CHANNEL_SELECT }>;
@@ -35,7 +35,8 @@ export type AdminChannelRow = Prisma.ChannelGetPayload<{ select: typeof ADMIN_CH
 
 /**
  * Чи приходять квитанції доставки: fake — так (їх шле симулятор); справжній провайдер — лише з
- * підпискою на вебхук. Без них повідомлення не йде далі «прийнято» (CHAT-3a, design.md D10).
+ * підпискою НОМЕРА на цю систему (CHAT-3b2: час підписки — на каналі, його ставить і знімає адмін). Це дешевий
+ * показник, а не істина; без квитанцій повідомлення не йде далі «прийнято» (CHAT-3a, design.md D10).
  */
 export function hasDeliveryReceipts(provider: string, webhookSubscribedAt: Date | null): boolean {
   return provider === 'fake' || webhookSubscribedAt !== null;
@@ -82,7 +83,7 @@ export function toChannelResponse(channel: ChannelRow): ChannelResponse {
     verifiedName: channel.verifiedName,
     isEnabled: channel.isEnabled,
     isDefault: channel.isDefault,
-    deliveryReceipts: hasDeliveryReceipts(channel.provider, channel.account.webhookSubscribedAt),
+    deliveryReceipts: hasDeliveryReceipts(channel.provider, channel.webhookSubscribedAt),
   };
 }
 

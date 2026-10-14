@@ -43,7 +43,15 @@ export const NormalizedMessageEventSchema = z.object({
   profileName: z.string().nullable(),
   /** Час повідомлення в провайдера */
   sentAt: z.iso.datetime(),
-  content: z.object({ type: z.literal('text'), body: z.string() }),
+  content: z.object({
+    type: z.literal('text'),
+    body: z.string(),
+    /**
+     * Тип провайдера, який ми не вміємо показати (CHAT-3b2): `body` — нейтральна заглушка `[image]`, а тип
+     * лягає в `payload.unsupported`, з якого інтерфейс робить локалізований текст.
+     */
+    unsupportedType: z.string().min(1).max(64).optional(),
+  }),
   providerMeta: z.record(z.string(), z.unknown()),
 });
 

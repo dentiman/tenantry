@@ -69,8 +69,8 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
   `APP_PUBLIC_URL`) — `https://…sslip.io` у `/etc/saas/deploy.env`.
 - **Вебхуки каналів (CHAT-3b1):** `scripts/hetzner/common.sh` типово ставить `CHANNEL_WEBHOOK_BASE_URL` = `APP_PUBLIC_URL`
   (публічна адреса вебхука = `<base>/api/public/channels/<provider>/<ключ>`; Caddy і nginx пропускають шлях) і
-  `CHANNEL_WEBHOOK_SIGNATURE=record` — вебхуки Meta лише захоплюються, підпис записується, але не вимагається. Перед
-  тим, як вебхук почне щось робити, повернути `enforce` у `/etc/saas/deploy.env`. Підписка номера — кнопкою в
+  `CHANNEL_WEBHOOK_SIGNATURE` лишається типовим `enforce` (від CHAT-3b2 вебхук створює розмови й квитанції, тож запит без
+  чинного підпису відхиляється; на час налагодження можна поставити `record` у `/etc/saas/deploy.env`). Підписка номера — кнопкою в
   Налаштування → Messaging; вона перевизначає адресу **номера**, а не WABA (на спільному тестовому WABA події цього
   номера перестануть іти в інший проєкт, доки не натиснути «Unsubscribe»).
 - Початкові паролі адміна й оператора платформи — `SEED_ADMIN_PASSWORD` / `SEED_PLATFORM_PASSWORD`

@@ -101,10 +101,13 @@ Administrators connect a WhatsApp Business account here.
   go to another host "Take over" asks you to confirm, because that service stops receiving the number's
   webhooks until you press "Unsubscribe". Nothing is subscribed automatically.
 - "Show received webhooks" lists what WhatsApp has sent, with "Signature valid", "Signature invalid" or
-  "Not checked", and "Show body" for the raw text. Received webhooks are stored but not processed yet.
+  "Not checked", and "Show body" for the raw text. Every webhook is kept exactly as received; for a subscribed
+  number, messages and delivery receipts in them also update the conversations. A request without a valid
+  signature is refused.
 - "Show recent provider calls" lists the latest calls to Meta (without message text or tokens).
-- Delivery and read receipts are not tracked yet, and incoming WhatsApp messages are not received yet:
-  "Delivery and read receipts are not tracked yet: a sent message stays at “sent”."
+- A number that is not subscribed does not get delivery and read receipts: "Delivery and read receipts arrive
+  only for numbers subscribed to this system (see “Webhooks” on each number); otherwise a sent message stays at
+  “sent”."
 
 ## Activity
 

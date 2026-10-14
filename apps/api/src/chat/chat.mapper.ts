@@ -115,7 +115,7 @@ export async function toConversationResponse(
           deliveryReceipts: conversation.channel
             ? hasDeliveryReceipts(
                 conversation.channel.provider,
-                conversation.channel.account.webhookSubscribedAt,
+                conversation.channel.webhookSubscribedAt,
               )
             : false,
           templates: conversation.channel

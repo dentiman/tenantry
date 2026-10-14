@@ -38,6 +38,7 @@ import { canResend, deliveryIcon, failureKey, isDeliverable } from './delivery-s
 import { ReadOnViewTracker } from './read-on-view-tracker';
 import { flattenTranscript, useMarkRead, useTranscript, type ChatMessage } from './use-chat';
 import type { Conversation } from './use-chat';
+import { templateText, unsupportedText } from './whatsapp-helpers';
 
 interface ChatTranscriptProps {
   conversation: Conversation;
@@ -430,7 +431,7 @@ function TranscriptRow({
             className={isNote ? 'border border-dashed border-border' : undefined}
           >
             <BubbleBody
-              body={templateText(message, t) ?? message.body ?? ''}
+              body={templateText(message, t) ?? unsupportedText(message, t) ?? message.body ?? ''}
               tone={isNote ? 'other' : isOwn ? 'own' : 'other'}
               meta={
                 <>
@@ -602,16 +603,4 @@ export function buildRows(messages: ChatMessage[], pending: OutboxMessage[]): Ro
   }
 
   return rows;
-}
-
-/** Шаблонне повідомлення (CHAT-3a) показується як «Template: імʼя (мова)», а не голим імʼям */
-function templateText(
-  message: { payload?: unknown },
-  t: (key: string, options: Record<string, string>) => string,
-): string | null {
-  const payload = message.payload as
-    { template?: { name?: string; language?: string } } | null | undefined;
-  const template = payload?.template;
-  if (!template?.name) return null;
-  return t('template.bubble', { name: template.name, language: template.language ?? '' });
 }

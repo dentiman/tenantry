@@ -6,6 +6,7 @@ import { createChannelAdapterRegistry } from '../channel-adapter-registry';
 import { MetaGraphClient } from './graph-client';
 import { MetaCloudAdapter } from './meta-cloud.adapter';
 import { GraphStub, graphError, sendOk } from './testing/graph-stub';
+import { statusHook } from './testing/webhook-fixtures';
 
 const TOKEN = 'EAAG1234567890abcdefghijklmnopqrstuvwxyzTOKEN';
 const stub = new GraphStub();
@@ -183,8 +184,9 @@ describe('MetaCloudAdapter webhooks (CHAT-3b1)', () => {
     expect(adapter.verifyWebhook(headers(sign('shh-secret', body)), { ...creds, appSecret: null })).toBe(false);
   });
 
-  it('розбір нічого не інтерпретує: валідний JSON → без подій, не-JSON → invalid_json', () => {
-    expect(adapter.parseWebhook(body)).toEqual({ events: [] });
+  it('розбір: справжня форма статусу дає подію status; не-JSON — invalid_json', () => {
+    const real = Buffer.from(statusHook({ id: 'wamid.X', status: 'delivered', opaque: 'our-id' }));
+    expect(adapter.parseWebhook(real).events).toMatchObject([{ kind: 'status', status: 'delivered', opaqueId: 'our-id' }]);
     expect(adapter.parseWebhook(Buffer.from('not json'))).toEqual({ events: [], error: 'invalid_json' });
   });
 });

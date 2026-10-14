@@ -236,6 +236,9 @@ export class ChannelIngestService {
         externalId: event.externalMessageId,
         senderContactId: contactId,
         providerSentAt: sentAt,
+        ...(event.content.unsupportedType !== undefined && {
+          payload: { unsupported: { type: event.content.unsupportedType } },
+        }),
         providerMeta: event.providerMeta as Prisma.InputJsonValue,
       },
     });

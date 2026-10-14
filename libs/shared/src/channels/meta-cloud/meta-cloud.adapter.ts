@@ -9,11 +9,12 @@ import type {
 import { ChannelSendError, type OutboundContext } from '../channel-send';
 import { classifyMetaError } from './errors';
 import { MetaApiError, MetaGraphClient } from './graph-client';
+import { parseMetaWebhook } from './webhook-parser';
 
 /**
  * Адаптер WhatsApp Cloud API (CHAT-3a: лише вихід). Відправка тексту й схваленого шаблону за іменем;
  * успіх — 2xx із `messages[0].id` (поле `message_status` є лише в шаблону й не потрібне). Вебхуки
- * (CHAT-3b1) лише захоплюються: рукостискання й підпис справжні, а розбір подій порожній.
+ * (CHAT-3b1/3b2): рукостискання, підпис і розбір повідомлень та квитанцій у події ядра.
  *
  * Відповідь 2xx означає «прийнято», а не «доставлено» (docs/whatsapp-research/live-probe-2026-10-13.md п.1).
  */
@@ -55,17 +56,9 @@ export class MetaCloudAdapter implements ChannelAdapter {
     return challenge;
   }
 
-  /**
-   * CHAT-3b1: лише захоплення — нічого не інтерпретуємо, тож подій немає (ingest позначить рядок
-   * обробленим і не зачепить розмов). Не-JSON тіло — «отруйне»: зберігається як FAILED, відповідь 200.
-   */
+  /** Тіло вебхука → події (CHAT-3b2); розбір — `webhook-parser.ts` */
   parseWebhook(raw: Buffer): ParseResult {
-    try {
-      JSON.parse(raw.toString('utf8'));
-    } catch {
-      return { events: [], error: 'invalid_json' };
-    }
-    return { events: [] };
+    return parseMetaWebhook(raw);
   }
 
   async send(ctx: OutboundContext, creds: ChannelCredentials): Promise<{ externalId: string }> {

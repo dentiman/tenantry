@@ -786,7 +786,7 @@ POST /conversations/:id/messages
   **Учасник клієнтської розмови — її відповідальний**: звідси лічильник непрочитаного, фільтр «мої» і сповіщення про вхідне
   (`chat.customer_message_received`, лише відповідальному, не тому, хто дивиться, і не про повідомлення, на яке вже відповіли).
 - **Нотатки** — `visibility = INTERNAL` у клієнтській розмові: без вікна й черги, не чіпають `last_message_*` та `awaitingReply`.
-- **WhatsApp, вебхуки (CHAT-3b1).** Лише захоплення: сирі хуки Meta з заголовками й результатом підпису, підписка номера кнопкою, читання адміном; розбір не робиться, квитанцій немає (`whatsapp-channel.md` §4.3/§4.13).
+- **WhatsApp, вебхуки (CHAT-3b1/3b2).** Сирі хуки Meta зберігаються з заголовками й результатом підпису (3b1); розбір (3b2) перетворює їх на вхідні повідомлення (текст або заглушка `[<type>]`) і квитанції через ті самі `ChannelIngestService`/`ChannelStatusService`, що й fake; `deliveryReceipts` каналу = номер підписаний (`whatsapp-channel.md` §4.3/§4.13).
 - **WhatsApp, вихід (CHAT-3a).** Адаптер заявляє `windowEnforcement: 'provider'` (`replyWindow`: без відомого вхідного — не блокує; з
   відомим і старим — як на fake). Шаблон: `POST /conversations/:id/template-messages { name, language, clientMessageId }` — той
   самий шлях QUEUED→SENDING→SENT, вікно не потрібне, у `payload.template` імʼя й мова, `body` = імʼя; повтор шаблону теж без
