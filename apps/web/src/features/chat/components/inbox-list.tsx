@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from '@tanstack/react-router';
 import { RotateCw } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@saas-skeleton/ui/components/ui/avatar';
+import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Empty,
@@ -171,12 +172,18 @@ function InboxRow({ entry }: { entry: InboxEntry }) {
               />
             )}
           </div>
-          {/* Канал і привʼязаний клієнт — окремим рядком: у скриньці кількох номерів без цього
-              не видно, на який номер написали, а без клієнта — що людина ще не привʼязана */}
-          <p className="truncate text-xs text-muted-foreground">
-            {[channelNumber, entry.contact.customer?.name ?? t('inbox.notLinked')]
-              .filter(Boolean)
-              .join(' · ')}
+          {/* Провайдер, номер каналу і привʼязаний клієнт — окремим рядком: у скриньці кількох
+              номерів і провайдерів без цього не видно, куди написали, а без клієнта — що людина
+              ще не привʼязана */}
+          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[0.625rem]">
+              {t(`inbox.provider.${entry.channel.provider}`, { defaultValue: entry.channel.provider })}
+            </Badge>
+            <span className="truncate">
+              {[entry.contact.customer?.name ?? t('inbox.notLinked'), channelNumber]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
           </p>
         </ItemContent>
       </Item>

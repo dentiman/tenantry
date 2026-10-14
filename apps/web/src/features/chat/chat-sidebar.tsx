@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tab
 import { ConversationList } from './components/conversation-list';
 import { InboxList } from './components/inbox-list';
 
-type SidebarTab = 'internal' | 'customers';
+type SidebarTab = 'customers' | 'internal';
 
 /**
  * Друга колонка area «Chat» — список розмов.
@@ -13,12 +13,13 @@ type SidebarTab = 'internal' | 'customers';
  * масив пунктів (`chat.nav.ts`): тут живуть пошук, непрочитані й нескінченний
  * курсорний фід. Якби контракт був «пункти меню», чат не влазив би вже сюди.
  *
- * CHAT-2a: дві вкладки — внутрішні розмови (участь) і скринька клієнтів (спільна для тенанта).
- * Це різні списки з різними правилами доступу, тому не змішуються в одному фіді.
+ * Дві вкладки: скринька клієнтів (спільна для тенанта; відкривається першою — клієнтська робота є
+ * головною) і внутрішні розмови (участь). Це різні списки з різними правилами доступу, тому не
+ * змішуються в одному фіді.
  */
 export function ChatSidebar() {
   const { t } = useTranslation('chat');
-  const [tab, setTab] = useState<SidebarTab>('internal');
+  const [tab, setTab] = useState<SidebarTab>('customers');
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -30,12 +31,12 @@ export function ChatSidebar() {
         className="shrink-0 border-b border-sidebar-border p-2"
       >
         <TabsList className="w-full">
-          <TabsTrigger value="internal">{t('sidebar.tabs.internal')}</TabsTrigger>
           <TabsTrigger value="customers">{t('sidebar.tabs.customers')}</TabsTrigger>
+          <TabsTrigger value="internal">{t('sidebar.tabs.internal')}</TabsTrigger>
         </TabsList>
       </Tabs>
       <div className="min-h-0 flex-1">
-        {tab === 'internal' ? <ConversationList /> : <InboxList />}
+        {tab === 'customers' ? <InboxList /> : <ConversationList />}
       </div>
     </div>
   );

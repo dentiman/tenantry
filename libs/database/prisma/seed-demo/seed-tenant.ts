@@ -11,6 +11,7 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../../contracts/src/demo';
 import { ensureDefaultChannel, joinDefaultChannel } from '../../../shared/src/chat/default-channel';
 import { Prisma, type PrismaClient } from '../../src/generated/prisma/client';
 import { domainOf, personName, phoneFor, slugOfName } from './people';
+import { seedCustomerChat } from './seed-customer-chat';
 import type { DemoEventSpec, DemoTenantDataset } from './types';
 import { DAY, HOUR, MINUTE, allDayStart, atWorkday, createRng, uid } from './util';
 
@@ -500,6 +501,9 @@ export async function seedTenant(
     }
     messageCount += rows.length;
   }
+
+  // ── Чат із клієнтами: fake-WhatsApp і розмови (docs/demo.md) ────────────────
+  messageCount += await seedCustomerChat(prisma, { tenantId, data, users, activeIdx, now });
 
   // ── Журнал активності ─────────────────────────────────────────────────────
   const drafts: ActivityDraft[] = [];

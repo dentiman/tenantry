@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
-import { PrismaService } from '@saas-skeleton/database';
+import { Prisma, PrismaService } from '@saas-skeleton/database';
 import type {
   FakeChannelSetupResponse,
   NormalizedEvent,
@@ -33,9 +33,12 @@ export class ChatDevToolsService {
     private readonly accounts: MessagingAccountService,
   ) {}
 
-  /** Ідемпотентно: повторний виклик повертає наявний акаунт і той самий секрет */
+  /**
+   * Ідемпотентно: повторний виклик повертає наявний акаунт і той самий секрет. Акаунт, створений демо-сідом
+   * (`seed-customer-chat.ts`), секрету не має — тут його довипускаємо, а наявний канал лишаємо як є.
+   */
   async ensureFakeChannel(): Promise<FakeChannelSetupResponse> {
-    const account =
+    let account =
       (await this.prisma.messagingAccount.findFirst({ where: { provider: 'fake' } })) ??
       (await this.prisma.messagingAccount.create({
         data: {
@@ -46,26 +49,45 @@ export class ChatDevToolsService {
           appSecret: this.crypto.encrypt(randomBytes(24).toString('hex')),
         },
       }));
+    if (!account.appSecret) {
+      account = await this.prisma.messagingAccount.update({
+        where: { id: account.id },
+        data: { appSecret: this.crypto.encrypt(randomBytes(24).toString('hex')) },
+      });
+    }
     const hasChannel = await this.prisma.channel.count({ where: { accountId: account.id } });
     if (hasChannel === 0) {
-      await this.prisma.channel.create({
-        data: {
-          accountId: account.id,
-          type: 'WHATSAPP',
-          provider: 'fake',
-          externalId: FAKE_CHANNEL_EXTERNAL_ID,
-          displayPhoneNumber: '+1 555 010 0001',
-          verifiedName: 'Fake WhatsApp',
-          isEnabled: true,
-          isDefault: true,
-          syncedAt: new Date(),
-        },
-      });
+      await this.createChannel(account.id);
     }
 
     const [view] = (await this.accounts.list(true)).filter((a) => a.id === account.id);
     if (!view || !account.appSecret) throw new ConflictException('Fake account could not be read back');
     return { account: view, signingSecret: this.crypto.decrypt(account.appSecret) };
+  }
+
+  /**
+   * Номер провайдера унікальний між тенантами (часткове UNIQUE), а це інструмент для будь-якого
+   * тенанта: перший бере стабільний `fake-phone-1`, наступним (конфлікт) дістається суфікс з id акаунта.
+   */
+  private async createChannel(accountId: string): Promise<void> {
+    const base = {
+      accountId,
+      type: 'WHATSAPP' as const,
+      provider: 'fake',
+      displayPhoneNumber: '+1 555 010 0001',
+      verifiedName: 'Fake WhatsApp',
+      isEnabled: true,
+      isDefault: true,
+      syncedAt: new Date(),
+    };
+    try {
+      await this.prisma.channel.create({ data: { ...base, externalId: FAKE_CHANNEL_EXTERNAL_ID } });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+      await this.prisma.channel.create({
+        data: { ...base, externalId: `${FAKE_CHANNEL_EXTERNAL_ID}-${accountId.slice(0, 8)}` },
+      });
+    }
   }
 
   async simulate(input: SimulateInbound, baseUrl: string): Promise<SimulateInboundResponse> {

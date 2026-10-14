@@ -110,6 +110,10 @@
       }
     },
     "loadError": "Could not load customer conversations",
+    "provider": {
+      "fake": "Fake",
+      "meta_cloud": "WhatsApp"
+    },
     "unknownContact": "Unknown contact",
     "notLinked": "No customer linked",
     "awaitingReply": "Waiting for a reply",

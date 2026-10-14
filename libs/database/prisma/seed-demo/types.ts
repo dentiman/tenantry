@@ -89,6 +89,21 @@ export interface DemoChannelSpec {
   unread?: Record<number, number>;
 }
 
+/**
+ * Тексти клієнтських розмов fake-WhatsApp (`seed-customer-chat.ts`). Кому саме і скільки їх —
+ * вирішує сід за сідованим ГПВЧ; датасет задає лише голос галузі.
+ */
+export interface DemoCustomerChatSpec {
+  /** Перше повідомлення клієнта */
+  questions: string[];
+  /** Відповіді агента */
+  replies: string[];
+  /** Наступні репліки клієнта після відповіді */
+  followUps: string[];
+  /** Нотатки для колег (internal) */
+  notes: string[];
+}
+
 export interface DemoTenantDataset {
   slug: string;
   name: string;
@@ -107,4 +122,6 @@ export interface DemoTenantDataset {
   notes: string[];
   events: DemoEventSpec[];
   channels: DemoChannelSpec[];
+  /** Тексти розмов із клієнтами через fake-WhatsApp */
+  customerChat: DemoCustomerChatSpec;
 }

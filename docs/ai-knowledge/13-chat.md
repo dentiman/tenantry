@@ -7,8 +7,11 @@ area: general
 
 # Chat
 
-Open **Chat** in the left rail. The list on the left has two tabs: "Team" (conversations with
-colleagues) and "Customers" (conversations that arrive from a messaging channel).
+Open **Chat** in the left rail. The list on the left has two tabs: "Customers" (conversations
+that arrive from a messaging channel; this tab opens first) and "Team" (conversations with
+colleagues). Each customer conversation shows a small label with the channel it came through
+("WhatsApp", or "Fake" for the built-in test channel), the channel's phone number and the linked
+customer.
 
 ## Team conversations
 
