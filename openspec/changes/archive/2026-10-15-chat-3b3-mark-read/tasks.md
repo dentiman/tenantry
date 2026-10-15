@@ -24,4 +24,4 @@
 - [x] 5.1 Unit: parser reaction, adapter `markRead` request shape, helper text for reactions
 - [x] 5.2 e2e: claim once across two readers and repeated moves, internal conversation untouched, old message untouched, reaction does not open the window, worker call and failure log
 - [x] 5.3 Docs: `whatsapp-channel.md`, `whatsapp-feature-flows.md` (F13, F16), `chat.md`, roadmap; ai-knowledge if a label changes
-- [ ] 5.4 Live check on the Meta test number: open a message from the phone, the phone shows blue ticks
+- [x] 5.4 Live check on the Meta test number: open a message from the phone, the phone shows blue ticks
