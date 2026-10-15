@@ -25,10 +25,11 @@ import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/to
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import type { ChannelInboxListFilter } from '../../../api/generated/model/channelInboxListFilter';
 import { compactTime, initialsOf } from './chat-labels';
+import { formatForDisplay } from '../../../components/form/phone/phone-format';
 import { CustomerAvatar } from '../../customers/components/customer-identity';
 import { SimulateInboundPopover } from './simulate-inbound';
 import { StartCustomerConversationDialog } from './start-customer-conversation-dialog';
-import { flattenInbox, inboxContactName, inboxTitle, useInboxList, type InboxEntry } from './use-inbox';
+import { flattenInbox, inboxCompany, inboxTitle, useInboxList, type InboxEntry } from './use-inbox';
 
 const FILTERS: ChannelInboxListFilter[] = ['all', 'unassigned', 'mine'];
 
@@ -130,12 +131,13 @@ export function InboxList() {
 }
 
 /**
- * Рядок скриньки. Верх — ідентичність у розкладці `UserIdentity`/`CustomerIdentity` (аватар 32px,
- * титул `leading-tight`, другий рядок `text-xs`), але другий рядок тут не дані кастомера, а прев'ю
- * останнього повідомлення, тож блок складено з тих самих примітивів, а не викликом готового
- * компонента. Низ — мітка каналу — на всю ширину рядка під аватаром, а не в колонці тексту.
- * Привʼязаний контакт показується аватаром кастомера (`CustomerAvatar`: організація — квадрат
- * із будівлею, особа — коло); без привʼязки — коло з ініціалами людини.
+ * Рядок скриньки. Верх — ідентичність у розкладці `UserIdentity`/`CustomerIdentity` (аватар 32px, титул
+ * `leading-tight`, другий рядок `text-xs`), але другий рядок тут не дані кастомера, а прев'ю останнього
+ * повідомлення, тож блок складено з тих самих примітивів, а не викликом готового компонента.
+ * Титул — людина, з якою переписка (імʼя з профілю); аватар — кастомера, якщо контакт привʼязаний
+ * (`CustomerAvatar`: організація — квадрат із будівлею, особа — коло), інакше коло з ініціалами людини.
+ * Низ — на всю ширину: мітка каналу, кастомер («чия людина») і номер співрозмовника. Номер нашого каналу
+ * тут не показуємо: він однаковий у всіх рядках каналу й читався б як номер людини.
  */
 function InboxRow({ entry }: { entry: InboxEntry }) {
   const { t } = useTranslation('chat');
@@ -143,9 +145,9 @@ function InboxRow({ entry }: { entry: InboxEntry }) {
   const isActive = conversationId === entry.id;
   const title = inboxTitle(entry) ?? t('inbox.unknownContact');
   const customer = entry.contact.customer;
-  const channelNumber = entry.channel.displayPhoneNumber;
-  // Клієнт уже в титулі — третій рядок називає людину, що пише; без клієнта — що привʼязки ще нема
-  const who = customer ? inboxContactName(entry) : t('inbox.notLinked');
+  // Кастомер-організація — «чия людина»; без привʼязки — що її ще нема; кастомер-особа вже в титулі
+  const company = customer ? inboxCompany(entry) : t('inbox.notLinked');
+  const phone = formatForDisplay(entry.contact.phone);
 
   return (
     <Link
@@ -199,13 +201,12 @@ function InboxRow({ entry }: { entry: InboxEntry }) {
             </div>
           </ItemContent>
         </Item>
-        {/* Провайдер, хто пише і номер каналу — на всю ширину: у скриньці кількох номерів і провайдерів без
-            цього не видно, куди написали, а без клієнта — що людина ще не привʼязана */}
+        {/* Мітка каналу, кастомер і номер співрозмовника — на всю ширину рядка, під аватаром */}
         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[0.625rem]">
             {t(`inbox.provider.${entry.channel.provider}`, { defaultValue: entry.channel.provider })}
           </Badge>
-          <span className="truncate">{[who, channelNumber].filter(Boolean).join(' · ')}</span>
+          <span className="truncate">{[company, phone].filter(Boolean).join(' · ')}</span>
         </p>
       </div>
     </Link>

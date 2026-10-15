@@ -9028,12 +9028,17 @@
                       ],
                       "additionalProperties": false,
                       "nullable": true
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
                     "id",
                     "displayName",
-                    "customer"
+                    "customer",
+                    "phone"
                   ],
                   "additionalProperties": false
                 },

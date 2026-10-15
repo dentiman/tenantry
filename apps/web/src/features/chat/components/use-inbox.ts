@@ -26,19 +26,20 @@ export function flattenInbox(pages: { items: InboxEntry[] }[] | undefined): Inbo
 }
 
 /**
- * Титул рядка скриньки: привʼязаний клієнт (його аватар і назва — те, що менеджер знає з CRM), інакше
- * імʼя з профілю провайдера; без обох — `null` (рендерер підставить текст)
+ * Титул рядка скриньки — той, з ким переписка: людина по той бік каналу (імʼя з профілю провайдера), а
+ * без імені — привʼязаний кастомер; без обох — `null` (рендерер підставить текст). Кастомер-організація
+ * сама нічого не пише, тому його назва — другий рядок (`inboxCompany`), а не титул.
  */
 export function inboxTitle(entry: Pick<InboxEntry, 'contact'>): string | null {
-  return entry.contact.customer?.name ?? entry.contact.displayName ?? null;
+  return entry.contact.displayName ?? entry.contact.customer?.name ?? null;
 }
 
 /**
- * Хто саме з клієнта пише — для третього рядка, коли титул уже клієнт: імʼя з профілю, якщо воно
- * відрізняється від титулу (особа-кастомер пише від свого імені, тож дублювати нічого)
+ * Кастомер як «чия це людина»: назва, якщо вона не збігається з титулом (кастомер-особа — це і є співрозмовник,
+ * дублювати нічого)
  */
-export function inboxContactName(entry: Pick<InboxEntry, 'contact'>): string | null {
-  const { displayName, customer } = entry.contact;
-  if (!customer || !displayName || displayName === customer.name) return null;
-  return displayName;
+export function inboxCompany(entry: Pick<InboxEntry, 'contact'>): string | null {
+  const customer = entry.contact.customer;
+  if (!customer || customer.name === inboxTitle(entry)) return null;
+  return customer.name;
 }

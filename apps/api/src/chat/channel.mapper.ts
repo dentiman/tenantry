@@ -57,6 +57,13 @@ export const INBOX_SELECT = {
       id: true,
       displayName: true,
       customer: { select: { id: true, name: true, kind: true } },
+      // Перший телефон контакта — для рядка скриньки
+      addresses: {
+        where: { kind: 'phone' },
+        select: { value: true, normalized: true },
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+      },
     },
   },
 } satisfies Prisma.ConversationSelect;
@@ -117,6 +124,7 @@ export function toInboxEntry(
       id: row.contact.id,
       displayName: row.contact.displayName,
       customer: row.contact.customer,
+      phone: contactPhone(row.contact.addresses[0]),
     },
     assigneeId: row.assigneeId,
     lastMessageAt: row.lastMessageAt?.toISOString() ?? null,
@@ -124,6 +132,14 @@ export function toInboxEntry(
     awaitingReply: row.status !== 'RESOLVED' && lastMessageIsInbound,
     unreadCount: row.participants.find((p) => p.userId === viewerId)?.unreadCount ?? 0,
   };
+}
+
+/** E.164 з плюсом: нормалізований номер, інакше цифри адреси (`wa_id`) з плюсом; без адреси — `null` */
+function contactPhone(address: { value: string; normalized: string | null } | undefined): string | null {
+  if (!address) return null;
+  if (address.normalized) return address.normalized;
+  const digits = address.value.replace(/\D/g, '');
+  return digits ? `+${digits}` : null;
 }
 
 export function toContactResponse(contact: ContactRow): ChannelContactResponse {

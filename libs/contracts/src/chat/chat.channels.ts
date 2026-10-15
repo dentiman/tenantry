@@ -211,6 +211,8 @@ export const InboxEntrySchema = z.object({
     id: z.uuid(),
     displayName: z.string().nullable(),
     customer: ChannelContactCustomerSchema.nullable(),
+    /** Номер співрозмовника (E.164 з плюсом; для адреси без номера — `null`): у рядку скриньки, замість номера нашого каналу */
+    phone: z.string().nullable(),
   }),
   assigneeId: z.uuid().nullable(),
   lastMessageAt: z.iso.datetime().nullable(),

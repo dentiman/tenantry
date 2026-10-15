@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { conversationLabel } from './chat-labels';
-import { inboxContactName, inboxTitle, type InboxEntry } from './use-inbox';
+import { inboxCompany, inboxTitle, type InboxEntry } from './use-inbox';
 import type { Conversation } from './use-chat';
 
 // Підписи клієнтських розмов (CHAT-2a): що людина бачить у списку й заголовку.
@@ -15,17 +15,18 @@ const entry = (
   contact: {
     id: 'c1',
     displayName,
+    phone: '+380501112233',
     customer: customerName ? { id: 'k1', name: customerName, kind: 'ORGANIZATION' } : null,
   },
 });
 
 describe('inboxTitle', () => {
-  it('привʼязаний клієнт має перевагу над профільним імʼям', () => {
-    expect(inboxTitle(entry('Олена', 'ТОВ Ромашка'))).toBe('ТОВ Ромашка');
+  it('людина (профільне імʼя) має перевагу над привʼязаним кастомером', () => {
+    expect(inboxTitle(entry('Олена', 'ТОВ Ромашка'))).toBe('Олена');
   });
 
-  it('без клієнта береться профільне імʼя', () => {
-    expect(inboxTitle(entry('Олена', null))).toBe('Олена');
+  it('без імені береться привʼязаний кастомер', () => {
+    expect(inboxTitle(entry(null, 'ТОВ Ромашка'))).toBe('ТОВ Ромашка');
   });
 
   it('без обох — null: рендерер сам підставить «невідомий контакт»', () => {
@@ -33,15 +34,15 @@ describe('inboxTitle', () => {
   });
 });
 
-describe('inboxContactName', () => {
-  it('клієнт у титулі — людина, що пише, іде окремо', () => {
-    expect(inboxContactName(entry('Олена', 'ТОВ Ромашка'))).toBe('Олена');
+describe('inboxCompany', () => {
+  it('людина в титулі — кастомер іде другим', () => {
+    expect(inboxCompany(entry('Олена', 'ТОВ Ромашка'))).toBe('ТОВ Ромашка');
   });
 
-  it('збіг імені з клієнтом, відсутність клієнта чи імені — нічого дублювати', () => {
-    expect(inboxContactName(entry('Олена', 'Олена'))).toBeNull();
-    expect(inboxContactName(entry('Олена', null))).toBeNull();
-    expect(inboxContactName(entry(null, 'ТОВ Ромашка'))).toBeNull();
+  it('кастомер уже в титулі (збіг імені чи нема імені) або його нема — нічого дублювати', () => {
+    expect(inboxCompany(entry('Олена', 'Олена'))).toBeNull();
+    expect(inboxCompany(entry(null, 'ТОВ Ромашка'))).toBeNull();
+    expect(inboxCompany(entry('Олена', null))).toBeNull();
   });
 });
 

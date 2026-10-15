@@ -33,7 +33,7 @@ interface InboxBody {
     status: string;
     awaitingReply: boolean;
     assigneeId: string | null;
-    contact: { id: string; displayName: string | null; customer: { id: string; name: string } | null };
+    contact: { id: string; displayName: string | null; phone: string | null; customer: { id: string; name: string } | null };
     channel: { id: string; displayPhoneNumber: string | null };
     lastMessagePreview: string | null;
   }[];
@@ -334,7 +334,8 @@ describe('Customer inbox (e2e, CHAT-2a)', () => {
         id: older.conversationId,
         lastMessagePreview: 'свіже',
         channel: { displayPhoneNumber: '+1 555 000 0002' },
-        contact: { displayName: 'Давня' },
+        // Номер співрозмовника — E.164 з плюсом (з адреси без нормалізованого значення: цифри + плюс)
+        contact: { displayName: 'Давня', phone: expect.stringMatching(/^\+38050\d{7}$/) as string },
       });
     });
 

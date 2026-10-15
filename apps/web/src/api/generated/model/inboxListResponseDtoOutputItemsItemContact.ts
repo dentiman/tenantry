@@ -14,4 +14,6 @@ export type InboxListResponseDtoOutputItemsItemContact = {
   displayName: string | null;
   /** @nullable */
   customer: InboxListResponseDtoOutputItemsItemContactCustomer;
+  /** @nullable */
+  phone: string | null;
 };
