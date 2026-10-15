@@ -47,7 +47,7 @@ export function SimulateInboundPopover() {
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label={t('inbox.simulate.open')}>
+          <Button variant="ghost" size="icon-xs" aria-label={t('inbox.simulate.open')}>
             <FlaskConical />
           </Button>
         }

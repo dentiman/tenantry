@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@saas-skeleton/ui/components/ui/select';
 import { toast } from '@saas-skeleton/ui/components/ui/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@saas-skeleton/ui/components/ui/tooltip';
 import {
   getChannelInboxListQueryKey,
   useChannelChannels,
@@ -82,14 +83,22 @@ export function StartCustomerConversationDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button size="sm" variant="outline" className="w-full">
-            <MessageSquarePlus />
-            {t('outreach.open')}
-          </Button>
-        }
-      />
+      {/* Іконка з підказкою — у рядку фільтрів скриньки (місця під текстову кнопку там нема): тригер
+          діалогу і тригер підказки — один елемент, вкладені через `render` */}
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DialogTrigger
+              render={
+                <Button variant="outline" size="icon-xs" aria-label={t('outreach.open')}>
+                  <MessageSquarePlus />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>{t('outreach.open')}</TooltipContent>
+      </Tooltip>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('outreach.title')}</DialogTitle>

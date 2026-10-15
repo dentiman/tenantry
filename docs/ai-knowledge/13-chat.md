@@ -53,7 +53,7 @@ deliver shows the reason and "Resend". A customer's message that is not text (a 
 message stays at "sent" and the composer says "Delivery and read receipts are not tracked on this channel yet:
 a message stays at “sent”."
 
-To write to a customer first, open the "Customers" tab, click "New customer conversation", pick the
+To write to a customer first, open the "Customers" tab, click the "New customer conversation" icon at the right end of the "All / Unassigned / Mine" filter row, pick the
 "WhatsApp number", enter the "Customer phone" in international format (for example +380501234567) and
 click "Start". If that number already has an open conversation, it opens instead. Outside the 24-hour
 window only an approved template can be sent: click "Send template", enter the "Template name" and

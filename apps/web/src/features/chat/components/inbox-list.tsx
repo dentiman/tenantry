@@ -47,10 +47,7 @@ export function InboxList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 px-2 pt-2">
-        <StartCustomerConversationDialog />
-      </div>
-      <div className="flex shrink-0 items-center gap-2 border-b border-sidebar-border p-2">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-sidebar-border p-2">
         <ToggleGroup
           value={[filter]}
           onValueChange={(next: string[]) => {
@@ -62,12 +59,15 @@ export function InboxList() {
           aria-label={t('inbox.filter.label')}
         >
           {FILTERS.map((value) => (
-            <ToggleGroupItem key={value} value={value}>
+            <ToggleGroupItem key={value} value={value} className="px-1.5 text-xs">
               {t(`inbox.filter.${value}`)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        {import.meta.env.DEV && <SimulateInboundPopover />}
+        {/* Праворуч у тому ж рядку, що й фільтри: нова розмова — іконка з підказкою */}
+        <div className="ml-auto shrink-0">
+          <StartCustomerConversationDialog />
+        </div>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
@@ -126,6 +126,12 @@ export function InboxList() {
           </div>
         )}
       </ScrollArea>
+      {/* Лише в розробці: симулятор вхідних. У рядку фільтрів для нього місця нема — там нова розмова */}
+      {import.meta.env.DEV && (
+        <div className="flex shrink-0 justify-end border-t border-sidebar-border p-1">
+          <SimulateInboundPopover />
+        </div>
+      )}
     </div>
   );
 }
@@ -168,7 +174,8 @@ function InboxRow({ entry }: { entry: InboxEntry }) {
               <CustomerAvatar id={customer.id} kind={customer.kind} name={customer.name} />
             ) : (
               <Avatar>
-                <AvatarFallback colorSeed={entry.contact.id}>{initialsOf(title)}</AvatarFallback>
+                {/* Без привʼязки аватар сірий, без кольорового тінта: колір — ознака кастомера з CRM */}
+                <AvatarFallback>{initialsOf(title)}</AvatarFallback>
               </Avatar>
             )}
           </ItemMedia>

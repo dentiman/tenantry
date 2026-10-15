@@ -28,11 +28,22 @@ export function ChatSidebar() {
         onValueChange={(next) => {
           setTab(next as SidebarTab);
         }}
-        className="shrink-0 border-b border-sidebar-border p-2"
+        // Без відступів: таби займають усю ширину колонки й торкаються її країв; нижня риска — межа блока
+        className="shrink-0 gap-0 border-b border-sidebar-border"
       >
-        <TabsList className="w-full">
-          <TabsTrigger value="customers">{t('sidebar.tabs.customers')}</TabsTrigger>
-          <TabsTrigger value="internal">{t('sidebar.tabs.internal')}</TabsTrigger>
+        {/* Мінімалістичні таби (variant="line"): без жолоба, заокруглень і поверхні сегмента — лише підпис і
+            лінія-індикатор активного. Геометрія тригера підлаштована під нульові відступи списку: індикатор
+            лягає поверх нижньої межі, а не на 5px нижче, куди його ставить стоковий `p-[3px]` */}
+        <TabsList variant="line" className="w-full gap-0 rounded-none p-0">
+          {(['customers', 'internal'] as const).map((value) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="h-full rounded-none group-data-horizontal/tabs:after:-bottom-px"
+            >
+              {t(`sidebar.tabs.${value}`)}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </Tabs>
       <div className="min-h-0 flex-1">

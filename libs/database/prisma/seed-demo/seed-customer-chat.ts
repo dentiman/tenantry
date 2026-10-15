@@ -117,14 +117,18 @@ export async function seedCustomerChat(
   });
   const taken = new Set<string>();
   const people: Participant[] = [];
-  // Кожен другий із придатних, щоб привʼязані були розкидані по списку, а не лише перші
-  for (let i = 0; i < customers.length && people.length < LINKED; i += 2) {
-    const c = customers[i];
+  // Привʼязані розмови: переважно організації (кожна друга з придатних, щоб вони були розкидані по списку),
+  // але щотретя — кастомер-особа, щоб у скриньці видно обидві форми аватара (квадрат із будівлею й коло)
+  const orgs = customers.filter((c) => c.kind === 'ORGANIZATION').filter((_, i) => i % 2 === 0);
+  const persons = customers.filter((c) => c.kind === 'PERSON');
+  while (people.length < LINKED && (orgs.length > 0 || persons.length > 0)) {
+    const wantPerson = people.length % 3 === 2 && persons.length > 0;
+    const c = (wantPerson ? persons : orgs.length > 0 ? orgs : persons).shift();
     if (!c?.phone || taken.has(c.phone)) continue;
     taken.add(c.phone);
     people.push({
       customerId: c.id,
-      // Пише людина, а не компанія: для організації береться її основний контакт
+      // Пише людина, а не компанія: для організації береться її основний контакт, для особи — вона сама
       displayName: c.kind === 'ORGANIZATION' ? (c.contacts[0]?.name ?? c.name) : c.name,
       phone: c.phone,
     });
