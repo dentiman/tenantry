@@ -31,6 +31,11 @@ const bubbleVariants = cva(
           '*:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-background [&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted [&>[data-slot=bubble-content]:is(button,a):hover]:text-foreground dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-input/30',
         ghost:
           'border-none *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted [&>[data-slot=bubble-content]:is(button,a):hover]:text-foreground dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted/50',
+        // ЛОКАЛЬНА ПРАВКА реєстру: бульбашка в палітрі месенджера. Усі кольори — зі змінних, які задає споживач
+        // (`--bubble-bg`, `--bubble-fg`, `--bubble-shadow`), і жодного `dark:`-правила: такі правила інших
+        // варіантів мають вищу специфічність і перебивали б палітру, яку веде сама змінна теми
+        themed:
+          '*:data-[slot=bubble-content]:bg-(--bubble-bg) *:data-[slot=bubble-content]:text-(--bubble-fg) *:data-[slot=bubble-content]:rounded-lg *:data-[slot=bubble-content]:shadow-(--bubble-shadow)',
         destructive:
           '*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-destructive dark:*:data-[slot=bubble-content]:bg-destructive/20 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/20 dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/30',
       },

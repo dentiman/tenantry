@@ -1,0 +1,65 @@
+/*
+ * Вигляд клієнтської розмови (CHAT-3b3+): палітра й шпалери в стилі WhatsApp. Поки статично для всіх
+ * каналів; дві речі зроблено під майбутній розвід по каналах — усі кольори тут змінні `--chat-*`, а
+ * схема ввімкнена атрибутом `data-chat-theme` (`whatsapp`). Fake, Telegram чи інший канал отримає
+ * власний блок змінних без зміни компонентів.
+ *
+ * Шпалери — власний візерунок із простих піктограм (`assets/chat-doodle.svg`), який працює як МАСКА:
+ * колір малюнка береться зі змінної теми, тож один файл править і для світлої, і для темної.
+ */
+
+/* Лише колір «прочитано» потрібен усюди, де є галочки (і в командних розмовах) */
+:root {
+  --chat-tick-read: #0284c7;
+}
+.dark {
+  --chat-tick-read: #38bdf8;
+}
+
+[data-chat-theme='whatsapp'] {
+  --chat-wallpaper: #efeae2;
+  --chat-doodle: #d9d2c5;
+  --chat-bubble-other: #ffffff;
+  --chat-bubble-own: #d9fdd3;
+  --chat-bubble-note: #fff4c2;
+  --chat-text: #111b21;
+  --chat-meta: #667781;
+  --chat-chip: rgb(255 255 255 / 0.9);
+  --chat-chip-text: #54656f;
+  --chat-bubble-shadow: 0 1px 0.5px rgb(11 20 26 / 0.13);
+  --chat-tick-read: #53bdeb;
+}
+
+.dark [data-chat-theme='whatsapp'] {
+  --chat-wallpaper: #0b141a;
+  --chat-doodle: #1b272e;
+  --chat-bubble-other: #202c33;
+  --chat-bubble-own: #005c4b;
+  --chat-bubble-note: #3b3414;
+  --chat-text: #e9edef;
+  --chat-meta: #8696a0;
+  --chat-chip: rgb(24 34 41 / 0.92);
+  --chat-chip-text: #8696a0;
+  --chat-bubble-shadow: 0 1px 0.5px rgb(0 0 0 / 0.3);
+  --chat-tick-read: #53bdeb;
+}
+
+/* Область стрічки: фон + візерунок позаду вмісту (isolation тримає від'ємний z-index усередині) */
+[data-chat-theme] {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--chat-wallpaper);
+}
+
+[data-chat-theme]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--chat-doodle);
+  -webkit-mask-image: url('./assets/chat-doodle.svg');
+  mask-image: url('./assets/chat-doodle.svg');
+  -webkit-mask-size: 250px 250px;
+  mask-size: 250px 250px;
+}

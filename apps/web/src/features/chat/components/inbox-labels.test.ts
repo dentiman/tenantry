@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { conversationLabel } from './chat-labels';
-import { inboxTitle, type InboxEntry } from './use-inbox';
+import { inboxContactName, inboxTitle, type InboxEntry } from './use-inbox';
 import type { Conversation } from './use-chat';
 
 // Підписи клієнтських розмов (CHAT-2a): що людина бачить у списку й заголовку.
@@ -15,21 +15,33 @@ const entry = (
   contact: {
     id: 'c1',
     displayName,
-    customer: customerName ? { id: 'k1', name: customerName } : null,
+    customer: customerName ? { id: 'k1', name: customerName, kind: 'ORGANIZATION' } : null,
   },
 });
 
 describe('inboxTitle', () => {
-  it('профільне імʼя має перевагу над привʼязаним клієнтом', () => {
-    expect(inboxTitle(entry('Олена', 'ТОВ Ромашка'))).toBe('Олена');
+  it('привʼязаний клієнт має перевагу над профільним імʼям', () => {
+    expect(inboxTitle(entry('Олена', 'ТОВ Ромашка'))).toBe('ТОВ Ромашка');
   });
 
-  it('без імені береться привʼязаний клієнт', () => {
-    expect(inboxTitle(entry(null, 'ТОВ Ромашка'))).toBe('ТОВ Ромашка');
+  it('без клієнта береться профільне імʼя', () => {
+    expect(inboxTitle(entry('Олена', null))).toBe('Олена');
   });
 
   it('без обох — null: рендерер сам підставить «невідомий контакт»', () => {
     expect(inboxTitle(entry(null, null))).toBeNull();
+  });
+});
+
+describe('inboxContactName', () => {
+  it('клієнт у титулі — людина, що пише, іде окремо', () => {
+    expect(inboxContactName(entry('Олена', 'ТОВ Ромашка'))).toBe('Олена');
+  });
+
+  it('збіг імені з клієнтом, відсутність клієнта чи імені — нічого дублювати', () => {
+    expect(inboxContactName(entry('Олена', 'Олена'))).toBeNull();
+    expect(inboxContactName(entry('Олена', null))).toBeNull();
+    expect(inboxContactName(entry(null, 'ТОВ Ромашка'))).toBeNull();
   });
 });
 

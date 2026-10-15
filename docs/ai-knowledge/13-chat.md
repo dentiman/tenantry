@@ -9,9 +9,12 @@ area: general
 
 Open **Chat** in the left rail. The list on the left has two tabs: "Customers" (conversations
 that arrive from a messaging channel; this tab opens first) and "Team" (conversations with
-colleagues). Each customer conversation shows a small label with the channel it came through
-("WhatsApp", or "Fake" for the built-in test channel), the channel's phone number and the linked
-customer.
+colleagues). Each customer conversation row shows the linked customer's avatar and name (or the contact's
+profile name when no customer is linked), the last message, and underneath a small label with the
+channel it came through ("WhatsApp", or "Fake" for the built-in test channel), the person writing
+and the channel's phone number. Customer conversations are drawn like a messenger chat: your
+messages are green, the customer's are white (dark grey in the dark theme), over a patterned
+background, with larger tick marks (grey = sent or delivered, blue = read).
 
 ## Team conversations
 

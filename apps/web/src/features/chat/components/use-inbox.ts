@@ -25,7 +25,20 @@ export function flattenInbox(pages: { items: InboxEntry[] }[] | undefined): Inbo
   return pages?.flatMap((page) => page.items) ?? [];
 }
 
-/** Підпис рядка: імʼя з профілю провайдера; без нього — привʼязаний клієнт; інакше `null` (рендерер підставить текст) */
+/**
+ * Титул рядка скриньки: привʼязаний клієнт (його аватар і назва — те, що менеджер знає з CRM), інакше
+ * імʼя з профілю провайдера; без обох — `null` (рендерер підставить текст)
+ */
 export function inboxTitle(entry: Pick<InboxEntry, 'contact'>): string | null {
-  return entry.contact.displayName ?? entry.contact.customer?.name ?? null;
+  return entry.contact.customer?.name ?? entry.contact.displayName ?? null;
+}
+
+/**
+ * Хто саме з клієнта пише — для третього рядка, коли титул уже клієнт: імʼя з профілю, якщо воно
+ * відрізняється від титулу (особа-кастомер пише від свого імені, тож дублювати нічого)
+ */
+export function inboxContactName(entry: Pick<InboxEntry, 'contact'>): string | null {
+  const { displayName, customer } = entry.contact;
+  if (!customer || !displayName || displayName === customer.name) return null;
+  return displayName;
 }

@@ -68,6 +68,39 @@ function getInitials(name: string): string {
 }
 
 /**
+ * Аватар кастомера окремо від тексту блоку — той самий вигляд там, де поруч не два рядки
+ * `CustomerIdentity`, а власна розкладка (скринька чату: титул, прев'ю, мітка каналу).
+ * Форма кодує `kind`: фізособа — коло з ініціалами, організація — скруглений квадрат із будівлею.
+ */
+export function CustomerAvatar({
+  id,
+  kind,
+  name,
+  size = 'default',
+}: {
+  id: string;
+  kind: CustomerKind;
+  name: string;
+  size?: 'sm' | 'default' | 'lg';
+}) {
+  const isOrganization = kind === 'ORGANIZATION';
+  return (
+    // rounded-md перекриває rounded-full примітива (і його рамку в ::after) —
+    // тому tailwind-merge, а не власна верстка аватара
+    <Avatar size={size} className={isOrganization ? 'rounded-md after:rounded-md' : undefined}>
+      <AvatarFallback colorSeed={id} className={isOrganization ? 'rounded-md' : undefined}>
+        {isOrganization ? (
+          // Декоративна: тип уже названо текстом у гріді/картці
+          <Building2 aria-hidden className={ICON_SIZE[size]} />
+        ) : (
+          getInitials(name)
+        )}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+/**
  * Ідентичність кастомера одним блоком — доменний аналог `UserIdentity` (`libs/ui`):
  * медіа зліва, два рядки тексту справа. Живе в застосунку, а не в пакеті, бо
  * `Customer` існує тільки в tenant-плані (у platform-web його немає).
@@ -102,7 +135,6 @@ export function CustomerIdentity({
   className,
   textClassName,
 }: CustomerIdentityProps) {
-  const isOrganization = kind === 'ORGANIZATION';
   const isHeader = variant === 'header';
   // `find` по списку, а не ланцюжок `||`: порожній рядок (API віддає його замість
   // null у полях, які ніколи не заповнювали) мусить пропускатись далі, а `??` його
@@ -122,21 +154,7 @@ export function CustomerIdentity({
           бо розрахований на багаторядковий опис — тут рядків рівно два.
           Варіант у перевизначенні обовʼязковий — про причину див. `UserIdentity` */}
       <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
-        {/* rounded-md перекриває rounded-full примітива (і його рамку в ::after) —
-            тому tailwind-merge, а не власна верстка аватара */}
-        <Avatar size={size} className={isOrganization ? 'rounded-md after:rounded-md' : undefined}>
-          <AvatarFallback
-            colorSeed={id}
-            className={isOrganization ? 'rounded-md' : undefined}
-          >
-            {isOrganization ? (
-              // Декоративна: тип уже названо текстом у гріді/картці
-              <Building2 aria-hidden className={ICON_SIZE[size]} />
-            ) : (
-              getInitials(name)
-            )}
-          </AvatarFallback>
-        </Avatar>
+        <CustomerAvatar id={id} kind={kind} name={name} size={size} />
       </ItemMedia>
       <ItemContent className={['min-w-0 gap-0', textClassName].filter(Boolean).join(' ')}>
         {/* Стискання рядків замість стокових snug/normal: повітря, яке примітив

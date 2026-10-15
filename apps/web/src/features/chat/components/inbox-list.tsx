@@ -25,9 +25,10 @@ import { ToggleGroup, ToggleGroupItem } from '@saas-skeleton/ui/components/ui/to
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import type { ChannelInboxListFilter } from '../../../api/generated/model/channelInboxListFilter';
 import { compactTime, initialsOf } from './chat-labels';
+import { CustomerAvatar } from '../../customers/components/customer-identity';
 import { SimulateInboundPopover } from './simulate-inbound';
 import { StartCustomerConversationDialog } from './start-customer-conversation-dialog';
-import { flattenInbox, inboxTitle, useInboxList, type InboxEntry } from './use-inbox';
+import { flattenInbox, inboxContactName, inboxTitle, useInboxList, type InboxEntry } from './use-inbox';
 
 const FILTERS: ChannelInboxListFilter[] = ['all', 'unassigned', 'mine'];
 
@@ -128,12 +129,23 @@ export function InboxList() {
   );
 }
 
+/**
+ * Рядок скриньки. Верх — ідентичність у розкладці `UserIdentity`/`CustomerIdentity` (аватар 32px,
+ * титул `leading-tight`, другий рядок `text-xs`), але другий рядок тут не дані кастомера, а прев'ю
+ * останнього повідомлення, тож блок складено з тих самих примітивів, а не викликом готового
+ * компонента. Низ — мітка каналу — на всю ширину рядка під аватаром, а не в колонці тексту.
+ * Привʼязаний контакт показується аватаром кастомера (`CustomerAvatar`: організація — квадрат
+ * із будівлею, особа — коло); без привʼязки — коло з ініціалами людини.
+ */
 function InboxRow({ entry }: { entry: InboxEntry }) {
   const { t } = useTranslation('chat');
   const { conversationId } = useParams({ strict: false });
   const isActive = conversationId === entry.id;
   const title = inboxTitle(entry) ?? t('inbox.unknownContact');
+  const customer = entry.contact.customer;
   const channelNumber = entry.channel.displayPhoneNumber;
+  // Клієнт уже в титулі — третій рядок називає людину, що пише; без клієнта — що привʼязки ще нема
+  const who = customer ? inboxContactName(entry) : t('inbox.notLinked');
 
   return (
     <Link
@@ -141,52 +153,61 @@ function InboxRow({ entry }: { entry: InboxEntry }) {
       params={{ conversationId: entry.id }}
       className="block outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
     >
-      <Item
-        size="sm"
-        className={cn('rounded-none', isActive ? 'bg-accent' : 'hover:bg-accent/60')}
+      <div
+        className={cn(
+          'flex flex-col gap-1.5 px-3 py-2.5 transition-colors',
+          isActive ? 'bg-accent' : 'hover:bg-accent/60',
+        )}
         data-active={isActive}
       >
-        <ItemMedia>
-          <Avatar className="size-9">
-            <AvatarFallback>{initialsOf(title)}</AvatarFallback>
-          </Avatar>
-        </ItemMedia>
-        <ItemContent className="min-w-0 gap-0.5">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <ItemTitle className={cn('truncate', entry.awaitingReply && 'font-semibold')}>
-              {title}
-            </ItemTitle>
-            <span className="ml-auto shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-              {compactTime(entry.lastMessageAt)}
-            </span>
-          </div>
-          <div className="flex min-w-0 items-center gap-2">
-            <ItemDescription className="truncate">
-              {entry.lastMessagePreview ?? t('list.noMessages')}
-            </ItemDescription>
-            {entry.awaitingReply && (
-              <span
-                className="ml-auto size-2 shrink-0 rounded-full bg-primary"
-                role="img"
-                aria-label={t('inbox.awaitingReply')}
-              />
+        <Item size="sm" className="w-full min-w-0 flex-nowrap gap-3 p-0">
+          <ItemMedia className="group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center">
+            {customer ? (
+              <CustomerAvatar id={customer.id} kind={customer.kind} name={customer.name} />
+            ) : (
+              <Avatar>
+                <AvatarFallback colorSeed={entry.contact.id}>{initialsOf(title)}</AvatarFallback>
+              </Avatar>
             )}
-          </div>
-          {/* Провайдер, номер каналу і привʼязаний клієнт — окремим рядком: у скриньці кількох
-              номерів і провайдерів без цього не видно, куди написали, а без клієнта — що людина
-              ще не привʼязана */}
-          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[0.625rem]">
-              {t(`inbox.provider.${entry.channel.provider}`, { defaultValue: entry.channel.provider })}
-            </Badge>
-            <span className="truncate">
-              {[entry.contact.customer?.name ?? t('inbox.notLinked'), channelNumber]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-          </p>
-        </ItemContent>
-      </Item>
+          </ItemMedia>
+          <ItemContent className="min-w-0 gap-0">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <ItemTitle
+                className={cn(
+                  'min-w-0 max-w-full truncate leading-tight',
+                  entry.awaitingReply && 'font-semibold',
+                )}
+                title={title}
+              >
+                {title}
+              </ItemTitle>
+              <span className="ml-auto shrink-0 text-xs leading-tight whitespace-nowrap text-muted-foreground">
+                {compactTime(entry.lastMessageAt)}
+              </span>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <ItemDescription className="line-clamp-none truncate text-xs leading-tight">
+                {entry.lastMessagePreview ?? t('list.noMessages')}
+              </ItemDescription>
+              {entry.awaitingReply && (
+                <span
+                  className="ml-auto size-2 shrink-0 rounded-full bg-primary"
+                  role="img"
+                  aria-label={t('inbox.awaitingReply')}
+                />
+              )}
+            </div>
+          </ItemContent>
+        </Item>
+        {/* Провайдер, хто пише і номер каналу — на всю ширину: у скриньці кількох номерів і провайдерів без
+            цього не видно, куди написали, а без клієнта — що людина ще не привʼязана */}
+        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[0.625rem]">
+            {t(`inbox.provider.${entry.channel.provider}`, { defaultValue: entry.channel.provider })}
+          </Badge>
+          <span className="truncate">{[who, channelNumber].filter(Boolean).join(' · ')}</span>
+        </p>
+      </div>
     </Link>
   );
 }

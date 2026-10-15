@@ -31,6 +31,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { formatDate, formatDateTime, formatTime } from '@saas-skeleton/ui/lib/format';
 import { cn } from '@saas-skeleton/ui/lib/utils';
+import '../chat-theme.css';
 import { CHAT_COLUMN } from './chat-layout';
 import { useChatOutboxStore, type OutboxMessage } from '../stores/chat-outbox.store';
 import { initialsOf, systemEntryText } from './chat-labels';
@@ -121,7 +122,10 @@ export function ChatTranscript({
         initialReportedSeq={conversation.lastReadSeq}
         onRead={markRead}
       />
-      <MessageScroller className="min-h-0 flex-1">
+      <MessageScroller
+        className="min-h-0 flex-1"
+        data-chat-theme={conversation.kind === 'CUSTOMER' ? CHAT_THEME : undefined}
+      >
         <MessageScrollerViewport className="px-4 py-3">
           {/* `justify-end` — коротка розмова притискається до композера, як у
               будь-якому месенджері. Коли вміст переростає вʼюпорт, вільного
@@ -130,6 +134,7 @@ export function ChatTranscript({
             {/* Догортання вгору: як тільки маркер початку видно — тягнемо старішу
                 сторінку. Курсор порожній — початок розмови, і маркер це каже */}
             <TranscriptStart
+              themed={conversation.kind === 'CUSTOMER'}
               hasMore={query.hasNextPage}
               isFetching={query.isFetchingNextPage}
               onReach={() => {
@@ -258,10 +263,12 @@ function TranscriptStart({
   hasMore,
   isFetching,
   onReach,
+  themed,
 }: {
   hasMore: boolean;
   isFetching: boolean;
   onReach: () => void;
+  themed: boolean;
 }) {
   const { t } = useTranslation('chat');
   const ref = useRef<HTMLDivElement | null>(null);
@@ -289,7 +296,11 @@ function TranscriptStart({
     <div ref={ref} className="flex justify-center py-1">
       {isFetching ? (
         <Spinner aria-label={t('transcript.loadingOlder')} />
-      ) : hasMore ? null : (
+      ) : hasMore ? null : themed ? (
+        <Marker className="justify-center">
+          <MarkerContent className={THEMED_CHIP}>{t('transcript.beginning')}</MarkerContent>
+        </Marker>
+      ) : (
         <Marker variant="separator" className={TRANSCRIPT_MARKER}>
           <MarkerContent>{t('transcript.beginning')}</MarkerContent>
         </Marker>
@@ -315,8 +326,14 @@ function TranscriptRow({
 }) {
   const { t } = useTranslation('chat');
 
+  const themed = conversation.kind === 'CUSTOMER';
+
   if (row.kind === 'day') {
-    return (
+    return themed ? (
+      <Marker className="justify-center">
+        <MarkerContent className={THEMED_CHIP}>{row.label}</MarkerContent>
+      </Marker>
+    ) : (
       <Marker variant="separator" className={TRANSCRIPT_MARKER}>
         <MarkerContent>{row.label}</MarkerContent>
       </Marker>
@@ -329,10 +346,14 @@ function TranscriptRow({
       <MessageGroup>
         <Message align="end">
           <MessageContent>
-            <Bubble align="end" variant={isFailed ? 'destructive' : 'tinted'}>
+            <Bubble
+              align="end"
+              variant={isFailed ? 'destructive' : themed ? 'themed' : 'tinted'}
+              className={themed && !isFailed ? themedBubbleClass('own', false) : undefined}
+            >
               <BubbleBody
                 body={row.entry.body}
-                tone={isFailed ? 'failed' : 'own'}
+                tone={isFailed ? 'failed' : themed ? 'themed' : 'own'}
                 meta={
                   <>
                     {/* Годинник замість рядка «Sending…» — форма месенджера:
@@ -388,11 +409,16 @@ function TranscriptRow({
 
   if (message.kind === 'SYSTEM') {
     const text = systemEntryText(message, t);
-    return text ? (
+    if (!text) return null;
+    return themed ? (
+      <Marker className="justify-center">
+        <MarkerContent className={THEMED_CHIP}>{text}</MarkerContent>
+      </Marker>
+    ) : (
       <Marker variant="separator" className={TRANSCRIPT_MARKER}>
         <MarkerContent>{text}</MarkerContent>
       </Marker>
-    ) : null;
+    );
   }
 
   // Вихідне клієнтові лежить на боці команди незалежно від того, хто з колег його написав
@@ -407,7 +433,8 @@ function TranscriptRow({
   return (
     <MessageGroup>
       <Message align={isOwn ? 'end' : 'start'}>
-        {!isOwn && (
+        {/* У розмові 1:1 з клієнтом аватар і підпис співрозмовника зайві (як у WhatsApp): він один */}
+        {!isOwn && !themed && (
           <MessageAvatar>
             <Avatar className="size-8">
               {author?.avatarUrl ? <AvatarImage src={author.avatarUrl} alt={label} /> : null}
@@ -422,17 +449,25 @@ function TranscriptRow({
               {t('message.internalNote')} · {label}
             </MessageHeader>
           ) : (
-            (!isOwn || (isOutbound && message.senderId !== viewerId)) &&
+            (themed
+              ? isOutbound && message.senderId !== viewerId
+              : !isOwn || (isOutbound && message.senderId !== viewerId)) &&
             !groupedWithPrevious && <MessageHeader>{label}</MessageHeader>
           )}
           <Bubble
             align={isOwn ? 'end' : 'start'}
-            variant={isNote ? 'muted' : isOwn ? 'tinted' : 'muted'}
-            className={isNote ? 'border border-dashed border-border' : undefined}
+            variant={themed ? 'themed' : isNote ? 'muted' : isOwn ? 'tinted' : 'muted'}
+            className={
+              themed
+                ? themedBubbleClass(isNote ? 'note' : isOwn ? 'own' : 'other', !groupedWithPrevious)
+                : isNote
+                  ? 'border border-dashed border-border'
+                  : undefined
+            }
           >
             <BubbleBody
               body={templateText(message, t) ?? unsupportedText(message, t) ?? message.body ?? ''}
-              tone={isNote ? 'other' : isOwn ? 'own' : 'other'}
+              tone={themed ? 'themed' : isNote ? 'other' : isOwn ? 'own' : 'other'}
               meta={
                 <>
                   <MessageTime iso={message.createdAt} />
@@ -477,15 +512,56 @@ function DeliveryMark({ status }: { status: ChatMessage['status'] }) {
   const text = t(`delivery.${icon}`);
   return (
     <>
-      {icon === 'pending' && <Clock className="size-3" />}
-      {icon === 'sent' && <Check className="size-3" />}
-      {icon === 'delivered' && <CheckCheck className="size-3" />}
-      {icon === 'read' && <CheckCheck className="size-3 text-sky-600 dark:text-sky-400" />}
-      {icon === 'failed' && <AlertCircle className="size-3 text-destructive" />}
+      {/* Галочки більші й жирніші за кегль часу: це стан, який агент має бачити одним поглядом;
+          «прочитано» — колір `--chat-tick-read` (синій у кожній схемі) */}
+      {icon === 'pending' && <Clock className="size-3.5" strokeWidth={2.5} />}
+      {icon === 'sent' && <Check className="size-4" strokeWidth={2.75} />}
+      {icon === 'delivered' && <CheckCheck className="size-4" strokeWidth={2.75} />}
+      {icon === 'read' && (
+        <CheckCheck className="size-4 text-(--chat-tick-read)" strokeWidth={2.75} />
+      )}
+      {icon === 'failed' && <AlertCircle className="size-4 text-destructive" />}
       <span className="sr-only">{text}</span>
     </>
   );
 }
+
+/**
+ * Схема кольорів клієнтської розмови (`chat-theme.css`). Поки одна для всіх каналів — WhatsApp; розвід по
+ * провайдеру (`conversation.channel.provider` → своя схема) додається заміною цієї константи на функцію.
+ */
+const CHAT_THEME = 'whatsapp';
+
+type BubbleKind = 'own' | 'other' | 'note';
+
+/**
+ * Бульбашка клієнтської розмови в палітрі схеми: колір фону й тексту зі змінних, радіус 8px (у
+ * WhatsApp бульбашка менш округла за стокову) і «хвостик» — прямий верхній кут на боці того, хто
+ * говорить, лише на першій репліці групи. Перевизначення тими ж селекторами, що й варіанти
+ * `Bubble` (`*:data-[slot=bubble-content]`), тож tailwind-merge лишає останнє слово за нами.
+ */
+function themedBubbleClass(kind: BubbleKind, first: boolean): string {
+  // Повні літерали класів, а не збирання рядка: Tailwind знаходить утиліти скануванням тексту
+  const palette = {
+    own: '[--bubble-bg:var(--chat-bubble-own)]',
+    other: '[--bubble-bg:var(--chat-bubble-other)]',
+    note: '[--bubble-bg:var(--chat-bubble-note)] *:data-[slot=bubble-content]:border-dashed *:data-[slot=bubble-content]:border-amber-500/50',
+  }[kind];
+  const tail = first
+    ? kind === 'own'
+      ? '*:data-[slot=bubble-content]:rounded-tr-none'
+      : '*:data-[slot=bubble-content]:rounded-tl-none'
+    : '';
+  return cn(
+    palette,
+    '[--bubble-fg:var(--chat-text)] [--bubble-shadow:var(--chat-bubble-shadow)]',
+    tail,
+  );
+}
+
+/** Службовий підпис (день, системний запис) на шпалерах — «таблетка», як у WhatsApp, а не лінія з текстом */
+const THEMED_CHIP =
+  'rounded-md bg-(--chat-chip) px-2.5 py-1 text-xs text-(--chat-chip-text) shadow-(--chat-bubble-shadow)';
 
 /** Кегль мітки один на всі стани — вона однакова і в чужій, і в своїй бульбашці */
 const META_CLASS = 'text-[0.6875rem] leading-none font-normal tabular-nums';
@@ -495,6 +571,8 @@ const META_TONE = {
   // синьому не видно. Мітки читаються як у чужій бульбашці
   own: 'text-muted-foreground',
   other: 'text-muted-foreground',
+  // Колір часу й галочок у схемі розмови (`--chat-meta`)
+  themed: 'text-(--chat-meta)',
   failed: 'text-destructive/70',
 } as const;
 

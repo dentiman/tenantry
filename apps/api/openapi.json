@@ -9012,11 +9012,19 @@
                         },
                         "name": {
                           "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "ORGANIZATION",
+                            "PERSON"
+                          ]
                         }
                       },
                       "required": [
                         "id",
-                        "name"
+                        "name",
+                        "kind"
                       ],
                       "additionalProperties": false,
                       "nullable": true
@@ -9193,11 +9201,19 @@
               },
               "name": {
                 "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ORGANIZATION",
+                  "PERSON"
+                ]
               }
             },
             "required": [
               "id",
-              "name"
+              "name",
+              "kind"
             ],
             "additionalProperties": false,
             "nullable": true

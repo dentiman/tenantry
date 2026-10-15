@@ -56,7 +56,7 @@ export const INBOX_SELECT = {
     select: {
       id: true,
       displayName: true,
-      customer: { select: { id: true, name: true } },
+      customer: { select: { id: true, name: true, kind: true } },
     },
   },
 } satisfies Prisma.ConversationSelect;
@@ -68,7 +68,7 @@ export const CONTACT_SELECT = {
   channelId: true,
   displayName: true,
   lastInboundAt: true,
-  customer: { select: { id: true, name: true } },
+  customer: { select: { id: true, name: true, kind: true } },
   addresses: { select: { kind: true, value: true }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.ChannelContactSelect;
 

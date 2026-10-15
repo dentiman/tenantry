@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CustomerKindSchema } from '../customer/customer.schema';
 import { CursorQuerySchema, cursorResponseSchema } from '../pagination/pagination.schema';
 import { ChatMessageFailureSchema, ConversationStatusSchema } from './chat.schema';
 import { AccountTokenSchema } from './chat.whatsapp';
@@ -173,6 +174,8 @@ export const FakeChannelSetupResponseSchema = z.object({
 export const ChannelContactCustomerSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  /** Від нього залежить аватар (організація — квадрат із будівлею, особа — коло з ініціалами), як у картці кастомера */
+  kind: CustomerKindSchema,
 });
 
 export const ChannelContactAddressResponseSchema = z.object({
