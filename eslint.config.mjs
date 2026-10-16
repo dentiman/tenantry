@@ -51,6 +51,12 @@ const FRONTEND_LIBS = {
   ],
   message: 'libs/shared — серверний шар; UI/i18n фронтендів йому не належать.',
 };
+const SYSTEM_PRISMA = {
+  group: ['@saas-skeleton/database'],
+  importNames: ['SystemPrismaService', 'SystemPrismaModule'],
+  message:
+    'Tenant API працює лише під RLS: BYPASSRLS-клієнт (saas_platform) тут недоступний і в DI не зареєстрований. Крос-tenant робота — у worker (cron) чи platform-api (docs/multi-tenancy-architecture.md §4).',
+};
 const restrictImports = (...patterns) => ({
   'no-restricted-imports': ['error', { patterns }],
 });
@@ -143,7 +149,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/api/src/**/*.ts', 'apps/platform-api/src/**/*.ts'],
+    files: ['apps/api/src/**/*.ts'],
+    rules: restrictImports(CROSS_APP, MODULE_INTERNALS, SYSTEM_PRISMA),
+  },
+  {
+    files: ['apps/platform-api/src/**/*.ts'],
     rules: restrictImports(CROSS_APP, MODULE_INTERNALS),
   },
   {

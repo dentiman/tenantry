@@ -6,7 +6,7 @@ import {
   Prisma,
   PrismaModule,
   PrismaService,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenancyModule,
   TenantContextService,
   TenantTransactions,
@@ -40,7 +40,7 @@ describe('AI cost ledger (e2e, real Postgres)', () => {
       stdio: 'ignore',
     });
     module = await Test.createTestingModule({
-      imports: [TenancyModule.forRoot(), PrismaModule],
+      imports: [TenancyModule.forRoot(), PrismaModule, SystemPrismaModule],
     }).compile();
     await module.init();
     system = module.get(SystemPrismaService);

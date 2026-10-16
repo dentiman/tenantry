@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { PrismaService, SystemPrismaService, TenantContextService } from '@saas-skeleton/database';
+import { PrismaService, SystemPrismaModule, SystemPrismaService, TenantContextService } from '@saas-skeleton/database';
 import {
   createAndLoginTestUser,
   createTestUser,
@@ -28,7 +28,7 @@ describe('Tenant isolation (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [AppModule, SystemPrismaModule],
     }).compile();
 
     app = moduleRef.createNestApplication();

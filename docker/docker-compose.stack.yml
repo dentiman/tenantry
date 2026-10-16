@@ -53,11 +53,17 @@ x-update-hostport: &update-hostport
   order: stop-first
   failure_action: rollback
 
-# DB-URL-и: паролі ролей фіксовані в ensure-roles.ts (postgres внутрішній, порт не публікується).
-x-db-env: &db-env
-  DATABASE_URL: postgresql://saas_app:saas_app@postgres:5432/saas_skeleton
-  MIGRATE_DATABASE_URL: postgresql://saas_migrator:saas_migrator@postgres:5432/saas_skeleton
-  PLATFORM_DATABASE_URL: postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton
+# DB-URL-и, по одному на роль: кожен сервіс отримує ЛИШЕ ролі, які йому потрібні
+# (docs/multi-tenancy-architecture.md §4). Паролі — змінні DB_*_PASSWORD (docker/deploy.env,
+# на Hetzner перекриваються /etc/saas/deploy.env); ті самі змінні `pnpm db:roles` застосовує
+# до ролей у Postgres. Без змінної стек не деплоїться (`:?`), а не підставляє дефолт мовчки.
+# Пароль потрапляє в URL як є — лише [A-Za-z0-9_-], без URL-спецсимволів.
+x-db-app-env: &db-app-env
+  DATABASE_URL: postgresql://saas_app:${DB_APP_PASSWORD:?set DB_APP_PASSWORD}@postgres:5432/saas_skeleton
+x-db-migrate-env: &db-migrate-env
+  MIGRATE_DATABASE_URL: postgresql://saas_migrator:${DB_MIGRATOR_PASSWORD:?set DB_MIGRATOR_PASSWORD}@postgres:5432/saas_skeleton
+x-db-platform-env: &db-platform-env
+  PLATFORM_DATABASE_URL: postgresql://saas_platform:${DB_PLATFORM_PASSWORD:?set DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton
 
 # Доступ до брокера. Потрібен ОБОМ процесам, але з різних причин: api тримає на
 # ньому adapter і presence-leases, воркер — лише headless-емітер сповіщень
@@ -198,7 +204,9 @@ services:
     # Override: спершу міграції (saas_migrator), потім старт (saas_app)
     entrypoint: ["/usr/src/app/docker/entrypoint-api.sh"]
     environment:
-      <<: [*db-env, *s3-env, *realtime-env, *ai-env]
+      # saas_app — рантайм під RLS; saas_migrator — лише entrypoint-міграції. BYPASSRLS-ролі
+      # (saas_platform) тут немає: tenant API її не використовує (docs/multi-tenancy-architecture.md §4)
+      <<: [*db-app-env, *db-migrate-env, *s3-env, *realtime-env, *ai-env]
       NODE_ENV: production
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
@@ -242,10 +250,11 @@ services:
     image: ${PLATFORM_API_IMAGE}
     environment:
       # AUTH-2 (R-15): platform-api — другий споживач throttler-а на Valkey,
-      # тому *realtime-broker-env тут, а не тільки *db-env
+      # тому *realtime-broker-env тут, а не тільки БД
       # AI-5a: *ai-env — env-дефолти, які екран налаштувань AI показує як «з environment»;
       # AI_SECRETS_KEY — шифрування ключа провайдера (ключа самого провайдера тут немає)
-      <<: [*db-env, *realtime-broker-env, *ai-env]
+      # БД — лише saas_platform: control plane не має tenant-клієнта і не мігрує
+      <<: [*db-platform-env, *realtime-broker-env, *ai-env]
       AI_SECRETS_KEY: ${AI_SECRETS_KEY:-}
       AI_BASE_URL: ${AI_BASE_URL:-}
       NODE_ENV: production
@@ -279,7 +288,8 @@ services:
   worker:
     image: ${WORKER_IMAGE}
     environment:
-      <<: [*db-env, *s3-env, *realtime-broker-env, *ai-env, *ai-provider-env]
+      # saas_app — підписники під RLS; saas_platform — системні cron-джоби (крос-tenant перелік)
+      <<: [*db-app-env, *db-platform-env, *s3-env, *realtime-broker-env, *ai-env, *ai-provider-env]
       NODE_ENV: production
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}

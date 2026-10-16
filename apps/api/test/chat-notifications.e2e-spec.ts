@@ -14,7 +14,7 @@ import {
   type NotificationSummary,
 } from '@saas-skeleton/contracts';
 import {
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -54,7 +54,7 @@ describe('Chat notifications (e2e, CHAT-0.2c)', () => {
   const openSockets: ClientSocket[] = [];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.listen(0);

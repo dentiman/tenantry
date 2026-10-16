@@ -6,7 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import {
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -33,7 +33,7 @@ describe('AI daily message limit (e2e)', () => {
   beforeAll(async () => {
     process.env.AI_ENABLED = 'true';
     process.env.AI_QUOTA_USER_DAILY_MESSAGES = String(LIMIT);
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

@@ -54,7 +54,7 @@ refresh-токена, це і є auth-специфічна робота). Якщ
 
 | Застосунок          | Роль                      | Порт         | БД-роль                                     | Auth                                 |
 | ------------------- | ------------------------- | ------------ | ------------------------------------------- | ------------------------------------ |
-| `apps/api`          | Data plane — tenant API   | 3001         | `saas_app` (RLS діє)                        | tenant JWT (`JWT_SECRET`)            |
+| `apps/api`          | Data plane — tenant API   | 3001         | `saas_app` (RLS діє); без `saas_platform`   | tenant JWT (`JWT_SECRET`)            |
 | `apps/web`          | Data plane — tenant UI    | 5173         | —                                           | той самий tenant JWT                 |
 | `apps/worker`       | Data plane — фонові джоби | — (без HTTP) | `saas_app` + `saas_platform` (system-джоби) | —                                    |
 | `apps/platform-api` | Control plane — API       | 3002         | `saas_platform` (BYPASSRLS)                 | platform JWT (`PLATFORM_JWT_SECRET`) |
@@ -170,6 +170,29 @@ invite **першого admin-а тенанта** — це інший кейс, 
 RLS діє тільки на `saas_app` — це і є той факт, що робить політики enforcement-ом, а не
 рекомендацією: навіть якщо доменний сервіс якимось чином отримав би довільний SQL, роль,
 під якою він виконується, фізично не бачить чужих рядків.
+
+**Який процес яку роль отримує** — і в DI, і в env стека
+([docker/docker-compose.stack.yml](../docker/docker-compose.stack.yml), якорі `x-db-*-env`):
+
+| Процес              | DI-модулі БД                         | Ролі в env                                        |
+| ------------------- | ------------------------------------ | ------------------------------------------------- |
+| `apps/api`          | `PrismaModule` (tenant-клієнт)       | `saas_app`; `saas_migrator` — лише entrypoint-міграції |
+| `apps/worker`       | `PrismaModule` + `SystemPrismaModule` | `saas_app`, `saas_platform`                       |
+| `apps/platform-api` | `SystemPrismaModule`                 | `saas_platform`                                   |
+
+`PrismaModule` BYPASSRLS-клієнта **не провайдить**: tenant API не відкриває пул під
+`saas_platform`, а імпорт `SystemPrismaService`/`SystemPrismaModule` у `apps/api/src` —
+помилка ESLint. E2e tenant API беруть `SystemPrismaService` для fixture-ів, явно додаючи
+`SystemPrismaModule` у тестовий модуль. Робота, якій треба бачити всі тенанти, живе у worker
+(cron, system-scope — §8) чи platform-api, а не в tenant API.
+
+**Межа поки що — мережа, а не паролі.** Паролі робочих ролей дорівнюють їхнім іменам (dev-значення
+з `01-roles.sql`); на стендах вони лежать у змінних `DB_*_PASSWORD` (`docker/deploy.env`), але
+значення ті самі. Від зовнішнього світу базу закриває лише те, що порт Postgres не публікується.
+Хто виконає код у будь-якому контейнері мережі стека (`saas_net`), той підключиться під будь-якою
+роллю — включно з `saas_migrator`, власником таблиць, що може вимкнути RLS. Тому DI-розділення вище
+захищає від помилки в коді, а не від зламаного контейнера. Що змінити перед справжнім продом —
+[docs/deploy-swarm.md](deploy-swarm.md) §«Ролі БД і паролі».
 
 ## 5. RLS: політики й `resolve_tenant`
 

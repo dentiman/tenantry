@@ -3,7 +3,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import {
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -28,7 +28,7 @@ describe('AiMessageStateService (e2e, real Postgres)', () => {
   let tenantContext: TenantContextService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { CryptoService } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -62,7 +62,7 @@ describe('Webhook subscription and captured events (e2e, CHAT-3b1)', () => {
 
   beforeAll(async () => {
     process.env.META_GRAPH_BASE_URL = await stub.start();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

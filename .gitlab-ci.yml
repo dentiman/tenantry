@@ -321,7 +321,8 @@ db_roles_prod:
       for i in $(seq 1 30); do
         DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
           -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
-          -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+          -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/saas_skeleton" \
+          -e DB_APP_PASSWORD -e DB_MIGRATOR_PASSWORD -e DB_PLATFORM_PASSWORD \
           "$TOOLS_IMAGE" pnpm db:roles && exit 0
         echo "[db_roles] postgres ще не готовий (спроба $i/30) — чекаю 5с…"; sleep 5
       done
@@ -341,7 +342,7 @@ seed_prod:
   script:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton" \
         "$TOOLS_IMAGE" pnpm db:seed
 
 db_roles_dev:
@@ -363,7 +364,8 @@ db_roles_dev:
       for i in $(seq 1 30); do
         DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
           -e POSTGRES_ADMIN_URL="postgresql://saas:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
-          -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+          -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/saas_skeleton" \
+          -e DB_APP_PASSWORD -e DB_MIGRATOR_PASSWORD -e DB_PLATFORM_PASSWORD \
           "$TOOLS_IMAGE" pnpm db:roles && exit 0
         echo "[db_roles] postgres ще не готовий (спроба $i/30) — чекаю 5с…"; sleep 5
       done
@@ -386,7 +388,7 @@ seed_dev:
   script:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton" \
         "$TOOLS_IMAGE" pnpm db:seed
 
 # Демо-датасет для показу клієнтам (docs/demo.md): три галузеві тенанти з командою, кастомерами,
@@ -414,8 +416,8 @@ seed_demo_dev:
   script:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
-        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton" \
+        -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/saas_skeleton" \
         -e AI_BASE_URL -e AI_API_KEY \
         "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo && { pnpm ai:knowledge:index --all-tenants || echo "УВАГА: індексація знань не вдалась — запусти ai_index_dev"; }'
 
@@ -456,8 +458,8 @@ ai_index_dev:
   script:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
-        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
+        -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton" \
         -e AI_BASE_URL -e AI_API_KEY \
         "$TOOLS_IMAGE" pnpm ai:knowledge:index --all-tenants
 
@@ -481,8 +483,8 @@ demo_reset_dev:
   script:
     - |
       DOCKER_CONTEXT=swarm docker run --rm --network ${STACK_NAME}_saas_net \
-        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton" \
-        -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/saas_skeleton" \
+        -e PLATFORM_DATABASE_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/saas_skeleton" \
+        -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/saas_skeleton" \
         -e AI_BASE_URL -e AI_API_KEY \
         "$TOOLS_IMAGE" sh -c 'pnpm db:seed && pnpm db:seed:demo:reset && { pnpm ai:knowledge:index --all-tenants || echo "УВАГА: індексація знань не вдалась — запусти ai_index_dev"; }'
 

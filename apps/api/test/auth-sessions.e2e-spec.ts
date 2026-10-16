@@ -10,7 +10,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import * as argon2 from 'argon2';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import {
@@ -34,7 +34,7 @@ describe('Auth sessions (e2e)', () => {
   let tokens: { accessToken: string; refreshToken: string };
 
   beforeAll(async () => {
-    const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleFixture = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleFixture.createNestApplication();
     configureApp(app);
     prisma = moduleFixture.get(SystemPrismaService);
@@ -371,7 +371,7 @@ describe('Auth sessions: reuse вибиває всі сесії (e2e)', () => {
     previous = process.env.AUTH_REUSE_REVOKES_ALL_SESSIONS;
     process.env.AUTH_REUSE_REVOKES_ALL_SESSIONS = 'true';
 
-    const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleFixture = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleFixture.createNestApplication();
     configureApp(app);
     prisma = moduleFixture.get(SystemPrismaService);

@@ -6,7 +6,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import {
   ChannelAdapterRegistry,
   ActivityRecorder,
@@ -35,7 +35,7 @@ describe('Chat dev tools (e2e, CHAT-2a)', () => {
 
   beforeAll(async () => {
     process.env.CHAT_DEV_TOOLS = 'true';
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     // Симулятор ходить на власний публічний вебхук по HTTP — потрібен слухаючий сервер

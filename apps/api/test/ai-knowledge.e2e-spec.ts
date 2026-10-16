@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Test, type TestingModule } from '@nestjs/testing';
 import {
   PrismaModule,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenancyModule,
   TenantContextService,
   TenantTransactions,
@@ -29,7 +29,7 @@ describe('Postgres knowledge foundation (real pgvector + tenant transactions)', 
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
-      imports: [TenancyModule.forRoot(), PrismaModule],
+      imports: [TenancyModule.forRoot(), PrismaModule, SystemPrismaModule],
       providers: [PostgresKnowledgeStore],
     }).compile();
     await module.init();

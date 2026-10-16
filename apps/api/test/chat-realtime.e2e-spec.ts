@@ -12,7 +12,7 @@ import {
   type ChatConversationChanged,
   type ChatMessageCreated,
 } from '@saas-skeleton/contracts';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { joinDefaultChannel } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -52,7 +52,7 @@ describe('Chat realtime (e2e)', () => {
   const openSockets: ClientSocket[] = [];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     // Саме listen, а не init: без слухаючого сокета Engine.IO нікуди підключатись

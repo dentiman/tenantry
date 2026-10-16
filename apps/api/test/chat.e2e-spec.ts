@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
 
 interface MessageBody {
@@ -53,7 +53,7 @@ describe('Chat API (e2e)', () => {
   let prisma: SystemPrismaService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

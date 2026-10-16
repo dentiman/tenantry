@@ -10,7 +10,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import {
   Prisma,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -36,7 +36,7 @@ describe('Messaging pipeline (e2e)', () => {
   let prisma: SystemPrismaService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

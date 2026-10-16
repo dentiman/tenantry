@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { Test, type TestingModule } from '@nestjs/testing';
 import {
   PrismaModule,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenancyModule,
   TenantContextService,
   TenantTransactions,
@@ -111,7 +111,7 @@ describe('Knowledge ingest (real Postgres, tenant RLS, fake embeddings)', () => 
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
-      imports: [TenancyModule.forRoot(), PrismaModule],
+      imports: [TenancyModule.forRoot(), PrismaModule, SystemPrismaModule],
       providers: [PostgresKnowledgeStore],
     }).compile();
     await module.init();

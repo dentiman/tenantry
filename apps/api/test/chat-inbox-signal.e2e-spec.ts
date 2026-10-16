@@ -8,7 +8,7 @@ import request from 'supertest';
 import * as argon2 from 'argon2';
 import { io as ioClient, type Socket as ClientSocket } from 'socket.io-client';
 import { REALTIME_EVENTS, type ChatInboxChanged } from '@saas-skeleton/contracts';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { NotificationDispatcherRegistry } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -30,7 +30,7 @@ describe('Chat inbox signal (e2e, CHAT-2a)', () => {
   const sockets: ClientSocket[] = [];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.listen(0);

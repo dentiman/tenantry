@@ -3,14 +3,16 @@
 # Build context = КОРІНЬ репо.
 #
 # Запускається з ЯВНОЮ командою через overlay-мережу стеку, напр.:
-#   # ролі (одноразово, ДО першого деплою api) — потрібен суперюзер:
+#   # ролі (одноразово, ДО першого деплою api) — потрібен суперюзер; паролі ролей — DB_*_PASSWORD
+#   # із docker/deploy.env (застосовуються й до наявних ролей):
 #   docker run --rm --network <stack>_saas_net \
-#     -e POSTGRES_ADMIN_URL=postgresql://saas:saas@postgres:5432/postgres \
-#     -e DATABASE_URL=postgresql://saas_app:saas_app@postgres:5432/saas_skeleton \
+#     -e POSTGRES_ADMIN_URL=postgresql://saas:$POSTGRES_PASSWORD@postgres:5432/postgres \
+#     -e DATABASE_URL=postgresql://saas_app:$DB_APP_PASSWORD@postgres:5432/saas_skeleton \
+#     -e DB_APP_PASSWORD -e DB_MIGRATOR_PASSWORD -e DB_PLATFORM_PASSWORD \
 #     <tools-image> pnpm db:roles
 #   # сід дефолтних ідентичностей (під saas_platform — BYPASSRLS):
 #   docker run --rm --network <stack>_saas_net \
-#     -e PLATFORM_DATABASE_URL=postgresql://saas_platform:saas_platform@postgres:5432/saas_skeleton \
+#     -e PLATFORM_DATABASE_URL=postgresql://saas_platform:$DB_PLATFORM_PASSWORD@postgres:5432/saas_skeleton \
 #     <tools-image> pnpm db:seed
 
 FROM node:24-bookworm-slim AS tools

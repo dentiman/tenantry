@@ -2,7 +2,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { PrismaService, SystemPrismaService } from '@saas-skeleton/database';
+import { PrismaService, SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { PlatformAiSettingsReader } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -33,7 +33,7 @@ describe('AI assistant availability (e2e)', () => {
 
   beforeAll(async () => {
     process.env.AI_ENABLED = 'true';
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

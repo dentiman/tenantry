@@ -5,7 +5,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { startOfUtcDay } from '@saas-skeleton/shared';
 import { AI_QUOTA_EXCEEDED_CODE } from '@saas-skeleton/contracts';
 import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
@@ -43,7 +43,7 @@ describe('AI assistant API (e2e)', () => {
     // AiConfig будується фабрикою при створенні застосунку — тому env
     // виставляється ДО compile(), а не в jest-конфізі на весь прогін
     process.env.AI_ENABLED = 'true';
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

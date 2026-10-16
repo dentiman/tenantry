@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import {
   PrismaService,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -52,7 +52,7 @@ describe('Mark as read (e2e, CHAT-3b3)', () => {
 
   beforeAll(async () => {
     process.env.META_GRAPH_BASE_URL = await stub.start();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

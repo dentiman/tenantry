@@ -4,7 +4,7 @@ import { Logger, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Redis } from 'ioredis';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REDIS_THROTTLER_CLIENT } from '../src/redis/redis.constants';
@@ -83,7 +83,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
       restoreEnv = withEnv({ ...PRODUCTION_LIMITS, REALTIME_KEY_PREFIX: prefix });
       keyPattern = `${prefix}:throttle:*`;
 
-      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
       app = moduleRef.createNestApplication();
       configureApp(app);
       await app.init();
@@ -214,7 +214,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
       });
       keyPattern = `${prefix}:throttle:*`;
 
-      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
       app = moduleRef.createNestApplication();
       configureApp(app);
       await app.init();
@@ -287,7 +287,7 @@ describe('Rate limiting (e2e, AUTH-0)', () => {
 
     beforeAll(async () => {
       restoreEnv = withEnv(PRODUCTION_LIMITS);
-      const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] })
         .overrideProvider(REDIS_THROTTLER_CLIENT)
         .useValue(brokenClient)
         .compile();

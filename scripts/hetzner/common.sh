@@ -67,13 +67,15 @@ run_tools() {
 }
 
 # db:roles — одноразово, ДО першого старту api (saas_migrator мусить існувати для міграцій).
-# Ідемпотентний. Postgres може ще ініціалізуватись — повторюємо
+# Ідемпотентний. Паролі ролей — DB_*_PASSWORD із load_stack_env (застосовуються й до наявних ролей).
+# Postgres може ще ініціалізуватись — повторюємо
 db_roles() {
   local i
   for i in $(seq 1 30); do
     if run_tools \
       -e POSTGRES_ADMIN_URL="postgresql://${POSTGRES_USER:-saas}:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
-      -e DATABASE_URL="postgresql://saas_app:saas_app@postgres:5432/${POSTGRES_DB:-saas_skeleton}" \
+      -e DATABASE_URL="postgresql://saas_app:${DB_APP_PASSWORD}@postgres:5432/${POSTGRES_DB:-saas_skeleton}" \
+      -e DB_APP_PASSWORD -e DB_MIGRATOR_PASSWORD -e DB_PLATFORM_PASSWORD \
       "$TOOLS_IMAGE" pnpm db:roles; then
       return 0
     fi

@@ -4,7 +4,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import {
   ActivityRecorder,
   ChannelAdapterRegistry,
@@ -92,7 +92,7 @@ describe('Meta inbound and receipts (e2e, CHAT-3b2)', () => {
   }
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

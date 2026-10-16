@@ -1,7 +1,9 @@
 -- MT-0: три ролі БД (docs/multi-tenancy-plan.md §3).
 -- Виконується ТІЛЬКИ на свіжому volume (docker-entrypoint-initdb.d); для наявних БД —
 -- `pnpm db:roles` (libs/database/scripts/ensure-roles.ts, той самий ефект ідемпотентно).
--- Паролі — dev-only (як saas:saas); прод задає свої при провіжені.
+-- Паролі — dev-only (як saas:saas); цей файл бачить лише локальний docker compose. На стендах
+-- ролі створює `pnpm db:roles` з паролями з DB_*_PASSWORD (docker/deploy.env) — і поки що там
+-- ті самі значення; план зміни — docs/deploy-swarm.md §«Ролі БД і паролі».
 
 -- 1. Власник схеми: тільки міграції. CREATEDB — для shadow database `prisma migrate dev`.
 CREATE ROLE saas_migrator LOGIN PASSWORD 'saas_migrator' CREATEDB;

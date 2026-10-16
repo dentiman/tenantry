@@ -12,7 +12,7 @@ import request from 'supertest';
 import { io as ioClient, type Socket as ClientSocket } from 'socket.io-client';
 import { REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import type { AiConversationChanged } from '@saas-skeleton/contracts';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { createAndLoginTestUser } from './test-users';
@@ -31,7 +31,7 @@ describe('AI assistant realtime (e2e)', () => {
     // AiConfig будується фабрикою при створенні застосунку — тому env
     // виставляється ДО compile(), а не в jest-конфізі на весь прогін
     process.env.AI_ENABLED = 'true';
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     // Саме listen, а не init: без слухаючого сокета Engine.IO нікуди підключатись

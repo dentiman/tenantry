@@ -8,6 +8,12 @@
  * Підключення:
  *  - POSTGRES_ADMIN_URL — суперюзер (дефолт: postgresql://saas:saas@localhost:5432/postgres);
  *  - цільова БД — з DATABASE_URL (pathname) або аргументу --db <name>.
+ *
+ * Паролі ролей — DB_APP_PASSWORD / DB_MIGRATOR_PASSWORD / DB_PLATFORM_PASSWORD, ті самі змінні,
+ * з яких стек складає URL-и (docker/deploy.env). Не задано — dev-дефолт «пароль = ім'я ролі»
+ * (як у docker/postgres/init/01-roles.sql і .env.example). Задано явно — пароль застосовується
+ * й до вже наявної ролі (ALTER ROLE), тож зміна змінної + db:roles = зміна пароля в Postgres.
+ * Незадана змінна наявну роль НЕ чіпає: забута змінна не скине пароль стенда на дефолт.
  */
 import '../load-root-env';
 import { Client } from 'pg';
@@ -16,10 +22,18 @@ const DEFAULT_ADMIN_URL = 'postgresql://saas:saas@localhost:5432/postgres';
 const DEFAULT_DATABASE_URL = 'postgresql://saas:saas@localhost:5432/saas_skeleton';
 
 const ROLES = [
-  { name: 'saas_migrator', options: "LOGIN PASSWORD 'saas_migrator' CREATEDB" },
-  { name: 'saas_app', options: "LOGIN PASSWORD 'saas_app'" },
-  { name: 'saas_platform', options: "LOGIN PASSWORD 'saas_platform' BYPASSRLS" },
+  { name: 'saas_migrator', passwordEnv: 'DB_MIGRATOR_PASSWORD', options: 'LOGIN CREATEDB' },
+  { name: 'saas_app', passwordEnv: 'DB_APP_PASSWORD', options: 'LOGIN' },
+  { name: 'saas_platform', passwordEnv: 'DB_PLATFORM_PASSWORD', options: 'LOGIN BYPASSRLS' },
 ] as const;
+
+/** Пароль із env або undefined; порожній рядок — помилка конфігурації, а не «без пароля» */
+function configuredPassword(envName: string): string | undefined {
+  const value = process.env[envName];
+  if (value === undefined) return undefined;
+  if (value === '') throw new Error(`${envName} is set but empty`);
+  return value;
+}
 
 function targetDbName(): string {
   const argIndex = process.argv.indexOf('--db');
@@ -64,10 +78,15 @@ async function ensureRoles(): Promise<void> {
   await client.connect();
   try {
     for (const role of ROLES) {
+      const configured = configuredPassword(role.passwordEnv);
       const exists = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [role.name]);
       if ((exists.rowCount ?? 0) === 0) {
-        await client.query(`CREATE ROLE ${role.name} ${role.options}`);
+        const password = client.escapeLiteral(configured ?? role.name);
+        await client.query(`CREATE ROLE ${role.name} ${role.options} PASSWORD ${password}`);
         console.log(`Created role: ${role.name}`);
+      } else if (configured !== undefined) {
+        await client.query(`ALTER ROLE ${role.name} PASSWORD ${client.escapeLiteral(configured)}`);
+        console.log(`Password applied from ${role.passwordEnv}: ${role.name}`);
       }
     }
   } finally {

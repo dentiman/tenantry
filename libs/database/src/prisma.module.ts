@@ -1,7 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from './prisma.service';
-import { SystemPrismaService } from './system-prisma.service';
 import { withTenantContext } from './tenant/prisma-tenant.extension';
 import { PRISMA_BASE } from './tenant/tokens';
 
@@ -10,6 +9,10 @@ import { PRISMA_BASE } from './tenant/tokens';
  * інжектить PrismaService як і раніше й НЕ знає про мультитенантність (§0/§6 плану).
  * Голий клієнт (PRISMA_BASE) — лише для інфраструктури (TenantTransactions).
  * Потребує TenancyModule.forRoot() у корені застосунку (дає ClsService глобально).
+ *
+ * BYPASSRLS-клієнта (SystemPrismaService) тут НЕМАЄ свідомо: tenant API його не отримує
+ * й не відкриває пул під saas_platform. Кому він потрібен (worker, platform-api), імпортують
+ * SystemPrismaModule явно — так привілей видно в composition root.
  */
 @Global()
 @Module({
@@ -26,8 +29,7 @@ import { PRISMA_BASE } from './tenant/tokens';
         return withTenantContext(base, getTenantId);
       },
     },
-    SystemPrismaService,
   ],
-  exports: [PrismaService, PRISMA_BASE, SystemPrismaService],
+  exports: [PrismaService, PRISMA_BASE],
 })
 export class PrismaModule {}

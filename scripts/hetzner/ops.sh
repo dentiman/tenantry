@@ -15,8 +15,8 @@ load_stack_env
 action="${1:?usage: ops.sh <db_roles|seed|seed_demo|demo_reset|backup_db>}"
 
 DB="${POSTGRES_DB:-saas_skeleton}"
-PLATFORM_DB_URL="postgresql://saas_platform:saas_platform@postgres:5432/$DB"
-APP_DB_URL="postgresql://saas_app:saas_app@postgres:5432/$DB"
+PLATFORM_DB_URL="postgresql://saas_platform:${DB_PLATFORM_PASSWORD:?}@postgres:5432/$DB"
+APP_DB_URL="postgresql://saas_app:${DB_APP_PASSWORD:?}@postgres:5432/$DB"
 
 case "$action" in
   db_roles)

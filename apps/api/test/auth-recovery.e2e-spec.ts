@@ -9,7 +9,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { SystemPrismaService, VerificationPurpose } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService, VerificationPurpose } from '@saas-skeleton/database';
 import { CryptoService, PgBossService } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -40,7 +40,7 @@ describe('Auth recovery (e2e)', () => {
   let userSuffix = 0;
 
   beforeAll(async () => {
-    const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleFixture = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleFixture.createNestApplication();
     configureApp(app);
     prisma = moduleFixture.get(SystemPrismaService);

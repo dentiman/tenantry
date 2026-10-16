@@ -5,7 +5,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { resolveAllowedOrigins } from '../src/config/cors.config';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import {
   createAndLoginTestUser,
   createTestUser,
@@ -22,7 +22,7 @@ describe('Auth (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [AppModule, SystemPrismaModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();

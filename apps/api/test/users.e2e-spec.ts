@@ -6,7 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
 
 describe('Users API (e2e)', () => {
@@ -44,7 +44,7 @@ describe('Users API (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [AppModule, SystemPrismaModule],
     }).compile();
 
     app = moduleRef.createNestApplication();

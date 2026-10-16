@@ -5,7 +5,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { createAndLoginTestUser } from './test-users';
 import { sentJobs } from './__mocks__/pg-boss';
 
@@ -24,7 +24,7 @@ describe('AI assistant API — disabled installation (e2e)', () => {
 
   beforeAll(async () => {
     process.env.AI_ENABLED = 'false';
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

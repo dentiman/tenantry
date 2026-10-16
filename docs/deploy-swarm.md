@@ -114,8 +114,9 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 - **Update:** stateless — `order: start-first` + `failure_action: rollback` (zero-downtime);
   stateful (postgres/seaweedfs) — `order: stop-first` (двом інстансам не можна ділити один volume).
 - **Стан:** `pgdata`/`seaweedfs-data` — `local`+`o:bind` у `${SAAS_DATA_DIR}/{postgres,seaweedfs}`.
-- **DB-URL-и:** паролі ролей фіксовані в `ensure-roles.ts`
-  (`saas_app`/`saas_migrator`/`saas_platform`); postgres-порт не публікується.
+- **DB-URL-и:** по одному якорю на роль (`x-db-app-env`/`x-db-migrate-env`/`x-db-platform-env`),
+  кожен сервіс отримує лише свої ролі; паролі — змінні `DB_*_PASSWORD` з `docker/deploy.env`
+  (§7, «Ролі БД і паролі»); postgres-порт не публікується.
 - **S3-конфіг** — swarm `config` із `file:` (читається на раннері з комітнутого `docker/seaweedfs/s3.prod.json`).
 
 ## 6. CI-пайплайн і транспорт
@@ -241,7 +242,8 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
   стільки, скільки джоба (§6).
 
 **Прикладні секрети/конфіг — у РЕПО (тестовий прод, свідомо комітяться):**
-- `docker/deploy.env` — `POSTGRES_PASSWORD`, `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `S3_ENDPOINT`,
+- `docker/deploy.env` — `POSTGRES_PASSWORD`, `DB_APP_PASSWORD`/`DB_MIGRATOR_PASSWORD`/`DB_PLATFORM_PASSWORD`
+  (нижче, «Ролі БД і паролі»), `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `S3_ENDPOINT`,
   `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_CORS_ALLOWED_ORIGINS`, `SMTP_HOST`, `SMTP_FROM`,
   `REDIS_PASSWORD`, `REALTIME_ALLOWED_ORIGINS` (+ опційні override з дефолтами).
   deploy-job робить `set -a; . ./docker/deploy.env; set +a`.
@@ -252,6 +254,61 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
 
 > **Для СПРАВЖНЬОГО проду:** обидва файли винести в CI Variables (Protected+Masked) і
 > розігнорувати назад у `.gitignore`.
+
+### Ролі БД і паролі
+
+**Що є зараз.** Postgres має суперюзера `saas` і три робочі ролі — `saas_app` (під RLS),
+`saas_platform` (BYPASSRLS), `saas_migrator` (власник таблиць). Хто яку отримує й чому —
+[multi-tenancy-architecture.md](multi-tenancy-architecture.md) §4. Суперюзер має випадковий
+пароль (`POSTGRES_PASSWORD`). Паролі робочих ролей лежать у змінних `docker/deploy.env`:
+
+| Змінна                 | Роль            | URL у стеку             | Сервіси            |
+| ---------------------- | --------------- | ----------------------- | ------------------ |
+| `DB_APP_PASSWORD`      | `saas_app`      | `DATABASE_URL`          | api, worker        |
+| `DB_MIGRATOR_PASSWORD` | `saas_migrator` | `MIGRATE_DATABASE_URL`  | api (entrypoint)   |
+| `DB_PLATFORM_PASSWORD` | `saas_platform` | `PLATFORM_DATABASE_URL` | worker, platform-api |
+
+Значення поки ті самі, що були захардкоджені раніше: пароль = ім'я ролі. Змінилося лише місце:
+одне джерело замість копій у stack-файлі, CI-джобах і `scripts/hetzner`. Ці ж змінні читає
+`pnpm db:roles` (`libs/database/scripts/ensure-roles.ts`): нову роль створює з паролем зі змінної,
+а **наявній роли застосовує пароль, лише якщо змінну задано явно** (`ALTER ROLE`). Без змінної
+стек не деплоїться (`${DB_…:?}`), а `db:roles` наявну роль не чіпає. На Hetzner значення можна
+перекрити в `/etc/saas/deploy.env` ([deploy-hetzner.md](deploy-hetzner.md)). Локальний dev, e2e,
+`scripts/ci-verify.sh` і `ws:init` лишаються на dev-паролях (`.env.example`, `01-roles.sql`).
+
+**Чому це поки прийнятно — і що саме не захищено.** Базу закриває мережа: порт Postgres не
+публікується, тож ззовні до неї не дістатися. Але паролі, рівні іменам ролей, означають, що
+**будь-хто з виконанням коду в будь-якому контейнері `saas_net`** (зокрема nginx `web`/`platform-web`
+і `seaweedfs`, опубліковані на `0.0.0.0`) підключиться під будь-якою роллю. Зокрема під
+`saas_migrator`, а той як власник таблиць може вимкнути RLS. Те, що api не отримує `saas_platform`
+у DI й env, захищає від помилки в коді, а не від такого сценарію. Свідомий компроміс тестових
+стендів із демо-даними.
+
+**Як змінити пароль ролі** (зараз чи при переході на прод). Генерувати лише `[A-Za-z0-9_-]`, бо
+пароль іде в URL без екранування (`openssl rand -hex 24`).
+
+1. Нове значення — у `docker/deploy.env` (GitLab) або `/etc/saas/deploy.env` (Hetzner).
+2. Запустити `db_roles_dev` або `db_roles_prod` (Hetzner: Ops → `db_roles`). Роль отримує новий пароль.
+3. **Одразу** розкотити стек. Postgres перевіряє пароль лише при підключенні: уже відкриті
+   з'єднання старих тасок живуть, а нові з'єднання зі старим паролем відмовлять. Тож вікно між
+   кроками 2 і 3 має бути коротким. Порядок не міняти: якщо стек розкотити першим, нова таска api
+   не підключиться, впаде на healthcheck і відкотиться.
+
+**Перед справжнім продом** — у такому порядку:
+
+1. **Унікальні паролі ролей поза репо**: CI Variables (Protected+Masked) або серверний файл,
+   як `/etc/saas/deploy.env` на Hetzner; рядки `DB_*_PASSWORD` прибрати з комітнутого `deploy.env`.
+2. **Міграції — окремою one-shot-джобою** (tools-образ, `prisma migrate deploy`) перед
+   `stack deploy`. Прибрати `docker/entrypoint-api.sh` і `*db-migrate-env` з api: найбільш
+   відкритий процес не має тримати пароль власника таблиць.
+3. **Окрема мережа для БД**: overlay лише для `postgres`, `api`, `platform-api`, `worker`.
+   `web`, `platform-web`, `seaweedfs`, `valkey` до неї не підключені.
+4. **Без dev-фолбеків у проді**: `DEFAULT_*_URL` у `prisma.service.ts` / `system-prisma.service.ts`
+   / `prisma.config.ts` підставляють `localhost` з dev-паролями. На проді змінна має бути обов'язковою
+   в env-схемі, щоб процес падав на старті, а не мовчки йшов не туди.
+5. Гігієна `SECURITY DEFINER`-функцій (`resolve_tenant`, `resolve_account_by_key`,
+   `record_unroutable_event`): `SET search_path = public, pg_temp` замість `public`, як радить
+   документація Postgres. Ескалації зараз немає, бо результат повертається тому самому `saas_app`.
 
 **AI-асистент (ai-1a, [ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1):**
 на стеку за замовчуванням `AI_ENABLED=false`, `AI_PROVIDER=fake`. Реальний бекенд — будь-який

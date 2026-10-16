@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { PrismaModule, TenancyModule } from '@saas-skeleton/database';
+import { PrismaModule, SystemPrismaModule, TenancyModule } from '@saas-skeleton/database';
 import {
   ActivitiesModule,
   AiKnowledgeModule,
@@ -58,6 +58,8 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     // MT: без резолвера — tenantId приходить у конверті (MessageWorkerRegistrar піднімає CLS)
     TenancyModule.forRoot(),
     PrismaModule,
+    // BYPASSRLS (saas_platform) — для системних cron-джоб, що перелічують рядки всіх тенантів
+    SystemPrismaModule,
     MessagingModule.forWorker(),
     StorageModule,
     CryptoModule,

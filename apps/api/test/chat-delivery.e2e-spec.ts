@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import {
   PrismaService,
-  SystemPrismaService,
+  SystemPrismaModule, SystemPrismaService,
   TenantContextService,
   TenantTransactions,
 } from '@saas-skeleton/database';
@@ -64,7 +64,7 @@ describe('Delivery, receipts and inbound workflow (e2e, CHAT-2b)', () => {
   const userIds: string[] = [];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

@@ -20,7 +20,7 @@ import type {
   NotificationCreated,
   PresenceChanged,
 } from '@saas-skeleton/contracts';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import type { Redis } from 'ioredis';
@@ -46,7 +46,7 @@ describe('Realtime gateway + presence (e2e)', () => {
   const openSockets: ClientSocket[] = [];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     // Саме listen, а не init: без слухаючого сокета Engine.IO нікуди підключатись

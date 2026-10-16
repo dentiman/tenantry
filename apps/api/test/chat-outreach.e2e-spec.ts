@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { createAndLoginTestUser, DEFAULT_TENANT_ID } from './test-users';
@@ -39,7 +39,7 @@ describe('Starting a conversation from a number (e2e, CHAT-3a)', () => {
   const phone = () => `+38050${String(Math.floor(Math.random() * 9_000_000) + 1_000_000)}`;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

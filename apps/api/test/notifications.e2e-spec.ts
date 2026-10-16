@@ -10,7 +10,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 // MT-2: прямі доступи тестів — під BYPASSRLS (поза tenant-контекстом RLS дав би 0 рядків)
-import { SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService, TenantContextService, TenantTransactions } from '@saas-skeleton/database';
 import type { NotificationSummary } from '@saas-skeleton/contracts';
 import { createAndLoginTestUser, createTestUser, DEFAULT_TENANT_ID } from './test-users';
 
@@ -34,7 +34,7 @@ describe('Notifications API (e2e)', () => {
   let tenantContext: TenantContextService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();

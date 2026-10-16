@@ -2,7 +2,7 @@
 
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { SystemPrismaService } from '@saas-skeleton/database';
+import { SystemPrismaModule, SystemPrismaService } from '@saas-skeleton/database';
 import { AI_CONFIG, type AiConfig } from '@saas-skeleton/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -23,7 +23,7 @@ describe('AiPurgeConversationsSubscriber (e2e, real Postgres)', () => {
   let subscriber: AiPurgeConversationsSubscriber;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule, SystemPrismaModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
