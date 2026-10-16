@@ -41,11 +41,11 @@ describe('navigation snapshot', () => {
   it('ADMIN', () => {
     expect(describeNav('ADMIN')).toMatchInlineSnapshot(`
       [
-        "rail: workspace, calendar, chat, assistant, settings, playground, guide",
+        "rail: workspace, chat, calendar, assistant, guide, settings",
         "workspace: dashboard, users, customers",
         "settings: settings.general, settings.calendar, settings.messaging, settings.numbering, settings.ai, settings.activity",
-        "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
+        "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "customers.detail: customers.overview, customers.contacts, calendar.customer-events",
       ]
     `);
@@ -54,16 +54,16 @@ describe('navigation snapshot', () => {
   it('USER не бачить налаштувань організації', () => {
     expect(describeNav('USER')).toMatchInlineSnapshot(`
       [
-        "rail: workspace, calendar, chat, assistant, playground, guide",
+        "rail: workspace, chat, calendar, assistant, guide",
         "workspace: dashboard, users, customers",
-        "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
+        "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "customers.detail: customers.overview, customers.contacts, calendar.customer-events",
       ]
     `);
   });
 
   it('вимкнений асистент (features.ai) ховає його розділ', () => {
-    expect(describeNav('USER', {})[0]).toBe('rail: workspace, calendar, chat, playground, guide');
+    expect(describeNav('USER', {})[0]).toBe('rail: workspace, chat, calendar, guide');
   });
 });

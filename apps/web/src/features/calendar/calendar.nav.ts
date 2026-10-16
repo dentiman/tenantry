@@ -14,7 +14,7 @@ export const calendarArea = defineArea({
   prefix: linkOptions({ to: '/calendar' }).to,
   label: 'layout:areas.calendar',
   icon: CalendarDays,
-  order: 20,
+  order: 30,
   panel: CalendarSidebar,
 });
 

@@ -2,13 +2,16 @@ import { linkOptions } from '@tanstack/react-router';
 import { AlignLeftIcon, Blocks, PanelTopIcon, RectangleHorizontalIcon } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
 import { PlaygroundSidebar } from './playground-sidebar';
+import { PLAYGROUND_ENABLED } from './playground.flag';
 
 export const playgroundArea = defineArea({
   id: 'playground',
   prefix: linkOptions({ to: '/playground' }).to,
   label: 'layout:areas.playground',
   icon: Blocks,
-  order: 50,
+  // Останній у рейлі; без `VITE_PLAYGROUND=true` розділу в рейлі немає (`playground.flag.ts`)
+  order: 100,
+  rail: PLAYGROUND_ENABLED,
   panel: PlaygroundSidebar,
 });
 

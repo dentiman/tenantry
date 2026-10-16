@@ -11,7 +11,7 @@ export const settingsArea = defineArea({
   prefix: linkOptions({ to: '/settings' }).to,
   label: 'layout:areas.settings',
   icon: Settings,
-  order: 40,
+  order: 60,
   panel: 'menu',
 });
 

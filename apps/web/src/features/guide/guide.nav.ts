@@ -9,7 +9,7 @@ export const guideArea = defineArea({
   prefix: linkOptions({ to: '/guide' }).to,
   label: 'layout:areas.guide',
   icon: BookOpenText,
-  order: 60,
+  order: 50,
   panel: GuideSidebar,
 });
 

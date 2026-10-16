@@ -23,5 +23,8 @@ export default defineConfig({
     // тому `environment: 'node'` лишається — обіцянку з коментаря вище
     // («environment задається на файл») витрачати не довелось
     include: ['src/**/*.test.{ts,tsx}'],
+    // Знімок навігації (`nav.test.ts`) — це рейл БЕЗ Playground; локальний
+    // `apps/web/.env.local` з `VITE_PLAYGROUND=true` не мусить його ламати
+    env: { VITE_PLAYGROUND: 'false' },
   },
 });

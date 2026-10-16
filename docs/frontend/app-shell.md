@@ -112,13 +112,19 @@ export default defineNavigation({
 | Area              | Префікс          | У рейлі                      | Друга колонка                                             |
 | ----------------- | ---------------- | ---------------------------- | --------------------------------------------------------- |
 | **Workspace**     | `/workspace`     | так                          | Dashboard · Users · Customers                             |
-| **Calendar**      | `/calendar`      | так                          | міні-місяць (НЕ меню — контейнер вигляду)                 |
 | **Chat**          | `/chat`          | так                          | список розмов (поки порожній стан)                        |
+| **Calendar**      | `/calendar`      | так                          | міні-місяць (НЕ меню — контейнер вигляду)                 |
 | **Assistant**     | `/assistant`     | так, якщо `features.ai`      | історія розмов з AI-асистентом, згрупована за датою       |
-| **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · AI assistant · Activity  |
-| **Playground**    | `/playground`    | так                          | Buttons (далі — стенди інших примітивів)                  |
 | **Guide**         | `/guide`         | так                          | зміст путівника: параграфи ОДНІЄЇ сторінки, scroll-spy    |
+| **Settings**      | `/settings`      | так, лише `ADMIN`            | General · Calendar · Numbering · AI assistant · Activity  |
+| **Playground**    | `/playground`    | лише з `VITE_PLAYGROUND=true` | Buttons (далі — стенди інших примітивів)                  |
 | **User settings** | `/user-settings` | **ні** — з дропдауна аватара | Profile · Account · Security · Notifications · Appearance |
+
+Playground — лише для локальної розробки й за замовчуванням вимкнений: змінна збірки
+`VITE_PLAYGROUND=true` (`features/playground/playground.flag.ts`) вмикає і пункт у рейлі, і
+маршрути `/playground/*` (без неї вони редіректять на `/`). Vite бере `VITE_*` з оточення
+процесу або з `apps/web/.env.local`, не з кореневого `.env`. У публічному путівнику (`/about`)
+Playground немає взагалі.
 
 Чотири рішення, які тут не косметичні:
 

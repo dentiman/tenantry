@@ -11,6 +11,7 @@ import { PlaygroundTabsPage } from './pages/playground-tabs';
 import { PlaygroundTextareaPage } from './pages/playground-textarea';
 import { PlaygroundUserSelectPage } from './pages/playground-user-select';
 import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
+import { PLAYGROUND_ENABLED } from './playground.flag';
 
 /**
  * Area «Playground» — візуальні стенди примітивів UI. Layout + index: стенд
@@ -20,6 +21,13 @@ import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 export const playgroundRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/playground',
+  // Вимкнений Playground (`playground.flag.ts`) не має й прямих адрес — не лише пункту в рейлі
+  beforeLoad: () => {
+    if (!PLAYGROUND_ENABLED) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({ to: '/', replace: true });
+    }
+  },
 });
 
 /** `/playground` → перший стенд каталогу: «домівка» area мусить щось показувати */

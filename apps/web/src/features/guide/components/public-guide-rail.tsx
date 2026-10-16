@@ -1,6 +1,5 @@
 import {
   BookOpenText,
-  Blocks,
   CalendarDays,
   Layers,
   LayoutGrid,
@@ -31,6 +30,7 @@ import { RAIL_ANCHOR_BUTTON, RAIL_NAV_BUTTON } from '../../../app-shell/app-rail
  * лишатись «приблизно таким, як зараз». Тож список рукописний: порядок і піктограми
  * збігаються з `order` / `icon` справжніх `*.nav.ts`, підписи — ті самі
  * `layout:areas.*`. Додали чи перейменували розділ у рейлі — освіжити тут (docs/demo.md).
+ * Playground тут немає свідомо: він лише для локальної розробки (`VITE_PLAYGROUND`).
  *
  * `link` — справжні адреси застосунку. Гостя на них зустріне існуючий гейт `requireAuth`
  * і поверне на `/login` — власного коду для цього немає; залогінений потрапить у розділ.
@@ -39,18 +39,19 @@ import { RAIL_ANCHOR_BUTTON, RAIL_NAV_BUTTON } from '../../../app-shell/app-rail
  */
 const RAIL_AREAS = [
   { id: 'workspace', link: linkOptions({ to: '/workspace' }), icon: LayoutGrid },
-  { id: 'calendar', link: linkOptions({ to: '/calendar' }), icon: CalendarDays },
   { id: 'chat', link: linkOptions({ to: '/chat' }), icon: MessagesSquare },
+  { id: 'calendar', link: linkOptions({ to: '/calendar' }), icon: CalendarDays },
   { id: 'assistant', link: linkOptions({ to: '/assistant' }), icon: SparklesIcon },
+  // Поточний розділ: без посилання, клік згортає/розгортає другу колонку
+  { id: 'guide', link: null, icon: BookOpenText },
   { id: 'settings', link: linkOptions({ to: '/settings' }), icon: Settings },
-  { id: 'playground', link: linkOptions({ to: '/playground' }), icon: Blocks },
 ] as const;
 
 /**
  * Рейл публічного путівника — копія `AppRail` без реєстру (див. `RAIL_AREAS`): ті самі
  * `Sidebar`/`SidebarMenuButton` і ті самі метрики кнопок (`RAIL_NAV_BUTTON`,
  * `RAIL_ANCHOR_BUTTON` експортує справжній рейл), тож смуга однакова за розміром і
- * формою. Бренд угорі, розділи посередині; «Guide» — поточний і, як у справжньому
+ * формою. Бренд угорі, розділи посередині; «Guide» — поточний (запис без `link`) і, як у справжньому
  * рейлі, клік по ньому згортає/розгортає другу колонку.
  */
 export function PublicGuideRail() {
@@ -94,33 +95,34 @@ export function PublicGuideRail() {
                 const label = t(`areas.${area.id}`);
                 return (
                   <SidebarMenuItem key={area.id}>
-                    <SidebarMenuButton
-                      className={RAIL_NAV_BUTTON}
-                      tooltip={tooltip(label)}
-                      aria-label={label}
-                      render={<Link {...area.link} />}
-                      onClick={() => {
-                        // Перехід в іншу area завжди РОЗКРИВАЄ панель — як у справжньому рейлі
-                        setOpen(true);
-                        closeOnMobile();
-                      }}
-                    >
-                      <Icon />
-                    </SidebarMenuButton>
+                    {area.link ? (
+                      <SidebarMenuButton
+                        className={RAIL_NAV_BUTTON}
+                        tooltip={tooltip(label)}
+                        aria-label={label}
+                        render={<Link {...area.link} />}
+                        onClick={() => {
+                          // Перехід в іншу area завжди РОЗКРИВАЄ панель — як у справжньому рейлі
+                          setOpen(true);
+                          closeOnMobile();
+                        }}
+                      >
+                        <Icon />
+                      </SidebarMenuButton>
+                    ) : (
+                      <SidebarMenuButton
+                        isActive
+                        className={RAIL_NAV_BUTTON}
+                        tooltip={tooltip(label)}
+                        aria-label={label}
+                        onClick={toggleSidebar}
+                      >
+                        <Icon />
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 );
               })}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive
-                  className={RAIL_NAV_BUTTON}
-                  tooltip={tooltip(t('areas.guide'))}
-                  aria-label={t('areas.guide')}
-                  onClick={toggleSidebar}
-                >
-                  <BookOpenText />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

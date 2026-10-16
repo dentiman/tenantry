@@ -14,7 +14,7 @@ export const assistantArea = defineArea({
   prefix: linkOptions({ to: '/assistant' }).to,
   label: 'layout:areas.assistant',
   icon: SparklesIcon,
-  order: 35,
+  order: 40,
   panel: AssistantSidebar,
 });
 

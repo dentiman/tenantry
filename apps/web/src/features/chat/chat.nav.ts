@@ -9,7 +9,7 @@ export const chatArea = defineArea({
   prefix: linkOptions({ to: '/chat' }).to,
   label: 'layout:areas.chat',
   icon: MessagesSquare,
-  order: 30,
+  order: 20,
   panel: ChatSidebar,
 });
 
