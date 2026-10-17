@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { UserCog } from 'lucide-react';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/dropdown-menu';
 import { SidebarMenuButton, useSidebar } from '@saas-skeleton/ui/components/ui/sidebar';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
-import { authLogout } from '../api/generated/api';
+import { endSession } from '../features/auth/lib/end-session';
 import { useAuthStore } from '../features/auth/stores/auth.store';
 
 /** Плейсхолдер — версія самого застосунку, `package.json` кореня монорепо */
@@ -62,18 +62,12 @@ export function AppFooterBar() {
 function AccountMenu() {
   const { t } = useTranslation('layout');
   const user = useAuthStore((s) => s.user);
-  const clearSession = useAuthStore((s) => s.clearSession);
-  const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
 
+  // Здати refresh-cookie і перезавантажити документ: кеш і стори попереднього
+  // користувача не повинні дожити до наступного входу (`end-session.ts`)
   const logout = () => {
-    // AUTH-2: токен більше не в localStorage — сервер бере його з httpOnly cookie.
-    // Здаємо його, але НЕ чекаємо на відповідь: вихід не має залежати від мережі.
-    // Викликаємо згенеровану функцію напряму, а не через хук — помилка тут не подія
-    // для юзера, а глобальний MutationCache показав би тост
-    void authLogout({}).catch(() => undefined);
-    clearSession();
-    void navigate({ to: '/login' });
+    void endSession();
   };
 
   return (

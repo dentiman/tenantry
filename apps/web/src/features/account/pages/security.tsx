@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import type { AuthSessionResponse } from '@saas-skeleton/contracts';
 import { ChangeOwnPasswordSchema } from '@saas-skeleton/contracts';
@@ -40,6 +39,7 @@ import {
 } from '../../../api/generated/api';
 import { ContentSection } from '../../../components/section/content-section';
 import { applyServerError, FormPasswordField } from '../../../components/form';
+import { endSession } from '../../auth/lib/end-session';
 import { useAuthStore } from '../../auth/stores/auth.store';
 
 interface ChangePasswordForm {
@@ -169,8 +169,6 @@ function SessionsSection() {
   const { t } = useTranslation('user-settings');
   const queryClient = useQueryClient();
   const setTokens = useAuthStore((s) => s.setTokens);
-  const clearSession = useAuthStore((s) => s.clearSession);
-  const navigate = useNavigate();
 
   const [isRevokeAllOpen, setIsRevokeAllOpen] = useState(false);
   const [pendingSession, setPendingSession] = useState<AuthSessionResponse | null>(null);
@@ -199,8 +197,7 @@ function SessionsSection() {
       // Завершили СВІЙ же пристрій: сесії, з якої зроблено запит, більше немає,
       // і лишатись на сторінці з мертвим токеном немає сенсу
       if (session.isCurrent) {
-        clearSession();
-        void navigate({ to: '/login' });
+        await endSession();
         return;
       }
 
