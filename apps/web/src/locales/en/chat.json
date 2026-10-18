@@ -329,15 +329,6 @@
       "failed": "Could not update the conversation."
     }
   },
-  "activity": {
-    "conversation": {
-      "assigned": "<b>{{actor}}</b> assigned <b>{{conversation}}</b> to <b>{{assignee}}</b>",
-      "unassigned": "<b>{{actor}}</b> removed the assignee of <b>{{conversation}}</b>",
-      "status_changed": "<b>{{actor}}</b> reopened <b>{{conversation}}</b>",
-      "resolved": "<b>{{actor}}</b> resolved <b>{{conversation}}</b>",
-      "set_pending": "<b>{{actor}}</b> marked <b>{{conversation}}</b> as pending"
-    }
-  },
   "outreach": {
     "open": "New customer conversation",
     "title": "Start a customer conversation",

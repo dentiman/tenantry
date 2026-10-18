@@ -5,6 +5,7 @@ import { en as zodEn } from 'zod/locales';
 import {
   DEFAULT_LOCALE,
   SUPPORTED_LOCALES,
+  activitiesEn,
   commonEn,
   errorsEn,
   validationEn,
@@ -43,6 +44,8 @@ void i18n.use(initReactI18next).init({
       common: commonEn,
       errors: errorsEn,
       validation: validationEn,
+      // Стрічка подій тенанта на його картці — той самий рендер, що в tenant-web
+      activities: activitiesEn,
       auth: authEn,
       layout: layoutEn,
       tenants: tenantsEn,

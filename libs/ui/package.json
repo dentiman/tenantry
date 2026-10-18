@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./activities": "./src/activities/index.ts",
     "./api/*": "./src/api/*.ts",
     "./components/auth-shell": "./src/components/auth-shell.tsx",
     "./components/brand-backdrop": "./src/components/brand-backdrop.tsx",

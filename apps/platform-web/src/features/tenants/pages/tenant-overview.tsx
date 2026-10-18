@@ -5,6 +5,7 @@ import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { useTenantsFindOne } from '../../../api/generated/api';
 import { Fact } from '../components/fact';
+import { TenantStateCard } from '../components/tenant-state-card';
 
 /**
  * Вкладка «Overview» картки tenant-а — індексний дочірній маршрут `TenantDetailLayout`.
@@ -21,6 +22,8 @@ export function TenantOverviewTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <TenantStateCard tenant={tenant} />
+
   <Card>
     <CardHeader>
       <CardTitle>{t('detail.identity.title')}</CardTitle>

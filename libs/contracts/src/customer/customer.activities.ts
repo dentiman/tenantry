@@ -7,10 +7,11 @@ import { EntityRefSchema, defineActivityTypes } from '../activity/activity-defin
  * заархівував клієнта» мусить фільтруватися по type. Редагування другорядних полів у журнал
  * не потрапляє взагалі.
  *
- * Тексти — у неймспейсі `customers`, ключ `activity.<тип>`.
+ * Тексти — `libs/i18n/src/locales/en/activities/customers.json` (спільний неймспейс `activities`,
+ * ключ — сам тип): стрічку рендерять обидва фронти.
  */
 export const CUSTOMER_ACTIVITIES = defineActivityTypes(
-  { ns: 'customers', prefix: 'activity' },
+  { ns: 'activities' },
   {
     'customer.created': {
       workspace: true,

@@ -252,8 +252,12 @@ messaging, сокет), а `socket-events` одразу каже про тран
 - **Збірка** — `libs/contracts/src/notification-types.ts` і `activity-types.ts`:
   `NOTIFICATION_TYPES`, схеми, meta, `ACTIVITY_TYPES` виводяться з них, тож `NotificationType`
   лишається точним union-ом і `satisfies Record<NotificationType, …>` ловить забутий тип.
-- **Тексти** — у неймспейсі модуля-власника (`calendar.json` → `notifications.*`, `activity.*`;
-  `customers.json` → те саме). Тексти платформних типів (`user.*`, `auth.*`, `settings.*`,
+- **Тексти** — у неймспейсі модуля-власника (`calendar.json` → `notifications.*`;
+  `customers.json` → те саме). Виняток — тексти **активностей** фіч: їх рендерять обидва фронти
+  (картки в tenant-web, стрічка тенанта в platform-web), тому вони лежать окремим файлом власника
+  `libs/i18n/src/locales/en/activities/<модуль>.json` у спільному неймспейсі `activities`
+  (`texts: { ns: 'activities' }`, ключ — сам тип). Прибираючи фічу з форку, прибери її файл і рядок
+  у `libs/i18n/src/index.ts`. Тексти платформних типів (`user.*`, `auth.*`, `settings.*`,
   `email.*`, `system`, `unknown`) і самих центрів лишаються в спільних `notifications.json` /
   `activities.json`: розносити їх по `users.json` / `auth.json` означало б тягнути тексти
   інбокса в неймспейси екранів логіну без виграшу для форку. Переносяться лише тексти фіч
@@ -262,7 +266,7 @@ messaging, сокет), а `socket-events` одразу каже про тран
   меню (`layout.json`).
 - **Рантайм** — `notification-message.tsx`, `activity-message.tsx`, `notification-preferences.tsx`
   читають визначення типу з реєстру контрактів; ні переліку типів, ні `if` по конкретному типу
-  в них немає (спецвипадок — поле визначення). Помічник `apps/web/src/lib/payload-values.ts`
+  в них немає (спецвипадок — поле визначення). Помічник `libs/ui/src/lib/payload-values.ts`
   generic. `registry-texts.test.ts` звіряє, що кожен тип має тексти за своєю адресою.
 
 ### 7.2. Події сокета

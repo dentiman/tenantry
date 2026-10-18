@@ -491,6 +491,31 @@ const rows = await this.prisma.activity.findMany({
 Фронтенд: `DashboardActivityWidget` (`features/activities/components/`) — той самий `ActivityFeed`
 з власним `useFeedQuery`, у слоті `dashboardWidgets` ([modules.md](modules.md) §4.1).
 
+## Читання в control plane: `GET /api/tenants/:tenantId/activities` (platform-api)
+
+Стрічка подій УСЬОГО тенанта на картці тенанта в platform-web — операційний зріз для
+оператора («що там сталося вчора о 15:00»), а не копія бізнес-екрану: повної хронології
+тенанта в tenant-плані немає ні в кого, навіть в адміна (загальна стрічка воркспейсу
+відфільтрована за типами).
+
+- **Оператор бачить УСІ типи** (рішення 2026-10-18), зокрема безпекові (`user.password_changed`,
+  `user.sessions_revoked`) і `calendar_event.*` з назвами приватних подій, — більше, ніж будь-який
+  юзер тенанта. Без фільтра за сутністю; необов'язковий фільтр `type`. Перегляд у
+  `platform_audit_events` не пишеться (відкладено).
+- **Межа тенанта — лише `where: { tenantId }`.** platform-api читає через `SystemPrismaService`
+  (BYPASSRLS), тому RLS тут не працює; невідомий тенант → 404.
+- **Нічого не дублюється.** Курсор, сортування і мапінг — `readActivityPage` /
+  `toActivityResponse` у `libs/shared/src/activities/activity-page.ts`, ті самі, що в
+  `apps/api` (там вони лише передають RLS-клієнт). Контракт — `TenantActivityQuerySchema`
+  (`CursorQuerySchema` + `type?`) у `libs/contracts/src/platform/tenant-activity.schema.ts`;
+  схема відповіді — та сама `ActivityListResponseSchema`.
+- **Рендер — спільний** (`libs/ui/src/activities/`, див. «Фронтенд: рендер фіда»): картка тенанта
+  ставить `ActivityPanel` у праву колонку з хуком `useTenantActivitiesFindAll`.
+
+Інваріант тримає `apps/platform-api/test/tenant-activities.e2e-spec.ts`: подій чужого тенанта у
+відповіді немає, тип поза `WORKSPACE_ACTIVITY_TYPES` присутній, фільтр за типом, курсор без дублів
+і пропусків на рівних `createdAt`, 400 на зламаний курсор, 404 і 401.
+
 ## Фронтенд: рендер фіда
 
 Демо-споживач (за зразком ChangeAvatarModal): row action «Activity» на `/users` →
@@ -501,13 +526,23 @@ const rows = await this.prisma.activity.findMany({
 Хостів у стрічки тепер три: `ActivityDrawer`, `ActivityPanel` (постійна бічна колонка
 карток юзера і кастомера — власна висота, свій скрол, `sticky` з `lg`) і журнал змін
 налаштувань компанії.
+
+> **Оновлено 2026-10-18.** `ActivityFeed`, `ActivityPanel` і `ActivityMessage` переїхали в
+> `libs/ui/src/activities/` (`@saas-skeleton/ui/activities`; шлях належить модулю `activities`
+> у `modules.config.ts`, а не infra-рівню `libs/ui`): їх рендерить і platform-web (стрічка
+> тенанта). Джерела даних у бібліотеці немає — хост передає `useFeedQuery({ cursor, isEnabled })`
+> хука свого згенерованого клієнта, а `feedKey` скидає накопичене при зміні стрічки. У
+> `apps/web/src/features/activities/components/` лишились тонкі обгортки з тими самими пропами
+> `entityType`/`entityId` (дефолтне джерело — `useActivitiesFindAll`).
 Пагінація — накопичення items у локальному стані з ЛІНИВИМ довантаженням: маркер у кінці
 списку під `IntersectionObserver` (без `root`, тобто відносно вьюпорта — вкладений скрол
 панелі браузер враховує сам, тож хост не передає сюди свій контейнер). Кнопки «Load more»
 більше немає; ключ `loadMore` лишився підписом до спінера довантаження.
 `useInfiniteQuery` через orval-конфіг — і далі беклог.
 
-Ключі — `libs/i18n`, namespace `activities` (спільне для web; ключ = тип події):
+Ключі — `libs/i18n`, namespace `activities` (спільний для обох фронтів; ключ = тип події).
+Тексти типів фіч — окремими файлами власників `libs/i18n/src/locales/en/activities/<модуль>.json`
+(`customers`, `calendar`, `chat`), які `libs/i18n/src/index.ts` зливає в той самий неймспейс:
 
 ```json
 {

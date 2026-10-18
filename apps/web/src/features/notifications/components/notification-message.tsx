@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { NotificationResponseDtoOutput } from '../../../api/generated/model/notificationResponseDtoOutput';
 import { notificationDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import { entityLink } from '../../../lib/entity-routes';
-import { payloadValues } from '../../../lib/payload-values';
+import { payloadValues } from '@saas-skeleton/ui/lib/payload-values';
 
 type Notification = NotificationResponseDtoOutput;
 

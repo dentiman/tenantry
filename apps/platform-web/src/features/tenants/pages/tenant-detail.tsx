@@ -1,11 +1,4 @@
 import { useState } from 'react';
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-} from '@saas-skeleton/ui/components/ui/field';
-import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { TriangleAlert } from 'lucide-react';
 import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -22,37 +15,35 @@ import {
 } from '@saas-skeleton/ui/components/ui/alert-dialog';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@saas-skeleton/ui/components/ui/card';
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
-import { Separator } from '@saas-skeleton/ui/components/ui/separator';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import {
   getTenantsFindAllQueryKey,
   getTenantsFindOneQueryKey,
+  useTenantActivitiesFindAll,
   useTenantsFindOne,
   useTenantsUpdate,
 } from '../../../api/generated/api';
+import { ActivityPanel } from '@saas-skeleton/ui/activities';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
-import { formatDate } from '@saas-skeleton/ui/lib/format';
-import { Fact } from '../components/fact';
 
 /**
  * Картка тенанта — ЛЕЙАУТ маршруту `tenants/$tenantId` (той самий патерн, що картка
  * кастомера в tenant-web): шапка з ідентичністю, статусом і діями, рядок вкладок і
  * `<Outlet/>`. Вкладки — дочірні маршрути: «Overview» (`/`), «Access» (`access`) і
- * «Users» (`users`, аварійне керування юзерами tenant-а); справа — колонка стану
- *.
+ * «Users» (`users`, аварійне керування юзерами tenant-а); справа — стрічка подій усього
+ * тенанта (стан і дозволи — у вкладці Overview).
  *
- * Показуємо рівно те, що є в control plane: сам рядок тенанта і його наслідки для
- * входу. Стрічки подій тут НЕМАЄ навмисно — activities живуть у tenant-плані під
- * RLS, і платформа їх не читає; так само немає лічильника юзерів і джоб тенанта,
- * бо відповідних ендпоінтів у platform-api не існує.
+ * Стрічку платформа читає з tenant-ових `activities` через system-клієнт з явним
+ * `tenantId` (`GET /tenants/:id/activities`): це операційний зріз для оператора, і він
+ * бачить усі типи, більше за будь-якого юзера тенанта. Лічильника юзерів і джоб
+ * тенанта немає, бо відповідних ендпоінтів у platform-api не існує.
  */
 export function TenantDetailLayout() {
   const { t } = useTranslation('tenants');
@@ -157,34 +148,15 @@ export function TenantDetailLayout() {
           <Outlet />
         </div>
 
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle>{t('detail.state.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Fact label={t('detail.state.status')}>
-              {tenant.isActive ? t('status.active') : t('status.suspended')}
-            </Fact>
-            <Separator />
-            <Fact label={t('detail.state.since')}>{formatDate(tenant.createdAt)}</Fact>
-            <Separator />
-            {/* Дозвіл платформи (AI-5a): Tenant Admin вмикає асистента лише в його межах */}
-            <Field orientation="horizontal" className="py-1.5">
-              <FieldContent>
-                <FieldLabel htmlFor="tenant-ai-allowed">{t('detail.state.ai')}</FieldLabel>
-                <FieldDescription>{t('detail.state.aiHint')}</FieldDescription>
-              </FieldContent>
-              <Switch
-                id="tenant-ai-allowed"
-                checked={tenant.aiAllowed}
-                disabled={updateTenant.isPending}
-                onCheckedChange={(checked) => {
-                  updateTenant.mutate({ id: tenant.id, data: { aiAllowed: checked } });
-                }}
-              />
-            </Field>
-          </CardContent>
-        </Card>
+        {/* Стрічка подій УСЬОГО тенанта — операційний зріз для розбору інцидентів: усі
+            юзери, усі сутності, усі типи (docs/activity-log.md). Той самий компонент, що
+            на картці кастомера в tenant-web; джерело — platform-api */}
+        <ActivityPanel
+          feedKey={`tenant:${tenantId}`}
+          useFeedQuery={({ cursor, isEnabled }) =>
+            useTenantActivitiesFindAll(tenantId, { cursor }, { query: { enabled: isEnabled } })
+          }
+        />
       </div>
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

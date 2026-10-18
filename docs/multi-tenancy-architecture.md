@@ -351,6 +351,11 @@ tenant-застосунках. `apps/platform-api` під цю заборону 
 - Сповіщення юзеру про зміну пароля не шлеться (tenant-api шле; тут потрібен би явний `tenantId`
   в notification recorder).
 
+Читання стрічки подій тенанта (`GET /tenants/:tenantId/activities`, права колонка картки тенанта)
+— той самий system-клієнт із явним `tenantId` у `where`; оператор бачить усі типи подій, більше за
+будь-якого юзера тенанта. Курсор і мапінг спільні з tenant-api (`libs/shared/src/activities/`).
+Деталі й рішення — [activity-log.md](activity-log.md), «Читання в control plane».
+
 ## 8. Черги: tenant-scope і system-scope
 
 > Оновлено після **EDA-1** (2026-08-04): шар черг переїхав із `libs/shared/src/jobs/` у

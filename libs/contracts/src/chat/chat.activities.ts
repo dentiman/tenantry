@@ -8,10 +8,11 @@ import { ConversationStatusSchema } from './chat.schema';
  * звернень без окремого запиту. У загальну стрічку воркспейсу не йдуть (`workspace` не задано):
  * це робочий шум команди, а не подія організації.
  *
- * Тексти — у неймспейсі `chat`, ключ `activity.<тип>`.
+ * Тексти — `libs/i18n/src/locales/en/activities/chat.json` (спільний неймспейс `activities`,
+ * ключ — сам тип): стрічку рендерять обидва фронти.
  */
 export const CHAT_ACTIVITIES = defineActivityTypes(
-  { ns: 'chat', prefix: 'activity' },
+  { ns: 'activities' },
   {
     'conversation.assigned': {
       payload: z.object({

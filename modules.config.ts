@@ -189,6 +189,8 @@ export const MODULES = {
     summary: 'Стрічка активності (activities / activity_links) і її рендеринг.',
     paths: [
       'apps/web/src/features/activities/',
+      // Рендер стрічки, спільний для обох фронтів; джерело даних передає хост
+      'libs/ui/src/activities/',
       'libs/contracts/src/activity/',
       'libs/shared/src/activities/',
       'apps/api/src/activities/',
@@ -236,6 +238,7 @@ export const MODULES = {
       'libs/contracts/src/platform/tenant.types.ts',
       'libs/contracts/src/platform/tenant-user.schema.ts',
       'libs/contracts/src/platform/tenant-user.types.ts',
+      'libs/contracts/src/platform/tenant-activity.*',
       'apps/platform-api/src/tenants/',
       'apps/platform-web/src/features/tenants/',
     ],

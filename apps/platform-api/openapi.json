@@ -574,6 +574,94 @@
         ]
       }
     },
+    "/api/tenants/{tenantId}/activities": {
+      "get": {
+        "operationId": "tenantActivitiesFindAll",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user.created",
+                "user.password_changed",
+                "user.sessions_revoked",
+                "user.enabled",
+                "user.disabled",
+                "user.email_changed",
+                "email.sent",
+                "customer.created",
+                "customer.archived",
+                "customer.restored",
+                "customer.owner_changed",
+                "customer.deleted",
+                "settings.updated",
+                "settings.numbering_shifted",
+                "calendar_event.created",
+                "calendar_event.rescheduled",
+                "calendar_event.cancelled",
+                "calendar_event.restored",
+                "calendar_event.deleted",
+                "calendar_event.attendee_added",
+                "calendar_event.attendee_removed",
+                "calendar_event.rsvp_changed",
+                "conversation.assigned",
+                "conversation.status_changed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantActivityListResponseDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "tenant-activities"
+        ]
+      }
+    },
     "/api/channel-events/unroutable": {
       "get": {
         "operationId": "channelEventsUnroutable",
@@ -1725,6 +1813,98 @@
         },
         "required": [
           "revokedCount"
+        ],
+        "additionalProperties": false
+      },
+      "TenantActivityListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "user.created",
+                    "user.password_changed",
+                    "user.sessions_revoked",
+                    "user.enabled",
+                    "user.disabled",
+                    "user.email_changed",
+                    "email.sent",
+                    "customer.created",
+                    "customer.archived",
+                    "customer.restored",
+                    "customer.owner_changed",
+                    "customer.deleted",
+                    "settings.updated",
+                    "settings.numbering_shifted",
+                    "calendar_event.created",
+                    "calendar_event.rescheduled",
+                    "calendar_event.cancelled",
+                    "calendar_event.restored",
+                    "calendar_event.deleted",
+                    "calendar_event.attendee_added",
+                    "calendar_event.attendee_removed",
+                    "calendar_event.rsvp_changed",
+                    "conversation.assigned",
+                    "conversation.status_changed"
+                  ]
+                },
+                "actorType": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "system"
+                  ]
+                },
+                "actorId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "actorLabel": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "payload": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "actorType",
+                "actorId",
+                "actorLabel",
+                "payload",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ],
         "additionalProperties": false
       },

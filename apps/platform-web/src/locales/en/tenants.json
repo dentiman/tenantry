@@ -84,7 +84,6 @@
     "state": {
       "title": "State",
       "status": "Status",
-      "since": "Created",
       "ai": "AI assistant allowed",
       "aiHint": "The tenant admin can turn the assistant on only while this is allowed."
     },

@@ -7,10 +7,11 @@ import { EntityRefSchema, defineActivityTypes } from '../activity/activity-defin
  * фільтруватися по type. Редагування назви чи опису в журнал НЕ йде — інакше фід кастомера
  * потоне в шумі.
  *
- * Тексти — у неймспейсі `calendar`, ключ `activity.<тип>`.
+ * Тексти — `libs/i18n/src/locales/en/activities/calendar.json` (спільний неймспейс `activities`,
+ * ключ — сам тип): стрічку рендерять обидва фронти.
  */
 export const CALENDAR_ACTIVITIES = defineActivityTypes(
-  { ns: 'calendar', prefix: 'activity' },
+  { ns: 'activities' },
   {
     'calendar_event.created': {
       payload: z.object({
