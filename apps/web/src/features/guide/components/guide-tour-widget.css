@@ -1,0 +1,159 @@
+/**
+ * Плитка туру на дашборді — «скло з власним фоном».
+ *
+ * Картки путівника напівпрозорі, бо під ними лежить брендовий фон
+ * (`libs/ui/src/brand-backdrop.css`). Дашборд — робочий екран із суцільним
+ * полотном, тож фон тут живе ВСЕРЕДИНІ плитки: теплі розмиті плями (помаранч,
+ * бурштин, персик), що повільно переливаються, а над ними — шар скла, світла
+ * кромка зверху і градієнтна рамка (прийом картки входу, §3 brand-backdrop.css).
+ *
+ * Поки кастомно для одного віджита; коли такий блок знадобиться деінде —
+ * виносимо в `libs/ui` з тоном як параметром.
+ *
+ * Токени оголошені на `:root`/`.dark`, а під `.tour-card` лише підставляються —
+ * та сама причина, що в `--card-glass`: пряме `--background: color-mix(…
+ * var(--background) …)` на тому самому елементі було б циклом.
+ */
+:root {
+  --tour-base: oklch(0.992 0.008 85);
+  --tour-glow-1: color-mix(in oklch, var(--warning) 50%, white);
+  --tour-glow-2: color-mix(in oklch, oklch(0.88 0.16 92) 60%, white);
+  --tour-glow-3: color-mix(in oklch, oklch(0.82 0.11 40) 45%, white);
+  --tour-glow-opacity: 0.85;
+  --tour-veil: color-mix(in oklab, var(--card) 42%, transparent);
+  --tour-edge-from: color-mix(in oklab, var(--warning) 50%, white);
+  --tour-edge-via: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --tour-edge-to: color-mix(in oklab, var(--warning) 32%, transparent);
+  --tour-card-glow: color-mix(in oklab, var(--warning) 18%, transparent);
+  /* Заливка чипів і `secondary` — накладки, а не суцільний сірий/білий: бере
+     відтінок плями під собою (як `--secondary: var(--accent)` під брендовим фоном) */
+  --tour-chip: color-mix(in oklab, var(--card) 55%, transparent);
+  /* Приглушений текст на крок темніший: на тонованому склі стоковий
+     `--muted-foreground` втрачає контраст (та сама історія, що `--auth-muted-foreground`) */
+  --tour-muted-foreground: color-mix(in oklab, var(--muted-foreground) 82%, var(--foreground));
+}
+
+.dark {
+  /* Як у брендового фону — глибокі «нічні» відтінки, а не яскравий warning */
+  --tour-base: oklch(0.17 0.012 60);
+  --tour-glow-1: color-mix(in oklch, var(--warning) 60%, black);
+  --tour-glow-2: color-mix(in oklch, oklch(0.72 0.14 88) 50%, black);
+  --tour-glow-3: color-mix(in oklch, oklch(0.62 0.13 35) 50%, black);
+  --tour-glow-opacity: 0.7;
+  --tour-veil: color-mix(in oklab, var(--card) 50%, transparent);
+  --tour-edge-from: color-mix(in oklab, var(--warning) 60%, transparent);
+  --tour-edge-via: color-mix(in oklab, var(--foreground) 11%, transparent);
+  --tour-edge-to: color-mix(in oklab, var(--warning) 22%, transparent);
+  --tour-card-glow: color-mix(in oklab, var(--warning) 14%, transparent);
+  --tour-chip: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --tour-muted-foreground: var(--muted-foreground);
+}
+
+.tour-card {
+  --background: var(--tour-chip);
+  --secondary: var(--accent);
+  --border: var(--border-glass);
+  --input: var(--border-glass);
+  --muted-foreground: var(--tour-muted-foreground);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background-color: var(--tour-base);
+  box-shadow:
+    var(--glass-highlight),
+    0 18px 48px -24px var(--tour-card-glow),
+    var(--surface-shadow);
+}
+
+/* Градієнтна рамка 1px: світліший теплий кут зверху-зліва → майже прозорий
+   знизу-справа. Маска вирізає середину, лишаючи тільки кант */
+.tour-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    var(--tour-edge-from),
+    var(--tour-edge-via) 45%,
+    var(--tour-edge-to)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.tour-card__glow {
+  position: absolute;
+  z-index: -2;
+  border-radius: 9999px;
+  opacity: var(--tour-glow-opacity);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.tour-card__glow--1 {
+  top: -60%;
+  left: -10%;
+  width: 55%;
+  height: 170%;
+  background: radial-gradient(closest-side, var(--tour-glow-1), transparent);
+  animation: tour-drift-1 22s ease-in-out infinite alternate;
+}
+
+.tour-card__glow--2 {
+  top: -30%;
+  left: 35%;
+  width: 45%;
+  height: 150%;
+  background: radial-gradient(closest-side, var(--tour-glow-2), transparent);
+  animation: tour-drift-2 26s ease-in-out infinite alternate;
+}
+
+.tour-card__glow--3 {
+  bottom: -70%;
+  right: -8%;
+  width: 45%;
+  height: 170%;
+  background: radial-gradient(closest-side, var(--tour-glow-3), transparent);
+  animation: tour-drift-3 30s ease-in-out infinite alternate;
+}
+
+/* Скло над плямами: без нього плями давали б насичену заливку, а не відтінок */
+.tour-card__veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--tour-veil);
+  pointer-events: none;
+}
+
+@keyframes tour-drift-1 {
+  to {
+    transform: translate(18%, 12%) scale(1.15);
+  }
+}
+
+@keyframes tour-drift-2 {
+  to {
+    transform: translate(-22%, 8%) scale(0.9);
+  }
+}
+
+@keyframes tour-drift-3 {
+  to {
+    transform: translate(-25%, -15%) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-card__glow {
+    animation: none;
+  }
+}

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { ArrowRightIcon, XIcon } from 'lucide-react';
+import { ArrowRightIcon, CompassIcon, XIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@saas-skeleton/ui/components/ui/button';
-import { DashboardWidget } from '../../dashboard/components/widget';
+import { cn } from '@saas-skeleton/ui/lib/utils';
 import { GUIDE_SECTIONS } from '../pages/guide.content';
 import { useGuideTourStore } from '../stores/guide-tour.store';
+import './guide-tour-widget.css';
 
 /**
  * Параграфи, на які веде плитка. «Overview» тут зайвий: на нього веде головна
@@ -35,26 +36,29 @@ export function GuideTourWidget() {
   if (dismissed) return null;
 
   return (
-    <DashboardWidget
-      className="lg:col-span-3"
-      title={t('tour.title')}
-      action={
-        <div className="flex items-center gap-1">
-          <Link to="/guide" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-            {t('tour.open')}
-            <ArrowRightIcon data-icon="inline-end" />
-          </Link>
-          <Button variant="ghost" size="icon-sm" aria-label={t('tour.dismiss')} onClick={dismiss}>
-            <XIcon />
-          </Button>
-        </div>
-      }
+    // «Скло з власним фоном» у теплих тонах — уся візуальна частина в
+    // `guide-tour-widget.css` (там і чому фон живе всередині плитки)
+    <section
+      aria-labelledby="guide-tour-title"
+      className="tour-card flex gap-3 p-4 lg:col-span-3"
     >
+      <span aria-hidden className="tour-card__glow tour-card__glow--1" />
+      <span aria-hidden className="tour-card__glow tour-card__glow--2" />
+      <span aria-hidden className="tour-card__glow tour-card__glow--3" />
+      <span aria-hidden className="tour-card__veil" />
+
+      <CompassIcon className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
+
       {/* Колонкою завжди, без `sm:flex-row`: брейкпоінт Tailwind меряє ВІКНО, а плитка
           живе в колонці, яку з'їдають сайдбар і панель асистента, — рядок із текстом
           і чипами стискав би текст у вузьку смугу */}
-      <div className="flex flex-col gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">{t('tour.lead')}</p>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id="guide-tour-title" className="text-base font-medium text-warning">
+            {t('tour.title')}
+          </h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">{t('tour.lead')}</p>
+        </div>
         <nav aria-label={t('tour.title')} className="flex flex-wrap gap-2">
           {TOUR_SECTIONS.map((section) => {
             const Icon = section.icon;
@@ -63,7 +67,7 @@ export function GuideTourWidget() {
                 key={section.id}
                 to="/guide"
                 hash={section.id}
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                className={cn(buttonVariants({ variant: 'outline', size: 'sm', radius: 'full' }))}
               >
                 <Icon data-icon="inline-start" />
                 {t(`sections.${section.id}`)}
@@ -72,6 +76,27 @@ export function GuideTourWidget() {
           })}
         </nav>
       </div>
-    </DashboardWidget>
+
+      {/* `cn()` навколо `buttonVariants` обов'язковий: без tailwind-merge `rounded-md`
+          розміру `sm` перебиває `rounded-full` (`Button` робить це сам, `Link` — ні) */}
+      <div className="flex shrink-0 items-start gap-2">
+        <Link
+          to="/guide"
+          className={cn(buttonVariants({ variant: 'secondary', size: 'sm', radius: 'full' }))}
+        >
+          {t('tour.open')}
+          <ArrowRightIcon data-icon="inline-end" />
+        </Link>
+        <Button
+          variant="secondary"
+          size="icon-sm"
+          radius="full"
+          aria-label={t('tour.dismiss')}
+          onClick={dismiss}
+        >
+          <XIcon />
+        </Button>
+      </div>
+    </section>
   );
 }

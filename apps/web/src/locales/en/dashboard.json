@@ -1,8 +1,5 @@
 {
   "title": "Dashboard",
-  "signedInAs": "Signed in as",
-  "role": "Role",
-  "memberSince": "Member since",
   "placeholder": {
     "title": "Coming soon",
     "hint": "Another widget will take this spot."
