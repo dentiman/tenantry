@@ -422,7 +422,7 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 
 ### `bash scripts/ci-verify.sh`
 
-Повний CI-гейт локально — те саме, що GitLab-джоба `verify`: `pnpm install` → `db:generate` →
+Повний CI-гейт локально — те саме, що GitLab-джоба `verify` (там вона лише ручна кнопка, не шлюз, тож перед пушем у `dev` її проганяють тут): `pnpm install` → `db:generate` →
 `lint` → `typecheck` → `test` → e2e обох API. Postgres і Valkey — одноразові контейнери у
 власній docker-мережі, тож dev-стек і workspace-слоти не зачіпаються; потрібен лише Docker.
 Перший прогін довгий (холодний pnpm store), далі store береться з тому

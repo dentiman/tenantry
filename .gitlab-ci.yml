@@ -64,14 +64,19 @@ ai_knowledge_check:
     - docker run --rm -v "$CI_PROJECT_DIR:/repo:ro" -w /repo node:24-bookworm-slim node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check
 
 # Повна перевірка коміту: lint (+ deps:check) → typecheck → unit → e2e обох API проти
-# одноразових Postgres (pgvector) і Valkey. Стадія build стартує лише після зеленої check,
-# тож неперевірений SHA не збирається і не деплоїться. Уся логіка — у скрипті, щоб локальний
-# прогін (`bash scripts/ci-verify.sh`) був тим самим, що тут.
+# одноразових Postgres (pgvector) і Valkey. Уся логіка — у скрипті, щоб локальний прогін
+# (`bash scripts/ci-verify.sh` / `pnpm verify`) був тим самим, що тут.
+#
+# ЗАРАЗ НЕ ШЛЮЗ (рішення власника 2026-10-19: прогін забирав надто багато часу) — перевірка
+# робиться локально перед пушем; тут лишилась ручна кнопка, і `allow_failure` не дає їй
+# тримати build. Повернути шлюзом — rules: `- if: $CI_COMMIT_BRANCH` без when/allow_failure.
 verify:
   stage: check
   tags: [deploy_dev]
   rules:
     - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
   timeout: 45m
   script:
     - bash scripts/ci-verify.sh

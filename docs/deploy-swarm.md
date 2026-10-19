@@ -123,14 +123,16 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 
 **check** — до будь-якої збірки, на кожній гілці:
 - `ai_knowledge_check` — закомічений корпус знань AI не розійшовся з `docs/ai-knowledge`;
-- `verify` — `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` →
+- `verify` — **ручна кнопка, не шлюз** (рішення власника 2026-10-19: прогін забирав надто багато
+  часу; перевірка — локально перед пушем). `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` →
   unit → e2e обох API. Postgres (той самий pgvector-образ і digest) і Valkey — одноразові
   контейнери на власній docker-мережі джоби; checkout монтується read-only і копіюється в
   node-контейнер (shell-executor не зміг би прибрати root-овий `node_modules`). pnpm store
   кешується в іменованому томі `saas-verify-pnpm-store` на раннері.
 
-Стадія build стартує лише після зеленої check — неперевірений SHA не збирається і не
-деплоїться. **Локально той самий прогін** — `bash scripts/ci-verify.sh` (потрібен лише Docker;
+Стадія build чекає лише на `ai_knowledge_check`; `verify` (`when: manual`, `allow_failure: true`)
+її не тримає, тож SHA збирається й деплоїться без повного прогону — відповідальність за нього на
+тому, хто пушить. Повернути шлюзом — прибрати `when`/`allow_failure` з rules джоби. **Локально той самий прогін** — `bash scripts/ci-verify.sh` (потрібен лише Docker;
 dev-стек і workspace-слоти не чіпає, бо все живе в окремій мережі). GitHub Actions
 (`.github/workflows/ci.yml`) прибрано 2026-10-05: remote — лише GitLab, тож він ніколи не
 запускався.
