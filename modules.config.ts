@@ -343,6 +343,12 @@ export const MODULES = {
     summary: 'Пісочниця компонентів (демо, не продукт).',
     paths: ['apps/web/src/features/playground/'],
   },
+  'invoices-demo': {
+    tier: 'feature',
+    dependsOn: ['app', 'customers'],
+    summary: 'Демо-сторінка інвойсів на фейкових даних (показ клієнтам, без бекенду). Видаляється текою.',
+    paths: ['apps/web/src/features/invoices-demo/'],
+  },
 } as const satisfies Record<string, ModuleDef>;
 
 export type ModuleName = keyof typeof MODULES;

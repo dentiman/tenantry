@@ -42,7 +42,7 @@ describe('navigation snapshot', () => {
     expect(describeNav('ADMIN')).toMatchInlineSnapshot(`
       [
         "rail: workspace, chat, calendar, assistant, guide, settings",
-        "workspace: dashboard, users, customers",
+        "workspace: dashboard, users, customers, invoices-demo",
         "settings: settings.general, settings.calendar, settings.messaging, settings.numbering, settings.ai, settings.activity",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
         "playground: playground.vertical-form, playground.inline-form, playground.dialog",
@@ -55,7 +55,7 @@ describe('navigation snapshot', () => {
     expect(describeNav('USER')).toMatchInlineSnapshot(`
       [
         "rail: workspace, chat, calendar, assistant, guide",
-        "workspace: dashboard, users, customers",
+        "workspace: dashboard, users, customers, invoices-demo",
         "user-settings: user-settings.profile, user-settings.account, user-settings.security, user-settings.notifications, user-settings.appearance",
         "playground: playground.vertical-form, playground.inline-form, playground.dialog",
         "customers.detail: customers.overview, customers.contacts, calendar.customer-events",

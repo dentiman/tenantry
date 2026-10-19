@@ -12,6 +12,7 @@ import chatEn from '../locales/en/chat.json';
 import customersEn from '../locales/en/customers.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import guideEn from '../locales/en/guide.json';
+import invoicesDemoEn from '../features/invoices-demo/invoices-demo.en.json';
 import layoutEn from '../locales/en/layout.json';
 import playgroundEn from '../locales/en/playground.json';
 import settingsEn from '../locales/en/settings.json';
@@ -41,6 +42,7 @@ export const resources = {
     settings: settingsEn,
     users: usersEn,
     customers: customersEn,
+    'invoices-demo': invoicesDemoEn, // invoices-demo
     'user-settings': userSettingsEn,
   },
 };

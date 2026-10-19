@@ -47,6 +47,7 @@ import {
   customerOverviewRoute,
   customerContactsRoute,
 } from './features/customers/customers.routes';
+import { invoicesDemoRoute } from './features/invoices-demo/invoices-demo.routes';
 import { dashboardRoute } from './features/dashboard/dashboard.routes';
 import { aboutRoute, guideRoute } from './features/guide/guide.routes';
 import { userSettingsNotificationsRoute } from './features/notifications/notifications.routes';
@@ -95,6 +96,7 @@ const routeTree = rootRoute.addChildren([
         customerContactsRoute,
         customerEventsRoute, // calendar
       ]),
+      invoicesDemoRoute, // invoices-demo
     ]),
     calendarRoute.addChildren([calendarIndexRoute, calendarViewRoute, calendarEventRoute]),
     chatRoute.addChildren([chatIndexRoute, chatConversationRoute]),

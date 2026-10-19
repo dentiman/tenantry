@@ -1,0 +1,111 @@
+{
+  "nav": "Invoices",
+  "title": "Invoices",
+  "subtitle": "Demo billing: 50 sample invoices, nothing is saved",
+  "newInvoice": "New invoice",
+  "searchLabel": "Search invoices",
+  "searchPlaceholder": "Number or customer…",
+  "ariaLabel": "Invoices",
+  "empty": "No invoices match these filters",
+  "overdue": "Overdue",
+  "toolbar": {
+    "total": "Invoices",
+    "selected": "Selected"
+  },
+  "filters": {
+    "statusLabel": "Status",
+    "statusAll": "All statuses",
+    "monthLabel": "Billed month",
+    "monthAll": "All months",
+    "methodLabel": "Payment method",
+    "methodAll": "All methods"
+  },
+  "status": {
+    "NEW": "New",
+    "IN_COLLECTION": "In collection",
+    "PAID": "Paid",
+    "CANCELED": "Canceled"
+  },
+  "method": {
+    "DIRECT_DEBIT": "Direct debit",
+    "CREDIT_CARD": "Credit card",
+    "WALLET": "Wallet",
+    "none": "Not set"
+  },
+  "fieldSets": {
+    "main": "Main",
+    "payment": "Payment",
+    "tax": "Tax",
+    "sap": "SAP"
+  },
+  "fields": {
+    "number": "Number",
+    "customer": "Customer",
+    "nationalId": "National ID",
+    "status": "Status",
+    "billedMonth": "Billed month",
+    "createdAt": "Created",
+    "dueDate": "Due date",
+    "paidAt": "Paid at",
+    "subtotal": "Before tax",
+    "taxPercent": "Tax %",
+    "taxAmount": "Tax",
+    "total": "Total",
+    "paymentMethod": "Customer payment method",
+    "paidMethod": "Paid with",
+    "paymentAttempts": "Payment attempts",
+    "emailedAt": "Emailed at",
+    "items": "Items",
+    "docNumber": "Document no.",
+    "taxDocNumber": "Tax document no.",
+    "taxDate": "Tax date",
+    "taxConfirmationNumber": "Tax confirmation no.",
+    "taxConfirmedAt": "Confirmed at",
+    "sapDocEntry": "SAP doc entry",
+    "sapDocNum": "SAP doc number",
+    "sapOrderDocEntry": "SAP order entry",
+    "sapOrderDocNum": "SAP order number",
+    "sapIncomingPaymentDocEntry": "SAP payment entry",
+    "sapIncomingPaymentNumber": "SAP payment number"
+  },
+  "actions": {
+    "downloadPdf": "Download PDF",
+    "sendEmail": "Send by email",
+    "chargeCard": "Charge credit card",
+    "changeTaxDate": "Change tax date",
+    "registerTaxConfirmation": "Register tax confirmation",
+    "collectionTransactions": "Direct debit transactions",
+    "cancel": "Cancel invoice"
+  },
+  "bulk": {
+    "sendEmail": "Send by email",
+    "charge": "Charge",
+    "directDebitFile": "Generate direct debit file",
+    "registerTaxConfirmations": "Register tax confirmations",
+    "createInSap": "Create missing in SAP",
+    "suspendServices": "Suspend services",
+    "more": "More"
+  },
+  "demoToast": {
+    "title": "Demo only",
+    "single": "“{{action}}” for {{number}} is not implemented yet.",
+    "bulk": "“{{action}}” for {{count}} invoices is not implemented yet.",
+    "page": "“{{action}}” is not implemented yet."
+  },
+  "panel": {
+    "description": "Invoice · {{month}}",
+    "customer": "Customer",
+    "amounts": "Amounts",
+    "dates": "Dates",
+    "payment": "Payment",
+    "tax": "Tax documents",
+    "sap": "SAP",
+    "items": "Items",
+    "itemsCount_one": "{{count}} item",
+    "itemsCount_other": "{{count}} items",
+    "oneTime": "One-time",
+    "notInSap": "Not created in SAP yet",
+    "notConfirmed": "Not confirmed",
+    "never": "—"
+  }
+}
