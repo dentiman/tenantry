@@ -7,6 +7,7 @@ import { formatDate, formatDateTime } from '@saas-skeleton/ui/lib/format';
 import { useCustomersFindOne } from '../../../api/generated/api';
 import { PhoneNumber } from '../../../components/phone-number';
 import { SlotOutlet } from '../../../lib/slots';
+import { formatCustomerAddress } from '../customer-address';
 import { customerOverviewCards } from '../customer-detail-slots';
 
 /** Рядок «підпис → значення» у картках: одна форма на всі групи (як на /users/$userId) */
@@ -32,20 +33,34 @@ export function CustomerOverviewTab() {
     return null;
   }
 
-  const address = [
-    customer.addressLine1,
-    customer.addressLine2,
-    [customer.postalCode, customer.city].filter(Boolean).join(' '),
-    customer.region,
-    customer.country,
-  ]
-    .filter((part) => part && part.length > 0)
-    .join(', ');
+  const address = formatCustomerAddress(customer);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Картки фіч — першими: найближчі зустрічі (календар) — перше, що
-        питають на картці клієнта. Слот, а не імпорт (docs/modules.md §4) */}
+      {/* Контакти — першими: за телефоном/поштою на картку заходять найчастіше */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('detail.contact.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Fact label={t('detail.contact.email')}>
+            {customer.email ?? t('detail.contact.empty')}
+          </Fact>
+          <Separator />
+          <Fact label={t('detail.contact.phone')}>
+            <PhoneNumber value={customer.phone} />
+          </Fact>
+          <Separator />
+          <Fact label={t('detail.contact.website')}>
+            {customer.website ?? t('detail.contact.empty')}
+          </Fact>
+          <Separator />
+          <Fact label={t('detail.contact.address')}>{address || t('detail.contact.empty')}</Fact>
+        </CardContent>
+      </Card>
+
+      {/* Картки фіч — одразу після контактів: найближчі зустрічі (календар) — те, що
+        питають на картці клієнта наступним. Слот, а не імпорт (docs/modules.md §4) */}
       <SlotOutlet
         slot={customerOverviewCards}
         props={{ customerId: customer.id, customerName: customer.name }}
@@ -69,27 +84,6 @@ export function CustomerOverviewTab() {
           <Fact label={t('detail.state.contacts')}>{customer.contactsCount}</Fact>
           <Separator />
           <Fact label={t('detail.state.customerSince')}>{formatDate(customer.createdAt)}</Fact>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('detail.contact.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Fact label={t('detail.contact.email')}>
-            {customer.email ?? t('detail.contact.empty')}
-          </Fact>
-          <Separator />
-          <Fact label={t('detail.contact.phone')}>
-            <PhoneNumber value={customer.phone} />
-          </Fact>
-          <Separator />
-          <Fact label={t('detail.contact.website')}>
-            {customer.website ?? t('detail.contact.empty')}
-          </Fact>
-          <Separator />
-          <Fact label={t('detail.contact.address')}>{address || t('detail.contact.empty')}</Fact>
         </CardContent>
       </Card>
 

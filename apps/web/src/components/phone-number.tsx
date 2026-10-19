@@ -1,3 +1,4 @@
+import { Phone } from 'lucide-react';
 import { CopyToClipboard } from '@saas-skeleton/ui/components/copy-to-clipboard';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { formatForDisplay, toDialableDigits } from './form/phone/phone-format';
@@ -22,11 +23,16 @@ interface PhoneNumberProps {
  *   прапор у колонці читався як окремий смисловий стовпчик — око чіплялось за
  *   нього замість цифр. `phoneCountry` лишається в моделі — він потрібен формі
  *   редагування (за `+1` країну не відновити), а не показу.
- * - **Колір `muted-foreground`**: телефон — довідкове поле поруч з іменем, а не
- *   те, що читають першим; на щабель тихіше за основний текст рядка.
- * - **Копіюється тільки клік по самому номеру**: окремої кнопки-іконки поруч
- *   немає — у гріді вона зайняла б стільки ж місця, скільки саме значення, і
- *   зʼявлялась би в кожному рядку.
+ * - **Дрібніший кегль (`text-xs`) і дефіси**: телефон — довідкове поле поруч з
+ *   іменем, а не те, що читають першим; цифри через дефіс групуються оком.
+ * - **Синій відтінок бренду (`primary`, підмішаний до тексту)**: як у сервісних
+ *   систем (Zendesk, HubSpot) — телефон/email «дієві» значення, їх впізнають за
+ *   кольором. Підмішування `foreground` не дає світлому синьому провалити
+ *   контраст на 12px.
+ * - **Ледь помітна іконка телефону попереду** (`icon-muted`): маркує тип значення
+ *   без підпису колонки; на ховері яснішає разом з номером. Це НЕ кнопка —
+ *   копіюється клік по всьому елементу.
+ * - **Копіюються суцільні цифри** (`toDialableDigits`): без дефісів, пробілів і плюса.
  */
 export function PhoneNumber({ value, className }: PhoneNumberProps) {
   const display = formatForDisplay(value);
@@ -40,11 +46,12 @@ export function PhoneNumber({ value, className }: PhoneNumberProps) {
     <CopyToClipboard
       value={digits}
       className={cn(
-        'tabular-nums text-muted-foreground transition-colors hover:text-foreground',
+        'group/phone gap-1.5 text-xs tabular-nums text-[color-mix(in_oklab,var(--primary)_80%,var(--foreground))] transition-colors hover:text-primary',
         className,
       )}
     >
-      {display}
+      <Phone aria-hidden className="size-3 shrink-0 text-icon-muted transition-colors group-hover/phone:text-primary" />
+      <span className="truncate">{display}</span>
     </CopyToClipboard>
   );
 }

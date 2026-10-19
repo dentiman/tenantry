@@ -14,6 +14,7 @@ import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import type { CustomerListResponseDtoOutputItemsItem } from '../../../api/generated/model/customerListResponseDtoOutputItemsItem';
 import { CreateCustomerModal } from '../components/create-customer-modal';
 import { PhoneNumber } from '../../../components/phone-number';
+import { formatCustomerAddress } from '../customer-address';
 import { CustomerIdentity } from '../components/customer-identity';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
 import { PageHeader } from '@saas-skeleton/ui/components/page-header';
@@ -135,6 +136,23 @@ export function CustomersPage() {
       id: 'phone',
       header: t('table.phone'),
       cell: (c) => <PhoneNumber value={c.phone} />,
+    },
+    {
+      // Окрема колонка, а не третій рядок під іменем: ідентичність лишається
+      // дворядковою. Дрібний кегль і обрізання — адреса довга й довідкова
+      id: 'address',
+      header: t('table.address'),
+      className: 'max-w-[18rem]',
+      cell: (c) => {
+        const address = formatCustomerAddress(c);
+        return address ? (
+          <span className="block truncate text-xs text-muted-foreground" title={address}>
+            {address}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      },
     },
     {
       id: 'status',

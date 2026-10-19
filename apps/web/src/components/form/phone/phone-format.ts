@@ -186,8 +186,11 @@ export function toE164(raw: string, country: CountryCode): string | null {
 }
 
 /**
- * Читабельний вигляд збереженого номера («380 67 123 4567»). У БД і в API номер
- * завжди E.164 — розставляння пробілів belongs до UI, а не до контракту.
+ * Читабельний вигляд збереженого номера («380-67-123-4567»). У БД і в API номер
+ * завжди E.164 — розставляння дефісів belongs до UI, а не до контракту.
+ *
+ * Дефіси, а не пробіли (рішення користувача): пробіл у вузькій колонці дозволяє
+ * перенос посеред номера, а дефіс читається як одне ціле «слово».
  *
  * Плюс у показі знято свідомо (рішення користувача): він нічого не додає до
  * читання — код країни й так стоїть першим, — але створює шум у колонці, де
@@ -197,7 +200,7 @@ export function toE164(raw: string, country: CountryCode): string | null {
 export function formatForDisplay(value: string | null | undefined): string | null {
   if (!value) return null;
   const formatted = parsePhoneNumberFromString(value)?.formatInternational() ?? value;
-  return formatted.replace(/^\+/, '');
+  return formatted.replace(/^\+/, '').replace(/\s+/g, '-');
 }
 
 /**
