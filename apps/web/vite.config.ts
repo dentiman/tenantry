@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -18,8 +19,20 @@ export default defineConfig(({ mode }) => {
     Number.isInteger(workspaceSlot) && workspaceSlot > 0 ? 3001 + 100 * workspaceSlot : undefined;
   const apiTarget = `http://localhost:${String(rootEnv.API_PORT ?? workspaceApiPort ?? rootEnv.PORT ?? '3001')}`;
 
+  // Версія й історія для футера шела (scripts/build-info.ts, docs/build-info.md): скрипт
+  // віддає JSON у stdout, тож vite.config не імпортує .ts поза власним tsconfig
+  const buildInfo = execFileSync(
+    process.execPath,
+    [
+      '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON',
+      path.resolve(__dirname, '../../scripts/build-info.ts'),
+    ],
+    { encoding: 'utf8', env: { ...process.env, ...rootEnv } },
+  );
+
   return {
     plugins: [react(), tailwindcss()],
+    define: { __APP_BUILD__: buildInfo },
     // Vite не читає tsconfig paths — аліас дублюється тут (див. коментар у tsconfig.json)
     resolve: {
       alias: {

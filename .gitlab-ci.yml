@@ -91,6 +91,8 @@ verify:
     - docker:27-dind
   variables:
     DOCKER_BUILDKIT: "1"
+    # Повна історія: з неї build_web рахує номер збірки (`git rev-list --count HEAD`)
+    GIT_DEPTH: "0"
   tags: [deploy_dev]      # ТИМЧАСОВО: усе (в т.ч. prod) під deploy_dev-раннерами
   rules:
     # main поки не деплоїться (див. .prod_disabled нижче) — образи для нього не потрібні
@@ -141,7 +143,7 @@ build_worker:
 build_web:
   extends: .build_base
   script:
-    - docker build -f Dockerfile.web --build-arg APP=web -t "$WEB_IMAGE_BASE:$CI_COMMIT_SHA" .
+    - docker build -f Dockerfile.web --build-arg APP=web --build-arg APP_BUILD_NUMBER="$(git rev-list --count HEAD)" --build-arg APP_GIT_SHA="$CI_COMMIT_SHORT_SHA" -t "$WEB_IMAGE_BASE:$CI_COMMIT_SHA" .
     - docker push "$WEB_IMAGE_BASE:$CI_COMMIT_SHA"
     - if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then docker tag "$WEB_IMAGE_BASE:$CI_COMMIT_SHA" "$WEB_IMAGE_BASE:latest" && docker push "$WEB_IMAGE_BASE:latest"; fi
     - echo "WEB_IMAGE=$WEB_IMAGE_BASE:$CI_COMMIT_SHA" >> build.env

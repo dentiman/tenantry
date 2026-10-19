@@ -68,6 +68,7 @@ export const MODULES = {
       'apps/web/src/lib/payload-values.ts',
       'apps/platform-web/src/lib/money.ts',
       'apps/web/src/lib/entity-routes.ts',
+      'apps/web/src/lib/build-info.ts',
       'apps/platform-web/src/components/section/',
     ],
   },
@@ -333,7 +334,7 @@ export const MODULES = {
   },
   guide: {
     tier: 'feature',
-    dependsOn: ['app', 'auth', 'dashboard'],
+    dependsOn: ['app', 'auth'],
     summary: 'Внутрішній гайд по UI-кіту (демо, не продукт).',
     paths: ['apps/web/src/features/guide/'],
   },

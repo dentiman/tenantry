@@ -1,0 +1,12 @@
+# Project history summary (as of 2026-10-19)
+- **Period:** 2026-07-11 → 2026-10-19 (~14 weeks, 54 active days, ~123 h of work, estimated).
+- **Commits:** 290 (peaks: Sep 105, Oct 98).
+- **Size:** ~243k lines (TS 108k, TSX 38k, Markdown 57k), 2161 files, 37 migrations.
+- **Features:** 31 OpenSpec changes (26 archived, 5 in progress).
+- **Commit groups by feature (approx.):**
+  - Multitenancy + auth: ~100
+  - Docs + OpenSpec: ~100
+  - Web/UI shell: ~78
+  - Deploy/CI: ~46
+  - AI assistant: ~38
+  - Chat/WhatsApp: ~24

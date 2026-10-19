@@ -18,6 +18,13 @@
   },
   "accountMenu": "Account menu",
   "logout": "Log out",
+  "build": {
+    "open": "About this build, version {{version}}",
+    "title": "About this build",
+    "version": "Version {{version}}",
+    "history": "Project history",
+    "demoNote": "Demo data: maintained by hand and refreshed from time to time."
+  },
   "theme": {
     "switchLabel": "Switch theme",
     "light": "Light",

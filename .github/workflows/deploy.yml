@@ -40,13 +40,20 @@ jobs:
           - { image: platform-web, dockerfile: Dockerfile.web, app: platform-web }
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # номер збірки tenant-web = кількість комітів (scripts/build-info.ts)
       - name: Build ${{ matrix.image }}
         env:
           DOCKER_BUILDKIT: "1"
           DOCKERFILE: ${{ matrix.dockerfile }}
           APP: ${{ matrix.app }}
           TAG: saas/${{ matrix.image }}:${{ github.sha }}
-        run: docker build -f "$DOCKERFILE" --build-arg APP="$APP" -t "$TAG" .
+        run: |
+          args=(--build-arg APP="$APP")
+          if [ "$DOCKERFILE" = Dockerfile.web ]; then
+            args+=(--build-arg APP_BUILD_NUMBER="$(git rev-list --count HEAD)" --build-arg APP_GIT_SHA="$(git rev-parse --short HEAD)")
+          fi
+          docker build -f "$DOCKERFILE" "${args[@]}" -t "$TAG" .
 
   deploy:
     needs: build

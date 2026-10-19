@@ -23,6 +23,10 @@ COPY . .
 RUN npm pkg delete scripts.prepare
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     HUSKY=0 pnpm install --frozen-lockfile
+# Версія застосунку (scripts/build-info.ts): у контексті немає .git (.dockerignore), тож
+# номер збірки й коміт CI передає build-arg-ами; без них скрипт візьме значення з package.json
+ARG APP_BUILD_NUMBER
+ARG APP_GIT_SHA
 RUN pnpm --filter @saas-skeleton/${APP} build
 
 # ---------------------------------------------------------------------------

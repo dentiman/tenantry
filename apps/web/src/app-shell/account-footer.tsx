@@ -10,13 +10,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@saas-skeleton/ui/components/ui/dropdown-menu';
+import { Button } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@saas-skeleton/ui/components/ui/popover';
+import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { SidebarMenuButton, useSidebar } from '@saas-skeleton/ui/components/ui/sidebar';
 import { UserIdentity } from '@saas-skeleton/ui/components/user-identity';
 import { endSession } from '../features/auth/lib/end-session';
 import { useAuthStore } from '../features/auth/stores/auth.store';
-
-/** Плейсхолдер — версія самого застосунку, `package.json` кореня монорепо */
-const APP_VERSION = '0.0.1';
+import { buildInfo } from '../lib/build-info';
 
 /**
  * Нижня смуга шела — на всю ширину ОБОХ колонок (рейл + панель), під ними й
@@ -25,9 +33,9 @@ const APP_VERSION = '0.0.1';
  * `app-shell.tsx`, а не всередині рейлу — інакше вона обмежилась би 48px
  * рейлу й не змогла б рознести тригер акаунта та праву групу кнопок.
  *
- * Права частина — свідомо порожній плейсхолдер (версія застосунку): місце
- * під майбутні кнопки (запрошення, довідка), як у Notion поруч із
- * воркспейс-перемикачем. Ховається в згорнутому стані разом з усім, крім
+ * Права частина — кнопка версії застосунку, що відкриває попап «Про збірку»
+ * (`BuildInfoPopover`); поруч є місце під майбутні кнопки (запрошення,
+ * довідка), як у Notion поруч із воркспейс-перемикачем. Ховається в згорнутому стані разом з усім, крім
  * самого аватара — так само, як другий рядок `AreaSidebar`.
  *
  * `h-12`/`p-2` — тісніше за решту рядків шела (`h-14`) навмисно: це
@@ -40,12 +48,84 @@ export function AppFooterBar() {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-t border-sidebar-border p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
       <AccountMenu />
-      {/* Просто текст, без обводки — плейсхолдер не мусить важити оком
-          більше за сам тригер акаунта поруч */}
-      <span className="ml-auto shrink-0 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-        v{APP_VERSION}
-      </span>
+      <BuildInfoPopover />
     </div>
+  );
+}
+
+/**
+ * Версія збірки (`scripts/build-info.ts`, змінюється з кожним деплоєм) як кнопка;
+ * у попапі — коли зібрано і з якого коміту, та історія проєкту з
+ * `docs/history-summary.md`. Історія — ДЕМО-ДАНІ (`docs/build-info.md`), про що
+ * попап каже прямо. Без обводки, `ghost`: кнопка не мусить важити оком більше за
+ * сам тригер акаунта поруч.
+ */
+function BuildInfoPopover() {
+  const { t, i18n } = useTranslation('layout');
+  const { version, commit, builtAt, history } = buildInfo;
+  const builtAtLabel =
+    builtAt === ''
+      ? null
+      : new Date(builtAt).toLocaleString(i18n.language, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="xs"
+            className="ml-auto shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
+            aria-label={t('build.open', { version })}
+          />
+        }
+      >
+        v{version}
+      </PopoverTrigger>
+      <PopoverContent side="top" align="end" sideOffset={8} className="w-80">
+        <PopoverHeader>
+          <PopoverTitle>{t('build.title')}</PopoverTitle>
+          <PopoverDescription>
+            {t('build.version', { version })}
+            {commit !== null && ` · ${commit}`}
+            {builtAtLabel !== null && <> · {builtAtLabel}</>}
+          </PopoverDescription>
+        </PopoverHeader>
+        {history !== null && (
+          <>
+            <div className="border-t pt-2.5">
+              <p className="text-xs font-medium">{history.title || t('build.history')}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t('build.demoNote')}</p>
+            </div>
+            <ScrollArea className="max-h-80">
+              <dl className="flex flex-col gap-1.5 pr-2 text-xs">
+                {history.entries.map((entry) => (
+                  <div key={entry.label}>
+                    <dt className="flex gap-1.5">
+                      <span className="shrink-0 font-medium">{entry.label}</span>
+                      <span className="text-muted-foreground">{entry.value}</span>
+                    </dt>
+                    {entry.children.length > 0 && (
+                      <dd className="mt-0.5 flex flex-col gap-0.5 pl-3 text-muted-foreground">
+                        {entry.children.map((child) => (
+                          <div key={child.label} className="flex justify-between gap-2">
+                            <span>{child.label}</span>
+                            <span className="tabular-nums">{child.value}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    )}
+                  </div>
+                ))}
+              </dl>
+            </ScrollArea>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -73,9 +153,7 @@ function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <SidebarMenuButton className="min-w-0 flex-1" aria-label={t('accountMenu')} />
-        }
+        render={<SidebarMenuButton className="min-w-0 flex-1" aria-label={t('accountMenu')} />}
       >
         <UserIdentity
           id={user?.id ?? ''}
