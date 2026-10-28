@@ -45,3 +45,6 @@ coverage/
 
 # Сирий експорт чужих вебхуків (docs/whatsapp-research/fms-webhook-sample-2026-10-14.md): у репо не кладемо
 whatsapp_webhook_log.csv
+
+# Локальний конфіг AgentsRoom
+saas/
