@@ -65,6 +65,38 @@ The demo data can be reset at any time. The AI assistant is live but limited to 
   </tr>
 </table>
 
+## Built for AI-assisted development
+
+Shared context, explicit extension points and repeatable checks help developers and coding agents
+turn business requirements into changes within an established architecture.
+
+- **Persistent project context.** [Shared instructions](AGENTS.md) for Claude Code and Codex:
+  codebase map, commands, conventions and fixed decisions.
+- **Spec-driven changes.** [OpenSpec](openspec/config.yaml) keeps rationale, behavioural specs
+  and implementation tasks available across contributors and sessions.
+- **Change playbooks.** [Backend checklist](.agents/skills/backend-change/SKILL.md) and
+  [reference implementations](docs/backend-conventions.md) guide ownership, transactions and access.
+- **Generated API clients.** [Zod contracts](libs/contracts/src) → DTOs → OpenAPI →
+  [typed clients and query hooks](apps/web/orval.config.ts).
+- **Checked module boundaries.** [Declared ownership and dependencies](modules.config.ts),
+  enforced by the [module checker](scripts/modules-check.ts) during lint.
+- **Explicit extension points.** [Slots, hooks and registries](docs/modules.md) connect features
+  to screens, navigation and lifecycle events.
+- **Shared UI foundation.** [Components and design tokens](docs/frontend/ui-stack.md) keep
+  both frontends consistent as new screens are added.
+- **Reusable screen patterns.** [Forms and DataGrid](libs/ui/src/components), plus
+  [record detail panels](docs/frontend/layout-structure.md), provide established interaction patterns.
+- **Common application services.** [Backend conventions](docs/backend-conventions.md) show how
+  to reuse activity recording, notifications, numbering and transactional messaging.
+- **Development without provider keys.** [Fake LLM](libs/shared/src/ai/llm/fake-llm.provider.ts)
+  and [channel adapters](libs/shared/src/channels/fake-channel.adapter.ts) support local development and tests.
+- **Isolated worktrees.** [`pnpm ws:init`](docs/workspace-slots.md) gives each workspace its own
+  database, containers and ports for concurrent tasks.
+- **Tests for invariants.** [API e2e suites](apps/api/test) cover tenant isolation, access rules,
+  concurrent requests and redelivery scenarios.
+- **One local verification command.** [`pnpm verify`](scripts/ci-verify.sh) runs lint, typecheck,
+  unit and e2e tests in throwaway containers.
+
 ## Engineering practices
 
 - **Invariants ship with tests.** 54 e2e suites run against real Postgres and Valkey; the ones guarding
