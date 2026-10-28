@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EvalConfigFileSchema } from './eval-config';
@@ -8,10 +8,17 @@ const DOCS = join(__dirname, '../../../../../docs/ai-sources');
 const read = (name: string): unknown => JSON.parse(readFileSync(join(DOCS, name), 'utf8'));
 
 describe('QuestionSetSchema', () => {
-  it('наявний fms-eval.json валідний як є; закомічений приклад конфігурацій — теж', () => {
-    expect(QuestionSetSchema.safeParse(read('fms-eval.json')).success).toBe(true);
+  it('закомічений приклад конфігурацій валідний як є', () => {
     expect(EvalConfigFileSchema.safeParse(read('answer-eval-configs.json')).success).toBe(true);
   });
+
+  // Набір питань FMS — чужі дані, у публічному репо його немає; перевіряється, лише де лежить локально
+  it.skipIf(!existsSync(join(DOCS, 'fms-eval.json')))(
+    'локальний fms-eval.json валідний як є',
+    () => {
+      expect(QuestionSetSchema.safeParse(read('fms-eval.json')).success).toBe(true);
+    },
+  );
 
   const base = {
     id: 'd1',
