@@ -5,8 +5,8 @@
 
 **Статус: усі 6 пунктів ЗАКРИТО в AI-0.1 (2026-09-27),**
 `openspec/changes/archive/2026-09-27-ai-0-1-hardening/` (design.md D1–D8, tasks.md групи 1–7). Сценарії
-підтверджені юніт- і e2e-тестами, перелік — [ai-assistant-implementation.md](ai-assistant-implementation.md)
-§12. Контекст: [поточна реалізація](ai-assistant-implementation.md).
+підтверджені юніт- і e2e-тестами, перелік — [ai-assistant-implementation.md](../ai-assistant-implementation.md)
+§12. Контекст: [поточна реалізація](../ai-assistant-implementation.md).
 
 ## 1. Немає атомарного захоплення генерації та захисту від застарілої спроби
 
@@ -14,7 +14,7 @@
 
 **Ризик: високий за паралельної повторної доставки.**
 
-**Місце:** [AiGenerateReplySubscriber](../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts),
+**Місце:** [AiGenerateReplySubscriber](../../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts),
 методи `prepare`, `persistPartial`, `finalize`.
 
 `prepare()` допускає як `PENDING`, так і `STREAMING`. Перевірка статусу та запис
@@ -39,8 +39,8 @@ Partial/final writes дозволяти тільки чинній спробі; 
 **Ризик: середній; дефект підтверджується кодом.**
 
 **Місце:** `prepare()` у
-[subscriber](../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts) та
-[buildPrompt](../libs/shared/src/ai/prompt/prompt-builder.ts).
+[subscriber](../../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts) та
+[buildPrompt](../../libs/shared/src/ai/prompt/prompt-builder.ts).
 
 Запит історії з `seq < reply.seq` включає поточне питання на `reply.seq - 1`.
 Потім `buildPrompt()` додає його ще раз як `question`. Fake-провайдер цього
@@ -60,8 +60,8 @@ Partial/final writes дозволяти тільки чинній спробі; 
 **Ризик: середній; поведінка суперечить коментарю в topology.**
 
 **Місце:** `handle()` і `prepare()` у
-[subscriber](../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts),
-запис `ai-generator` у [topology](../libs/shared/src/messaging/topology.ts).
+[subscriber](../../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts),
+запис `ai-generator` у [topology](../../libs/shared/src/messaging/topology.ts).
 
 Worker ловить помилку провайдера, записує `FAILED` і успішно завершує handler.
 Тому `retryLimit: 1` не запускає повтор для цієї помилки. Простого `throw`
@@ -84,10 +84,10 @@ Worker ловить помилку провайдера, записує `FAILED`
 **Ризик: середній; потребує перевірки на PostgreSQL.**
 
 **Місце:** `ask()`, `reset()`, `createActive()` у
-[AiService](../apps/api/src/ai/ai.service.ts).
+[AiService](../../apps/api/src/ai/ai.service.ts).
 
 Уточнення попереднього рев’ю: конфлікт `seq` сам по собі не означає HTTP 500 —
-[AllExceptionsFilter](../libs/shared/src/errors/all-exceptions.filter.ts)
+[AllExceptionsFilter](../../libs/shared/src/errors/all-exceptions.filter.ts)
 уже перетворює `P2002` на 409.
 
 Окремий ризик є в `createActive()`: після `P2002` метод робить `findActive()`
@@ -110,9 +110,9 @@ insert із `ON CONFLICT DO NOTHING` і наступне читання. Не д
 
 **Ризик: середній для UX; з реальним провайдером — також для витрат.**
 
-**Місце:** `cancel()` у [AiService](../apps/api/src/ai/ai.service.ts),
-[AiCancelChannel](../libs/shared/src/ai/ai-cancel.channel.ts), початок `handle()`
-у [subscriber](../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts).
+**Місце:** `cancel()` у [AiService](../../apps/api/src/ai/ai.service.ts),
+[AiCancelChannel](../../libs/shared/src/ai/ai-cancel.channel.ts), початок `handle()`
+у [subscriber](../../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts).
 
 API приймає Stop і для `PENDING`, але лише публікує повідомлення в pub/sub.
 До старту worker-а або до завершення його підписки слухача ще немає — команда
@@ -134,7 +134,7 @@ marker, а перед фіналізацією враховує його. Для
 
 **Ризик: низький зараз; рекомендація щодо підтримуваності.**
 
-**Місце:** [AiGenerateReplySubscriber](../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts).
+**Місце:** [AiGenerateReplySubscriber](../../apps/worker/src/subscribers/ai-generate-reply.subscriber.ts).
 
 Один клас керує станами БД, prompt preparation, streaming/coalescing,
 таймаутами, cancellation, error mapping і realtime. Для AI-0 це ще керований

@@ -1,7 +1,7 @@
 # Tasks
 
 Phase **AI-0.1** of `docs/ai-assistant.md` §10: close the AI-0 debt from
-`docs/ai-assistant-review-gaps.md` (items 1–6) and §6.3, on `FakeLlmProvider` only. No task
+`docs/notes/ai-assistant-review-gaps.md` (items 1–6) and §6.3, on `FakeLlmProvider` only. No task
 waits on a provider account or a user decision.
 
 Root gate at the end of each group: `pnpm lint && pnpm typecheck && pnpm build`.
@@ -154,7 +154,7 @@ Worker unit tests: `pnpm --filter @saas-skeleton/worker test`. Tenant e2e: `pnpm
       - Ask in tab A → tab B showed the new question and the completed reply without tab B
         ever asking (§6.3 fix, confirmed via `ai.conversation-changed.v1`).
       - `__fail_once__ __long__ ...` → server-side `attempt` went 0→1 (claim) →2 (in-process
-        retry, `docs/ai-assistant-review-gaps.md` п.1/3); both tabs converged on the SAME
+        retry, `docs/notes/ai-assistant-review-gaps.md` п.1/3); both tabs converged on the SAME
         final content with no duplication or leftover from the failed first attempt.
       - `__stall__` question asked in tab A → tab B rendered a live "Stop" button for a
         generation it did not start, and clicking Stop **in tab B** ended the reply as
@@ -178,7 +178,7 @@ Worker unit tests: `pnpm --filter @saas-skeleton/worker test`. Tenant e2e: `pnpm
       `docs/realtime.md` (delta guard is `attempt` + `chunkSeq`). Promote every design decision
       from this change that stays true (D1–D7) — the archive is not a reference.
 - [x] 8.2 Update `docs/ai-assistant.md`: §6.3 marked fixed, §0 gets an "AI-0.1" row, §10 phase
-      table gets the AI-0.1 row; mark all items in `docs/ai-assistant-review-gaps.md` closed with
+      table gets the AI-0.1 row; mark all items in `docs/notes/ai-assistant-review-gaps.md` closed with
       a pointer to this change; update CLAUDE.md rule 15 (restart guard is a higher `attempt`,
       not `chunkSeq === 0`). Verify by grepping `chunkSeq === 0` across `docs/` and `CLAUDE.md`
       — no remaining claim that it is the restart guard.

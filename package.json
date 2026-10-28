@@ -2,7 +2,7 @@
   "name": "saas-skeleton",
   "version": "0.0.1",
   "private": true,
-  "description": "SaaS Skeleton — multitenant CRM/ERP foundation (NestJS + React)",
+  "description": "Tenantry — production-shaped foundation for multitenant CRM/ERP SaaS products (NestJS + React)",
   "scripts": {
     "docker:up": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml up -d; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml up -d; else docker compose -f docker/docker-compose.yml up -d; fi'",
     "docker:down": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml down; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml down; else docker compose -f docker/docker-compose.yml down; fi'",

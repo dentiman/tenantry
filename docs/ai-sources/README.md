@@ -7,7 +7,7 @@
 
 ```bash
 pnpm ai:docs:preview --source fms \
-  --root /path/to/fms-api/fms-docs \
+  --root /path/to/fms-docs \
   --manifest docs/ai-sources/fms-pilot.json \
   --output /tmp/fms-docs-preview.json
 ```
@@ -116,7 +116,7 @@ CLI/parser не імпортуються в runtime barrel `libs/shared/src/ai/i
 
 ```bash
 pnpm ai:docs:ingest --source fms \
-  --root /path/to/fms-api/fms-docs \
+  --root /path/to/fms-docs \
   --manifest docs/ai-sources/fms-pilot.json \
   --tenant default            # slug або id активного tenant-а
 ```

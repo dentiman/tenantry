@@ -10,7 +10,7 @@ import { StaticKnowledgeSource } from './static-knowledge-source';
 /**
  * `postgres` без продукту валить старт воркера (AI-2a.3, design.md D1): тихий відкат на
  * статичний корпус означав би, що інсталяція, налаштована на FMS, відповідає довідкою
- * SaaS Skeleton. Облікові дані embeddings на старті більше не обов'язкові (AI-5a): ключ
+ * Tenantry. Облікові дані embeddings на старті більше не обов'язкові (AI-5a): ключ
  * може прийти з налаштувань суперадміна, а без нього падає конкретне питання.
  */
 export function createKnowledgeSource(

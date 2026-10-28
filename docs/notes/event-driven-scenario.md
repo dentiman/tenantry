@@ -1,7 +1,7 @@
 # Вхідний сценарій: оплата інвойса
 
 Постановка задачі «як є», з якої виріс дизайн у
-[event-driven-architecture.md](event-driven-architecture.md). Збережена дослівно —
+[event-driven-architecture.md](../event-driven-architecture.md). Збережена дослівно —
 щоб було видно, на що саме відповідає той документ.
 
 ---

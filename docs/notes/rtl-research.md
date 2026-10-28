@@ -2,9 +2,9 @@
 
 > Статус: **дослідження, рішень не зафіксовано.** Дата: 2026-09-20.
 > Обʼєкт: `apps/web` + `libs/ui` (спільна ліба → `apps/platform-web` зачіпається неминуче).
-> Пов'язані доки: [i18n-plan.md](i18n-plan.md) (фаза I18N-4, де RTL наразі **не згаданий**),
-> [frontend/ui-stack.md](frontend/ui-stack.md), [frontend/app-shell.md](frontend/app-shell.md),
-> [calendar.md](calendar.md).
+> Пов'язані доки: [i18n-plan.md](../i18n-plan.md) (фаза I18N-4, де RTL наразі **не згаданий**),
+> [frontend/ui-stack.md](../frontend/ui-stack.md), [frontend/app-shell.md](../frontend/app-shell.md),
+> [calendar.md](../calendar.md).
 
 ## Вердикт
 

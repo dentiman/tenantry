@@ -2,7 +2,7 @@ import { DocumentBuilder, type OpenAPIObject, type SwaggerDocumentOptions } from
 
 export function buildOpenApiConfig(): Omit<OpenAPIObject, 'paths'> {
   return new DocumentBuilder()
-    .setTitle('SaaS Skeleton API')
+    .setTitle('Tenantry API')
     .setDescription('Foundation API for multitenant CRM/ERP systems')
     .setVersion('0.0.1')
     .addBearerAuth()

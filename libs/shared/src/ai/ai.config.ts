@@ -116,7 +116,7 @@ const AiEnvSchema = z.object({
    */
   AI_API_KEY: optionalStringFromEnv(),
   /**
-   * AI-0.1 (docs/ai-assistant-review-gaps.md п.3, design.md D2): скільки РАЗІВ
+   * AI-0.1 (docs/notes/ai-assistant-review-gaps.md п.3, design.md D2): скільки РАЗІВ
    * перезапускати генерацію всередині ОДНІЄЇ доставки після тимчасової відмови
    * провайдера, перш ніж визнати відповідь FAILED. 0 — жодного ретраю
    */

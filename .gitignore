@@ -24,10 +24,8 @@ apps/worker/logs/
 docker/deploy.env
 docker/seaweedfs/s3.prod.json
 
-# IDE (runConfigurations — спільні для команди, коміт'яться; решта .idea/ — локальна)
-.idea/*
-!.idea/runConfigurations/
-!.idea/runConfigurations/**
+# IDE — локальне, у публічний репо не кладемо
+.idea/
 .vscode/
 
 # Misc
@@ -45,7 +43,7 @@ coverage/
 .claude/skills/archify/test/
 .claude/skills/archify/examples/*.html
 
-# Сирий експорт чужих вебхуків (docs/whatsapp-research/fms-webhook-sample-2026-10-14.md): у репо не кладемо
+# Сирий експорт чужих вебхуків (docs/whatsapp-research/*-webhook-sample-*.md): у репо не кладемо
 whatsapp_webhook_log.csv
 
 # Локальний конфіг AgentsRoom

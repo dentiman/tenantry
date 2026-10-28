@@ -4,7 +4,7 @@ The pipeline after "stored" exists: `channels.ingest-webhook` → `ChannelIngest
 `parseWebhook` → per event `ingestMessage` / `ChannelStatusService.foldOrPark` (forward-only conditional
 UPDATE, parking in `channel_pending_statuses`, one-minute sweeper). `MetaCloudAdapter.parseWebhook` returns
 `events: []` since 3b1. The stand holds real captures: an inbound text, `sent` and `delivered` of our own send,
-with `biz_opaque_callback_data` equal to our message id, and fms-dev's export shows the rest: `read`, `failed`
+with `biz_opaque_callback_data` equal to our message id, and legacy-dev's export shows the rest: `read`, `failed`
 (131049), `image`, `document`, `reaction`, `message_template_status_update`, `account_update`.
 
 ## Goals / Non-Goals

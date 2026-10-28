@@ -21,7 +21,7 @@
   },
   "overview": {
     "eyebrow": "Product introduction",
-    "title": "SaaS Skeleton",
+    "title": "Tenantry",
     "lead": "The foundation for building multi-tenant CRM and ERP products. Sign-in, organizations, background jobs, files, live updates, notifications and the UI are already done — a new product starts straight from its own business logic.",
     "chips": [
       "Multi-tenancy",
@@ -285,7 +285,7 @@
     "description": "How the product is built, verified and shipped — tools for the development team."
   },
   "architecture": {
-    "frameTitle": "SaaS Skeleton architecture diagram"
+    "frameTitle": "Tenantry architecture diagram"
   },
   "subsystems": {
     "description": "What stands behind the diagram's nodes: for each subsystem — what it gives the business and how it works technically.",

@@ -6,7 +6,7 @@ GitLab default branch `main` не совпадает с основной вет�
 Незакоммиченный `database-access-audit-2026-10-17.md` не входит в этот diff.
 
 Установлен и применён `getsentry/skills`, `skills/find-bugs`, локально
-`/Users/dentiman/.codex/skills/find-bugs/SKILL.md`. Источник:
+скіл `find-bugs` (Sentry). Источник:
 https://github.com/getsentry/skills/tree/main/skills/find-bugs.
 Это анализ изменений, не полный security-аудит всей кодовой базы.
 
@@ -214,7 +214,7 @@ apps/worker/src/worker.module.ts
 docker/deploy.env
 docker/docker-compose.stack.yml
 docker/postgres/init/01-roles.sql
-docs/architecture-review-2026-10-15.md
+docs/notes/architecture-review-2026-10-15.md
 docs/auth-hardening-plan.md
 docs/deploy-hetzner.md
 docs/deploy-swarm.md

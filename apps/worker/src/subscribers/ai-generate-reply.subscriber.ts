@@ -574,7 +574,7 @@ export class AiGenerateReplySubscriber implements MessageSubscriberContract<
 
       // seq < reply.seq - 1 (НЕ reply.seq): рядок reply.seq - 1 — саме questionRow вище,
       // і buildPrompt() додає його окремо як `question`. Включити його сюди теж означало б
-      // надіслати моделі те саме питання двічі (docs/ai-assistant-review-gaps.md п.2).
+      // надіслати моделі те саме питання двічі (docs/notes/ai-assistant-review-gaps.md п.2).
       //
       // Статус НЕ фільтрується тут: провалений/зупинений хід має піти з контексту ЦІЛОЮ
       // парою, а не лишити своє питання без пари — цим займається selectHistoryPairs.

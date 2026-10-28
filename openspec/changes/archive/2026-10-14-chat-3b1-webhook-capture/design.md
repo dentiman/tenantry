@@ -3,12 +3,12 @@
 CHAT-2a built the generic public webhook (`/api/public/channels/:provider/:webhookKey`): the key finds the
 account, the adapter verifies the signature over raw bytes, the body is stored in `channel_webhook_events`
 and a worker ingests it. `MetaCloudAdapter` currently refuses every webhook (`webhooks_not_enabled`). The test
-WABA is shared with fms-dev, whose address is set at the WABA and application levels; the same number
+WABA is shared with legacy-dev, whose address is set at the WABA and application levels; the same number
 (`120000000000001`) is used by both. A read of the live configuration on 2026-10-14 shows the number-level
 object `webhook_configuration { whatsapp_business_account, application }` — a `phone_number` key appears when a
 number-level override exists (confirmed live on 2026-10-14).
 
-An export of fms-dev's own `whatsapp_webhook_log` (310 rows, kept out of git) was analysed: 215 of 215 signed
+An export of legacy-dev's own `whatsapp_webhook_log` (310 rows, kept out of git) was analysed: 215 of 215 signed
 Meta requests match HMAC-SHA256(app secret, raw body) with our app secret; our two live sends of 2026-10-14
 are in it with `biz_opaque_callback_data` equal to our message ids; payloads carry `user_id`/`from_user_id`.
 
@@ -74,7 +74,7 @@ is open) and `CHANNEL_WEBHOOK_SIGNATURE` to `record`. A server-side `/etc/saas/d
 
 ## Risks / Trade-offs
 
-- **The shared number.** While our override is set, fms-dev receives nothing for `120000000000001`.
+- **The shared number.** While our override is set, legacy-dev receives nothing for `120000000000001`.
   Unsubscribe returns it. Said in the UI confirmation and in the runbook.
 - **Unsigned acceptance on a public URL** (`record`). Mitigated by the secret 32-hex key in the path, by
   storing only, and by the flag; the route does not act on anything it stores.

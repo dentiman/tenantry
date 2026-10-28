@@ -1349,7 +1349,7 @@
     }
   },
   "info": {
-    "title": "SaaS Skeleton Platform API",
+    "title": "Tenantry Platform API",
     "description": "Control plane: tenants CRUD, queue monitoring, platform operators",
     "version": "0.0.1",
     "contact": {}

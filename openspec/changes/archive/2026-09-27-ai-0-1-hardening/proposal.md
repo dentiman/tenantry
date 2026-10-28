@@ -3,7 +3,7 @@
 ## Why
 
 AI-0 shipped the whole assistant pipeline on `FakeLlmProvider`. A static review
-(`docs/ai-assistant-review-gaps.md`, 2026-09-21) and the cross-check of the two research docs
+(`docs/notes/ai-assistant-review-gaps.md`, 2026-09-21) and the cross-check of the two research docs
 (`docs/ai-assistant.md` §6.3) found defects that the fake provider hides but a real provider
 would turn into money and stuck conversations: overlapping generations, a retry the topology
 promises but never runs, a Stop that is silently lost, the current question sent to the model
@@ -80,5 +80,5 @@ None.
 - **Web (`apps/web/src/realtime/ai-sync.ts`):** stream position read from the cache instead of
   a module-level map; handles `attempt` and the new event.
 - **Docs:** `docs/ai-assistant-implementation.md`, `docs/ai-assistant.md` §6.3 and §10,
-  `docs/ai-assistant-review-gaps.md` (closed), `CLAUDE.md` rule 15 (restart guard is now
+  `docs/notes/ai-assistant-review-gaps.md` (closed), `CLAUDE.md` rule 15 (restart guard is now
   `attempt`).

@@ -339,7 +339,7 @@ function selectFilters(t: TFunction<'invoices-demo'>): DataGridFilterDef<Invoice
 /**
  * Демо-сторінка інвойсів (фейкові дані, без бекенду): грід з наборами колонок, фільтрами,
  * деталями в context panel, меню дій рядка і смугою масових дій — усе дії заглушки.
- * Структура й операції повторюють FMS (`fms-admin` InvoicesTable, `fms-api` Invoice).
+ * Структура й операції повторюють реальну білінгову систему.
  */
 export function InvoicesDemoPage() {
   const { t } = useTranslation('invoices-demo');

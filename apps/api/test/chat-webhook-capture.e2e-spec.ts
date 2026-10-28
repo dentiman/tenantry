@@ -23,7 +23,7 @@ import { DEFAULT_TENANT_ID } from './test-users';
 
 const APP_SECRET = 'e2e-app-secret-0123456789';
 const VERIFY_TOKEN = 'e2e-verify-token';
-// Форма статусу з експорту fms-dev: біз-опак-дата вертається, є pricing і BSUID
+// Форма статусу з експорту legacy-dev: біз-опак-дата вертається, є pricing і BSUID
 const STATUS_BODY =
   '{"object":"whatsapp_business_account","entry":[{"id":"210000000000001","changes":[{"value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550000001","phone_number_id":"120000000000001"},"contacts":[{"wa_id":"380000000000","user_id":"UA.1"}],"statuses":[{"id":"wamid.AAA","status":"delivered","timestamp":"1791961399","recipient_id":"380000000000","biz_opaque_callback_data":"11111111-1111-4111-8111-111111111111","pricing":{"billable":true,"category":"utility"}}]},"field":"messages"}]}]}';
 

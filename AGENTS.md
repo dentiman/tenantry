@@ -1,9 +1,9 @@
-# SaaS Skeleton — AGENTS.md
+# Tenantry — AGENTS.md
 
 Forkable skeleton for multitenant CRM/ERP products (billing, customers, tickets, queues).
 Two planes, each a full stack: **tenant plane** (`apps/api` + `apps/web`) and **control
 plane** (`apps/platform-api` + `apps/platform-web`, operator-facing, manages tenants).
-Auth and core patterns were ported from a prior project (`fibo-admin`) and extended here.
+Auth and core patterns were ported from a prior internal project and extended here.
 
 This file covers what's needed on nearly every task: commands, directory map, cross-cutting
 conventions, and rules that are easy to violate by accident. Subsystem depth (data model,
@@ -50,6 +50,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   історією проєкту (`docs/history-summary.md` — **демо-дані**, ведуться вручну)
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
+- `docs/notes/` — design journal (initial proposal, dated reviews/audits, research spikes); a
+  record of how decisions were reached, not the current reference
 - `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet
 - `docs/frontend/ui-stack.md` — primitives, tokens, form and **DataGrid** conventions
   (**start here** for any UI work, including `createDataGrid<TFilters, TItem>()`);
@@ -69,7 +71,7 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
   raw event store → ingest, outbox `QUEUED→SENDING→SENT`, status folding, identity with BSUID,
   templates), WhatsApp feature catalogue with levels, phases CHAT-2a…3c, open questions O-W1…9.
-  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`; `fms-webhook-sample-2026-10-14.md` — shapes of 300 real webhooks) is in `docs/whatsapp-research/`.
+  Evidence (Meta API reference, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`) is in `docs/whatsapp-research/`.
   `docs/whatsapp-feature-flows.md` — per-feature flows (UI, system steps, Graph calls, webhooks) and the
   one-time Meta setup runbook (app, WABA, system-user token, webhook, test number).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and

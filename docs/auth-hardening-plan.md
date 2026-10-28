@@ -643,7 +643,7 @@ refresh; повний цикл (логін → F5 → refresh → logout) пра
 - [x] Перевірити, що логаут із `http-client` (`clearSession()` + редірект) кличе
       серверний `/auth/logout` — інакше cookie лишиться жити (`account-footer.tsx`
       тепер кличе `authLogout({})` без токена в тілі).
-- [x] Вихід (2026-10-16, огляд A1 `docs/architecture-review-2026-10-15.md`) — одна функція
+- [x] Вихід (2026-10-16, огляд A1 `docs/notes/architecture-review-2026-10-15.md`) — одна функція
       `endSession()` (`features/auth/lib/end-session.ts`, дзеркало в `platform-web`): дочекатися
       `POST /auth/logout` (таймаут 3 с) і **перезавантажити документ** (`location.assign('/login')`),
       а не SPA-навігація. Інакше кеш TanStack Query (ключі без identity, bootstrap зі

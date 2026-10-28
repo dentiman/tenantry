@@ -17,7 +17,7 @@ export class MailerService implements OnModuleDestroy {
     });
     this.from = configService.get<string>(
       'SMTP_FROM',
-      'SaaS Skeleton <noreply@saas-skeleton.local>',
+      'Tenantry <noreply@tenantry.local>',
     );
   }
 

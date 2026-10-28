@@ -26,7 +26,7 @@
 | Business portfolio | вибирається/створюється при створенні app | власник WABA і системного користувача |
 | **WABA** (WhatsApp Business Account) і його id | WhatsApp Manager / Business settings → Accounts → WhatsApp Accounts; при створенні app Meta створює **тестовий** WABA автоматично | поле «WABA ID» у налаштуваннях тенанта |
 | Номер телефону: тестовий (публічний тестовий номер Meta) або реальний | App dashboard → WhatsApp → API setup | канали, що синхронізуються |
-| **App secret** | App dashboard → Settings → Basic → App secret | **ключ HMAC для `X-Hub-Signature-256`** — той самий секрет застосунку, що в `debug_token` (`APP_ID\|APP_SECRET`); це не токен доступу. Для спільного застосунку (наш і fms) секрет один |
+| **App secret** | App dashboard → Settings → Basic → App secret | **ключ HMAC для `X-Hub-Signature-256`** — той самий секрет застосунку, що в `debug_token` (`APP_ID\|APP_SECRET`); це не токен доступу. Для спільного застосунку (наш і legacy-api) секрет один |
 | **Токен доступу** | §F0.2 | поле «Токен» |
 | Публічна HTTPS-адреса нашого API | розгорнутий dev-стенд або тунель (ngrok/cloudflared) до `pnpm api:dev` | Meta не достукається до `localhost`; сертифікат має бути валідним (самопідписані не приймаються) |
 
@@ -77,7 +77,7 @@
 з `override_callback_uri` (на тестовому WABA) → `GET /{waba}/message_templates` → відправка тестового
 повідомлення на номер зі списку → прийом вебхука. Секрети скрипт читає з кореневого `.env` (змінні `WHATSAPP_*`, заповнює власник; файл у `.gitignore`).
 Результати: [whatsapp-channel.md](whatsapp-channel.md) §8.1 і [whatsapp-research/live-probe-2026-10-13.md](whatsapp-research/live-probe-2026-10-13.md) (проба виконана 2026-10-13: читання, шаблон, текст у вікні; вебхук і `subscribed_apps` POST — ні). Лишилось: вебхук і запис `subscribed_apps`
-(§F3) — після того, як буде окрема публічна адреса, не спільна з fms-api.
+(§F3) — після того, як буде окрема публічна адреса, не спільна з legacy-api.
 
 ### F0.6. MCP-сервери Meta — необов'язково, не блокує роботу
 Meta (вересень 2026) випустила MCP-сервери для керування WABA через асистента: *WhatsApp Business Tools*
@@ -179,7 +179,7 @@ Meta (вересень 2026) випустила MCP-сервери для кер
   побічний ефект збереження чи зміни токена: після зміни токена показується підказка «перепідпишіть».
 - *Скасувати:* `DELETE /{waba-id}/subscribed_apps` (прибирає застосунок із WABA — зупиняє вебхуки
   всіх номерів цього WABA; якщо WABA спільний з іншими — попередження, бо це зачепить їх).
-- **Спільний WABA/застосунок (з проби 2026-10-13).** На тестовому WABA вже є override іншого проєкту (fms-dev), і `POST` з нашою адресою його замінить. Тому перед `POST` — завжди `GET` і показ чужого значення з попередженням; запис тільки після підтвердження. Перша перевірка в 3a: перевизначення **на рівні номера** (`/{phone-number-id}`, `webhook_configuration.override_callback_uri`, (R)), яке не зачіпає WABA; деталі й запасні варіанти — [whatsapp-channel.md](whatsapp-channel.md) §8, п.10.
+- **Спільний WABA/застосунок (з проби 2026-10-13).** На тестовому WABA вже є override іншого проєкту (legacy-dev), і `POST` з нашою адресою його замінить. Тому перед `POST` — завжди `GET` і показ чужого значення з попередженням; запис тільки після підтвердження. Перша перевірка в 3a: перевизначення **на рівні номера** (`/{phone-number-id}`, `webhook_configuration.override_callback_uri`, (R)), яке не зачіпає WABA; деталі й запасні варіанти — [whatsapp-channel.md](whatsapp-channel.md) §8, п.10.
 - Пріоритет доставки Meta: номер > WABA > застосунок; шаблонні й акаунтні вебхуки йдуть тільки на
   застосунок (§F0.3).
 

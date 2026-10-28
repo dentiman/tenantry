@@ -4118,7 +4118,7 @@
     }
   },
   "info": {
-    "title": "SaaS Skeleton API",
+    "title": "Tenantry API",
     "description": "Foundation API for multitenant CRM/ERP systems",
     "version": "0.0.1",
     "contact": {}

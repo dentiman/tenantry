@@ -1,7 +1,7 @@
 # Жива проба Cloud API — що перевірено і які особливості (2026-10-13)
 
 > Знімок фактів, **підтверджених викликами на живому тестовому акаунті**, на відміну від решти `whatsapp-research/`
-> (документація Meta, fms-api, OSS). Інструмент: `pnpm whatsapp:probe` (`scripts/whatsapp-probe.ts`; секрети — з
+> (документація Meta, legacy-api, OSS). Інструмент: `pnpm whatsapp:probe` (`scripts/whatsapp-probe.ts`; секрети — з
 > кореневого `.env`, `WHATSAPP_*`). Graph **v23.0**. Тестовий WABA «Test WhatsApp Business Account», app
 > `kolvix masseging`, один тестовий номер. Рішення з цих фактів — у [whatsapp-channel.md](../whatsapp-channel.md) §8.1.
 
