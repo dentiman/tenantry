@@ -363,6 +363,9 @@ volumes:
 
 configs:
   s3_config:
+    # Swarm-config незмінний — імʼя з хешем вмісту (S3_CONFIG_HASH друкує
+    # scripts/deploy/write-s3-config.sh), інакше зміна ключів валить `stack deploy`.
+    name: ${STACK_NAME:?}_s3_config_${S3_CONFIG_HASH:?S3_CONFIG_HASH не задано — див. scripts/deploy/write-s3-config.sh}
     # Читається на раннері (client-side), відправляється в swarm як config-обʼєкт.
     # Шлях ВІДНОСНО теки цього stack-файлу (docker/), а НЕ від кореня репо —
     # docker stack deploy резолвить configs.file від директорії compose-файлу.

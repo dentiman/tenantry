@@ -203,7 +203,7 @@ build_tools:
     # секрети — з File-змінної DEPLOY_ENV; без неї чи з порожнім секретом джоба падає тут
     - set -a; . ./docker/stack.env; . "${DEPLOY_ENV:?CI/CD Variable DEPLOY_ENV (File) не задано}"; set +a
     - sh scripts/deploy/require-env.sh
-    - sh scripts/deploy/write-s3-config.sh
+    - S3_CONFIG_HASH=$(sh scripts/deploy/write-s3-config.sh); export S3_CONFIG_HASH
   script:
     # 1) ПЕРЕДПУЛ образів на manager — синхронно, в межах живої джоби, fail-fast.
     #    Без нього pull робить swarm-агент АСИНХРОННО вже після `stack deploy`, і будь-яка

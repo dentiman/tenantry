@@ -157,7 +157,7 @@ docker context create swarm --docker host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLO
 docker login … -u $REGISTRY_DEPLOY_USER        # Deploy Token; фолбек на job-token із warning
 set -a; . ./docker/stack.env; . "$DEPLOY_ENV"; set +a   # несекретний конфіг + секрети з File-змінної
 sh scripts/deploy/require-env.sh                # порожній обовʼязковий секрет → exit 1 до розкату
-sh scripts/deploy/write-s3-config.sh            # s3.prod.json з S3_* (у git його немає)
+export S3_CONFIG_HASH=$(sh scripts/deploy/write-s3-config.sh)  # s3.prod.json з S3_* (у git його немає); хеш → імʼя config-а
 for img in …; do DOCKER_CONTEXT=swarm docker pull "$img"; done   # ПЕРЕДПУЛ, синхронно
 DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth --detach=false --prune …
 … пост-перевірка: фактичний Image кожного сервісу == щойно зібраний тег, інакше exit 1

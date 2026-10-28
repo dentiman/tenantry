@@ -13,7 +13,8 @@ COMPOSE=docker/docker-compose.stack.yml
 
 # Ключі S3 для SeaweedFS — із серверного env (у git їх немає): s3.prod.json генерується на
 # кожен розкат у робочій теці runner-а
-sh scripts/deploy/write-s3-config.sh
+S3_CONFIG_HASH=$(sh scripts/deploy/write-s3-config.sh)
+export S3_CONFIG_HASH
 
 first_run=false
 docker service inspect "${STACK_NAME}_postgres" >/dev/null 2>&1 || first_run=true
