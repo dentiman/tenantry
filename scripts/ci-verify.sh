@@ -14,7 +14,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RUN_ID="saas-verify-${CI_JOB_ID:-local-$$}"
 PG_IMAGE='pgvector/pgvector:0.8.6-pg17-bookworm@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f'
-VALKEY_IMAGE='valkey/valkey:8-alpine'
+VALKEY_IMAGE='valkey/valkey:8-alpine@sha256:2602ace2be6569bc2bbb06f873776516ab9089821525be34f4305c67eb9db02a'
 NODE_IMAGE='node:24-bookworm-slim'
 # Іменований том — кеш pnpm store між прогонами (раннер персистентний)
 PNPM_STORE_VOLUME='saas-verify-pnpm-store'

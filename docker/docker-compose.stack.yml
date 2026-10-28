@@ -171,8 +171,10 @@ services:
   # RT-0. Порт НЕ публікується — доступ лише по overlay (valkey:6379).
   # Персистентності немає (presence ефемерна) → volume не потрібен, а отже
   # stop-first тут не через спільний volume, а тому що інстанс один.
+  # Digest закріплено: тег, що непомітно переїхав, рестартує брокер у тому ж `stack deploy`,
+  # що й api/worker (pipeline 5682, 2026-10-28). Оновлення — окремим комітом.
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8-alpine@sha256:2602ace2be6569bc2bbb06f873776516ab9089821525be34f4305c67eb9db02a
     command:
       - valkey-server
       - --requirepass

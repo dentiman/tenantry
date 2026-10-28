@@ -10,6 +10,7 @@ import {
   realtimeSessionKeyPrefix,
   realtimeStreamName,
 } from '@saas-skeleton/contracts';
+import { streamsAdapterClient } from '@saas-skeleton/shared';
 import type { RealtimeConfig } from './realtime.config';
 
 /**
@@ -75,7 +76,8 @@ export class RealtimeIoAdapter extends IoAdapter {
               skipMiddlewares: false,
             }
           : undefined,
-      adapter: createAdapter(this.redis, {
+      // Дублікати адаптера (XREAD, SUBSCRIBE) чекають на брокер, а не валять процес на старті
+      adapter: createAdapter(streamsAdapterClient(this.redis), {
         // Імена — з contracts: у той самий стрім пише headless-емітер воркера
         streamName: realtimeStreamName(this.config.keyPrefix),
         sessionKeyPrefix: realtimeSessionKeyPrefix(this.config.keyPrefix),

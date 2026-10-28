@@ -421,6 +421,15 @@ scale` і rolling update, рестарт брокера під навантаж�
 6. **Адаптер сам дублює клієнт Valkey** для блокуючого XREAD, тому presence і розсилка
    спокійно ділять один інстанс — блокуюча команда не займе конекшн, на якому виконуються
    presence-скрипти.
+7. **Дублікати адаптера успадковують `maxRetriesPerRequest` і валять процес.** Адаптер кличе
+   `subClient.subscribe(channels)` без обробки promise. Якщо Valkey недоступний на старті
+   (pipeline 5682: брокер рестартував у тому ж `stack deploy`, `ENOTFOUND valkey`), після
+   3 спроб це unhandled `MaxRetriesPerRequestError` → exit 1 → swarm відкочує api і worker.
+   Простий `.catch` не допоміг би: ioredis після реконекту перепідписує лише ті канали, підписка
+   на які встигла пройти, тож вузол лишився б без pub/sub назавжди. Тому адаптер отримує
+   `streamsAdapterClient(redis)` (`libs/shared/src/realtime/`): `duplicate()` віддає клієнти з
+   `maxRetriesPerRequest: null`, вони чекають на брокер. Сам клієнт (presence, XADD/PUBLISH)
+   лишається fast-fail.
 
 ## Первинні джерела
 

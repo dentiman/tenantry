@@ -206,6 +206,7 @@ export const MODULES = {
       'libs/contracts/src/realtime/',
       'apps/api/src/realtime/',
       'apps/worker/src/realtime/',
+      'libs/shared/src/realtime/',
     ],
   },
   messaging: {

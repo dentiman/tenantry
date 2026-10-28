@@ -15,7 +15,11 @@ import {
   type NotificationCreated,
   type ServerToClientEvents,
 } from '@saas-skeleton/contracts';
-import { NotificationDispatcherRegistry, type NotificationDispatcher } from '@saas-skeleton/shared';
+import {
+  NotificationDispatcherRegistry,
+  streamsAdapterClient,
+  type NotificationDispatcher,
+} from '@saas-skeleton/shared';
 
 const DEFAULT_REDIS_URL = 'redis://:saas-realtime@localhost:6379';
 
@@ -60,7 +64,8 @@ export class WorkerRealtimeEmitter
     });
 
     const io = new Server<ClientToServerEvents, ServerToClientEvents>({
-      adapter: createAdapter(redis, {
+      // Дублікати адаптера (XREAD, SUBSCRIBE) чекають на брокер, а не валять процес на старті
+      adapter: createAdapter(streamsAdapterClient(redis), {
         streamName: realtimeStreamName(keyPrefix),
         sessionKeyPrefix: realtimeSessionKeyPrefix(keyPrefix),
         maxLen: 10_000,
