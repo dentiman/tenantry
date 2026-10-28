@@ -8,6 +8,12 @@
 #
 # Обидві джоби — на self-hosted runner-і, що стоїть НА Hetzner-вузлі (label `hetzner`):
 # образи збираються локально й у registry не пушаться, деплой іде в локальний Docker.
+#
+# Репозиторій ПУБЛІЧНИЙ, а runner self-hosted, тому: тригери лише push у main і ручний запуск
+# (жодного pull_request — PR з форка не має виконуватись на сервері); job-и прив'язані до
+# github.repository (форк не ставить job-и в чергу на чужий runner); в налаштуваннях репо
+# workflow-и з PR зовнішніх контриб'юторів вимагають схвалення; секретів у GitHub немає —
+# runner читає /etc/saas/deploy.env на самому сервері (docs/deploy-hetzner.md).
 name: CI/CD
 
 on:
@@ -25,7 +31,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'dentiman/tenantry' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, hetzner]
     timeout-minutes: 60
     strategy:
@@ -57,7 +63,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'dentiman/tenantry' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, hetzner]
     timeout-minutes: 45
     # Один розкат за раз, і не одночасно з ops-операціями (спільна група з ops.yml)

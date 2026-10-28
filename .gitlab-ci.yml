@@ -26,9 +26,14 @@
 #   REGISTRY_DEPLOY_PASSWORD   скоуп read_registry; обидві masked). Не задані → фолбек на
 #                              job-token із гучним попередженням у логу джоби.
 #
-# Прикладні секрети/конфіг стеку (JWT, S3, SMTP, пароль БД) — у КОМІТНУТОМУ docker/deploy.env
-# (тестовий прод, свідомо в репо). Ключі сховища — docker/seaweedfs/s3.prod.json (теж у репо).
-# Для справжнього проду ці два файли винести в CI Variables і розігнорувати назад.
+#   DEPLOY_ENV                 тип FILE, Protected: секретний env стенда saas-dev (JWT, БД, S3,
+#                              Redis, публічні URL) — шаблон docker/deploy.env.example. Репозиторій
+#                              публічний (GitHub dentiman/tenantry), тож у git секретів немає.
+#                              Protected-змінна видна лише protected-гілкам: `dev` має бути protected.
+#
+# Несекретний конфіг стеку — комітнутий docker/stack.env (спільний із Hetzner); DEPLOY_ENV
+# підвантажується після нього й перекриває. Ключі сховища (s3.prod.json) генерує
+# scripts/deploy/write-s3-config.sh з S3_* під час розкату.
 
 stages:
   - check
@@ -194,8 +199,11 @@ build_tools:
         echo "       протухнуть разом із джобою. Заведи Deploy Token — docs/deploy-swarm.md §7."
         echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
       fi
-    # прикладні секрети з комітнутого файлу → у оточення job-а (для інтерполяції ${...} у стеку)
-    - set -a; . ./docker/deploy.env; set +a
+    # конфіг стеку → у оточення job-а (для інтерполяції ${...} у стеку): несекретний з репо,
+    # секрети — з File-змінної DEPLOY_ENV; без неї чи з порожнім секретом джоба падає тут
+    - set -a; . ./docker/stack.env; . "${DEPLOY_ENV:?CI/CD Variable DEPLOY_ENV (File) не задано}"; set +a
+    - sh scripts/deploy/require-env.sh
+    - sh scripts/deploy/write-s3-config.sh
   script:
     # 1) ПЕРЕДПУЛ образів на manager — синхронно, в межах живої джоби, fail-fast.
     #    Без нього pull робить swarm-агент АСИНХРОННО вже після `stack deploy`, і будь-яка
@@ -267,7 +275,7 @@ deploy_dev:
     DEPLOY_HOST: $DEPLOY_HOST_DEV
     DEPLOY_PORT: $DEPLOY_PORT_DEV
     SAAS_DATA_DIR: /srv/saas-dev/data
-    # прикладні секрети — з docker/deploy.env (source у before_script)
+    # прикладні секрети — з DEPLOY_ENV (source у before_script)
 
 # PROD ВИМКНЕНО (2026-10-05). Розробка йде в `dev` (головна гілка, деплой → saas-dev);
 # `main` — дзеркало, яке синхронізуємо з `dev`, але НЕ деплоїмо: на ньому біжить лише стадія
@@ -291,7 +299,7 @@ deploy_prod:
     DEPLOY_HOST: $DEPLOY_HOST_PROD
     DEPLOY_PORT: $DEPLOY_PORT_PROD
     SAAS_DATA_DIR: /srv/saas-prod/data
-    # прикладні секрети — з docker/deploy.env (source у before_script)
+    # прикладні секрети — з DEPLOY_ENV (source у before_script)
 
 # ===========================================================================
 # ONE-SHOT (manual): db:roles → ДО першого деплою; seed → базові ідентичності; seed_demo/demo_reset →
@@ -310,7 +318,8 @@ deploy_prod:
     - docker context rm -f swarm 2>/dev/null || true
     - docker context create swarm --docker "host=ssh://$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PORT:-22}"
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-    - set -a; . ./docker/deploy.env; set +a
+    - set -a; . ./docker/stack.env; . "${DEPLOY_ENV:?CI/CD Variable DEPLOY_ENV (File) не задано}"; set +a
+    - sh scripts/deploy/require-env.sh
 
 db_roles_prod:
   extends: [.tools_base, .prod_disabled]
@@ -432,12 +441,12 @@ seed_demo_dev:
 # тенанта (`pnpm ai:knowledge:index --all-tenants`, docs/demo.md §7). Те саме, що ми робили для FMS
 # (`ai:docs:ingest`), лише джерело — закомічений корпус. Запускається:
 #   • САМ, коли пуш зачепив документацію, корпус, індексатор чи конфіг стенда (перший розкат —
-#     теж: змінюються deploy.env і сам індексатор);
+#     теж: змінюються stack.env і сам індексатор);
 #   • ВРУЧНУ в будь-який момент: новий тенант, відновлення після скидання БД.
 # Ідемпотентно й дешево: корпус не змінився — нуль викликів провайдера; змінився один документ —
 # платиться лише за його чанки; повний прогін усіх тенантів ≈ 10,6 тис. токенів на тенант.
 # `allow_failure`: збій провайдера не має червонити деплой; попередній індекс лишається чинним.
-# Ключ embeddings — CI Variable `AI_API_KEY` (той самий, що у воркера), `AI_BASE_URL` — із deploy.env.
+# Ключ embeddings — CI Variable `AI_API_KEY` (той самий, що у воркера), `AI_BASE_URL` — із docker/stack.env.
 ai_index_dev:
   extends: .tools_base
   stage: deploy_prod
@@ -448,7 +457,7 @@ ai_index_dev:
         - libs/shared/src/ai/knowledge/generated/knowledge-corpus.json
         - libs/shared/src/ai/knowledge/ingest/**/*
         - scripts/ai-knowledge-index.ts
-        - docker/deploy.env
+        - docker/stack.env
       when: on_success
       allow_failure: true
     - if: '$CI_COMMIT_BRANCH == "dev"'

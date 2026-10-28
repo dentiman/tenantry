@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Локальний шлях до деплою на Hetzner: повна перевірка → push у github/main (його деплоїть
-# .github/workflows/deploy.yml). Verify у GitHub-пайплайн свідомо НЕ входить (docs/deploy-hetzner.md §2),
+# Локальний шлях до деплою на Hetzner: повна перевірка → dev і main на GitHub (main деплоїть
+# .github/workflows/deploy.yml) і на GitLab (scripts/git-sync.sh). Verify у GitHub-пайплайн свідомо НЕ входить (docs/deploy-hetzner.md §2),
 # тож ця команда — єдиний шлюз перед розкатом.
 #
-#   pnpm release:hetzner              # перевірити поточну гілку й запушити її в github/main
+#   pnpm release:hetzner              # перевірити dev і поставити на нього dev+main обох remote-ів
 #   SKIP_VERIFY=1 pnpm release:hetzner   # лише запушити (правка CI/доків, термінове виправлення)
 #
 # Перевіряється робоча тека, а пушиться HEAD, тому дерево мусить бути чистим: інакше
@@ -16,7 +16,7 @@ TARGET=main
 die() { echo "release: $*" >&2; exit 1; }
 
 src="$(git rev-parse --abbrev-ref HEAD)"
-[ "$src" != HEAD ] || die "detached HEAD — стань на гілку"
+[ "$src" = dev ] || die "релізиться лише dev (зараз: $src) — main після релізу дорівнює dev"
 [ -z "$(git status --porcelain)" ] || die "є незакомічені/неві́дстежувані зміни — закоміть або прибери їх"
 
 git fetch --quiet "$REMOTE" "$TARGET"
@@ -34,11 +34,6 @@ else
   bash scripts/ci-verify.sh
 fi
 
-echo "→ push $src → $REMOTE/$TARGET (це запускає деплой)"
-git push "$REMOTE" "HEAD:refs/heads/$TARGET"
-
-# Локальний main — дзеркало: підтягуємо його, якщо це fast-forward і він не поточна гілка
-if [ "$src" != "$TARGET" ] && git merge-base --is-ancestor "$TARGET" HEAD 2>/dev/null; then
-  git branch -f "$TARGET" HEAD
-fi
-echo "Готово. Стежити за розкатом: gh run watch --repo dentiman/saas-skeleton"
+echo "→ dev і main → HEAD на обох remote-ах (push у github/main запускає деплой)"
+SYNC_BRANCHES="dev main" bash scripts/git-sync.sh
+echo "Готово. Стежити за розкатом: gh run watch --repo dentiman/tenantry"

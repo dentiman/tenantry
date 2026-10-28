@@ -41,8 +41,9 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
 - `docs/deploy-swarm.md` — GitLab CI (check → build → deploy) → Docker Swarm
-- `docs/deploy-hetzner.md` — GitHub Actions → Hetzner VPS (self-hosted runner on the same host,
-  Caddy TLS on `sslip.io`, server-side secrets in `/etc/saas/deploy.env`, `main` deploys)
+- `docs/deploy-hetzner.md` — GitHub Actions (`dentiman/tenantry`) → Hetzner VPS (self-hosted runner
+  on the same host and its public-repo safeguards, Caddy TLS on `sslip.io`, secrets only in
+  `/etc/saas/deploy.env`, `main` deploys)
 - `docs/demo.md` — демо-стенд для показу клієнтам: датасет трьох галузевих тенантів (`db:seed:demo`),
   статичні демо-акаунти (їх читають сід і логін-сторінки), публічний путівник `/about` (рішення про видимі гостям статуси модулів — §8), ручні CI-джоби завантаження/скидання
 - `docs/build-info.md` — версія застосунку внизу tenant-web (номер збірки = коміти, на кожен деплой нова) і попап з
@@ -183,19 +184,26 @@ a contract or controller changes — see `docs/commands.md` for the full list in
 
 - **`dev` is the primary branch.** Work lands in `dev` (or a feature branch merged into it);
   a push to `dev` deploys the `saas-dev` stack.
-- **`main` is a mirror of `dev`.** It is fast-forwarded to `dev` from time to time. On GitLab
+- **`main` is a mirror of `dev`.** It is fast-forwarded to `dev` by `pnpm release:hetzner`. On GitLab
   it is not deployed: only the `check` stage runs — no images, no prod jobs (`.prod_disabled` in
   `.gitlab-ci.yml`). Do not re-enable prod or retarget prod jobs to another branch without an
   explicit request. GitLab's default branch is still `main`, so `$CI_DEFAULT_BRANCH` ≠ `dev`.
-- **Two independent CIs, two remotes.** `origin` = GitLab (`.gitlab-ci.yml`, deploys `dev` →
-  `saas-dev`). `github` = `dentiman/saas-skeleton` (private; `.github/workflows/`), where a push
-  to **`main`** deploys the Hetzner stack `saas-prod` through a self-hosted runner —
-  `docs/deploy-hetzner.md`. Pushing to one remote does not trigger the other's pipeline; push to
-  `github` only when you mean to deploy there — the way is `pnpm release:hetzner` (local
-  `scripts/ci-verify.sh`, then a fast-forward push to `github/main`).
+- **Two remotes, same history, two independent CIs.** `github` = `dentiman/tenantry` (**public**,
+  MIT, source of truth; `.github/workflows/`): a push to **`main`** deploys the Hetzner stack
+  `saas-prod` via a self-hosted runner — `docs/deploy-hetzner.md`. `origin` = GitLab
+  (`.gitlab-ci.yml`), same SHAs: a push to `dev` deploys `saas-dev`. Don't push branches by hand:
+  `pnpm git:sync` pushes current `dev` → `dev` on both (ff-only, no Hetzner deploy);
+  `pnpm release:hetzner` = local verify, then `dev` and `main` → HEAD on both (deploys Hetzner;
+  `main` == `dev` after). GitLab is reachable only from the work network — the script warns and
+  it catches up on the next run.
+- **Secrets are never in git** (public repo). Committed `docker/stack.env` holds only non-secret
+  shared config; secrets live in the stand's env — `/etc/saas/deploy.env` on Hetzner, the
+  File-type Protected CI Variable `DEPLOY_ENV` on GitLab (template `docker/deploy.env.example`).
+  `docker/deploy.env` and `docker/seaweedfs/s3.prod.json` are gitignored; the latter is generated
+  on every rollout.
 - **Neither CI runs `verify` automatically** (owner decision 2026-10-19: too slow). The gate is
   local: run `pnpm verify` (`scripts/ci-verify.sh`) before pushing to `dev`; `pnpm release:hetzner`
-  does it before pushing to `github/main`. **GitLab:** stage `check` gates `build` only through
+  does it before pushing. **GitLab:** stage `check` gates `build` only through
   `ai_knowledge_check`; `verify` is a manual job with `allow_failure` — details
   `docs/deploy-swarm.md` §6. **GitHub:** `verify.yml` is a manual button only.
 

@@ -18,17 +18,18 @@ export PLATFORM_WEB_IMAGE="$IMAGE_PREFIX/platform-web:$SHA"
 export TOOLS_IMAGE="$IMAGE_PREFIX/tools:$SHA"
 export STACK_NAME
 
-# Конфіг стеку: спершу комітнутий docker/deploy.env (несекретні дефолти), потім серверний
-# файл — він перекриває його секретами й публічними URL цього сервера. Серверний файл
-# у git не потрапляє (там згенеровані на сервері JWT/БД/S3-секрети).
+# Конфіг стеку: спершу комітнутий docker/stack.env (несекретний, спільний з GitLab), потім
+# серверний файл — усі секрети й публічні URL цього сервера (шаблон — docker/deploy.env.example).
+# Серверний файл — ЄДИНЕ місце секретів Hetzner-стенда: у git і в GitHub Secrets їх немає.
 load_stack_env() {
   [ -r "$SERVER_ENV" ] || { echo "Немає $SERVER_ENV — спершу налаштуй сервер (docs/deploy-hetzner.md)"; exit 1; }
   set -a
   # shellcheck disable=SC1091
-  . ./docker/deploy.env
+  . ./docker/stack.env
   # shellcheck disable=SC1090
   . "$SERVER_ENV"
   set +a
+  sh scripts/deploy/require-env.sh
   # CHAT-3b1: публічна адреса вебхуків каналів — адреса самого стенду (nginx web проксить /api, шлях
   # /api/public/channels відкритий). Серверний файл перекриває.
   export CHANNEL_WEBHOOK_BASE_URL="${CHANNEL_WEBHOOK_BASE_URL:-${APP_PUBLIC_URL:-}}"

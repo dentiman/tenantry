@@ -19,8 +19,10 @@ apps/worker/logs/
 .env.local
 .env.*.local
 .env.production
-# docker/seaweedfs/s3.prod.json — СВІДОМО комітиться (тестовий прод; читається `configs: file`
-# на раннері при деплої). Для справжнього проду — розігнорувати назад і винести ключі в CI.
+# Секрети стендів не комітяться ніколи (репозиторій публічний): секретний env — на сервері /
+# у GitLab CI Variable, s3.prod.json генерує scripts/deploy/write-s3-config.sh під час розкату
+docker/deploy.env
+docker/seaweedfs/s3.prod.json
 
 # IDE (runConfigurations — спільні для команди, коміт'яться; решта .idea/ — локальна)
 .idea/*

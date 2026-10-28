@@ -35,7 +35,7 @@ sign in with one click; all of them use the `.example` TLD, and no email is ever
 | Surface | URL | Account |
 | --- | --- | --- |
 | Tenant app | https://web.2-29-1-13.sslip.io | any chip under **Demo accounts** (e.g. `olivia.bennett@northwind.example` / `Demo12345678`) |
-| Control plane | https://platform.2-29-1-13.sslip.io | `platform@example.com` / `Platform12345` |
+| Control plane | https://platform.2-29-1-13.sslip.io | operator access on request — it can create and deactivate tenants |
 
 The demo data can be reset at any time. The AI assistant is live but limited to a few questions per user per day.
 
@@ -129,7 +129,7 @@ pnpm platform:dev       # http://localhost:3002
 pnpm platform:web:dev   # http://localhost:5174
 ```
 
-Default accounts: `admin@example.com` / `Admin1234567` (tenant) and `platform@example.com` /
+Local default accounts: `admin@example.com` / `Admin1234567` (tenant) and `platform@example.com` /
 `Platform12345` (control plane). Every command is documented in [docs/commands.md](docs/commands.md).
 
 ## Documentation

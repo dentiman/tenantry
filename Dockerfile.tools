@@ -4,7 +4,8 @@
 #
 # Запускається з ЯВНОЮ командою через overlay-мережу стеку, напр.:
 #   # ролі (одноразово, ДО першого деплою api) — потрібен суперюзер; паролі ролей — DB_*_PASSWORD
-#   # із docker/deploy.env (застосовуються й до наявних ролей):
+#   # із секретного env стенда — DEPLOY_ENV у GitLab, /etc/saas/deploy.env на Hetzner
+#   # (застосовуються й до наявних ролей):
 #   docker run --rm --network <stack>_saas_net \
 #     -e POSTGRES_ADMIN_URL=postgresql://saas:$POSTGRES_PASSWORD@postgres:5432/postgres \
 #     -e DATABASE_URL=postgresql://saas_app:$DB_APP_PASSWORD@postgres:5432/saas_skeleton \

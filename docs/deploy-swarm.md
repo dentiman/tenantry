@@ -64,7 +64,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 | Стан | у стеку, прибито до manager (`node.role==manager`, `replicas:1`); volume `local`+`o:bind` у `${SAAS_DATA_DIR}` → бекап = весь сервер |
 | Зовнішній доступ | **IP:port без проксі** (тестовий прод): web/platform-web/seaweedfs — `mode:host` на `0.0.0.0`, браузер по http напряму; api/platform-api — на `127.0.0.1`. Прод → `127.0.0.1` + reverse-proxy з TLS |
 | Міграції | entrypoint `api`-контейнера: `prisma migrate deploy` під `MIGRATE_DATABASE_URL` (saas_migrator) → старт під `DATABASE_URL` (saas_app) |
-| Секрети | **тестовий прод:** прикладні секрети (JWT/S3/SMTP/пароль БД) у КОМІТНУТОМУ `docker/deploy.env` + `docker/seaweedfs/s3.prod.json` (свідомо в репо). Серверний таргет — CI-змінні `DEPLOY_USER/HOST/PORT_*` (ті самі, що в accounting). Для справжнього проду — винести в CI Variables |
+| Секрети | **у git їх немає** (репо публічний — GitHub `dentiman/tenantry`). Несекретний конфіг — комітнутий `docker/stack.env`; секрети й публічні URL `saas-dev` — CI/CD Variable `DEPLOY_ENV` (File, Protected; §7); `s3.prod.json` генерується під час розкату. Серверний таргет — CI-змінні `DEPLOY_USER/HOST/PORT_*` (ті самі, що в accounting) |
 | База образу | `node:24-bookworm-slim` (через argon2/sharp; Node 24 — pg-boss/file-type ESM). `nginx:alpine` для фронтів |
 
 **Правки в репо (мінімальні, потрібні для деплою):**
@@ -115,9 +115,11 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
   stateful (postgres/seaweedfs) — `order: stop-first` (двом інстансам не можна ділити один volume).
 - **Стан:** `pgdata`/`seaweedfs-data` — `local`+`o:bind` у `${SAAS_DATA_DIR}/{postgres,seaweedfs}`.
 - **DB-URL-и:** по одному якорю на роль (`x-db-app-env`/`x-db-migrate-env`/`x-db-platform-env`),
-  кожен сервіс отримує лише свої ролі; паролі — змінні `DB_*_PASSWORD` з `docker/deploy.env`
+  кожен сервіс отримує лише свої ролі; паролі — змінні `DB_*_PASSWORD` із секретного env стенда
   (§7, «Ролі БД і паролі»); postgres-порт не публікується.
-- **S3-конфіг** — swarm `config` із `file:` (читається на раннері з комітнутого `docker/seaweedfs/s3.prod.json`).
+- **S3-конфіг** — swarm `config` із `file:` (`docker/seaweedfs/s3.prod.json` на раннері; у git його
+  немає — генерує `scripts/deploy/write-s3-config.sh` з `S3_ACCESS_KEY`/`S3_SECRET_KEY` на кожен
+  розкат). Swarm-config незмінний: зміна ключів потребує нового імені config-обʼєкта.
 
 ## 6. CI-пайплайн і транспорт
 
@@ -133,9 +135,9 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 Стадія build чекає лише на `ai_knowledge_check`; `verify` (`when: manual`, `allow_failure: true`)
 її не тримає, тож SHA збирається й деплоїться без повного прогону — відповідальність за нього на
 тому, хто пушить. Повернути шлюзом — прибрати `when`/`allow_failure` з rules джоби. **Локально той самий прогін** — `bash scripts/ci-verify.sh` (потрібен лише Docker;
-dev-стек і workspace-слоти не чіпає, бо все живе в окремій мережі). GitHub Actions
-(`.github/workflows/ci.yml`) прибрано 2026-10-05: remote — лише GitLab, тож він ніколи не
-запускався.
+dev-стек і workspace-слоти не чіпає, бо все живе в окремій мережі). GitHub Actions — окремий
+таргет (Hetzner, [deploy-hetzner.md](deploy-hetzner.md)); GitLab несе ту саму історію, що
+`dentiman/tenantry`, гілки синхронізує `pnpm git:sync`.
 
 **build** (dind + BuildKit): 6 образів паралельно, тег `$CI_COMMIT_SHA` (+`latest` на default-гілці
 GitLab; `latest` ніде не споживається — стек бере образ за SHA), теги передаються далі
@@ -153,7 +155,9 @@ dotenv-артефактом `build.env`.
 # SSH раннер↔manager УЖЕ налаштований (ключ/known_hosts на рівні раннера) — не інжектимо
 docker context create swarm --docker host=ssh://$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT
 docker login … -u $REGISTRY_DEPLOY_USER        # Deploy Token; фолбек на job-token із warning
-set -a; . ./docker/deploy.env; set +a          # прикладні секрети з репо → у оточення job-а
+set -a; . ./docker/stack.env; . "$DEPLOY_ENV"; set +a   # несекретний конфіг + секрети з File-змінної
+sh scripts/deploy/require-env.sh                # порожній обовʼязковий секрет → exit 1 до розкату
+sh scripts/deploy/write-s3-config.sh            # s3.prod.json з S3_* (у git його немає)
 for img in …; do DOCKER_CONTEXT=swarm docker pull "$img"; done   # ПЕРЕДПУЛ, синхронно
 DOCKER_CONTEXT=swarm docker stack deploy --with-registry-auth --detach=false --prune …
 … пост-перевірка: фактичний Image кожного сервісу == щойно зібраний тег, інакше exit 1
@@ -243,26 +247,35 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
   фолбекається на job-token і пише попередження, — але тоді креди на ноді живуть рівно
   стільки, скільки джоба (§6).
 
-**Прикладні секрети/конфіг — у РЕПО (тестовий прод, свідомо комітяться):**
-- `docker/deploy.env` — `POSTGRES_PASSWORD`, `DB_APP_PASSWORD`/`DB_MIGRATOR_PASSWORD`/`DB_PLATFORM_PASSWORD`
-  (нижче, «Ролі БД і паролі»), `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `S3_ENDPOINT`,
-  `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_CORS_ALLOWED_ORIGINS`, `SMTP_HOST`, `SMTP_FROM`,
-  `REDIS_PASSWORD`, `REALTIME_ALLOWED_ORIGINS` (+ опційні override з дефолтами).
-  deploy-job робить `set -a; . ./docker/deploy.env; set +a`.
-  **`REALTIME_ALLOWED_ORIGINS` = той самий origin, що `S3_CORS_ALLOWED_ORIGINS`**
-  (`http://<node-ip>:8511`): гейтвей звіряє його через Socket.IO `allowRequest`, бо
-  browser CORS захищає HTTP-транспорт, але НЕ WebSocket.
-- `docker/seaweedfs/s3.prod.json` — ключі сховища (мають збігатися з `S3_ACCESS_KEY`/`S3_SECRET_KEY`).
+**Прикладний конфіг — два шари; секретів у git немає** (репо публічний):
+- `docker/stack.env` (комітиться, спільний із Hetzner) — лише несекретне: SMTP-заглушки,
+  AI-провайдер/модель/квота, бекенд знань.
+- **`DEPLOY_ENV`** — CI/CD Variable типу **File**, **Protected** (Settings → CI/CD → Variables):
+  секретний env стенда `saas-dev`, шаблон — `docker/deploy.env.example`. Обовʼязкові:
+  `POSTGRES_PASSWORD`, `DB_APP_PASSWORD`/`DB_MIGRATOR_PASSWORD`/`DB_PLATFORM_PASSWORD` (нижче, «Ролі
+  БД і паролі»), `JWT_SECRET`, `PLATFORM_JWT_SECRET`, `ENCRYPTION_KEY`, `REDIS_PASSWORD`,
+  `S3_ACCESS_KEY`, `S3_SECRET_KEY` і публічні адреси `APP_PUBLIC_URL`, `REALTIME_ALLOWED_ORIGINS`,
+  `PLATFORM_CORS_ALLOWED_ORIGINS`, `S3_ENDPOINT`, `S3_CORS_ALLOWED_ORIGINS`; за потреби —
+  `AI_API_KEY`, `AI_SECRETS_KEY`, `SEED_*_PASSWORD`, `COOKIE_SECURE=false` (голий http), override SMTP.
+  Protected-змінна видна лише protected-гілкам, тому **`dev` має бути protected**. Копія файлу — у
+  менеджері паролів власника (втрата `ENCRYPTION_KEY`/`AI_SECRETS_KEY` = неможливо розшифрувати
+  збережене).
 
-> **Для СПРАВЖНЬОГО проду:** обидва файли винести в CI Variables (Protected+Masked) і
-> розігнорувати назад у `.gitignore`.
+deploy- і tools-джоби роблять `set -a; . ./docker/stack.env; . "$DEPLOY_ENV"; set +a` (другий
+перекриває перший) і `scripts/deploy/require-env.sh` — без змінної чи з порожнім обовʼязковим
+секретом джоба падає до того, як стек чіпали. `docker/seaweedfs/s3.prod.json` генерує
+`scripts/deploy/write-s3-config.sh` з `S3_*`.
+**`REALTIME_ALLOWED_ORIGINS` = той самий origin, що `S3_CORS_ALLOWED_ORIGINS`**
+(`http://<node-ip>:8511`): гейтвей звіряє його через Socket.IO `allowRequest`, бо
+browser CORS захищає HTTP-транспорт, але НЕ WebSocket.
 
 ### Ролі БД і паролі
 
 **Що є зараз.** Postgres має суперюзера `saas` і три робочі ролі — `saas_app` (під RLS),
 `saas_platform` (BYPASSRLS), `saas_migrator` (власник таблиць). Хто яку отримує й чому —
 [multi-tenancy-architecture.md](multi-tenancy-architecture.md) §4. Суперюзер має випадковий
-пароль (`POSTGRES_PASSWORD`). Паролі робочих ролей лежать у змінних `docker/deploy.env`:
+пароль (`POSTGRES_PASSWORD`). Паролі робочих ролей — змінні секретного env стенда (`DEPLOY_ENV` у
+GitLab, `/etc/saas/deploy.env` на Hetzner):
 
 | Змінна                 | Роль            | URL у стеку             | Сервіси            |
 | ---------------------- | --------------- | ----------------------- | ------------------ |
@@ -270,26 +283,28 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
 | `DB_MIGRATOR_PASSWORD` | `saas_migrator` | `MIGRATE_DATABASE_URL`  | api (entrypoint)   |
 | `DB_PLATFORM_PASSWORD` | `saas_platform` | `PLATFORM_DATABASE_URL` | worker, platform-api |
 
-Значення поки ті самі, що були захардкоджені раніше: пароль = ім'я ролі. Змінилося лише місце:
-одне джерело замість копій у stack-файлі, CI-джобах і `scripts/hetzner`. Ці ж змінні читає
+Одне джерело замість копій у stack-файлі, CI-джобах і `scripts/hetzner`; у git значень немає, а
+порожнє значення валить розкат (`require-env.sh`). Ці ж змінні читає
 `pnpm db:roles` (`libs/database/scripts/ensure-roles.ts`): нову роль створює з паролем зі змінної,
 а **наявній роли застосовує пароль, лише якщо змінну задано явно** (`ALTER ROLE`). Без змінної
-стек не деплоїться (`${DB_…:?}`), а `db:roles` наявну роль не чіпає. На Hetzner значення можна
-перекрити в `/etc/saas/deploy.env` ([deploy-hetzner.md](deploy-hetzner.md)). Локальний dev, e2e,
+стек не деплоїться (`${DB_…:?}`), а `db:roles` наявну роль не чіпає
+([deploy-hetzner.md](deploy-hetzner.md) — те саме для Hetzner). Локальний dev, e2e,
 `scripts/ci-verify.sh` і `ws:init` лишаються на dev-паролях (`.env.example`, `01-roles.sql`).
 
-**Чому це поки прийнятно — і що саме не захищено.** Базу закриває мережа: порт Postgres не
-публікується, тож ззовні до неї не дістатися. Але паролі, рівні іменам ролей, означають, що
+**Що лишається не захищеним.** Базу закриває мережа: порт Postgres не публікується. Паролі ролей
+мають бути випадковими (`openssl rand`), а не рівними іменам ролей, як було до 2026-10-28: інакше
 **будь-хто з виконанням коду в будь-якому контейнері `saas_net`** (зокрема nginx `web`/`platform-web`
-і `seaweedfs`, опубліковані на `0.0.0.0`) підключиться під будь-якою роллю. Зокрема під
-`saas_migrator`, а той як власник таблиць може вимкнути RLS. Те, що api не отримує `saas_platform`
-у DI й env, захищає від помилки в коді, а не від такого сценарію. Свідомий компроміс тестових
-стендів із демо-даними.
+і `seaweedfs`) підключиться під будь-якою роллю. Навіть з випадковими паролями всі
+сервіси сидять в одній overlay `saas_net`, і api тримає пароль `saas_migrator` (entrypoint-міграції):
+**виконання коду в api** дає роль власника таблиць, а той може вимкнути RLS. Те, що api не отримує
+`saas_platform` у DI й env, захищає від помилки в коді, а не від такого сценарію. Свідомий
+компроміс тестових стендів із демо-даними; закривають його пункти 2–3 нижче.
 
 **Як змінити пароль ролі** (зараз чи при переході на прод). Генерувати лише `[A-Za-z0-9_-]`, бо
 пароль іде в URL без екранування (`openssl rand -hex 24`).
 
-1. Нове значення — у `docker/deploy.env` (GitLab) або `/etc/saas/deploy.env` (Hetzner).
+1. Нове значення — у `DEPLOY_ENV` (GitLab → Settings → CI/CD → Variables) або `/etc/saas/deploy.env`
+   (Hetzner); оновити й копію в менеджері паролів.
 2. Запустити `db_roles_dev` або `db_roles_prod` (Hetzner: Ops → `db_roles`). Роль отримує новий пароль.
 3. **Одразу** розкотити стек. Postgres перевіряє пароль лише при підключенні: уже відкриті
    з'єднання старих тасок живуть, а нові з'єднання зі старим паролем відмовлять. Тож вікно між
@@ -298,8 +313,9 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
 
 **Перед справжнім продом** — у такому порядку:
 
-1. **Унікальні паролі ролей поза репо**: CI Variables (Protected+Masked) або серверний файл,
-   як `/etc/saas/deploy.env` на Hetzner; рядки `DB_*_PASSWORD` прибрати з комітнутого `deploy.env`.
+1. **Унікальні паролі ролей поза репо** — місце є з 2026-10-28 (`DEPLOY_ENV` / `/etc/saas/deploy.env`);
+   переконатися, що значення там випадкові, а не успадковані «пароль = ім'я ролі» (якщо ні —
+   процедура вище).
 2. **Міграції — окремою one-shot-джобою** (tools-образ, `prisma migrate deploy`) перед
    `stack deploy`. Прибрати `docker/entrypoint-api.sh` і `*db-migrate-env` з api: найбільш
    відкритий процес не має тримати пароль власника таблиць.
@@ -313,7 +329,8 @@ SHA (кроку 4 у script). **Для prod** ту саму зміну обра�
    документація Postgres. Ескалації зараз немає, бо результат повертається тому самому `saas_app`.
 
 **AI-асистент (ai-1a, [ai-assistant-implementation.md](ai-assistant-implementation.md) §7.1):**
-на стеку за замовчуванням `AI_ENABLED=false`, `AI_PROVIDER=fake`. Реальний бекенд — будь-який
+дефолт stack-файлу — `AI_ENABLED=false`, `AI_PROVIDER=fake`; обидва стенди перекривають його в
+`docker/stack.env` (OpenRouter, `AI_ENABLED=true`). Реальний бекенд — будь-який
 з рідним OpenAI Chat Completions API; рекомендований дефолт — **OpenRouter** з увімкненим
 Zero Data Retention у кабінеті і дешевою моделлю з [ai-assistant.md](ai-assistant.md) §5.5
 (`openai/gpt-5.6-luna`). Порядок вмикання — саме такий:
@@ -323,14 +340,15 @@ Zero Data Retention у кабінеті і дешевою моделлю з [ai-
    `AI_QUOTA_USER_DAILY_TOKENS`/`AI_QUOTA_TENANT_DAILY_TOKENS`, [ai-assistant.md](ai-assistant.md)
    §8) — квоти обмежують інсталяцію структурно, стеля лишається останнім рубежем проти багу в
    самих квотах чи в підрахунку провайдера. Без стелі ключ не вмикати.
-2. `docker/deploy.env`: `AI_PROVIDER=openai-compat`, `AI_BASE_URL=https://openrouter.ai/api/v1`,
+2. `docker/stack.env`: `AI_PROVIDER=openai-compat`, `AI_BASE_URL=https://openrouter.ai/api/v1`,
    `AI_MODEL=<модель>`.
-3. **`AI_API_KEY` — лише CI Variable (Protected + Masked)**, ніколи не в комітнутому
-   `deploy.env`. Deploy-job і так експортує CI Variables в оточення, з якого інтерполюється stack.
+3. **`AI_API_KEY` — лише в секретному env стенда** (`DEPLOY_ENV` / `/etc/saas/deploy.env`; у GitLab
+   годиться й окрема masked CI Variable — deploy-job експортує їх в оточення), ніколи не в
+   `stack.env`.
    У stack-файлі `AI_BASE_URL`/`AI_API_KEY` сидять в окремому якорі `x-ai-provider-env`, який
    отримує **лише `worker`**: api модель не викликає, і ключ йому не видається.
 4. `AI_ENABLED=true` (читають і api, і worker).
-5. **AI-5a: `AI_SECRETS_KEY` — CI Variable (Protected + Masked)**, `openssl rand -base64 32`.
+5. **AI-5a: `AI_SECRETS_KEY` — там само, у секретному env стенда**, `openssl rand -base64 32`.
    Отримують лише `worker` і `platform-api`. Без нього суперадмін не може зберегти ключ провайдера
    в platform-web → AI; з ним модель, URL і ключ міняються в UI без redeploy, а `AI_*` вище лишаються
    дефолтами ([ai-platform-controls.md](ai-platform-controls.md)). Втрата майстер-ключа = ключ
@@ -356,18 +374,21 @@ redeploy.
 1. **Сервер:** Swarm-нода (`docker swarm init`); deploy-юзер у групі `docker`;
    `mkdir -p ${SAAS_DATA_DIR}/{postgres,seaweedfs}`. SSH раннер↔manager уже налаштований.
 2. **GitLab/репо:** завести CI Variables `DEPLOY_USER/HOST/PORT_*` (§7; ті самі, що в accounting —
-   можливо, вже є); заповнити `docker/deploy.env`
-   і `docker/seaweedfs/s3.prod.json` реальними значеннями; переконатися, що runner-тег
-   (`deploy_dev`) відповідає вашому раннеру з SSH до manager-а.
+   можливо, вже є); зробити гілку `dev` protected; заповнити копію `docker/deploy.env.example`
+   (`openssl rand`, IP ноди в публічних URL — крок 6) і завести її як CI/CD Variable `DEPLOY_ENV`
+   (тип File, Protected), копію — у менеджер паролів. `s3.prod.json` руками не створювати — його
+   генерує розкат. Переконатися, що runner-тег (`deploy_dev`) відповідає вашому раннеру з SSH до
+   manager-а.
 3. Пуш у гілку → **build** збирає й пушить образи.
 4. **`docker stack deploy`** (deploy_prod): postgres/seaweedfs піднімаються з даними;
    api-entrypoint спробує migrate — на порожній БД **впаде на ролях** (це очікувано на самому
    першому запуску).
 5. Запустити **manual `db_roles_prod`** (створює `saas_migrator`/`saas_app`/`saas_platform`) →
    api рестартне (restart_policy) і міграції пройдуть. За потреби демо-дані — **manual `seed_prod`**.
-6. **Доступ (IP:port без проксі):** у `docker/deploy.env` замінити `CHANGE_ME_NODE_IP` на IP ноди
+6. **Доступ (IP:port без проксі):** у `DEPLOY_ENV` — IP ноди в публічних адресах
    (`S3_ENDPOINT=http://<node-ip>:8503`, `S3_CORS_ALLOWED_ORIGINS=http://<node-ip>:8511`,
-   `REALTIME_ALLOWED_ORIGINS=http://<node-ip>:8511`). Відкрити
+   `REALTIME_ALLOWED_ORIGINS=http://<node-ip>:8511`, `APP_PUBLIC_URL`,
+   `PLATFORM_CORS_ALLOWED_ORIGINS=http://<node-ip>:8512`, `COOKIE_SECURE=false`). Відкрити
    у браузері `http://<node-ip>:8511` (web) / `:8512` (platform-web). Усе по http (без TLS/проксі).
 7. **Димовий тест realtime:** відкрити `/users` двома браузерами під різними юзерами — обидва
    мають бачити один одного online. Далі `docker service scale saas-dev_api=2` (порт `api` не
@@ -390,7 +411,7 @@ redeploy.
 | runtime config.json через nginx-entrypoint | ✖️ не треба (фронт на відносному `/api`) |
 | seeder-образ + manual `pg_dump` | ✅ (`Dockerfile.tools`, `db_roles`/`seed`/`dump`) |
 | dev/prod по гілках | ✅ (prod поки вимкнено, §6) |
-| **`scp` stack + `.env` на сервер** | **→ docker context**: stack читається локально, env інтерполюється client-side, S3-config — swarm `config` з локального файлу. Нуль файлів на сервері |
+| **`scp` stack + `.env` на сервер** | **→ docker context**: stack читається локально, env (`stack.env` + `DEPLOY_ENV`) інтерполюється client-side, S3-config — swarm `config` з файлу, згенерованого на раннері. Нуль файлів на сервері |
 
 ## 10. Масштабування (коли single-node стане тісно)
 

@@ -428,12 +428,20 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 Перший прогін довгий (холодний pnpm store), далі store береться з тому
 `saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
 
-### `pnpm verify` / `pnpm release:hetzner`
+### `pnpm verify` / `pnpm git:sync` / `pnpm release:hetzner`
 
-`pnpm verify` — синонім `bash scripts/ci-verify.sh`. `pnpm release:hetzner` — локальний шлях до
-деплою на Hetzner (`docs/deploy-hetzner.md` §4): на поточній гілці з чистим деревом проганяє той
-самий `verify`, потім fast-forward `git push github HEAD:main` (це запускає розкат). Verify у
-GitHub-пайплайн свідомо не входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
+`pnpm verify` — синонім `bash scripts/ci-verify.sh`.
+
+`pnpm git:sync` (`scripts/git-sync.sh`) — поточний `dev` → `dev` на обох remote-ах: спершу `github`
+(`dentiman/tenantry`, джерело правди), потім `origin` (GitLab, ті самі SHA). Лише fast-forward:
+якщо remote має коміти, яких нема локально, скрипт зупиняється (спершу злити, ніколи не
+force-push). Пуш `dev` у GitLab запускає розкат `saas-dev`; Hetzner не деплоїться. GitLab
+недоступний (поза робочою мережею) → попередження, наздожене наступним запуском.
+
+`pnpm release:hetzner` — локальний шлях до деплою на Hetzner (`docs/deploy-hetzner.md` §4): на `dev`
+з чистим деревом проганяє той самий `verify`, потім через `git-sync` ставить `dev` і `main` на HEAD
+на обох remote-ах (пуш у `github/main` запускає розкат). Verify у GitHub-пайплайн свідомо не
+входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
 
 ### `pnpm format` / `pnpm format:check`
 

@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   run:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'dentiman/tenantry' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, hetzner]
     timeout-minutes: 60
     # Спільна група з deploy.yml: операції й розкат не накладаються

@@ -41,6 +41,7 @@
     "openapi:generate": "pnpm --filter @saas-skeleton/api openapi:generate",
     "verify": "bash scripts/ci-verify.sh",
     "release:hetzner": "bash scripts/hetzner/release.sh",
+    "git:sync": "bash scripts/git-sync.sh",
     "ai:knowledge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts",
     "ai:knowledge:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check",
     "lint": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check && pnpm deps:check && pnpm modules:check --strict && pnpm lint:eslint",

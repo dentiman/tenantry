@@ -11,20 +11,9 @@ load_stack_env
 
 COMPOSE=docker/docker-compose.stack.yml
 
-# Ключі S3 для SeaweedFS беремо з серверного конфігу, а не з комітнутого s3.prod.json (там чужі
-# тестові ключі). Файл у робочій теці runner-а перезаписується — наступний checkout його скине.
-# Swarm-config незмінний: вміст стабільний, поки не змінено S3_ACCESS_KEY/S3_SECRET_KEY
-cat > docker/seaweedfs/s3.prod.json <<JSON
-{
-  "identities": [
-    {
-      "name": "saas",
-      "credentials": [{ "accessKey": "$S3_ACCESS_KEY", "secretKey": "$S3_SECRET_KEY" }],
-      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
-    }
-  ]
-}
-JSON
+# Ключі S3 для SeaweedFS — із серверного env (у git їх немає): s3.prod.json генерується на
+# кожен розкат у робочій теці runner-а
+sh scripts/deploy/write-s3-config.sh
 
 first_run=false
 docker service inspect "${STACK_NAME}_postgres" >/dev/null 2>&1 || first_run=true
