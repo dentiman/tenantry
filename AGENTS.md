@@ -198,6 +198,12 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   `pnpm release:hetzner` = local verify, then `dev` and `main` → HEAD on both (deploys Hetzner;
   `main` == `dev` after). GitLab is reachable only from the work network — the script warns and
   it catches up on the next run.
+- **Documentation-only publication on GitHub:** `git push github main` is allowed for commits
+  limited to `README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `docs/**` and `openspec/**`.
+  The deploy workflow skips these pushes, except `docs/ai-knowledge/**` and
+  `docs/history-summary.md` (application inputs). Any other changed path triggers deployment;
+  manual dispatch always remains available. Merge documentation commits back into `dev`
+  before the next release so the fast-forward check passes. See `docs/deploy-hetzner.md` §4.
 - **Secrets are never in git** (public repo). Committed `docker/stack.env` holds only non-secret
   shared config; secrets live in the stand's env — `/etc/saas/deploy.env` on Hetzner, the
   File-type Protected CI Variable `DEPLOY_ENV` on GitLab (template `docker/deploy.env.example`).
