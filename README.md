@@ -1,194 +1,160 @@
-# SaaS Skeleton
+<div align="center">
 
-Фундамент для мультитенантних CRM/ERP-систем: NestJS + React монорепозиторій із наскрізними
-типізованими контрактами (Zod → OpenAPI → TanStack Query hooks). Скелетон призначений для
-форків під конкретні продукти. Архітектурні рішення — у [docs/architecture-proposal.md](docs/architecture-proposal.md),
-план фаз — у [docs/roadmap.md](docs/roadmap.md), інструкції для агентів (Codex, Claude Code) — у [AGENTS.md](AGENTS.md); `CLAUDE.md` лише імпортує його.
+# Tenantry
 
-## Стек
+**A production-shaped foundation for multitenant CRM/ERP SaaS products.**
 
-| Шар         | Технології                                                                                                                                                                  |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend     | NestJS 11, Prisma 7 (adapter-pg), PostgreSQL 17, nestjs-zod v5, Pino                                                                                                        |
-| Realtime    | Socket.IO 4 (websocket-only, namespace `/tenant`) + Valkey 8 як Redis Streams adapter і сховище presence-leases                                                              |
-| Contracts   | Zod 4 — єдине джерело правди типів API (`libs/contracts`)                                                                                                                   |
-| API-конвеєр | `@nestjs/swagger` → `openapi.json` → orval → typed TanStack Query hooks                                                                                                     |
-| Frontend    | React 19, Vite 7, TanStack Router + Query v5, Zustand, Tailwind CSS 4, react-hook-form                                                                                      |
-| UI          | shadcn/ui на Base UI (стиль `base-nova`), спільний шар `libs/ui`; тема light/dark/system (next-themes)                                                                       |
-| Auth        | JWT (15m) + refresh rotation (`tenantId:tokenId:secret`, argon2) + theft detection; два незалежні auth-и (tenant `apps/api` і platform `apps/platform-api`, окремі секрети) |
-| Monorepo    | pnpm workspaces + Turborepo, ESLint 9 (strict type-checked), Prettier, Husky                                                                                                |
+Two planes (tenant app + operator control plane), Postgres row-level security as the tenant
+boundary, end-to-end typed contracts, a transactional-outbox message bus, realtime, an AI
+assistant with grounded citations, and a WhatsApp customer channel — built as a forkable base
+rather than a demo.
 
-## Швидкий старт
+[**Live demo**](https://web.2-29-1-13.sslip.io) ·
+[Control plane](https://platform.2-29-1-13.sslip.io) ·
+[Architecture](docs/multi-tenancy-architecture.md) ·
+[Conventions](docs/backend-conventions.md) ·
+[Roadmap](docs/roadmap.md)
+
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17%20%2B%20RLS%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Swarm-2496ED?logo=docker&logoColor=white)
+
+</div>
+
+![Customers grid](docs/assets/screenshots/customers.png)
+
+## Try it
+
+The demo runs on a single Hetzner VPS and is seeded with three industry tenants
+(logistics, healthcare, creative studio). The sign-in page lists the demo accounts, so you can
+sign in with one click; all of them use the `.example` TLD, and no email is ever sent.
+
+| Surface | URL | Account |
+| --- | --- | --- |
+| Tenant app | https://web.2-29-1-13.sslip.io | any chip under **Demo accounts** (e.g. `olivia.bennett@northwind.example` / `Demo12345678`) |
+| Control plane | https://platform.2-29-1-13.sslip.io | `platform@example.com` / `Platform12345` |
+
+The demo data can be reset at any time. The AI assistant is live but limited to a few questions per user per day.
+
+## What's inside
+
+| Area | What is built |
+| --- | --- |
+| **Multitenancy** | Shared schema with `tenant_id` and **Postgres RLS as the primary enforcement**: the app connects as a non-owner role, and every request runs inside a transaction that sets the tenant via `set_config`. Domain code never passes a `tenantId`. |
+| **Two planes** | Tenant API + SPA and a separate control plane (operator API + SPA) with its own identity, JWT secret, cookie and database role. |
+| **Auth** | Custom implementation: short-lived access JWT in memory, a rotating refresh token in an httpOnly cookie, sessions as a first-class entity (device list, idle and absolute expiry, reuse detection), password recovery and email change through single-use tokens, rate limiting. |
+| **Typed contracts** | Zod 4 schemas → `nestjs-zod` DTOs → OpenAPI → orval → TanStack Query hooks. There are no hand-written API types; generated artifacts are committed. |
+| **Messaging** | Events and commands over a transactional outbox on pg-boss: `publish(tx, …)` fans out inside the producing transaction, idempotency is keyed by message and consumer, poison messages go to a DLQ. Topology mismatches fail at worker boot. |
+| **Realtime** | Socket.IO + Valkey (Redis Streams adapter), presence leases, last-seen. Socket events say "re-read"; the few that carry payloads use monotonic counters with a REST resync. |
+| **Domain modules** | Customers (organisations and people, human-readable per-tenant numbering), calendar (attendees, RSVP, time zones, reminders), activity feed, notification inbox, files (presigned two-phase S3 upload with magic-byte verification), org and personal settings. |
+| **Chat** | Internal team conversations plus a provider-neutral customer channel: signed webhook → raw event store → ingest, ordered outbound delivery, delivery receipts, assignment workflow. WhatsApp Cloud API is the first adapter. |
+| **AI assistant** | Streaming answers generated only in the worker. Hybrid retrieval (pgvector + Postgres full-text search, merged by RRF), citations verified on the server and re-authorized on every open, per-user quotas, a cost ledger, and an offline answer-quality eval harness. |
+| **Module graph** | Apps and libs are split into tiers (infra → platform → core → feature) declared in [`modules.config.ts`](modules.config.ts). Lint fails on an undeclared or upward import and on any runtime import cycle; lower modules expose slots that features fill. |
+| **Delivery** | Docker images, a GitLab CI → Docker Swarm pipeline, and a GitHub Actions → Hetzner pipeline (self-hosted runner, Caddy TLS). Per-worktree isolated dev stacks for parallel agent work. |
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/dashboard.png" alt="Dashboard"></td>
+    <td><img src="docs/assets/screenshots/chat.png" alt="Customer chat"></td>
+  </tr>
+  <tr>
+    <td align="center">Dashboard with product tour</td>
+    <td align="center">Customer chat with linked record</td>
+  </tr>
+</table>
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Tenant plane
+    web[apps/web<br/>React SPA] -->|REST + Socket.IO| api[apps/api<br/>NestJS]
+  end
+  subgraph Control plane
+    pweb[apps/platform-web<br/>React SPA] -->|REST| papi[apps/platform-api<br/>NestJS]
+  end
+  api -->|withTenantTx + RLS| pg[(PostgreSQL 17<br/>RLS · pgvector · pg-boss)]
+  papi -->|BYPASSRLS role| pg
+  worker[apps/worker<br/>subscribers + cron] --> pg
+  api <--> valkey[(Valkey<br/>Socket.IO adapter · presence)]
+  web -.->|presigned PUT/GET| s3[(S3-compatible storage)]
+  worker --> llm[LLM / embeddings]
+  meta[WhatsApp Cloud API] -->|signed webhook| api
+  worker -->|outbound delivery| meta
+```
+
+| Path | Role |
+| --- | --- |
+| `apps/api` | Tenant API: auth, account, users, customers, calendar, chat, files, activities, notifications, realtime gateway, AI |
+| `apps/platform-api` | Control plane: operator auth, tenants, job monitoring, AI settings and cost ledger |
+| `apps/worker` | No HTTP: message subscribers, cron, email, AI reply generation |
+| `apps/web`, `apps/platform-web` | SPAs with a two-level navigation shell, code grouped by feature module |
+| `libs/contracts` | Zod schemas, the single source of API types |
+| `libs/database` | Prisma schema (one file per module), migrations, seeds, tenant context and transactions |
+| `libs/shared` | Messaging runtime, recorders, storage, channels, AI pipeline |
+| `libs/ui` | Shared shadcn/ui (Base UI) primitives, theme, data grid, forms |
+
+## Engineering practices
+
+- **Invariants ship with tests.** 54 e2e suites run against real Postgres and Valkey; the ones guarding
+  concurrency use `Promise.all` races, negative cases or redelivery, not just the happy path.
+- **Read-modify-write is guarded**: conditional `updateMany`, atomic increments, unique indexes or
+  `SELECT … FOR UPDATE`, and the top-level method owns the single transaction.
+- **Errors have one envelope** (`ApiError` with a stable `code`); backend messages are diagnostics, and the
+  frontend renders codes through i18next.
+- **Decisions are written down.** [`docs/`](docs) holds the reasoning for every subsystem,
+  [`openspec/`](openspec) holds behavioural specs and in-flight changes, and [`AGENTS.md`](AGENTS.md) is the
+  working agreement for AI coding agents (Claude Code, Codex) that helped build the project.
+- **One local gate**: `pnpm verify` runs lint (ESLint strict-type-checked, module graph, import cycles),
+  typecheck, unit tests and both e2e suites in throwaway containers.
+
+## Run locally
+
+Requirements: Node 24+, pnpm 10, Docker.
 
 ```bash
 cp .env.example .env
 pnpm install
-pnpm docker:up            # PostgreSQL 17 + Mailpit + Valkey + SeaweedFS у Docker
-                          # (свіжий Postgres-volume сам створює ролі БД)
-pnpm db:roles             # ТІЛЬКИ якщо Postgres-volume існував до MT-0: ідемпотентно створює
-                          # ролі saas_migrator/saas_app/saas_platform і гранти (інакше пропустити)
-pnpm db:generate          # Prisma client
-pnpm db:migrate:dev       # міграції (йдуть під saas_migrator — MIGRATE_DATABASE_URL з .env)
-pnpm db:seed              # дефолтні дані: tenant "default" + admin@example.com/Admin1234567
-                          # (tenant-адмін) + platform@example.com/Platform12345 (platform-оператор)
-pnpm api:dev              # Tenant API на http://localhost:3001 (Swagger: /api/docs)
-pnpm platform:dev         # Control plane API на http://localhost:3002 (Swagger: /api/docs;
-                          # окремий JWT-secret, роль saas_platform — BYPASSRLS)
-pnpm worker:dev           # Worker: споживачі черги pg-boss + cron (окремий процес)
-pnpm web:dev              # Tenant web на http://localhost:5173 (проксі /api і /socket.io → 3001)
-pnpm platform:web:dev     # Platform web на http://localhost:5174 (проксі /api → 3002)
+pnpm docker:up          # Postgres 17 (pgvector) + Valkey + Mailpit + SeaweedFS
+pnpm db:generate && pnpm db:migrate:dev && pnpm db:seed
+pnpm db:seed:demo       # optional: the three demo tenants
+
+pnpm api:dev            # http://localhost:3001  (Swagger at /api/docs)
+pnpm worker:dev
+pnpm web:dev            # http://localhost:5173
+pnpm platform:dev       # http://localhost:3002
+pnpm platform:web:dev   # http://localhost:5174
 ```
 
-Почати геть з нуля (стирає всі дані): `pnpm db:reset` — DROP+CREATE бази, ролі, міграції
-й сід за одну команду (тільки localhost; деталі — [docs/database-seed.md](docs/database-seed.md)).
+Default accounts: `admin@example.com` / `Admin1234567` (tenant) and `platform@example.com` /
+`Platform12345` (control plane). Every command is documented in [docs/commands.md](docs/commands.md).
 
-Повний довідник **усіх** команд `package.json` з прикладами й поясненням, що робить
-кожна — [docs/commands.md](docs/commands.md) (там же — готові JetBrains Run Configurations
-для мінімального dev-набору, впорядковані під запуск "з нуля").
+## Documentation
 
-## Структура
+Most design documents are written in Ukrainian.
 
-```
-apps/
-  api/            # Tenant API (data plane, :3001): auth, users, files, health; RLS-контекст
-                  # через TenancyModule; Swagger на /api/docs
-  platform-api/   # Control plane API (:3002): platform-auth (окремі platform_users, окремий
-                  # JWT-secret), tenants CRUD, jobs-моніторинг; роль saas_platform (BYPASSRLS)
-  worker/         # NestJS-процес без HTTP: обробники job-ів pg-boss + cron
-  web/            # Tenant SPA (:5173): shell, login, users CRUD, картка юзера, інбокс
-  platform-web/   # Control plane SPA (:5174): tenants CRUD, jobs-моніторинг
-libs/
-  contracts/  # Zod-схеми + z.infer типи (залежить лише від zod; platform-контракти — subpath /platform)
-  database/   # Prisma schema, migrations, seed, PrismaService/PrismaModule; src/tenant/ — TenancyModule
-              # (nestjs-cls) + tenant-extension для set_config, SystemPrismaService (BYPASSRLS)
-  shared/     # Повідомлення: defineEvent/defineCommand, MESSAGE_TOPOLOGY, MessagePublisher,
-              # @MessageSubscriber, inbox-ідемпотентність; сховище (StorageService)
-  ui/         # Спільний UI-шар обох фронтів: тема, вендорені примітиви shadcn, грід, форми
-docker/       # docker-compose: postgres, mailpit, valkey (realtime), seaweedfs
-docs/         # архітектурна пропозиція та рішення; docs/multi-tenancy-architecture.md — довідник
-              # поточної мультитенантної архітектури; docs/frontend/ — усе про UI-шар
-```
+| Topic | Document |
+| --- | --- |
+| Multitenancy, RLS, both planes | [multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md) |
+| Backend rules and their reference code | [backend-conventions.md](docs/backend-conventions.md) |
+| Module tiers and the dependency graph | [modules.md](docs/modules.md) |
+| Messaging, DLQ | [event-driven-architecture.md](docs/event-driven-architecture.md) |
+| Realtime | [realtime.md](docs/realtime.md) |
+| Auth and sessions | [auth-hardening-plan.md](docs/auth-hardening-plan.md) |
+| Chat and the WhatsApp channel | [chat.md](docs/chat.md), [whatsapp-channel.md](docs/whatsapp-channel.md) |
+| AI assistant | [ai-assistant.md](docs/ai-assistant.md), [ai-assistant-implementation.md](docs/ai-assistant-implementation.md) |
+| Frontend stack and UI conventions | [frontend/ui-stack.md](docs/frontend/ui-stack.md) |
+| Deployment | [deploy-hetzner.md](docs/deploy-hetzner.md), [deploy-swarm.md](docs/deploy-swarm.md) |
+| What's next | [roadmap.md](docs/roadmap.md) |
 
-## Ключові конвенції (успадковані з fibo-admin)
+## Status
 
-- **Контракти**: жодних ручних типів API — тільки `z.infer<>` зі схем `libs/contracts`.
-- **Шари backend-модуля**: DTO (`createZodDto`) → Service (логіка + Prisma) → Mapper
-  (явний мапінг, не витікають `passwordHash` тощо) → Controller (HTTP + Swagger-метадані).
-- **Відповіді**: одиночна сутність — плоский об'єкт; список — `{ items, total, page, limit, totalPages }`.
-- **Дати в API** — ISO-рядки (wire-формат), конвертація в мапперах.
-- **Guard за замовчуванням**: всі роути захищені JWT, відкриті позначаються `@Public()`.
+Under active development since July 2026. Not built yet: 2FA, permission-based RBAC, subdomain routing
+and billing. The roadmap lists priorities and phase status.
 
-## Кодогенерація фронтенд-клієнта
+## License
 
-Після зміни контрактів/контролерів:
-
-```bash
-pnpm openapi:generate   # apps/api/openapi.json
-pnpm web:codegen        # apps/web/src/api/generated (orval)
-```
-
-Згенеровані хуки (`useAuthLogin`, `useUsersFindAll`, …) ходять через
-`apps/web/src/api/http-client.ts` — axios-інстанс із Bearer-токеном та single-flight refresh на 401.
-
-## Тести та якість
-
-```bash
-pnpm lint         # ESLint (strict type-checked, 0 warnings)
-pnpm typecheck    # tsc по всіх пакетах (turbo)
-pnpm api:test:e2e      # Jest + supertest проти реальної БД, tenant-api (96 тестів; окрема БД
-                       # saas_skeleton_test, створюється і мігрується автоматично — dev-дані
-                       # і seed не чіпаються). Realtime-тести ходять до живої Valkey —
-                       # ізоляція через окремий REALTIME_KEY_PREFIX, не окреме сховище
-pnpm platform:test:e2e # те саме для control plane (11 тестів)
-```
-
-CI (GitLab, джоба `verify` перед збіркою образів): lint → typecheck → unit → e2e проти
-одноразових PostgreSQL і Valkey. Локально той самий прогін — `bash scripts/ci-verify.sh`
-(`docs/deploy-swarm.md` §6).
-
-## Асинхронні повідомлення (EDA-1 — готово)
-
-Асинхронна робота описується двома примітивами в `libs/shared/src/messaging/`:
-`defineEvent('users.user-registered.v1', schema)` — факт із 0..N підписниками (версія в імені
-обовʼязкова) і `defineCommand('files.generate-thumbnail', schema)` — наказ рівно одному
-споживачеві. Хто на що підписаний, видно в одному місці — маніфесті `MESSAGE_TOPOLOGY`.
-
-API інжектить `MessagePublisher` і викликає `publish(tx, def, data)` — **транзакція першим
-аргументом**: один виклик кладе job у чергу кожного підписника з маніфесту в тій самій
-транзакції, що й доменна зміна. Worker позначає класи `@MessageSubscriber({ definition, id })`;
-вони знаходяться автоматично, разом із cron-розкладами, а розсинхрон із маніфестом валить
-старт. Ідемпотентність — `MessageInboxService.runOnce(envelope, consumerId, fn)` по ключу
-`messageId:consumerId` (таблиця `processed_jobs`). Провалені повідомлення йдуть у спільну `dlq`.
-
-Живі приклади: `auth.cleanup-expired-tokens` (cron-команда), `users.user-registered.v1`
-(публікується при створенні юзера адміном → підписник `welcome-email`).
-Деталі й обґрунтування — [docs/event-driven-architecture.md](docs/event-driven-architecture.md).
-
-## Realtime і presence
-
-Socket.IO-гейтвей живе в кожній репліці `apps/api` (namespace `/tenant`, той самий HTTP-сервер
-і origin, що REST). Транспорт — **тільки WebSocket**: polling вимкнено, тому session affinity
-не потрібна взагалі. Multi-node fan-out — `@socket.io/redis-streams-adapter` поверх Valkey;
-adapter потрібен навіть на одній репліці, бо `order: start-first` під час деплою тримає два
-таски `api` одночасно.
-
-Handshake бере токен із Socket.IO `auth` і перевіряє його **тим самим `AccessTokenService`,
-що й HTTP-guard**, потім звіряє `isActive` юзера й тенанта в явному `TenantContextService.runWith`.
-Access-токен живе 15 хвилин, а socket — годинами, тому сервер шле `auth.expiring.v1`, а
-клієнт відповідає `auth.update.v1` через ТОЙ САМИЙ single-flight `refreshTokens()`, що й
-axios-інтерсептор — без перепідключення.
-
-Presence: юзер `online`, якщо є хоч одне живе зʼєднання в цьому тенанті (дві вкладки — один
-online user). У памʼяті ноди — рахунок вкладок, у Valkey — lease пари `(user, apiNode)`, що
-продовжується heartbeat-ом і прибирається ідемпотентним sweeper-ом без вибору лідера.
-Повний стан завжди читається з `GET /api/presence` (`onlineUserIds` + `revision`), а socket
-надсилає лише delta `presence.changed.v1`, яку фронт застосовує до кешу TanStack Query за
-правилом ревізій (дубль — ігнор, `+1` — застосувати, розрив — resync). Відмова брокера не
-чіпає REST: endpoint віддає 503, а UI показує «невідомо» замість брехливого «всі offline».
-
-Демо — online-badge на `/users`. Огляд і зафіксовані рішення — [docs/realtime.md](docs/realtime.md),
-механіка (ключі, Lua, конфіг, режими відмов) — [docs/realtime-internals.md](docs/realtime-internals.md).
-
-## In-app сповіщення (готово)
-
-Персональний інбокс поверх того самого realtime-транспорту: дзвінок із бейджем, панель
-(непрочитані / усі / архів), налаштування на тип сповіщення. Текст **не зберігається** —
-бекенд пише `type` + `payload` з референсами `{kind, id}`, а фронт рендерить через i18next і
-сам будує посилання на сутність усередині повідомлення (реєстр `entity-routes.ts`).
-
-Однотипні події схлопуються в одну картку, доки її не прочитали (частковий унікальний індекс
-+ `INSERT … ON CONFLICT`), тож «створено 5 юзерів» — один рядок, а не пʼять. Бейдж рахує
-**нові з моменту останнього відкриття панелі**, а не всі непрочитані — інакше він назавжди
-застряг би на великому числі.
-
-Емісія в браузер — after-commit у процесі, що записав рядок (**не** через pg-boss: черга не є
-live-транспортом). Сповіщення, народжені у воркері, доїжджають через headless Socket.IO-сервер
-на тому самому Valkey-адаптері. Спливна картка (тост) і рядок у центрі — **один компонент**.
-
-Деталі, зафіксовані рішення і тести — [docs/notifications.md](docs/notifications.md).
-
-## Фронтенд
-
-Обидва фронти на shadcn/ui (Base UI, стиль `base-nova`) зі спільним шаром `libs/ui`: одна тема,
-вендорені примітиви реєстру, грід, обгортки форм. Уся документація UI-шару — у
-[docs/frontend/](docs/frontend/README.md): правила стека
-([ui-stack.md](docs/frontend/ui-stack.md)), звідки брати новий компонент
-([ui-registry.md](docs/frontend/ui-registry.md)), історія переходу на shadcn
-([ui-migration-history.md](docs/frontend/ui-migration-history.md)) і відкриті питання.
-
-## Скіли Claude Code
-
-У `.claude/skills/` (реєстр — `skills-lock.json`) лежить [archify](https://github.com/tt-a1i/archify) —
-скіл, який з текстового опису або з Mermaid генерує самодостатні інтерактивні HTML-діаграми
-(architecture / workflow / sequence / dataflow / lifecycle) з експортом у PNG/SVG/WebM;
-оновлення — `npx skills update archify`.
-
-## Далі за roadmap
-
-Мультитенантність, realtime і in-app сповіщення вже реалізовані й перевірені — див.
-[docs/multi-tenancy-architecture.md](docs/multi-tenancy-architecture.md),
-[docs/realtime.md](docs/realtime.md) і [docs/notifications.md](docs/notifications.md).
-Лишилось: заплановані сповіщення (нагадування) і email як другий канал, екран DLQ,
-RBAC/permissions, refresh-токени в httpOnly cookie, справжня reuse-detection ротованих
-токенів, беклог мультитенантності (піддомени, invite-флоу, білінг), доменні модулі
-(customers, tickets, billing). Деталі — у docs/roadmap.md.
+[MIT](LICENSE)
