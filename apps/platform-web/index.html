@@ -9,12 +9,13 @@
     <!--
       Палітра — ДО першого малювання, інакше кожне завантаження показувало б кадр
       дефолтної теми. Дзеркало apps/web/index.html; ключ мусить збігатися зі
-      `storageKey` у <UiThemeProvider> нижче.
+      `storageKey` у <UiThemeProvider> нижче, а список палітр — із реєстром
+      (`libs/ui/src/themes/registry.ts`).
     -->
     <script>
       try {
         var palette = localStorage.getItem('saas_platform_theme_palette');
-        if (palette && /^[a-z-]{1,20}$/.test(palette)) {
+        if (['tenantry', 'gray'].indexOf(palette) !== -1) {
           document.documentElement.dataset.theme = palette;
         }
       } catch (e) {

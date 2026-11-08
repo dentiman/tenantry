@@ -1,0 +1,275 @@
+/**
+ * ТЕМА «Gray» (`gray`) — палітра Notion: теплі zinc-нейтралі у світлі й темний
+ * Notion цілком у темряві. Була дефолтною з 2026-09-08 до 2026-11-08, коли
+ * дефолтом стала `tenantry`; збережена як повноцінна тема, а не як архів.
+ *
+ * Асиметрія режимів свідома: світло — zinc-шкала HeroUI, темрява — власні
+ * токени Notion. Режими ніхто не бачить одночасно, спільним лишається контракт
+ * ролей, а не палітра.
+ *
+ * КОНТРАКТ ТЕМИ (див. `docs/frontend/theming.md`):
+ *   • світлий режим — `:root[data-theme='<id>']` (вага 0-2-0);
+ *   • темний  режим — `:root[data-theme='<id>'].dark` (0-3-0).
+ *     Обидва селектори НАВМИСНО важчі за базові `:root` / `.dark`: файли тем
+ *     підключаються через `@import`, а імпорти в CSS завжди спливають на початок
+ *     файла — тобто на порядок джерела спиратися не можна, виграти має саме
+ *     специфічність;
+ *   • тема оголошує ВЕСЬ набір токенів, а не дельту;
+ *   • `color-scheme` — обовʼязковий.
+ * Мапа `@theme inline` живе в `styles.css` і темами не дублюється; палітра
+ * ПОДІЙ (`--event-*`) — спільна база всіх тем і теж лишається в `styles.css`.
+ */
+
+:root[data-theme='gray'] {
+  --radius: 0.625rem;
+  color-scheme: light;
+  --background: oklch(0.9702 0 0);
+  --foreground: oklch(0.2103 0.0059 285.89);
+  --card: oklch(1 0 0);
+  /* ── Поверхня картки (`card-surface.css`) ─────────────────────────────────
+     Світло: картка біла на майже білому полотні, тож напівпрозорість
+     нічого не дасть (рівняння в `card-surface.css` виводить базу >1). Рівні
+     тут несе ТІНЬ: `default` з нею, `muted`/`ghost` без неї. */
+  --card-base: var(--card);
+  --card-fill: var(--card);
+  --card-fill-muted: var(--muted);
+  --card-fill-subtle: color-mix(in oklab, var(--muted) 50%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 2.8%, transparent);
+  --card-outline-nested: color-mix(in oklab, var(--foreground) 8%, transparent);
+  /* БЕЗ тіні — пробуємо, чи вистачить самих заливок і межі. Якщо рівні
+     зіллються, повертати сюди `var(--surface-shadow)`: це один токен. */
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  /* Точні HeroUI v3 accent / danger та їхні foreground-пари. */
+  --primary: oklch(0.6204 0.195 253.83);
+  --primary-foreground: oklch(0.9911 0 0);
+  --secondary: oklch(0.94 0.001 286.375);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(1 0 0);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.9524 0.0013 286.37);
+  --muted-foreground: oklch(0.5517 0.0138 285.94);
+  /* ── Іконки — ОКРЕМА шкала з ТРЬОХ рівнів, а не колір тексту ──────────────
+     Правило взяте у Notion, який тримає шкалу знаків `--c-ico*` поруч зі
+     шкалою тексту `--c-tex*`: суцільна форма іконки важить оком більше за
+     штрихи літер, тож зрівняні в кольорі знак і підпис читаються як знак, що
+     перетягує увагу. Рівні (світлий режим Notion → наш zinc-еквівалент):
+       `--icon-strong` = `--c-icoPri`   `#383836` — АКТИВНИЙ пункт навігації;
+       `--icon`        = `--c-icoSec`   `#8e8b86` — звичайний знак поруч із
+                                                    текстом (меню, кнопки);
+       `--icon-muted`  = `--c-icoTer`   `#ada9a3` — службовий знак (шеврон
+                                                    селекта, адорн поля).
+     Дві верхні сходинки й дають «активний світліший за решту»: у спокої знак
+     відступає, у вибраному пункті виходить наперед. */
+  --icon-strong: color-mix(in oklab, var(--foreground) 89%, transparent); /* TraGra850 */
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent); /* TraGra600 */
+  --icon-muted: color-mix(in oklab, var(--foreground) 33.3%, transparent); /* TraGra500 */
+  /* ── Накладки: hover / вибраний стан ──────────────────────────────────────
+     Це НЕ поверхні, а ПРОЗОРІ шари поверх того, що вже намальовано. Джерело —
+     парна шкала Notion Calendar (`--ca-palTraGra*`), у якої однакові номери
+     рівнів в обох режимах: 200 = 0.07 чорного (світло) / 0.055 білого
+     (темрява), 300 = 0.11 / 0.094, 400 = 0.157 / 0.13.
+     Суцільний колір тут працював погано за визначенням: одне значення
+     підібране під полотно вже майже зливалося з сайдбаром (у нас три поверхні
+     шела на різній світлоті, а в темряві попап ще й світліший за картку).
+     Накладка ж дає ОДНАКОВУ різницю до будь-якої поверхні під нею.
+     База — `--foreground` замість чистого чорного/білого: тема тепла, і
+     нейтральна накладка вибивалась би холодним. Прозорість тут працює тільки
+     на елементах БЕЗ власного фону (ghost-кнопка, пункт меню, пункт навігації,
+     комірка календаря); тим, у кого фон є (`--field`, `--secondary`),
+     накладка-заміна показала б полотно замість їхньої поверхні — там
+     лишаються суцільні `*-hover`. */
+  --accent: color-mix(in oklab, var(--foreground) 11%, transparent); /* TraGra300 */
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6532 0.2328 25.74);
+  --destructive-foreground: oklch(0.9911 0 0);
+  /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
+     тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
+  --success: oklch(0.51 0.145 163.225);
+  --success-foreground: oklch(0.984 0.003 247.858);
+  --warning: oklch(0.545 0.179 58.318);
+  --warning-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.9 0.004 286.32);
+  /* Фон поля та його обводка — різні ролі: поле біле, border видимий. */
+  --field: oklch(1 0 0);
+  --input: oklch(0.9 0.004 286.32);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  /* Фокус-кільце синє — те саме рішення, що й --primary. */
+  --ring: var(--primary);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  /* Три службові тони сітки. Порядок важливий: `in-view` (тиждень, відкритий у
+     сітці) мусить лишатись світлішим за наведення, інакше hover поверх
+     підсвіченого тижня став би невидимим. */
+  /* Лінія ГОДИНИ слабша за межу дня: у Notion Calendar вертикальні розділювачі
+     колонок читаються, а горизонтальні майже ні — інакше сітка перетворюється
+     на міліметрівку, у якій подія втрачає вагу. Рівень 100 проти 200 у
+     `--border`. */
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 6%, transparent); /* TraGra100 */
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 5%, transparent); /* TraGra75 */
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 7%, transparent); /* TraGra200 */
+  --calendar-day-hover: var(--accent);
+  /* Шел стоїть на ОДНУ сходинку zinc-шкали нижче за полотно, і обидві його
+     колонки — рейл і панель area — беруть цей самий токен, тобто читаються як
+     одна поверхня, розділена лише `--sidebar-border`. Значення збігається з
+     `--muted` (наступний щабель після `--background`), але оголошене окремо:
+     це інша РОЛЬ, і згодом одне може зрушити без іншого.
+     У світлому режимі це єдина сходинка світлоти в шелі — решту глибини далі
+     дають межі й тіні; у темряві навпаки, там сходинок чотири й вони головний
+     інструмент (див. коментар до `.dark`). */
+  --sidebar: oklch(0.9524 0.0013 286.37);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --surface-shadow:
+    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  --overlay-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+}
+
+:root[data-theme='gray'].dark {
+  /* ── Темний режим дефолту: ТЕМНИЙ NOTION ЦІЛКОМ ───────────────────────────
+     Це не «схоже на Notion», а їхні власні токени, зняті з живого CSS-бандла
+     app.notion.com (`_assets/84388-*.css`, вересень 2026): 265 перевизначень
+     `--c-*` у `.notion-dark-theme`. Кожен рядок нижче підписаний іменем
+     токена-джерела, щоб значення можна було перевірити, а не звіряти оком.
+     Скорочення Notion читаються так: `bac` background, `bor` border, `tex` text,
+     `ico` icon, `pal` palette, `but` button, `inp` input, `sha` shadow;
+     `Pri/Sec/Ter` — primary/secondary/tertiary, `Ele` elevated, `Int`
+     interactive, `Str` strong, `Foc` focus, `Hov` hover.
+
+     Модель поверхонь: глибина йде ЧОТИРМА сходинками, і щільніше = світліше —
+     полотно #191919 (не чорне) → сайдбар і картки #202020 → приглушене #262626
+     → наведення #2c2c2b, а попапи ЩЕ світліші (#252525), тобто попап світліший
+     за картку під ним. Висота передається СВІТЛОМ, а не тінню — це головна
+     впізнавана риса темного Notion і причина, чому світлий режим дефолту
+     (плаский zinc, глибина від меж і тіней) свідомо влаштований інакше.
+     Текст — тепла off-white #f0efed, а не #fff: чисто білий у Notion лишається
+     тільки за кольором іконки-акценту.
+
+     Значення записані в hex саме як у джерелі: `oklch` тут нічого не додав би,
+     а звірку з Notion зробив би неможливою. Tailwind однаково вміє
+     `bg-primary/10` з будь-яким форматом (він рахує `color-mix` у oklab). */
+  color-scheme: dark;
+  --background: #191919; /* --c-bacPri */
+  --foreground: #f0efed; /* --c-texPri */
+  --card: #202020; /* --c-bacEle */
+  /* ── Поверхня картки (`card-surface.css`) ─────────────────────────────────
+     Темрява: база піднята з 0.244 до 0.265 рівно настільки, скільки
+     з'їдає альфа 60% — на полотні 0.213 результат лишається 0.244, тобто
+     вигляд не змінився. Тіні немає: у темряві рівень читається заливкою. */
+  --card-base: oklch(0.265 0 0);
+  --card-fill: color-mix(in oklab, var(--card-base) 60%, transparent);
+  --card-fill-muted: color-mix(in oklab, var(--card-base) 30%, transparent);
+  --card-fill-subtle: color-mix(in oklab, var(--card-base) 15%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 1.8%, transparent);
+  --card-outline-nested: color-mix(in oklab, var(--foreground) 3%, transparent);
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  --popover: #252525; /* --c-popBac  висота передається світлом */
+  --popover-foreground: var(--foreground);
+  --primary: #2383e2; /* той самий синій, що у світлі */
+  --primary-foreground: #ffffff;
+  --secondary: #2f2f2f; /* --c-butGroBac */
+  --secondary-foreground: var(--foreground);
+  /* Активний сегмент у темряві — ІНВЕРСІЯ, а не «трохи світліший сірий».
+     Патерн Notion: у світлій темі це біла плитка з обводкою й тінню на сірому
+     жолобі — вона читається як піднята НАД ним; у темній та сама роль вимагає
+     протилежного ходу, бо «на сходинку світліший сірий» (#383836) на темному
+     полотні виглядає не піднятим, а просто тьмяним. Тому 92% від кольору
+     тексту: майже біла плитка з темним написом. Не 100% — чиста біла на
+     темному сліпить на великій площі, а 4% домішки полотна знімають різь,
+     лишаючи плитку «білою» на око. */
+  --segment: color-mix(in oklab, var(--foreground) 96%, var(--background));
+  --segment-foreground: var(--background);
+  --muted: #262626; /* --c-bacInt */
+  --muted-foreground: #ada9a3; /* --c-texSec */
+  /* ── Іконки: шкала НАПІВПРОЗОРА, і це джерело з ІНШОГО продукту ───────────
+     Значення зняті не з app.notion.com, а з Notion Calendar
+     (calendar.notion.so), і там темна шкала влаштована принципово інакше — не
+     суцільні сірі, а білий із альфою: `--nds-translucentGray-700` 0.565,
+     `-600` 0.445, `-500` 0.283, причому `-600` це одночасно `--text-body` і
+     `--nds-icon-contr-graySecondary`, тобто ІКОНКА В МЕНЮ. Різниця з
+     app.notion.com разюча: там знак ~`#ada9a3` (≈0.68 еквіваленту), тут ~0.445
+     — удвічі тьмяніше.
+     Беремо шкалу календаря, але з альфою на ТЕПЛОМУ білому теми (`#f0efed`),
+     а не на чистому `#fff`: інакше знаки поїхали б у холодний сірий і
+     розійшлися з рештою нейтралей. Альфа тут не стилістика — вона тримає
+     знак у правильному відношенні до БУДЬ-ЯКОЇ поверхні під ним (полотно,
+     картка, попап світліший за картку), чого суцільний hex не вміє. */
+  --icon-strong: color-mix(in oklab, var(--foreground) 87%, transparent); /* TraGra850 */
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent); /* TraGra600 */
+  --icon-muted: color-mix(in oklab, var(--foreground) 28.2%, transparent); /* TraGra500 */
+  /* Накладки — та сама парна шкала, темна колонка (див. коментар у `:root`) */
+  --accent: color-mix(in oklab, var(--foreground) 9.4%, transparent); /* TraGra300 */
+  --accent-foreground: var(--foreground);
+  --destructive: #de5550; /* --c-pilIcoRed (dark) */
+  --destructive-foreground: #ffffff;
+  --success: #529e72; /* --c-palGre900 (dark) */
+  --success-foreground: var(--background);
+  --warning: #d99e35; /* --c-palYel800 (dark) */
+  --warning-foreground: var(--background);
+  /* Межі — теж із Notion Calendar і теж напівпрозорі. Там обводка поля це
+     буквально `--input-border: inset 0 0 0 1px rgba(255,255,255,0.055)`, а
+     лінії сітки — `#222` на полотні `#1f1f1f`, тобто різниця в дев'ять одиниць
+     на 255. Суцільний hex тут не годиться з тієї ж причини, що й для іконок:
+     одне значення не може бути правильним і на полотні, і на картці, і на
+     попапі, який світліший за картку. Ієрархія збережена — обводка поля
+     лишається контрастнішою за розділювач (правило §5 контракту тем). */
+  --border: rgb(240 239 237 / 5.5%); /* --input-border Notion Calendar */
+  --field: #252525; /* --c-whiButBac (dark) */
+  --input: rgb(240 239 237 / 9.5%); /* --nds-translucentGray-300 */
+  --field-hover: #2f2f2f; /* --c-whiButHovBac (dark) */
+  --primary-hover: #0077d4; /* --c-bluButHovBac */
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  --ring: var(--primary);
+  --chart-1: #4fa7ff; /* --c-palUiBlu700 (dark) */
+  --chart-2: #529e72;
+  --chart-3: #c77d48;
+  --chart-4: #9d68d3;
+  --chart-5: #d15796;
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 3%, transparent); /* TraGra100 */
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 1.6%, transparent); /* TraGra75 */
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 5.5%, transparent); /* TraGra200 */
+  --calendar-day-hover: var(--accent);
+  --sidebar: #202020; /* --c-bacSec */
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  /* `--c-shaBasSm` без обводки для поверхонь (межу вже малює --border) і
+     `--c-shaOutLg` з обводкою #383836 для оверлеїв — у темряві саме вона
+     відділяє попап від полотна, бо тінь на темному не читається. */
+  --surface-shadow: 0px 2px 4px 0px rgb(25 25 25 / 8%);
+  /* Hairline оверлея бере `--border`, а не власне значення. Доки він був
+     суцільним `#383836`, а межі теми переїхали на 5.5% прозорості, кожен
+     оверлей із власним `border` малював ДВА кільця різних відтінків одне на
+     одному — «двопіксельна розмита межа» на тостах і картках сповіщень.
+     Тепер це одна лінія: там, де межа є, вони збігаються; там, де її немає
+     (`Sheet`, `Popover`), hairline лишається єдиним контуром. */
+  --overlay-shadow:
+    0px 0px 0px 1px var(--border), 0px 14px 28px -6px rgb(25 25 25 / 20%),
+    0px 2px 4px -1px rgb(25 25 25 / 11.8%);
+}

@@ -23,12 +23,16 @@
       дефолтної теми. Клас світло/темрява так само вставляє next-themes своїм
       скриптом; це його дзеркало для другої осі (docs/frontend/theming.md).
       Ключ мусить збігатися зі `storageKey` у <UiThemeProvider>; значення
-      просіюється регуляркою, бо потрапляє в DOM.
+      просіюється СПИСКОМ відомих палітр, а не регуляркою форми. Список —
+      дзеркало реєстру (`libs/ui/src/themes/registry.ts`), і його не можна
+      замінити назад на регулярку: id теми переживає перейменування в
+      localStorage, а невідомий `data-theme` не підхопить жодна тема — до
+      гідратації сторінка лишилась би з самою спільною базою токенів.
     -->
     <script>
       try {
         var palette = localStorage.getItem('saas_theme_palette');
-        if (palette && /^[a-z-]{1,20}$/.test(palette)) {
+        if (['tenantry', 'gray'].indexOf(palette) !== -1) {
           document.documentElement.dataset.theme = palette;
         }
       } catch (e) {

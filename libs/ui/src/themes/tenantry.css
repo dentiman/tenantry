@@ -1,0 +1,281 @@
+/**
+ * ТЕМА «Tenantry» (`tenantry`) — ДЕФОЛТНА палітра продукту.
+ *
+ * Характер СВІТЛОГО режиму: нейтраль зі шкали Tailwind slate (hue ≈ 250…266,
+ * chroma до 0.046) — помітно ХОЛОДНА. Шкала поверхонь щільнішає ліворуч:
+ * 200 (наведення) → 100 (навігація) → 50 (полотно) → #fff (картки).
+ * Акцент — blue-600, рідна пара цієї шкали.
+ *
+ * Характер ТЕМНОГО режиму — ІНШЕ джерело: палітра інтерфейсу Orca, знята
+ * піксельно зі скриншота (2026-11-07). Дзеркалом світлої шкали він більше НЕ є
+ * — чому саме, розписано над самим блоком `.dark` нижче; коротко: хрома втричі
+ * нижча (слейт на темних сходинках дає фіолетовий відтінок) і шел стоїть
+ * темніше за полотно, а не світліше.
+ *
+ * КОНТРАКТ ТЕМИ (див. `docs/frontend/theming.md`):
+ *   • світлий режим — `:root[data-theme='<id>']` (вага 0-2-0);
+ *   • темний  режим — `:root[data-theme='<id>'].dark` (0-3-0).
+ *     Обидва селектори НАВМИСНО важчі за базові `:root` / `.dark`: файли тем
+ *     підключаються через `@import`, а імпорти в CSS завжди спливають на початок
+ *     файла — тобто на порядок джерела спиратися не можна, виграти має саме
+ *     специфічність;
+ *   • тема оголошує ВЕСЬ набір токенів, а не дельту;
+ *   • `color-scheme` — обовʼязковий.
+ *
+ * ДЕФОЛТ — і через це кожен селектор подвоєний парою `:root:not([data-theme])`.
+ * Атрибут на <html> може бути не виставлений (перший візит, вимкнений JS,
+ * мить до гідратації), і сторінка мусить бути повноцінно розфарбована вже тоді.
+ * Саме `:not([data-theme])`, а не голий `:root`: голий важить 0-1-0, а
+ * `brand-backdrop.css` оголошує частину токенів теж у `:root`/`.dark` і
+ * імпортується пізніше — дефолт програвав би йому за порядком. `:not()` бере
+ * вагу свого аргумента, тож виходить 0-2-0 / 0-3-0, рівно як у решти тем.
+ * Мапа `@theme inline` живе в `styles.css` і темами не дублюється; палітра
+ * ПОДІЙ (`--event-*`) — спільна база всіх тем і теж лишається в `styles.css`.
+ */
+:root:not([data-theme]),
+:root[data-theme='tenantry'] {
+  --radius: 0.625rem;
+  color-scheme: light;
+  --background: oklch(0.984 0.003 247.858); /* slate-50  #f8fafc */
+  --foreground: oklch(0.208 0.042 265.755); /* slate-900 #0f172a */
+  --card: oklch(1 0 0);
+  /* ── Поверхня картки (`card-surface.css`) ─────────────────────────────────
+     Та сама асиметрія, що в дефолтній темі: у світлі рівні несе тінь. */
+  --card-base: var(--card);
+  --card-fill: var(--card);
+  --card-fill-muted: var(--muted);
+  --card-fill-subtle: color-mix(in oklab, var(--muted) 50%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 2.8%, transparent);
+  --card-outline-nested: color-mix(in oklab, var(--foreground) 8%, transparent);
+  /* БЕЗ тіні — пробуємо, чи вистачить самих заливок і межі. Якщо рівні
+     зіллються, повертати сюди `var(--surface-shadow)`: це один токен. */
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.546 0.245 262.881); /* blue-600 #2563eb */
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.929 0.013 255.508); /* slate-200 #e2e8f0 */
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(1 0 0);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.968 0.007 247.896); /* slate-100 #f1f5f9 */
+  --muted-foreground: oklch(0.554 0.046 257.417); /* slate-500 #64748b */
+  /* Іконки — окрема шкала з трьох рівнів (правило Notion, `styles.css` §1.3.2);
+     тут перекладена у шкалу Tailwind slate. */
+  --icon-strong: color-mix(in oklab, var(--foreground) 89%, transparent); /* TraGra850 */
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent); /* TraGra600 */
+  --icon-muted: color-mix(in oklab, var(--foreground) 33.3%, transparent); /* TraGra500 */
+  /* Поверхня наведення/активного стану — на сходинку щільніша за навігацію,
+     інакше hover у сайдбарі (він же slate-100) не було б видно взагалі. */
+  /* Накладки hover / вибраного — парна шкала Notion Calendar, база
+     `--foreground` теми (`docs/frontend/theming.md` §1.3.3) */
+  --accent: color-mix(in oklab, var(--foreground) 11%, transparent); /* TraGra300 */
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6532 0.2328 25.74);
+  --destructive-foreground: oklch(0.9911 0 0);
+  /* Розширення теми: у shadcn немає success/warning, а 6 станів job-а і статус
+     тенанта інакше не передати. Варіанти badge — у ui/badge.tsx */
+  --success: oklch(0.51 0.145 163.225);
+  --success-foreground: oklch(0.984 0.003 247.858);
+  --warning: oklch(0.545 0.179 58.318);
+  --warning-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.929 0.013 255.508); /* slate-200 */
+  /* Фон поля та його обводка — різні ролі: поле біле, border на сходинку
+     контрастніший за звичайну межу, щоб форма читалась на світлому полотні. */
+  --field: oklch(1 0 0);
+  --input: oklch(0.869 0.022 252.894); /* slate-300 #cbd5e1 */
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  --ring: var(--primary);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  /* ── Службові тони календарної сітки ──────────────────────────────────────
+     Не плутати з палітрою ПОДІЙ (`--event-*`): та спільна для всіх тем і живе
+     в `styles.css`, а ці три — сходинки поверхонь шела, тож у кожної теми свої.
+     Вихідні — на півсходинки щільніші за полотно; `in-view` (тиждень, відкритий
+     у сітці) — ПРОМІЖНИЙ тон між навігацією і наведенням, інакше hover поверх
+     підсвіченого тижня став би невидимим. */
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 6%, transparent); /* TraGra100 */
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 5%, transparent); /* TraGra75 */
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 6%, transparent); /* TraGra100 */
+  --calendar-day-hover: var(--accent);
+  /* Навігація щільніша за полотно на одну сходинку — рівні шела читаються з
+     самих заливок, а не тільки з меж (рейл додає ще одну сходинку класом). */
+  --sidebar: oklch(0.968 0.007 247.896); /* slate-100 */
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --surface-shadow:
+    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  --overlay-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+}
+
+/* ── ТЕМРЯВА: знято з інтерфейсу Orca (slate dark) ──────────────────────────
+   Світлий режим вище лишається шкалою Tailwind slate; темний — НІ, і це
+   свідома асиметрія (той самий патерн, що в дефолтній темі: `styles.css`).
+   Значення зняті піксельно зі скриншота Orca, тому поруч стоїть вихідний hex.
+
+   Два фундаментальні відхилення від світлої половини:
+
+   1. ХРОМА ВТРИЧІ НИЖЧА. Було chroma 0.042 на hue 264.7 — на темних сходинках
+      slate це читається як фіолетовий відтінок. В Orca нейтралі тримають
+      chroma 0.011…0.015 на hue 264…269: холодний сірий, а не фіолетовий.
+      Насиченість віддана ЛИШЕ акцентам, і навіть вони приглушені
+      (primary 0.175 замість blue-500 0.214).
+   2. ШЕЛ ТЕМНІШИЙ ЗА ПОЛОТНО — інверсія звичного порядку. В Orca навігація
+      (#292c34) стоїть на сходинку НИЖЧЕ за полотно (#34373e), а картки
+      (#3c3f46) — на сходинку вище за нього. Не вирівнювати з іншими темами:
+      саме це дає впізнаваний силует Orca.
+      Межі при цьому ЗАВЖДИ СВІТЛІШІ за обидві поверхні, які розділяють —
+      жодна лінія в Orca не темніша за свій фон. Рівнів рівно два, і вони
+      розведені по двох токенах: межа контенту `--border` (~0.43) і вдвічі
+      тьмяніший шов шела `--sidebar-border` (0.376).
+
+   Шкала поверхонь, від темного до світлого:
+     0.293 навігація → 0.337 полотно → 0.368 картки/поля → 0.376 шов шела
+     → 0.390 підняті поверхні (бульбашки, чіпи) → ~0.43 межі й наведення. */
+:root:not([data-theme]).dark,
+:root[data-theme='tenantry'].dark {
+  color-scheme: dark;
+  --background: oklch(0.337 0.013 267.2); /* #34373e — полотно */
+  --foreground: oklch(0.924 0.002 247.8); /* #e5e6e7 — майже нейтральний, НЕ slate-50 */
+  --card: oklch(0.368 0.013 267.2); /* #3c3f46 */
+  /* ── Поверхня картки (`card-surface.css`) ─────────────────────────────────
+     База 0.389 — рішення рівняння `0.6·base + 0.4·0.337 = 0.368`:
+     на полотні картка лишається тією самою (0.368), на брендовому фоні
+     (0.155) дає 0.295. Один токен покрив обидві сцени. */
+  --card-base: oklch(0.389 0.013 267.2);
+  --card-fill: color-mix(in oklab, var(--card-base) 60%, transparent);
+  --card-fill-muted: color-mix(in oklab, var(--card-base) 30%, transparent);
+  --card-fill-subtle: color-mix(in oklab, var(--card-base) 15%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 1.8%, transparent);
+  --card-outline-nested: color-mix(in oklab, var(--foreground) 3%, transparent);
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  /* Попап в Orca стоїть на 0.325 і читається тільки тому, що лежить над
+     навігацією (0.293). Над полотном (0.337) він би зник, тож беремо сусідню
+     сходинку тієї ж шкали — рівень картки, — а шов тримають межа й тінь. */
+  --popover: oklch(0.368 0.013 267.2); /* #3c3f46 */
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.655 0.175 257.4); /* #438ff9 — акцентний синій Orca */
+  --primary-foreground: oklch(0.985 0.002 247.8);
+  --secondary: oklch(0.39 0.011 264.4); /* #42454b */
+  --secondary-foreground: var(--foreground);
+  /* Інверсія в темряві — той самий патерн, що в дефолті (див. `styles.css`) */
+  --segment: color-mix(in oklab, var(--foreground) 96%, var(--background));
+  --segment-foreground: var(--background);
+  --muted: oklch(0.39 0.011 264.4); /* #42454b */
+  --muted-foreground: oklch(0.735 0.004 271.4); /* #a8a9ac — плейсхолдери, підписи */
+  --icon-strong: color-mix(in oklab, var(--foreground) 87%, transparent); /* TraGra850 */
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent); /* TraGra600 */
+  --icon-muted: color-mix(in oklab, var(--foreground) 28.2%, transparent); /* TraGra500 */
+  /* 12% — не на око: саме цей відсоток відтворює ОБИДВА наведення Orca
+     одночасно — пункт попапу (0.368 → 0.432, #4e5158) і вибрану картку в
+     навігації (0.293 → 0.379, #3f4249). */
+  --accent: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --accent-foreground: var(--foreground);
+  /* Небезпека в Orca не трапляється на скриншоті; беремо хрому на рівні її ж
+     success/warning, щоб червоний не вибивався яскравістю з решти акцентів. */
+  --destructive: oklch(0.645 0.17 25.5);
+  --destructive-foreground: oklch(0.9911 0 0);
+  --success: oklch(0.71 0.133 157.4); /* #4bba80 — галочка агента */
+  --warning: oklch(0.791 0.162 88); /* #e6b300 — індикатор Agent Dashboard */
+  --success-foreground: var(--background);
+  --warning-foreground: var(--background);
+  /* Межа контенту — СВІТЛІША за поверхню, яку обводить (§2), і НАПІВПРОЗОРА.
+     Прозорість тут не економія на токенах, а те, що робить лінію тонкою на
+     вигляд: суцільний `oklch(0.431 …)` на retina лягає двома фізичними
+     пікселями одного кольору й читається як рамка, тоді як накладка змішується
+     з фоном і лишає контур, а не обведення. Побічна вигода — одне значення
+     підлаштовується під сходинку, на якій стоїть: ~0.396 на полотні, ~0.424 на
+     картці, що й відтворює розкид Orca (0.420…0.447) без трьох окремих
+     токенів. Та сама механіка, що в `--accent` і шкали `--icon-*`.
+     Відсоток знижувався двічі на вимогу вигляду: 100% (суцільний) → 10% → 7%.
+     Нижче опускати нікуди — на 5% лінія вже зникає на полотні. */
+  --border: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --field: var(--card);
+  /* В Orca обводка поля й обводка картки — та сама лінія (0.428 проти 0.431),
+     тож тут це не два тони, а один токен. У світлі вони різні — див. вище. */
+  --input: var(--border);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--primary-foreground) 10%);
+  --destructive-hover: color-mix(
+    in oklab,
+    var(--destructive) 90%,
+    var(--destructive-foreground) 10%
+  );
+  --ring: var(--primary);
+  /* Графіки: хрома зведена до діапазону акцентів Orca (0.13…0.175). Фіолетовий
+     лишається в наборі заради розрізнюваності п'яти серій, але на 0.13, а не
+     на 0.265, як було. */
+  --chart-1: oklch(0.655 0.175 257.4);
+  --chart-2: oklch(0.71 0.133 157.4);
+  --chart-3: oklch(0.791 0.162 88);
+  --chart-4: oklch(0.66 0.13 300);
+  --chart-5: oklch(0.66 0.15 16.4);
+  /* Полотно піднялось із 0.129 до 0.337, тож ті самі відсотки накладки дали б
+     ледь помітні лінії — підняті до рівня, на якому сітка читається знову. */
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 5%, transparent); /* TraGra100 */
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 3%, transparent); /* TraGra75 */
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 5%, transparent); /* TraGra100 */
+  --calendar-day-hover: var(--accent);
+  --sidebar: oklch(0.293 0.015 269.2); /* #292c34 — рейл, бічне меню, права панель */
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  /* Шов ШЕЛА — окремий, НЕ `var(--border)`: в Orca лінія між навігацією (0.293)
+     і полотном (0.337) стоїть на 0.376, тобто світліша за обидві поверхні, але
+     помітно тьмяніша за межу контенту. Той самий тон міряється на всіх трьох
+     швах шела: сайдбар|полотно, топбар|полотно, полотно|права панель.
+     Непрозорий НАВМИСНО, на відміну від `--border`: він розділяє ДВІ РІЗНІ
+     поверхні, і накладка дала б різний тон залежно від того, на чиєму боці
+     намальована межа — а лінія мусить бути світлішою за обидві.
+     Знижений із 0.376 (знятого з Orca) слідом за `--border`: на 7% межа
+     контенту дає 0.378 на полотні, і при вихідних 0.376 два рівні злились би
+     в один — ієрархія «контент помітніший за шов шела» зникла б. Тримаємо
+     приблизно те саме СПІВВІДНОШЕННЯ, що в Orca, а не ті самі числа. */
+  --sidebar-border: oklch(0.357 0.012 273.1);
+  --sidebar-ring: var(--ring);
+  /* `Card` не має власного `border` (`border-width: 0`) — його контур цілком
+     лежить на `shadow-sm`, тобто на цьому токені. Прозоре значення, яке було
+     тут раніше, лишало картки взагалі без обводки. В Orca картка окреслена
+     рівно однопіксельною СВІТЛОЮ лінією без розмиття, тож тінь тут — не тінь,
+     а саме контур. */
+  --surface-shadow: 0 0 0 1px var(--border);
+  /* ТІЛЬКИ тінь, без власного контуру. Overlay-примітиви (`DropdownMenuContent`,
+     `SelectContent`, `DialogContent`…) уже несуть `ring-1 ring-foreground/10`,
+     тож inset-контур у цьому токені давав ДРУГУ лінію поруч із першою: у профілі
+     попапу читалось 0.357 (ring, що лягає на тінь) і одразу 0.413 (inset, що
+     лягає на фон попапу) — дві світлі межі в сусідніх пікселях, саме те, що
+     виглядало як подвійна обводка. Контур тут не потрібен: він уже в примітиві.
+     Один шар замість двох і великий радіус — теж навмисно: близька щільна тінь
+     (`0 2px 8px / 28%`) обривалась одразу за краєм смугою 0.256, на 0.08 нижчою
+     за полотно, і ця смуга читалась як ще одна лінія. Розмите пляма такого
+     контуру не утворює. */
+  --overlay-shadow: 0 8px 24px 0 rgb(0 0 0 / 36%);
+  /* Скляний блік вітринних сторінок (`brand-backdrop.css`, `.dark` = 0-1-0;
+     цей селектор 0-3-0, тож перекриває) ВИМКНЕНО саме в цій темі. Блік — це
+     `inset 0 1px 0` зсередини верхнього краю, а `--surface-shadow` тут дає
+     контур ЗЗОВНІ того ж краю: разом вони лягали двома світлими лініями в
+     сусідніх пікселях (у профілі картки /guide — 0.274 ззовні і 0.356
+     зсередини), і верх картки читався вдвічі товщим за решту контуру. В інших
+     темах конфлікту немає: там `--surface-shadow` — розмита тінь, і блік
+     лишається єдиною лінією, тож вимикати його глобально не можна. */
+  --glass-highlight: inset 0 0 0 0 transparent;
+}
