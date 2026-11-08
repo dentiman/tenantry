@@ -59,6 +59,7 @@ import {
   playgroundInlineFormRoute,
   playgroundComponentsRoute,
   playgroundComponentsButtonsRoute,
+  playgroundComponentsCardsRoute,
   playgroundComponentsComboboxRoute,
   playgroundComponentsInputRoute,
   playgroundComponentsSelectRoute,
@@ -122,6 +123,7 @@ const routeTree = rootRoute.addChildren([
       playgroundInlineFormRoute,
       playgroundComponentsRoute.addChildren([
         playgroundComponentsButtonsRoute,
+        playgroundComponentsCardsRoute,
         playgroundComponentsComboboxRoute,
         playgroundComponentsDataGridRoute,
         playgroundComponentsInputRoute,

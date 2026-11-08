@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 
 type EventKind = CalendarEventResponse['kind'];
@@ -40,6 +41,22 @@ export interface EventKindStyle {
   borderLine: string;
   /** Текст на заливці */
   text: string;
+  /**
+   * Колір типу для примітива `Card`: задає його `--card-tone-color`, з якого
+   * картка сама виводить і заливку (14% у базу), і смугу `edge` (повна сила).
+   *
+   * Чому не один із тонів `Card`: тони примітива семантичні
+   * (`info`/`success`/`warning`/`danger`), а тут колір означає ТИП ПОДІЇ —
+   * домен, який живе в цьому файлі. Примітив дає механіку, домен — значення;
+   * інакше `OUT_OF_OFFICE` довелося б назвати `warning`, і він розійшовся б
+   * кольором із тією самою подією в сітці календаря.
+   *
+   * Чому inline-стиль, а не Tailwind-клас: правила `card-surface.css` лежать
+   * поза `@layer`, тож перебивають будь-яку утиліту — arbitrary-властивість
+   * `[--card-tone-color:…]` до картки просто не доходила, і всі типи виходили
+   * сірими. Inline виграє в каскаді завжди.
+   */
+  cardStyle: CSSProperties;
 }
 
 export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
@@ -50,6 +67,10 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
     line: 'bg-event-blue-line',
     borderLine: 'border-l-event-blue-line',
     text: 'text-event-blue',
+    cardStyle: {
+      '--card-tone-color': 'var(--event-blue-line)',
+      '--card-tone-strength': '14%',
+    } as CSSProperties,
   },
   CALL: {
     bg: 'bg-event-green-bg',
@@ -58,6 +79,10 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
     line: 'bg-event-green-line',
     borderLine: 'border-l-event-green-line',
     text: 'text-event-green',
+    cardStyle: {
+      '--card-tone-color': 'var(--event-green-line)',
+      '--card-tone-strength': '14%',
+    } as CSSProperties,
   },
   DEADLINE: {
     bg: 'bg-event-red-bg',
@@ -66,6 +91,10 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
     line: 'bg-event-red-line',
     borderLine: 'border-l-event-red-line',
     text: 'text-event-red',
+    cardStyle: {
+      '--card-tone-color': 'var(--event-red-line)',
+      '--card-tone-strength': '14%',
+    } as CSSProperties,
   },
   OUT_OF_OFFICE: {
     bg: 'bg-event-orange-bg',
@@ -74,6 +103,10 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
     line: 'bg-event-orange-line',
     borderLine: 'border-l-event-orange-line',
     text: 'text-event-orange',
+    cardStyle: {
+      '--card-tone-color': 'var(--event-orange-line)',
+      '--card-tone-strength': '14%',
+    } as CSSProperties,
   },
   /**
    * «Інше» — свідомо БЕЗ власного кольору: п'ятий іменований відтінок нічого не
@@ -87,6 +120,9 @@ export const KIND_STYLES: Record<EventKind, EventKindStyle> = {
     line: 'bg-muted-foreground/40',
     borderLine: 'border-l-muted-foreground/40',
     text: 'text-muted-foreground',
+    /* Порожній: картка лишається нейтральною, і смуга `edge` стає сірою сама —
+       рівно те, що треба «іншому» типу */
+    cardStyle: {},
   },
 };
 

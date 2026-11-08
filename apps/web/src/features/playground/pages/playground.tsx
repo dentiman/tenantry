@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { PageBreadcrumbs } from '@saas-skeleton/ui/components/page-breadcrumbs';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button, buttonVariants } from '@saas-skeleton/ui/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@saas-skeleton/ui/components/ui/card';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import {
   Table,
@@ -14,6 +21,30 @@ import {
   TableRow,
 } from '@saas-skeleton/ui/components/ui/table';
 import { ExampleTile, ShowcaseCard } from '../components/showcase';
+
+/**
+ * Дві сімʼї різновидів — те, що показує секція «On surfaces».
+ * `solid` несуть ВЛАСНИЙ матеріал (колір сам є змістом: головна дія,
+ * небезпека, піднята плитка) і лишаються непрозорими. `adaptive` беруть
+ * відтінок поверхні, на якій стоять, тож усі їхні заливки — накладки з альфою.
+ */
+const SOLID_VARIANTS = ['default', 'destructive', 'elevated'] as const;
+const ADAPTIVE_VARIANTS = ['secondary', 'outline', 'ghost', 'link'] as const;
+
+/**
+ * Поверхні, на яких кнопки мусять виглядати «своїми». Тоновані картки взяті
+ * `fill="muted"` — саме той ступінь, яким у продукті позначають попередження
+ * та підказки, і саме на ньому глуха заливка кнопки читалась наклейкою.
+ */
+const BUTTON_SURFACES = [
+  { fill: 'default', tone: 'neutral' },
+  { fill: 'nested', tone: 'neutral' },
+  { fill: 'muted', tone: 'info' },
+  { fill: 'muted', tone: 'success' },
+  { fill: 'muted', tone: 'warning' },
+  { fill: 'muted', tone: 'danger' },
+  { fill: 'muted', tone: 'accent' },
+] as const;
 
 export function PlaygroundPage() {
   const { t } = useTranslation('playground');
@@ -73,6 +104,7 @@ export function PlaygroundPage() {
   const navigation = [
     { href: '#button-overview', label: t('navigation.overview') },
     { href: '#button-variants', label: t('navigation.variants') },
+    { href: '#button-surfaces', label: t('navigation.surfaces') },
     { href: '#button-sizes', label: t('navigation.sizes') },
     { href: '#button-radius', label: t('navigation.radius') },
     { href: '#button-icons', label: t('navigation.icons') },
@@ -117,7 +149,7 @@ export function PlaygroundPage() {
                 {t('button.description')}
               </p>
             </div>
-            <div className="rounded-xl bg-muted/50 p-4">
+            <div className="rounded-xl border border-dashed border-border p-4">
               <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t('button.importLabel')}
               </p>
@@ -140,6 +172,80 @@ export function PlaygroundPage() {
               ))}
             </div>
           </ShowcaseCard>
+
+          {/* Без `ShowcaseCard` навмисно: тонована картка в продукті стоїть на
+              ПОЛОТНІ, і загорнути зразки в ще одну картку означало б міряти
+              кнопку не на тій поверхні, через яку вся секція й існує. */}
+          <section
+            id="button-surfaces"
+            aria-labelledby="button-surfaces-title"
+            className="scroll-mt-6"
+          >
+            <div className="mb-5">
+              <h2
+                id="button-surfaces-title"
+                className="font-heading text-2xl font-semibold tracking-tight text-foreground"
+              >
+                {t('button.sections.surfaces.title')}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {t('button.sections.surfaces.description')}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {BUTTON_SURFACES.map(({ fill, tone }) => (
+                <Card key={`${fill}-${tone}`} size="sm" fill={fill} tone={tone}>
+                  <CardHeader>
+                    <CardTitle>{t(`cards.tone.${tone}.label`)}</CardTitle>
+                    <CardDescription>
+                      <code className="font-mono text-xs">{`fill="${fill}" tone="${tone}"`}</code>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t('button.surfaces.solidLabel')}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {SOLID_VARIANTS.map((variant) => (
+                          <Button key={variant} variant={variant} size="sm">
+                            {t(`button.variants.${variant}.label`)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t('button.surfaces.adaptiveLabel')}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {ADAPTIVE_VARIANTS.map((variant) => (
+                          <Button key={variant} variant={variant} size="sm">
+                            {t(`button.variants.${variant}.label`)}
+                          </Button>
+                        ))}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('button.icons.addLabel')}
+                        >
+                          <Plus />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label={t('button.icons.addLabel')}
+                        >
+                          <Plus />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
 
           <ShowcaseCard
             id="button-sizes"
@@ -262,7 +368,7 @@ export function PlaygroundPage() {
               </ExampleTile>
             </div>
 
-            <div className="mt-3 rounded-xl bg-muted/50 p-4">
+            <div className="mt-3 rounded-xl border border-dashed border-border p-4">
               <code className="mb-4 block font-mono text-xs text-foreground">
                 className=&quot;w-full&quot;
               </code>

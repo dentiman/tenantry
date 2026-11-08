@@ -80,6 +80,14 @@ export function PlaygroundSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/cards'}
+                      render={<Link to="/playground/components/cards" />}
+                    >
+                      {t('nav.cards')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
                       isActive={pathname === '/playground/components/combobox'}
                       render={<Link to="/playground/components/combobox" />}
                     >

@@ -17,11 +17,7 @@ import {
   TableRow,
 } from '@saas-skeleton/ui/components/ui/table';
 import { dateInputMask, todayValue } from '@saas-skeleton/ui/lib/date-value';
-import {
-  ExampleTile,
-  ShowcaseCard,
-  ValueReadout,
-} from '../components/showcase';
+import { ExampleTile, ShowcaseCard, ValueReadout } from '../components/showcase';
 import {
   FormDateField,
   FormSelect,
@@ -187,10 +183,7 @@ export function PlaygroundVerticalFormPage() {
                 />
               </div>
             </ExampleTile>
-            <ExampleTile
-              code="max={todayValue()}"
-              description={t('datePicker.tiles.past')}
-            >
+            <ExampleTile code="max={todayValue()}" description={t('datePicker.tiles.past')}>
               <div className="w-full">
                 <DatePicker value={birthday} onValueChange={setBirthday} max={todayValue()} />
               </div>
@@ -200,7 +193,7 @@ export function PlaygroundVerticalFormPage() {
                 <DatePicker value={standalone} onValueChange={setStandalone} disabled />
               </div>
             </ExampleTile>
-            <ExampleTile code='aria-invalid={true}' description={t('datePicker.tiles.invalid')}>
+            <ExampleTile code="aria-invalid={true}" description={t('datePicker.tiles.invalid')}>
               <div className="w-full">
                 <DatePicker value={standalone} onValueChange={setStandalone} aria-invalid />
               </div>

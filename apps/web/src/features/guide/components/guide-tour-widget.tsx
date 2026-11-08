@@ -2,10 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon, CompassIcon, XIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@saas-skeleton/ui/components/ui/button';
+import { Card } from '@saas-skeleton/ui/components/ui/card';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 import { GUIDE_SECTIONS } from '../pages/guide.content';
 import { useGuideTourStore } from '../stores/guide-tour.store';
-import './guide-tour-widget.css';
 
 /**
  * Параграфи, на які веде плитка. «Overview» тут зайвий: на нього веде головна
@@ -36,17 +36,24 @@ export function GuideTourWidget() {
   if (dismissed) return null;
 
   return (
-    // «Скло з власним фоном» у теплих тонах — уся візуальна частина в
-    // `guide-tour-widget.css` (там і чому фон живе всередині плитки)
-    <section
+    // Звичайна картка з тоном `warning`, а не власна «скляна» поверхня: доти це
+    // був єдиний на весь продукт блок із власним CSS — трьома рухомими плямами,
+    // вуаллю і градієнтною рамкою. Тон і так несе ту саму думку («подивись
+    // сюди»), а теплим лишається те, що й мало бути теплим: іконка і заголовок.
+    // Разом із плиткою пішов і `guide-tour-widget.css` з усіма `--tour-*`.
+    // `role="region"` + `aria-labelledby` замість `<section>`: `Card` рендериться
+    // як `div` і пропа `render` не має, а для скрінрідера ця пара — рівно те
+    // саме, що іменована секція
+    <Card
+      role="region"
       aria-labelledby="guide-tour-title"
-      className="tour-card flex gap-3 p-4 lg:col-span-3"
+      tone="warning"
+      // `fill="muted"` — найтихіший із ПОМІТНИХ ступенів тону (9% замість 18%,
+      // `card-surface.css`): плитка лишається теплою, але вже не кричить на
+      // дашборді поруч із білими віджетами. Рішення користувача.
+      fill="muted"
+      className="flex-row gap-3 p-4 lg:col-span-3"
     >
-      <span aria-hidden className="tour-card__glow tour-card__glow--1" />
-      <span aria-hidden className="tour-card__glow tour-card__glow--2" />
-      <span aria-hidden className="tour-card__glow tour-card__glow--3" />
-      <span aria-hidden className="tour-card__veil" />
-
       <CompassIcon className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
 
       {/* Колонкою завжди, без `sm:flex-row`: брейкпоінт Tailwind меряє ВІКНО, а плитка
@@ -67,7 +74,7 @@ export function GuideTourWidget() {
                 key={section.id}
                 to="/guide"
                 hash={section.id}
-                className={cn(buttonVariants({ variant: 'outline', size: 'sm', radius: 'full' }))}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm', radius: 'full' }))}
               >
                 <Icon data-icon="inline-start" />
                 {t(`sections.${section.id}`)}
@@ -77,8 +84,16 @@ export function GuideTourWidget() {
         </nav>
       </div>
 
-      {/* `cn()` навколо `buttonVariants` обов'язковий: без tailwind-merge `rounded-md`
-          розміру `sm` перебиває `rounded-full` (`Button` робить це сам, `Link` — ні) */}
+      {/* Усі кнопки плитки — `secondary`, рішення користувача. Різновид тут
+          доречний саме тому, що його заливка — накладка `--foreground`, а не
+          власний колір: на теплій картці кнопки виходять теплими й не несуть
+          жодної межі. `outline` давав рівно протилежне — обводку, яка на тоні
+          читалась чужою рамкою, а `elevated` — білу плитку з власною межею й
+          тінню. Вага всіх трьох однакова свідомо: ієрархію тут тримають
+          розташування (вхід праворуч, чипи під текстом) і стрілка, а не колір.
+          `cn()` навколо `buttonVariants` обов'язковий: без tailwind-merge
+          `rounded-md` розміру `sm` перебиває `rounded-full` (`Button` робить
+          це сам, `Link` — ні) */}
       <div className="flex shrink-0 items-start gap-2">
         <Link
           to="/guide"
@@ -97,6 +112,6 @@ export function GuideTourWidget() {
           <XIcon />
         </Button>
       </div>
-    </section>
+    </Card>
   );
 }

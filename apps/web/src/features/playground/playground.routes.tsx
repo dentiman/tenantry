@@ -1,6 +1,7 @@
 import { createRoute, redirect } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
 import { PlaygroundPage } from './pages/playground';
+import { PlaygroundCardsPage } from './pages/playground-cards';
 import { PlaygroundComboboxPage } from './pages/playground-combobox';
 import { PlaygroundDataGridPage } from './pages/playground-data-grid';
 import { PlaygroundDialogPage } from './pages/playground-dialog';
@@ -68,6 +69,17 @@ export const playgroundComponentsButtonsRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
   path: 'buttons',
   component: PlaygroundPage,
+});
+
+/**
+ * General Components: Card — каталог карткових ПОВЕРХОНЬ. Окремий стенд, бо
+ * вигляд картки задає не проп, а фон під нею, і різницю видно лише поруч:
+ * сторінка перемикає сцену між звичайним полотном і брендовим фоном.
+ */
+export const playgroundComponentsCardsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'cards',
+  component: PlaygroundCardsPage,
 });
 
 /** General Components: Combobox — пошук-з-попапом, фундамент усіх бізнес-селектів */

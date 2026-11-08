@@ -3,21 +3,63 @@ import * as React from 'react';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 
 /**
- * ЛОКАЛЬНА ПРАВКА реєстру: Card використовує HeroUI surface-shadow без
- * зовнішньої рамки. Метрики, spacing і композиція частин лишаються стоковими.
+ * ЛОКАЛЬНА ПРАВКА реєстру: поверхню задають ТРИ незалежні осі, а не класи на
+ * місці виклику. Метрики, spacing і композиція частин лишаються стоковими.
+ *
+ *   fill   скільки поверхні     default | muted | subtle | ghost | opaque | nested
+ *   tone   колір                neutral | info | success | warning | danger | accent
+ *   border характер лінії       solid | dashed | dotted
+ *   edge   акцентна смуга 3px   boolean (колір = tone на повну силу)
+ *   radius скруглення кутів     default | sm (радіус контролів) | none
+ *
+ * Самі значення — `libs/ui/src/card-surface.css` (там і чому заливка
+ * напівпрозора, і чому у світлій темі альфа інша). Тут лише data-атрибути:
+ * заливка — вкладений `color-mix` із трьох токенів, у Tailwind-класі такий
+ * вираз не записати.
+ *
+ * Чому осі, а не `variant`: різновиди не комбінуються, а ці три ортогональні —
+ * «приглушена попереджувальна з пунктиром» це реальний стан, і через
+ * `variant` він вимагав би окремого імені на кожну пару.
  */
 
+interface CardSurfaceProps {
+  /** Характер контуру. `dashed`/`dotted` — для незавершеного й drop-зон */
+  border?: 'solid' | 'dashed' | 'dotted';
+  /**
+   * Акцентна смуга 3px при лівому краї кольором `tone` на повну силу —
+   * патерн плитки календаря: тиха заливка плюс чіткий маркер типу
+   */
+  edge?: boolean;
+  /** Щільність заливки. Усе, крім `default`/`opaque`, без підняття */
+  fill?: 'default' | 'muted' | 'subtle' | 'ghost' | 'opaque' | 'nested';
+  size?: 'default' | 'sm';
+  /** Скруглення кутів. `sm` — той самий радіус, що в кнопок і полів */
+  radius?: 'default' | 'sm' | 'none';
+  /** Колір поверхні й межі. Джерело — палітра подій, спільна з календарем */
+  tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'accent';
+}
+
 function Card({
+  border = 'solid',
   className,
+  edge = false,
+  fill = 'default',
+  radius = 'default',
   size = 'default',
+  tone = 'neutral',
   ...props
-}: React.ComponentProps<'div'> & { size?: 'default' | 'sm' }) {
+}: React.ComponentProps<'div'> & CardSurfaceProps) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-fill={fill}
+      data-tone={tone}
+      data-border={border}
+      data-edge={edge || undefined}
+      data-radius={radius}
       className={cn(
-        'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground shadow-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         className,
       )}
       {...props}

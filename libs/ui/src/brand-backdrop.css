@@ -57,6 +57,17 @@
   --backdrop-glow-3: color-mix(in oklch, oklch(0.6 0.12 205) 55%, black);
   --backdrop-glow-opacity: 0.5;
   --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 6%);
+  /* У ТЕМРЯВІ межа скла мусить бути вдвічі сильнішою за світлову (10%), і це
+     не смак. Межа — напівпрозора накладка, і лягає вона на ФОН під карткою,
+     а не на саму картку: під брендовим фоном це 0.227, тож 10% давали 0.285
+     при самій картці 0.272 — різниця 0.013, тобто лінії фактично не було, а
+     згладжений перехід читався як подвоєна розмита смуга.
+     Підібрано емпірично по кроках 20% → 18%: нижче опускати нема куди. Межа
+     лягає на ФОН (0.174), а картка стоїть на 0.290, тож кожен пункт відсотка
+     з'їдає ~0.0075 їхньої різниці — на 16% вони зрівнюються і лінія зникає
+     зовсім. 18% лишають +0.02 над карткою: рівно той запас, що має звичайна
+     межа на робочих екранах. */
+  --border-glass: color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
 /* ── 2. Шел поверх фону ───────────────────────────────────────────────────── */
@@ -64,6 +75,9 @@
   /* Полотно й хедер прозорі — під ними фон */
   --background: transparent;
   --sidebar: var(--sidebar-glass);
+  /* Картки сюди вже НЕ дивляться: їхня заливка будується з `--card-base`
+     і власної альфи (`card-surface.css`), однаково в обох сценах. Токен
+     лишений для решти поверхонь, що фарбуються `bg-card`. */
   --card: var(--card-glass);
   --border: var(--border-glass);
   --sidebar-border: var(--border-glass);
@@ -109,7 +123,6 @@
    при прокрутці, і фільтр перераховується щокадру — 6px на порядок дешевший
    за 24px сайдбара */
 [data-backdrop='brand'] [data-slot='card'] {
-  box-shadow: var(--glass-highlight), var(--surface-shadow);
   backdrop-filter: blur(6px);
 }
 
@@ -121,6 +134,81 @@
   pointer-events: none;
   background-color: var(--backdrop-base);
   animation: brand-backdrop-in 320ms ease-out;
+}
+
+/* ── 2. Шел поверх фону ───────────────────────────────────────────────────── */
+[data-backdrop='brand'] {
+  /* Полотно й хедер прозорі — під ними фон */
+  --background: transparent;
+  --sidebar: var(--sidebar-glass);
+  /* Картки сюди вже НЕ дивляться: їхня заливка будується з `--card-base`
+     і власної альфи (`card-surface.css`), однаково в обох сценах. Токен
+     лишений для решти поверхонь, що фарбуються `bg-card`. */
+  --card: var(--card-glass);
+  --border: var(--border-glass);
+  --sidebar-border: var(--border-glass);
+  /* Заливки дрібних елементів — не суцільний сірий, а накладка кольору
+     тексту, як у смуги табів (`--accent`, §1.3.3 theming.md). Суцільні
+     `#2f2f2f`/`#262626` на кольоровому фоні читались латками чужої теми;
+     накладка бере відтінок плями під собою.
+     `--secondary` — бейдж `secondary`, кнопка `secondary`: рівень 300, як таби.
+     `--muted` — плитки іконок у картках: рівень 200, на сходинку тихіший.
+     `var(--foreground)` тут не циклічний — перевизначаємо інші токени */
+  --secondary: var(--accent);
+  --muted: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+/* Скло бічних колонок: сильне розмиття на ВЕЛИКИХ нерухомих поверхнях. Під
+   ними фон теж нерухомий (`fixed`), тож блюр рахується один раз, а не на
+   кожен кадр скролу. Карткам — окреме, мінімальне (див. нижче) */
+[data-backdrop='brand'] [data-slot='sidebar-inner'],
+[data-backdrop='brand'] [data-slot='context-panel'],
+[data-backdrop='brand'] [data-slot='ai-panel'] {
+  backdrop-filter: blur(24px) saturate(1.4);
+}
+
+/* `AreaSidebar` — другий `Sidebar` (`collapsible="none"`) ВСЕРЕДИНІ першого.
+   Суцільним це не видно, а у склі два шари по 62% дали б колонку area помітно
+   щільнішою за рейл. Скло одне — на зовнішньому контейнері */
+[data-backdrop='brand'] [data-slot='sidebar-inner'] [data-slot='sidebar'] {
+  background-color: transparent;
+}
+
+/* Хедер контенту — майже прозорий: легкий серпанок кольору фону + блюр.
+   Точки й плями під ним розмиваються в м'яку смугу, і хедер читається окремим
+   ярусом, не забираючи в сторінки фон, як це зробило б скло сайдбара.
+   `data-slot="app-header"` ставить шел (`app-shell.tsx`) */
+[data-backdrop='brand'] [data-slot='app-header'] {
+  background-color: color-mix(in oklab, var(--backdrop-base) 30%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Картки — легке скло: 60% поверхні + мінімальний блюр. Без блюру на такій
+   прозорості крізь картку (а надто крізь «заплановану», де фон ще вдвічі
+   прозоріший) читались точки візерунка. Радіус свідомо малий: картки їдуть
+   при прокрутці, і фільтр перераховується щокадру — 6px на порядок дешевший
+   за 24px сайдбара */
+[data-backdrop='brand'] [data-slot='card'] {
+  backdrop-filter: blur(6px);
+}
+
+/* ── Сам фон ──────────────────────────────────────────────────────────────── */
+.brand-backdrop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--backdrop-base);
+  animation: brand-backdrop-in 320ms ease-out;
+}
+
+/* Варіант для демо-сцени (`/playground/components/cards`): той самий фон, але
+   обмежений своїм контейнером, а не вікном. Потрібен рівно там, де брендову
+   поверхню треба показати ПОРУЧ зі звичайною на одному екрані — на реальних
+   сторінках фон завжди на все вікно. */
+.brand-backdrop--inset {
+  position: absolute;
+  animation: none;
 }
 
 /* Точки, а не сітка. Лінійна сітка зливалась із межами шела (сайдбар, хедер,
@@ -272,10 +360,14 @@
   --muted-foreground: var(--auth-muted-foreground);
   background-color: var(--auth-card-fill);
   backdrop-filter: blur(20px) saturate(1.5);
+  /* БЕЗ `var(--surface-shadow)`: контур цій картці дає власна градієнтна
+     hairline (`::before` нижче), а підйом — `--auth-card-glow`. У темах, де
+     `--surface-shadow` є однопіксельним КОНТУРОМ (`slate` у темряві), він
+     лягав поруч із hairline другою лінією — рамка читалась удвічі товщою
+     (у профілі 0.345 контур і 0.374 hairline у сусідніх пікселях). */
   box-shadow:
     var(--glass-highlight),
-    0 24px 64px -20px var(--auth-card-glow),
-    var(--surface-shadow);
+    0 24px 64px -20px var(--auth-card-glow);
 }
 
 /* Градієнтна hairline-рамка. Не `border-image` (губить радіус) і не два шари

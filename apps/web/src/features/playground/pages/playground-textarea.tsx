@@ -54,7 +54,7 @@ export function PlaygroundTextareaPage() {
 
       <div className="min-w-0 space-y-6">
         <section id="textarea-overview" className="scroll-mt-6">
-          <div className="rounded-xl bg-muted/50 p-4">
+          <div className="rounded-xl border border-dashed border-border p-4">
             <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {t('textarea.importLabel')}
             </p>
@@ -137,7 +137,7 @@ export function PlaygroundTextareaPage() {
           description={t('textarea.sections.usage.description')}
         >
           <div className="grid gap-3 lg:grid-cols-2">
-            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('textarea.usage.wrapper.title')}
@@ -159,7 +159,7 @@ export function PlaygroundTextareaPage() {
               </code>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('textarea.usage.group.title')}

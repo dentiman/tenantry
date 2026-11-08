@@ -18,17 +18,44 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *      у формах і таблицях він не вживається; додано, щоб велику кнопку давав примітив,
  *      а не `h-*` на місці виклику.
  * Фокус — суцільне `ring-2` кольору `--ring` (наш синій) з відступом 2px.
+ * Сам відступ ПРОЗОРИЙ (`ring-offset-transparent`), а не кольору полотна:
+ * проміжок між кнопкою і кільцем мусить показувати поверхню, на якій кнопка
+ * стоїть, інакше на тонованій картці навколо фокуса з'являється смужка
+ * кольору полотна.
  */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,opacity,transform] outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,opacity,transform] outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+        /**
+         * ЛОКАЛЬНА ПРАВКА реєстру: заливка НАПІВПРОЗОРА в обох режимах.
+         * У темряві так було й у стоку (`dark:bg-input/30`), а у світлі стояв
+         * глухий `bg-background` — і на тонованій поверхні (картка `warning`,
+         * `info`…) кнопка виглядала наклеєним білим прямокутником замість
+         * елемента цієї поверхні. На звичайному полотні видимої різниці немає:
+         * напівпрозорий колір полотна поверх полотна дає той самий колір.
+         */
         outline:
-          "border-border bg-background hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-input dark:bg-input/30 [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
+          "border-border bg-background/50 hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-input dark:bg-input/30 [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
+        /**
+         * ЛОКАЛЬНА ПРАВКА реєстру: заливка напівпрозора з тієї ж причини, що в
+         * `outline` вище — кнопка мусить брати відтінок поверхні, на якій стоїть.
+         * Але не альфа на сірому `--secondary`, а НАКЛАДКА `--foreground` — та сама
+         * механіка, що в `--accent`, `--icon-*` і межах карток. Різниця принципова:
+         * 75% сірого пропускають крізь себе лише чверть тону, і на попереджувальній
+         * картці кнопка лишалась сірою плямою; накладка ж кольору не має зовсім —
+         * вона лише затемнює те, на чому лежить, тож на теплій картці виходить
+         * тепла, на синій — синювата, а на звичайному полотні та сама, що й доти
+         * (8% foreground на білому ≈ slate-200, яким `--secondary` і був).
+         * Шкала станів: 8% спокій → 15% hover і відкритий попап. Hover свідомо
+         * вище за `--accent` (11/12%), яким наводяться `ghost`/`outline`: у
+         * заповненої кнопки стартова точка вже не нуль, і однаковий рівень читався
+         * б як відсутність реакції.
+         */
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
+          "bg-[color-mix(in_oklab,var(--foreground)_8%,transparent)] text-secondary-foreground hover:bg-[color-mix(in_oklab,var(--foreground)_15%,transparent)] aria-expanded:bg-[color-mix(in_oklab,var(--foreground)_15%,transparent)] aria-expanded:text-secondary-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         ghost:
           "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground [&_svg:not([class*='text-'])]:text-icon hover:[&_svg:not([class*='text-'])]:text-icon-strong",
         toolbar:
@@ -43,6 +70,9 @@ const buttonVariants = cva(
          * підняття там передається протилежним ходом. Іконки тут свідомо БЕЗ
          * `text-icon`: на світлій плитці в темній темі знак мусить бути
          * темним, а `--icon` — світлий.
+         * Заливка тут свідомо НЕПРОЗОРА, попри напівпрозорі `outline`/`secondary`:
+         * `elevated` — власний матеріал, як `default` і `destructive`, і сенс його
+         * саме в тому, що він лежить ПОВЕРХ поверхні, а не бере її відтінок.
          */
         elevated:
           'border-border bg-segment text-segment-foreground shadow-sm hover:bg-[color-mix(in_oklab,var(--segment),var(--segment-foreground)_8%)] aria-expanded:bg-[color-mix(in_oklab,var(--segment),var(--segment-foreground)_8%)]',

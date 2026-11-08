@@ -68,7 +68,7 @@ export function PlaygroundSelectPage() {
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="min-w-0 space-y-6">
           <section id="select-overview" className="scroll-mt-6">
-            <div className="rounded-xl bg-muted/50 p-4">
+            <div className="rounded-xl border border-dashed border-border p-4">
               <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t('select.importLabel')}
               </p>
@@ -205,7 +205,7 @@ export function PlaygroundSelectPage() {
             description={t('select.sections.usage.description')}
           >
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('select.usage.calendarReminders.title')}
@@ -247,7 +247,7 @@ export function PlaygroundSelectPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('select.usage.weekStarts.title')}
@@ -288,7 +288,7 @@ export function PlaygroundSelectPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('select.usage.filterBar.title')}

@@ -14,7 +14,8 @@
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
     "inlineForm": "Inline form",
-    "dataGrid": "Data grid"
+    "dataGrid": "Data grid",
+    "cards": "Cards"
   },
   "eyebrow": "Design system",
   "origin": {
@@ -36,6 +37,7 @@
   "navigation": {
     "overview": "Button overview",
     "variants": "Variants",
+    "surfaces": "On surfaces",
     "sizes": "Sizes",
     "radius": "Radius",
     "icons": "Icons",
@@ -50,6 +52,10 @@
       "variants": {
         "title": "Variants",
         "description": "Use one primary action per area. Secondary, outline, and ghost styles reduce visual priority; destructive is reserved for irreversible actions."
+      },
+      "surfaces": {
+        "title": "On surfaces",
+        "description": "A button must read as part of the surface it sits on. Variants that carry their own material stay opaque; adaptive variants fill with an alpha overlay, so a toned card shows through them instead of being covered by a flat grey rectangle."
       },
       "sizes": {
         "title": "Sizes",
@@ -141,6 +147,10 @@
         "className": "Adds layout utilities such as w-full without changing the recipe.",
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
       }
+    },
+    "surfaces": {
+      "solidLabel": "Own material · opaque",
+      "adaptiveLabel": "Adaptive · takes the surface tone"
     }
   },
   "combobox": {
@@ -770,6 +780,255 @@
       "auto": "Auto",
       "list": "List",
       "split": "Two columns"
+    }
+  },
+  "cards": {
+    "title": "Card",
+    "description": "One primitive, three independent axes. The surface is never a variant name — it is fill × tone × border, and the same card keeps its meaning on a work canvas, on a brand backdrop, and in either theme.",
+    "importLabel": "SHARED IMPORT",
+    "scene": {
+      "solid": {
+        "label": "No backdrop",
+        "hint": "Work screens: dashboard, record pages, settings. Opaque surfaces one step above the canvas."
+      },
+      "brand": {
+        "label": "Brand",
+        "hint": "The real showcase backdrop (/guide). The canvas turns transparent and every surface becomes glass."
+      },
+      "violet": {
+        "label": "Violet",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      },
+      "emerald": {
+        "label": "Emerald",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      },
+      "amber": {
+        "label": "Amber",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      }
+    },
+    "sections": {
+      "fill": {
+        "title": "Axis 1 — fill",
+        "description": "How much surface the card has. Dark builds the levels with transparency, light with fills that sit above and below the canvas — same meaning, mirrored mechanics, no shadow in either."
+      },
+      "nested": {
+        "title": "nested — a panel inside a card",
+        "description": "The one role that measures itself against its PARENT, not the canvas. Everything else on this axis is a share of the base fill, and a share of the base is invisible on a surface that is already raised."
+      },
+      "tone": {
+        "title": "Axis 2 — tone",
+        "description": "Colour mixed into the neutral base at 14%, border at 22%. Source is the event palette, shared with the calendar."
+      },
+      "matrix": {
+        "title": "Tone × fill",
+        "description": "Every tone carries all four steps. Scroll it over the light and dark patches of the backdrop — a colour that survives both is a colour that works."
+      },
+      "border": {
+        "title": "Axis 3 — border",
+        "description": "The outline is a real outline, not a shadow — that is what makes dashed and dotted possible."
+      },
+      "radius": {
+        "title": "Axis 4 — radius",
+        "description": "Three values, not four: sm matches the controls exactly, none is for cards that run into the edge of the canvas, and nothing in the product has ever asked for a step between them."
+      },
+      "combined": {
+        "title": "Axes combine",
+        "description": "The point of three axes instead of variant names: every pair is a real state and needs no name of its own."
+      },
+      "anatomy": {
+        "title": "Anatomy",
+        "description": "Seven parts, all optional. The header switches to a two-column grid as soon as it contains an action."
+      },
+      "sizes": {
+        "title": "Sizes",
+        "description": "Drives --card-spacing and the title size; it does not touch the surface."
+      },
+      "related": {
+        "title": "Related surfaces",
+        "description": "Other panels that look card-like but are not cards. Reach for these instead of restyling a Card."
+      }
+    },
+    "anatomy": {
+      "title": "CardTitle",
+      "descriptionText": "CardDescription sits under the title.",
+      "action": "CardAction",
+      "content": "CardContent holds the body.",
+      "footer": "CardFooter — tinted, with a top border."
+    },
+    "sizeSample": {
+      "default": {
+        "title": "Default",
+        "description": "spacing 16px, title 16px"
+      },
+      "sm": {
+        "title": "Small",
+        "description": "spacing 12px, title 14px"
+      }
+    },
+    "sampleCard": {
+      "title": "Customers",
+      "description": "Organizations and individuals with contacts.",
+      "body": "A card carries one subject. Its surface says where it sits, not how important it is.",
+      "action": "Open"
+    },
+    "related": {
+      "popover": {
+        "label": "Popover / dropdown",
+        "code": "DropdownMenuContent, SelectContent",
+        "description": "Floats above the page: own ring, real shadow, --popover fill. Never a Card."
+      },
+      "dialog": {
+        "label": "Dialog / sheet",
+        "code": "DialogContent, SheetContent",
+        "description": "Modal surface on --popover with an overlay behind it. Same family as the popover, different trigger."
+      },
+      "alert": {
+        "label": "Alert",
+        "code": "Alert variant=\"warning\"",
+        "description": "A message, not a container: tinted fill and border carry the signal. Muted in dark so it does not outshout the content."
+      },
+      "contextPanel": {
+        "label": "Context panel",
+        "code": "libs/ui context-panel",
+        "description": "The third shell column. It is part of the shell, so it uses the sidebar scale, not the card one."
+      }
+    },
+    "sceneLabel": "Backdrop",
+    "fill": {
+      "default": {
+        "label": "default",
+        "description": "The normal card. Dark: 60% of the base. Light: plain white, one step above the canvas."
+      },
+      "muted": {
+        "label": "muted",
+        "description": "Secondary or not built yet. Dark: half the fill. Light: one step below the canvas."
+      },
+      "ghost": {
+        "label": "ghost",
+        "description": "Outline only. Empty states, placeholders, drop zones."
+      },
+      "opaque": {
+        "label": "opaque",
+        "description": "The exception: nothing may show through (media, overlays)."
+      },
+      "subtle": {
+        "label": "subtle",
+        "description": "Almost no surface, but the tone is still readable. Background markers, long lists."
+      },
+      "nested": {
+        "label": "nested",
+        "description": "A panel INSIDE a card: submitted values, a code sample, a preview. Darkens whatever it sits on, so it reads as a recess in both themes."
+      }
+    },
+    "tone": {
+      "neutral": {
+        "label": "neutral",
+        "description": "The default surface."
+      },
+      "info": {
+        "label": "info",
+        "description": "From --event-blue-line."
+      },
+      "success": {
+        "label": "success",
+        "description": "From --event-green-line."
+      },
+      "warning": {
+        "label": "warning",
+        "description": "From --warning."
+      },
+      "danger": {
+        "label": "danger",
+        "description": "From --event-red-line."
+      },
+      "accent": {
+        "label": "accent",
+        "description": "From --primary."
+      }
+    },
+    "border": {
+      "solid": {
+        "label": "solid",
+        "description": "The default."
+      },
+      "dashed": {
+        "label": "dashed",
+        "description": "Unfinished, draft, planned."
+      },
+      "dotted": {
+        "label": "dotted",
+        "description": "The lightest hint: drop zones."
+      }
+    },
+    "combined": {
+      "planned": {
+        "label": "Planned module",
+        "code": "fill=\"muted\" border=\"dashed\"",
+        "description": "Replaces the bg-card/50 workaround in /guide."
+      },
+      "warning": {
+        "label": "Warning block",
+        "code": "tone=\"warning\" fill=\"muted\"",
+        "description": "Replaces the border-warning/30 bg-warning/10 recipe."
+      },
+      "dropzone": {
+        "label": "Drop zone",
+        "code": "fill=\"ghost\" border=\"dotted\"",
+        "description": "Nothing but a hint of a boundary."
+      },
+      "positive": {
+        "label": "Quiet success",
+        "code": "tone=\"success\" fill=\"muted\"",
+        "description": "A positive status that does not shout."
+      },
+      "event": {
+        "label": "Calendar event",
+        "code": "tone=\"info\" edge",
+        "description": "The agenda row: a quiet tint says \"event\", the 3px edge says which type — readable from the corner of the eye."
+      },
+      "edgeNeutral": {
+        "label": "Edge without a tone",
+        "code": "edge",
+        "description": "Neutral keeps a grey marker: the colour is there with zero strength, so it never reaches the fill but the edge still has something to draw."
+      }
+    },
+    "matrix": {
+      "caption": "tone × fill"
+    },
+    "nested": {
+      "onCard": {
+        "label": "inside a card",
+        "code": "<Card><Card fill=\"nested\" /></Card>",
+        "description": "The normal case: submitted values, a code sample, a preview."
+      },
+      "onCanvas": {
+        "label": "straight on the canvas",
+        "code": "<Card fill=\"nested\" />",
+        "description": "Works there too — the role darkens or lightens whatever is under it, so it never depends on one fixed parent."
+      },
+      "vsMuted": {
+        "label": "why not muted",
+        "code": "<Card fill=\"muted\" /> inside a card",
+        "description": "Measured against the canvas, so on a card it lands 0.006 away from it — the panel disappears."
+      },
+      "body": "A panel carries secondary content: values, samples, previews.",
+      "parent": "Parent card"
+    },
+    "radius": {
+      "default": {
+        "label": "default",
+        "description": "Container cards: widgets, sections, record panels."
+      },
+      "sm": {
+        "label": "sm",
+        "description": "The radius of Button, Input, Select and Item. For dense rows that stand next to controls — the agenda row uses it."
+      },
+      "none": {
+        "label": "none",
+        "description": "For a card that runs into the edge of the canvas, where a rounded corner hangs in the air."
+      }
     }
   }
 }

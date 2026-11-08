@@ -17,6 +17,8 @@
    Контракт, реєстр і план перемикача — `docs/frontend/theming.md`. */
 @import './themes/tenantry.css';
 @import './themes/gray.css';
+/* Поверхня картки: осі fill / tone / border — див. сам файл */
+@import './card-surface.css';
 /* Брендовий фон «вітринних» сторінок і скляний шел над ним — див. сам файл */
 @import './brand-backdrop.css';
 

@@ -93,7 +93,7 @@ export function PlaygroundComboboxPage() {
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="min-w-0 space-y-6">
           <section id="combobox-overview" className="scroll-mt-6">
-            <div className="rounded-xl bg-muted/50 p-4">
+            <div className="rounded-xl border border-dashed border-border p-4">
               <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t('combobox.importLabel')}
               </p>
@@ -267,7 +267,7 @@ export function PlaygroundComboboxPage() {
             description={t('combobox.sections.usage.description')}
           >
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('combobox.usage.serverSearch.title')}
@@ -281,7 +281,7 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('combobox.usage.countrySelect.title')}
@@ -295,7 +295,7 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('combobox.usage.chipsMulti.title')}
@@ -309,7 +309,7 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('combobox.usage.customerSelect.title')}
