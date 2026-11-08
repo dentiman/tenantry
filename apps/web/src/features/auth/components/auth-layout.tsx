@@ -15,10 +15,13 @@ import { AuthShell } from '@saas-skeleton/ui/components/auth-shell';
 export function AuthLayout({
   title,
   footerLink,
+  aside,
   children,
 }: {
   title: string;
   footerLink?: ReactNode;
+  /** Блок під карткою (демо-акаунти) */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation(['layout', 'auth']);
@@ -33,6 +36,7 @@ export function AuthLayout({
       logo={<Layers />}
       productName={productName}
       title={title}
+      aside={aside}
       footer={
         footerLink ? (
           <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">

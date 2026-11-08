@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { BrandBackdrop } from '@saas-skeleton/ui/components/brand-backdrop';
 import {
   Card,
@@ -16,6 +17,8 @@ interface AuthShellProps {
   description?: ReactNode;
   /** Тихий рядок під карткою (копірайт тощо) */
   footer?: ReactNode;
+  /** Блок під карткою, поза її рамкою (демо-акаунти тощо) */
+  aside?: ReactNode;
   children: ReactNode;
 }
 
@@ -37,6 +40,7 @@ export function AuthShell({
   title,
   description,
   footer,
+  aside,
   children,
 }: AuthShellProps) {
   return (
@@ -45,6 +49,11 @@ export function AuthShell({
       className="flex min-h-svh flex-col items-center px-4 py-10 text-foreground"
     >
       <BrandBackdrop variant="auth" />
+
+      {/* Тема світла/темна: фон і скло беруть токени `:root`/`.dark`, тож досить перемкнути клас */}
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeSwitcher />
+      </div>
 
       {/* `relative` — щоб вміст малювався над фіксованим шаром фону (той без z-index) */}
       <main className="relative flex w-full flex-1 flex-col items-center justify-center gap-6">
@@ -55,7 +64,7 @@ export function AuthShell({
           <span className="text-base font-semibold tracking-tight">{productName}</span>
         </div>
 
-        <Card data-slot="auth-card" className="w-full max-w-md [--card-spacing:--spacing(6)]">
+        <Card fill="muted" className="w-full max-w-md [--card-spacing:--spacing(6)]">
           <CardHeader>
             <CardTitle className="text-center text-xl">{title}</CardTitle>
             {description && (
@@ -64,6 +73,8 @@ export function AuthShell({
           </CardHeader>
           <CardContent>{children}</CardContent>
         </Card>
+
+        {aside && <div className="w-full max-w-3xl">{aside}</div>}
       </main>
 
       {footer && <footer className="relative mt-8 text-xs text-muted-foreground">{footer}</footer>}

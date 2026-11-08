@@ -1,4 +1,5 @@
 import { Button } from '@saas-skeleton/ui/components/ui/button';
+import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import { DEMO_ACCOUNTS, type DemoAccount } from '@saas-skeleton/contracts/demo';
 
@@ -41,37 +42,48 @@ export function DemoAccounts({
 }) {
   const { t } = useTranslation('auth');
 
+  // Лише галузеві демо-тенанти (по два акаунти); базовий `default` — робочий акаунт
+  // розробника, на екрані входу йому місця немає
+  const groups = groupByTenant(DEMO_ACCOUNTS).filter(([tenant]) => tenant !== 'default');
+
   return (
-    <section aria-labelledby="demo-accounts-title" className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <h2 id="demo-accounts-title" className="text-xs font-medium text-muted-foreground">
-          {t('demo.title')}
-        </h2>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-      {groupByTenant(DEMO_ACCOUNTS).map(([tenant, group]) => (
-        <div key={tenant} className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted-foreground">{group.tenantName}</span>
-          <div className="flex flex-wrap gap-1.5">
-            {group.accounts.map((account) => (
-              <Button
-                key={account.email}
-                type="button"
-                variant="outline"
-                size="xs"
-                disabled={disabled}
-                title={account.email}
-                onClick={() => {
-                  onSelect(account);
-                }}
-              >
-                {t('demo.chip', { role: account.roleLabel, name: account.name })}
-              </Button>
-            ))}
+    <section aria-labelledby="demo-accounts-title" className="flex flex-col gap-5">
+      <h2
+        id="demo-accounts-title"
+        className="text-center text-xs font-medium text-muted-foreground"
+      >
+        {t('demo.title')}
+      </h2>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-3">
+        {groups.map(([tenant, group]) => (
+          // Назва тенанта — плашка-«кнопка» на верхній межі картки, по центру межі
+          // по вертикалі. Лежить поза `Card` (той `overflow-hidden` її б обрізав)
+          <div key={tenant} className="relative">
+            <span className="absolute top-0 left-3 z-10 -translate-y-1/2 rounded-full border border-primary/30 bg-[color-mix(in_oklab,var(--primary)_16%,white)] px-2.5 py-0.5 text-xs font-medium text-foreground dark:bg-[color-mix(in_oklab,var(--primary)_40%,black)]">
+              {group.tenantName}
+            </span>
+            <Card fill="muted" size="sm" className="h-full">
+              <CardContent className="flex flex-col gap-1.5 pt-1">
+                {group.accounts.map((account) => (
+                  <Button
+                    key={account.email}
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={disabled}
+                    title={account.email}
+                    onClick={() => {
+                      onSelect(account);
+                    }}
+                  >
+                    {t('demo.chip', { role: account.roleLabel, name: account.name })}
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }
