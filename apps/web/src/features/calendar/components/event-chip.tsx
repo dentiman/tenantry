@@ -149,7 +149,7 @@ export function EventChip({
         kindStyle.text,
         variant === 'absolute' && 'absolute',
         isDraggable && 'cursor-grab active:cursor-grabbing',
-        isDragging && 'z-30 shadow-lg ring-2 ring-primary/40',
+        isDragging && 'z-30 shadow-md ring-2 ring-primary/40',
         // Немає відповіді — плитка контурна: «я ще не сказав, чи буду» мусить
         // бути видно без відкривання картки. Рамка тут ЄДИНИЙ випадок, коли
         // плитка її має, тому й `border` живе в цій умові, а не в базі

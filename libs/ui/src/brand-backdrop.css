@@ -272,21 +272,19 @@
 }
 
 /* ── 3. Варіант `auth`: сторінки входу (`AuthShell`) ──────────────────────────
-   Простіший за `/guide`: БЕЗ точок (шар `__dots` не рендериться), а три плями
-   не розкидані по кутах шела, а зібрані в одну ауру за карткою по центру вікна.
+   Простіший за `/guide`: БЕЗ точок (шар `__dots` не рендериться) і з єдиною
+   плямою за карткою по центру вікна (дві інші приховані).
    Усе нижче — ЛИШЕ під `.brand-backdrop--auth` або `[data-slot='auth-card']`;
    правила `/guide` вище не змінюються.
 
-   Кольори — сам `--primary` і два суміжні відтінки, виведені з нього ж відносним
-   синтаксисом (`oklch(from …)`): +50° по колу (фіолетовий бік синього бренду) і
-   −55° (бірюзовий бік). Бренд тенанта зміниться — аура повернеться разом із ним.
-   Змішування з білим/чорним у `oklch` тримає відтінок чистим: у `srgb` суміш
-   синього з білим на майже-білому фоні сіріла б. */
+   Фон — БЕЗ кольорових відтінків: база — колір бічного меню (`--sidebar`), а
+   посередині одна пляма кольору центральної частини застосунку (`--background`),
+   без переходу «колір у колір» — лише світліша (у світлій темі) або світліша/темніша
+   (за токенами теми) пляма на тлі сайдбара. Обидва токени фіксуємо на `:root` ДО
+   `[data-backdrop]`, де `--background` прозорий, а `--sidebar` — скло (§1). */
 :root {
-  --auth-glow-1: color-mix(in oklch, var(--primary) 55%, white);
-  --auth-glow-2: color-mix(in oklch, oklch(from var(--primary) l c calc(h + 50)) 50%, white);
-  --auth-glow-3: color-mix(in oklch, oklch(from var(--primary) l c calc(h - 55)) 42%, white);
-  --auth-glow-opacity: 0.75;
+  --auth-base: var(--sidebar);
+  --auth-spot: var(--background);
   /* Рамка картки: світліший кут зверху-зліва → майже прозорий знизу-справа */
   --auth-edge-from: color-mix(in oklab, var(--primary) 30%, white);
   --auth-edge-via: color-mix(in oklab, var(--foreground) 9%, transparent);
@@ -305,11 +303,6 @@
 }
 
 .dark {
-  /* Як і на `/guide` — глибокі «нічні» відтінки, а не яскравий бренд */
-  --auth-glow-1: color-mix(in oklch, var(--primary) 80%, black);
-  --auth-glow-2: color-mix(in oklch, oklch(from var(--primary) l c calc(h + 50)) 70%, black);
-  --auth-glow-3: color-mix(in oklch, oklch(from var(--primary) l c calc(h - 55)) 62%, black);
-  --auth-glow-opacity: 0.85;
   --auth-edge-from: rgb(255 255 255 / 22%);
   --auth-edge-via: rgb(255 255 255 / 7%);
   --auth-edge-to: rgb(255 255 255 / 2%);
@@ -318,36 +311,35 @@
   --auth-muted-foreground: var(--muted-foreground);
 }
 
-/* Геометрія: усі три плями відцентровані на вікні й зсунуті від центру на
-   кілька сотень px. `min()` стискає і розміри, і зсуви на вузькому екрані,
-   тож на телефоні аура лишається за карткою, а не з'їжджає за край */
+/* Геометрія: одна пляма по центру вікна. Дві інші (`--2`, `--3`) для `auth` не
+   потрібні. Край плями м'який за рахунок `blur`, а не градієнта колір→колір;
+   `min()` стискає розмір на вузькому екрані */
+.brand-backdrop--auth {
+  background-color: var(--auth-base);
+}
+
 .brand-backdrop--auth .brand-backdrop__glow {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  opacity: var(--auth-glow-opacity);
-  filter: blur(80px);
+  display: none;
 }
 
-.brand-backdrop--auth .brand-backdrop__glow--1 {
-  width: min(820px, 120vw);
-  height: min(600px, 85vh);
-  transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, var(--auth-glow-1), transparent);
+/* Пляму тимчасово вимкнено (`display: none` вище) — лишився лише фон-сайдбар.
+   Щоб повернути: прибрати це правило й задати `--1` радіальну пляму `--auth-spot`. */
+
+/* Картка входу (`AuthShell`) — звичайний `Card` із `elevation="raised"`: тінь
+   вона бере з шкали висот теми (`--raised-shadow`), власної тут НЕМАЄ. Тут лише
+   те, чим вона відрізняється від картки у сітці: у світлі заливка суцільна біла
+   (`--card-base`, а не втоплений `muted`) і контур сильніший — картка стоїть
+   сама на тлі кольору сайдбара, і слабка лінія на ньому губиться. У темряві
+   лишається склом `muted` зі звичайним контуром. Специфічність 0-3-0 — вища за
+   правила осі `fill` у `card-surface.css`, тому без `!important`. */
+[data-backdrop='brand'] [data-slot='card'][data-auth-card] {
+  --card-surface: var(--card-base);
+  /* Той самий токен, що в контурі діалогу — у темряві `.dark` міняє його сам */
+  --card-outline: var(--raised-outline);
 }
 
-.brand-backdrop--auth .brand-backdrop__glow--2 {
-  width: min(520px, 85vw);
-  height: min(420px, 60vh);
-  transform: translate(calc(-50% - min(260px, 24vw)), calc(-50% - min(170px, 18vh)));
-  background: radial-gradient(closest-side, var(--auth-glow-2), transparent);
-}
-
-.brand-backdrop--auth .brand-backdrop__glow--3 {
-  width: min(500px, 85vw);
-  height: min(400px, 55vh);
-  transform: translate(calc(-50% + min(260px, 24vw)), calc(-50% + min(190px, 20vh)));
-  background: radial-gradient(closest-side, var(--auth-glow-3), transparent);
+.dark [data-backdrop='brand'] [data-slot='card'][data-auth-card] {
+  --card-surface: var(--card-fill-muted);
 }
 
 /* Картка входу — скло сильніше за звичайні картки (`blur 6px` вище): вона одна

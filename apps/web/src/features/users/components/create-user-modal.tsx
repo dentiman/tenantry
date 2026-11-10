@@ -83,7 +83,10 @@ export function CreateUserModal() {
         <UserPlus />
       </DialogTrigger>
       <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[420px]">
-        <DialogHeader className="border-b p-4 pr-12">
+        {/* Шапка смугою `bg-dialog-header` — світліша за тіло вікна в темряві. Лінію
+            під нею там приглушено: межу вже дає різниця заливок, а повний `--border`
+            на світлішій смузі виходив яскравішим за контур самого вікна */}
+        <DialogHeader className="border-b bg-dialog-header p-4 pr-12 dark:border-border/40">
           <DialogTitle>{t('create.heading')}</DialogTitle>
         </DialogHeader>
         {/* Форма і є body діалогу: скрол тільки тут, хедер лишається на місці */}

@@ -150,7 +150,10 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
           задвоєна межа. Приглушуємо колір самого бордера (opacity, а не
           прибираємо зовсім — межа з полотном шела лишається потрібною), і
           ще тьмяніше в темній темі, де яскрава лінія на й так темному тлі
-          різала око сильніше, ніж у світлій. */}
+          різала око сильніше, ніж у світлій.
+          У ТЕМРЯВІ (2026-11-10) панель перейшла на поверхню діалогу: `bg-dialog`
+          і межа `--raised-outline` приходять із самого `SheetContent`, тому тут
+          лишились тільки світлі перевизначення. */}
       <SheetContent
         side="right"
         // Вбудований close вимкнено: він абсолютний (`top-3 right-3`) і центрується
@@ -158,7 +161,7 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
         // шестернею (32px, у потоці) це давало видиму розбіжність по вертикалі.
         // Свій close нижче — той самий елемент, просто рядковий сусід інших кнопок
         showCloseButton={false}
-        className="bg-sidebar data-[side=right]:border-l-border/30 sm:max-w-[440px] dark:data-[side=right]:border-l-border/10"
+        className="bg-sidebar data-[side=right]:border-l-border/30 sm:max-w-[440px] dark:bg-dialog dark:data-[side=right]:border-l-(--raised-outline)"
       >
         <SheetHeader>
           {showSettings ? (

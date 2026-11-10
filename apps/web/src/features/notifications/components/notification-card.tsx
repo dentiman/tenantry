@@ -104,7 +104,7 @@ export function NotificationCard({
           // світліший колір (bg-popover світліший за bg-sidebar/card у
           // темній темі), а не shadow. Однаково незалежно від read/unread —
           // стан непрочитаного показує крапка + жирність тексту нижче
-          floating ? 'bg-popover shadow-lg' : 'bg-card shadow-sm dark:bg-popover dark:shadow-none',
+          floating ? 'bg-popover shadow-md' : 'bg-card shadow-sm dark:bg-popover dark:shadow-none',
           menu && 'pr-10',
           // Наведення НЕ міняє колір: блакитна обводка `hover:border-primary/50`
           // тут читалась як стан «вибрано» — брендовий колір у списку означає

@@ -3,6 +3,9 @@ import { Card, CardContent } from '@saas-skeleton/ui/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import { DEMO_ACCOUNTS, type DemoAccount } from '@saas-skeleton/contracts/demo';
 
+/** Тон картки тенанта за порядком групи — три різні кольори осі `tone` (card-surface.css) */
+const TENANT_TONES = ['info', 'success', 'warning'] as const;
+
 /**
  * Демо-вхід (docs/demo.md): префіл форми й чипи акаунтів. Вимикач без правки
  * коду — `VITE_DEMO_LOGINS=false` на збірці; будь-яке інше значення або його
@@ -55,20 +58,25 @@ export function DemoAccounts({
         {t('demo.title')}
       </h2>
       <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-3">
-        {groups.map(([tenant, group]) => (
+        {groups.map(([tenant, group], index) => (
           // Назва тенанта — плашка-«кнопка» на верхній межі картки, по центру межі
           // по вертикалі. Лежить поза `Card` (той `overflow-hidden` її б обрізав)
           <div key={tenant} className="relative">
-            <span className="absolute top-0 left-3 z-10 -translate-y-1/2 rounded-full border border-primary/30 bg-[color-mix(in_oklab,var(--primary)_16%,white)] px-2.5 py-0.5 text-xs font-medium text-foreground dark:bg-[color-mix(in_oklab,var(--primary)_40%,black)]">
+            <span className="absolute top-0 left-3 z-10 -translate-y-1/2 rounded-full border border-border bg-[color-mix(in_oklab,var(--auth-base)_90%,var(--foreground))] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
               {group.tenantName}
             </span>
-            <Card fill="muted" size="sm" className="h-full">
+            <Card
+              fill="muted"
+              tone={TENANT_TONES[index % TENANT_TONES.length]}
+              size="sm"
+              className="h-full"
+            >
               <CardContent className="flex flex-col gap-1.5 pt-1">
                 {group.accounts.map((account) => (
                   <Button
                     key={account.email}
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="xs"
                     disabled={disabled}
                     title={account.email}

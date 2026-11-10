@@ -322,7 +322,7 @@ export function DataGrid<T extends { id: string }>({
     const ghost = createPortal(
       <div
         aria-hidden
-        className="pointer-events-none fixed z-50 flex items-center rounded-md bg-popover px-2 text-sm font-medium text-popover-foreground opacity-90 shadow-md ring-1 ring-foreground/10"
+        className="pointer-events-none fixed z-50 flex items-center rounded-md bg-popover px-2 text-sm font-medium text-popover-foreground opacity-90 shadow-md ring-1 ring-(--overlay-outline)"
         style={{
           left: drag.pointerX - drag.offsetX,
           top: draggedBox.top,

@@ -63,6 +63,18 @@
   --event-green-bg: color-mix(in oklab, var(--event-green-line) 22%, var(--card));
   --event-red-bg: color-mix(in oklab, var(--event-red-line) 22%, var(--card));
   --event-orange-bg: color-mix(in oklab, var(--event-orange-line) 22%, var(--card));
+  /* Контур ПІДНЯТОЇ поверхні — картки входу й діалогу (theming.md §1.3.6).
+     Малюється `outline` з від'ємним offset, тобто ВСЕРЕДИНІ, на заливці самої
+     поверхні, а не зовні на тіні: у темряві така лінія світліша за поверхню й
+     читається як підсвічений край, а зовнішній `ring` на тіні — темний і губиться.
+     Спільний для всіх тем: це частка `--foreground`, колір дає тема. */
+  --raised-outline: color-mix(in oklab, var(--foreground) 16%, transparent);
+  /* Контур ПОПАПА (меню, списки, `Popover`, `HoverCard`): зовнішнє кільце
+     `ring-1 ring-(--overlay-outline)` — ЛОКАЛЬНА ПРАВКА реєстру, там стояло
+     `ring-foreground/10`. Токен, бо тема може потребувати іншої сили: кільце
+     лежить ЗОВНІ, поверх тіні, і в темряві ті самі 10% на затемненому тлі майже
+     не читаються (`tenantry.dark` піднімає до 16%). */
+  --overlay-outline: color-mix(in oklab, var(--foreground) 10%, transparent);
 }
 
 .dark {
@@ -76,6 +88,7 @@
   --event-red-line: #d85140;
   --event-orange: #e07040;
   --event-orange-line: #e07040;
+  --raised-outline: color-mix(in oklab, var(--foreground) 7%, transparent);
 }
 
 @theme inline {
@@ -86,10 +99,18 @@
 
   /* HeroUI-подібна шкала: м'яка багатошарова тінь для полів/поверхонь і трохи
      глибша для floating overlays. У dark глибину дає світлий inset, не glow. */
+  /* ШКАЛА ВИСОТ — чотири рівні, значення оголошує тема (theming.md §1.3.6):
+       shadow-xs/sm → surface  поля, сегменти, підняті плитки
+       shadow-raised → raised  самостійна картка на полотні (`Card elevation="raised"`)
+       shadow-md    → overlay  усе прив'язане до тригера: попап, меню, список, тост
+       shadow-lg/xl → modal    усе над scrim: діалог, шторка, мобільна панель
+     Примітив обирає РІВЕНЬ утилітою; власних `shadow-[…]` на місці виклику немає. */
   --shadow-xs: var(--surface-shadow);
   --shadow-sm: var(--surface-shadow);
+  --shadow-raised: var(--raised-shadow);
   --shadow-md: var(--overlay-shadow);
-  --shadow-lg: var(--overlay-shadow);
+  --shadow-lg: var(--modal-shadow);
+  --shadow-xl: var(--modal-shadow);
 
   --color-event-blue: var(--event-blue);
   --color-event-blue-line: var(--event-blue-line);
@@ -148,6 +169,8 @@
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
+  --color-dialog: var(--dialog);
+  --color-dialog-header: var(--dialog-header);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);

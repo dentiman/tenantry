@@ -30,9 +30,9 @@ interface AuthShellProps {
  *
  * Скло — не окремі кольори, а той самий токен-патерн, що й шел `/guide`
  * (docs/frontend/brand-backdrop.md §4.2): корінь ставить `data-backdrop="brand"`,
- * і `--card` під ним сам стає `--card-glass`. Рамку, блюр і світіння картки дає
- * `data-slot="auth-card"` (`brand-backdrop.css` §3). Фон — варіант `auth`: одна
- * аура за карткою, без точок.
+ * і `--card` під ним сам стає `--card-glass`. Картка — звичайний `Card` з
+ * `elevation="raised"`; її заливку й контур доточує `[data-auth-card]`
+ * (`brand-backdrop.css` §3). Фон — варіант `auth`, без точок.
  */
 export function AuthShell({
   logo,
@@ -64,7 +64,15 @@ export function AuthShell({
           <span className="text-base font-semibold tracking-tight">{productName}</span>
         </div>
 
-        <Card fill="muted" className="w-full max-w-md [--card-spacing:--spacing(6)]">
+        {/* Картка-сцена: `elevation="raised"` — рівень `--raised-shadow` спільної шкали
+            висот (той самий ряд, що попап і діалог). Заливку й контур, які в неї різні у
+            світлі й темряві, задає `[data-auth-card]` у `brand-backdrop.css` §3 */}
+        <Card
+          data-auth-card
+          fill="muted"
+          elevation="raised"
+          className="w-full max-w-md [--card-spacing:--spacing(6)]"
+        >
           <CardHeader>
             <CardTitle className="text-center text-xl">{title}</CardTitle>
             {description && (

@@ -11,6 +11,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *   border характер лінії       solid | dashed | dotted
  *   edge   акцентна смуга 3px   boolean (колір = tone на повну силу)
  *   radius скруглення кутів     default | sm (радіус контролів) | none
+ *   elevation висота над полотном flat | raised (самостійна картка-сцена)
  *
  * Самі значення — `libs/ui/src/card-surface.css` (там і чому заливка
  * напівпрозора, і чому у світлій темі альфа інша). Тут лише data-атрибути:
@@ -30,6 +31,11 @@ interface CardSurfaceProps {
    * патерн плитки календаря: тиха заливка плюс чіткий маркер типу
    */
   edge?: boolean;
+  /**
+   * Висота над полотном. `raised` — рівень `--raised-shadow` шкали висот теми;
+   * лише для картки, яка на екрані одна (вхід). Усе плаваюче — `Popover`/`Dialog`
+   */
+  elevation?: 'flat' | 'raised';
   /** Щільність заливки. Усе, крім `default`/`opaque`, без підняття */
   fill?: 'default' | 'muted' | 'subtle' | 'ghost' | 'opaque' | 'nested';
   size?: 'default' | 'sm';
@@ -43,6 +49,7 @@ function Card({
   border = 'solid',
   className,
   edge = false,
+  elevation = 'flat',
   fill = 'default',
   radius = 'default',
   size = 'default',
@@ -58,6 +65,7 @@ function Card({
       data-border={border}
       data-edge={edge || undefined}
       data-radius={radius}
+      data-elevation={elevation}
       className={cn(
         'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         className,

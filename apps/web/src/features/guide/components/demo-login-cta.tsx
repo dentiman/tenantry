@@ -28,7 +28,7 @@ export function DemoLoginCta() {
   const Icon = user ? ArrowRightIcon : LogInIcon;
   const className = cn(
     buttonVariants({ size: 'xl', radius: 'full' }),
-    'shadow-lg shadow-primary/25',
+    'shadow-md shadow-primary/25',
   );
   const content = (
     <>
