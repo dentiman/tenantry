@@ -130,7 +130,7 @@ async function ensureDbGrants(dbName: string): Promise<void> {
     // тобто скасовував REVOKE міграцій щоразу, коли ролі переналаштовували після міграцій
     // (e2e global setup, ws:init, db_roles після деплою). Тому обмеження застосовуються
     // тут заново, для тих таблиць, що вже існують.
-    for (const { table, saasApp } of CONTROL_PLANE_TABLES) {
+    for (const { table, saasApp, platformRevoke } of CONTROL_PLANE_TABLES) {
       const exists = await client.query(
         `SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = $1`,
         [table],
@@ -141,6 +141,9 @@ async function ensureDbGrants(dbName: string): Promise<void> {
         await client.query(`GRANT SELECT ON public."${table}" TO saas_app`);
       } else if (saasApp === 'select-insert') {
         await client.query(`GRANT SELECT, INSERT ON public."${table}" TO saas_app`);
+      }
+      if (platformRevoke) {
+        await client.query(`REVOKE ${platformRevoke} ON public."${table}" FROM saas_platform`);
       }
     }
 
@@ -175,6 +178,8 @@ async function ensureDbGrants(dbName: string): Promise<void> {
 const CONTROL_PLANE_TABLES: readonly {
   table: string;
   saasApp: 'none' | 'select' | 'select-insert';
+  /** Привілеї, які міграція відкликає і в control plane (`saas_platform`) */
+  platformRevoke?: 'INSERT, UPDATE';
 }[] = [
   { table: 'platform_users', saasApp: 'none' },
   { table: 'platform_auth_sessions', saasApp: 'none' },
@@ -186,6 +191,11 @@ const CONTROL_PLANE_TABLES: readonly {
   // RLS, але append-only для tenant-процесів (добір вартості оновлює його як saas_platform)
   { table: 'ai_model_prices', saasApp: 'select' },
   { table: 'ai_usage_events', saasApp: 'select-insert' },
+  // Журнал дій оператора над даними тенантів: tenant-процеси його не бачать узагалі
+  { table: 'platform_audit_events', saasApp: 'none' },
+  // CHAT-2a: tenant-процес пише лише через SECURITY DEFINER-функцію `record_unroutable_event`;
+  // platform-api читає й чистить за retention, але не вставляє й не змінює рядки
+  { table: 'channel_unroutable_events', saasApp: 'none', platformRevoke: 'INSERT, UPDATE' },
 ];
 
 async function main(): Promise<void> {
