@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 dist/
+dist-bundle-check/
 .turbo/
 
 # Prisma generated client
@@ -52,4 +53,3 @@ whatsapp_webhook_log.csv
 
 # Локальний конфіг AgentsRoom
 saas/
-dist-bundle-check/

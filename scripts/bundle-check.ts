@@ -96,19 +96,20 @@ function build(app: AppBudget, outDir: string): void {
   );
 }
 
-function check(app: AppBudget, showReport: boolean): string[] {
-  const appDir = join(ROOT, 'apps', app.dir);
-  const outName = 'dist-bundle-check';
-  const outDir = join(appDir, outName);
-  build(app, outName);
+interface StartSet {
+  readonly jsFiles: string[];
+  readonly js: { raw: number; gzip: number };
+  readonly cssGzip: number;
+}
 
-  const manifest = JSON.parse(
-    readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
-  ) as Record<string, ManifestChunk>;
-
-  // Стартовий набір = транзитивне замикання статичних імпортів entry
+/** Стартовий набір = транзитивне замикання статичних імпортів entry */
+function measureStartSet(
+  appName: string,
+  manifest: Record<string, ManifestChunk>,
+  outDir: string,
+): StartSet {
   const entryKey = Object.keys(manifest).find((key) => manifest[key]?.isEntry);
-  if (!entryKey) throw new Error(`${app.dir}: у manifest немає entry`);
+  if (!entryKey) throw new Error(`${appName}: у manifest немає entry`);
   const initial = new Set<string>();
   const walk = (key: string): void => {
     if (initial.has(key)) return;
@@ -122,7 +123,6 @@ function check(app: AppBudget, showReport: boolean): string[] {
     return chunk ? [chunk] : [];
   });
   const jsFiles = chunks.map((chunk) => chunk.file);
-  const cssFiles = chunks.flatMap((chunk) => chunk.css ?? []);
   const js = jsFiles.reduce(
     (sum, file) => {
       const s = sizes(join(outDir, file));
@@ -130,43 +130,43 @@ function check(app: AppBudget, showReport: boolean): string[] {
     },
     { raw: 0, gzip: 0 },
   );
-  const css = cssFiles.reduce((sum, file) => sum + sizes(join(outDir, file)).gzip, 0);
+  const cssGzip = chunks
+    .flatMap((chunk) => chunk.css ?? [])
+    .reduce((sum, file) => sum + sizes(join(outDir, file)).gzip, 0);
+  return { jsFiles, js, cssGzip };
+}
 
+function printSummary(app: AppBudget, outDir: string, start: StartSet, showReport: boolean): void {
   const allJs = listFiles(outDir).filter((file) => file.endsWith('.js'));
   const totalJsRaw = allJs.reduce((sum, file) => sum + statSync(file).size, 0);
 
   console.log(`\n${app.dir}`);
   console.log(
-    `  стартовий JS:  ${kb(js.raw)} КБ raw / ${kb(js.gzip)} КБ gzip  (${String(jsFiles.length)} файлів; бюджет ${String(app.initialJsGzipKb)} КБ gzip)`,
+    `  стартовий JS:  ${kb(start.js.raw)} КБ raw / ${kb(start.js.gzip)} КБ gzip  (${String(start.jsFiles.length)} файлів; бюджет ${String(app.initialJsGzipKb)} КБ gzip)`,
   );
-  console.log(`  стартовий CSS: ${kb(css)} КБ gzip`);
+  console.log(`  стартовий CSS: ${kb(start.cssGzip)} КБ gzip`);
   console.log(`  усього JS:     ${kb(totalJsRaw)} КБ raw у ${String(allJs.length)} чанках`);
 
-  if (showReport) {
-    const rows = allJs
-      .map((file) => ({
-        file: relative(outDir, file),
-        ...sizes(file),
-        initial: jsFiles.includes(relative(outDir, file)),
-      }))
-      .sort((a, b) => b.raw - a.raw)
-      .slice(0, 15);
-    for (const row of rows) {
-      console.log(
-        `    ${kb(row.raw).padStart(8)} КБ  ${kb(row.gzip).padStart(7)} gzip  ${row.initial ? '[старт]' : '       '} ${row.file}`,
-      );
-    }
-  }
-
-  const problems: string[] = [];
-  if (js.gzip > app.initialJsGzipKb * 1024) {
-    problems.push(
-      `${app.dir}: стартовий JS ${kb(js.gzip)} КБ gzip > бюджету ${String(app.initialJsGzipKb)} КБ. Перевір, що нова сторінка/важка бібліотека не потрапила в composition root (router.tsx, slot-fills.ts, *.nav.ts, main.tsx); --report покаже найбільші чанки.`,
+  if (!showReport) return;
+  const rows = allJs
+    .map((file) => ({
+      file: relative(outDir, file),
+      ...sizes(file),
+      initial: start.jsFiles.includes(relative(outDir, file)),
+    }))
+    .sort((a, b) => b.raw - a.raw)
+    .slice(0, 15);
+  for (const row of rows) {
+    console.log(
+      `    ${kb(row.raw).padStart(8)} КБ  ${kb(row.gzip).padStart(7)} gzip  ${row.initial ? '[старт]' : '       '} ${row.file}`,
     );
   }
+}
 
-  // Структура: у стартових чанках немає сторінок модулів
+/** Структура: у стартових чанках немає сторінок модулів (за `sources` їхніх sourcemap) */
+function findEagerPages(app: AppBudget, outDir: string, jsFiles: readonly string[]): string[] {
   const pagePattern = /\/src\/features\/[^/]+\/pages\/[^/]+\.tsx$/;
+  const problems: string[] = [];
   for (const file of jsFiles) {
     const map = JSON.parse(readFileSync(join(outDir, `${file}.map`), 'utf8')) as {
       sources: string[];
@@ -180,9 +180,31 @@ function check(app: AppBudget, showReport: boolean): string[] {
       );
     }
   }
-
-  rmSync(outDir, { recursive: true, force: true });
   return problems;
+}
+
+function check(app: AppBudget, showReport: boolean): string[] {
+  const outName = 'dist-bundle-check';
+  const outDir = join(ROOT, 'apps', app.dir, outName);
+  try {
+    build(app, outName);
+    const manifest = JSON.parse(
+      readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
+    ) as Record<string, ManifestChunk>;
+    const start = measureStartSet(app.dir, manifest, outDir);
+    printSummary(app, outDir, start, showReport);
+
+    const problems: string[] = [];
+    if (start.js.gzip > app.initialJsGzipKb * 1024) {
+      problems.push(
+        `${app.dir}: стартовий JS ${kb(start.js.gzip)} КБ gzip > бюджету ${String(app.initialJsGzipKb)} КБ. Перевір, що нова сторінка/важка бібліотека не потрапила в composition root (router.tsx, slot-fills.ts, *.nav.ts, main.tsx); --report покаже найбільші чанки.`,
+      );
+    }
+    return [...problems, ...findEagerPages(app, outDir, start.jsFiles)];
+  } finally {
+    // Тимчасова тека не лишається і при падінні збірки
+    rmSync(outDir, { recursive: true, force: true });
+  }
 }
 
 const showReport = process.argv.includes('--report');
