@@ -19,7 +19,7 @@ docker run --rm \
   "$NODE_IMAGE" bash -euo pipefail -c '
     mkdir -p /work
     tar -C /src --exclude=./node_modules --exclude="*/node_modules" --exclude=./.turbo \
-      --exclude=./.env --exclude=./.env.local --exclude="./apps/*/logs" -cf - . | tar -C /work -xf -
+      --exclude=./.git --exclude=./.env --exclude=./.env.local --exclude="./apps/*/logs" -cf - . | tar -C /work -xf -
     cd /work
     corepack enable
     npm pkg delete scripts.prepare
