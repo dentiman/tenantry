@@ -500,6 +500,40 @@ force-push). Пуш `dev` у GitLab запускає розкат `saas-dev`; He
 на обох remote-ах (пуш у `github/main` запускає розкат). Verify у GitHub-пайплайн свідомо не
 входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
 
+### Хуки git (husky) і легкий гейт
+
+`pnpm install` ставить husky (`prepare`), хуки лежать у `.husky/`. Повний `verify` ручний, а ці
+два — автоматичні й офлайн (без Docker і БД):
+
+| Хук | Що робить | Час |
+| --- | --- | --- |
+| `pre-commit` | `lint-staged`: ESLint (`--fix --max-warnings 0`) по staged `*.ts`/`*.tsx` | ≈3 с на файл |
+| `pre-push` | `scripts/pre-push-gate.sh`: `pnpm lint` і `pnpm typecheck` паралельно | ≈75 с холодно (lint ≈80 с сам по собі, typecheck 24 с / 0.4 с з кешу turbo) |
+
+`lint-staged` свідомо **без `prettier --write`**: 430 файлів репозиторію не відповідають
+`.prettierrc` (у тому числі більшість `docs/*.md`), тож хук переписував би цілі файли за кожну
+дотичну правку, а `pnpm-lock.yaml` і згенеровані клієнти теж потрапили б під формат. Повернути —
+після окремого коміту `pnpm format` на всьому дереві (рішення власника).
+
+`pre-push` не ганяє перевірки, коли нема що перевіряти: видалення гілки/тегу, пуш без нових
+комітів, пуш лише документації (`README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `docs/**`,
+`openspec/**` — ті самі шляхи, що пропускає `deploy.yml`; винятки `docs/ai-knowledge/**` і
+`docs/history-summary.md`). Без `node_modules` падає з підказкою; без згенерованого Prisma-клієнта
+сам виконує `pnpm db:generate`.
+
+**Обхід у крайньому випадку:** `SKIP_PREPUSH=1 git push …` — шлюз сам пише, що саме не
+перевірено; або `git commit/push --no-verify` (git — мовчки). e2e, unit і демо-сід шлюз **не**
+запускає — це `pnpm verify`.
+
+**Взаємодія зі скриптами пуша.** `pnpm git:sync` ганяє шлюз один раз до своїх двох пушів
+(GitHub, потім GitLab), а хук у них пропускає змінна `PREPUSH_GATE_DONE`. `pnpm release:hetzner`
+після `verify` виставляє її сама (verify уже містить lint і typecheck), тож повторів нема;
+`SKIP_VERIFY=1` скасовує лише важкий verify — легкий шлюз усе одно відпрацює у `git-sync`
+(крім пушу лише документації), вимкнути його теж — `SKIP_PREPUSH=1`.
+
+Серверний дубль легкого шлюзу — `bash scripts/ci-check.sh` (Docker, чистий checkout, ≈2.7 хв
+холодно) і `.github/workflows/check.yml` (push у `dev`, PR, вручну; не блокує деплой).
+
 ### `pnpm format` / `pnpm format:check`
 
 ```bash

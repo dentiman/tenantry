@@ -95,6 +95,7 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
 | --- | --- | --- |
 | `.github/workflows/deploy.yml` | push у `main` зі змінами поза документацією, вручну | `build` ×5 образів (self-hosted, по одному) → `deploy` (`scripts/hetzner/deploy.sh`) |
 | `.github/workflows/verify.yml` | лише вручну / `workflow_call` | повна перевірка на GitHub-hosted (`scripts/ci-verify.sh`); не шлюз деплою |
+| `.github/workflows/check.yml` | push у `dev`, PR, вручну | `pnpm lint` + `pnpm typecheck` на GitHub-hosted (`scripts/ci-check.sh`); без e2e, **не шлюз деплою** (у `deploy.yml` нема `needs`) |
 | `.github/workflows/ops.yml` | вручну («Run workflow») | `seed`, `db_roles`, `seed_demo`, `demo_reset`, `backup_db` (`scripts/hetzner/ops.sh`) |
 
 **Як розкотити:** `pnpm release:hetzner` (`scripts/hetzner/release.sh`) — на гілці `dev` з чистим

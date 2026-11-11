@@ -132,6 +132,12 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
   node-контейнер (shell-executor не зміг би прибрати root-овий `node_modules`). pnpm store
   кешується в іменованому томі `saas-verify-pnpm-store` на раннері.
 
+Легкого серверного дубля (`lint` + `typecheck`) у GitLab **немає свідомо**: стадія `build` стартує
+лише після завершення всієї стадії `check`, тож навіть джоба з `allow_failure` подовжила б кожен
+розкат `saas-dev` і зайняла спільний раннер — це зміна умов деплою, потрібне рішення власника.
+Локально цю роль виконує `pre-push` (`docs/commands.md`, «Хуки git»), на GitHub — неблокуючий
+`check.yml`. Якщо вирішать додати: джоба `check_lint` у `check`, `bash scripts/ci-check.sh`.
+
 Стадія build чекає лише на `ai_knowledge_check`; `verify` (`when: manual`, `allow_failure: true`)
 її не тримає, тож SHA збирається й деплоїться без повного прогону — відповідальність за нього на
 тому, хто пушить. Повернути шлюзом — прибрати `when`/`allow_failure` з rules джоби. **Локально той самий прогін** — `bash scripts/ci-verify.sh` (потрібен лише Docker;

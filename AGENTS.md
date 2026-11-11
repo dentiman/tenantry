@@ -231,7 +231,10 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   on every rollout.
 - **Neither CI runs `verify` automatically** (owner decision 2026-10-19: too slow). The gate is
   local: run `pnpm verify` (`scripts/ci-verify.sh`) before pushing to `dev`; `pnpm release:hetzner`
-  does it before pushing. **GitLab:** stage `check` gates `build` only through
+  does it before pushing. What *is* automatic on every `git push` is the offline half —
+  `.husky/pre-push` runs `pnpm lint` + `pnpm typecheck` (~75 s; skipped for docs-only pushes;
+  emergency bypass `SKIP_PREPUSH=1`, see `docs/commands.md` "Хуки git"); e2e, unit and the demo seed
+  stay manual. **GitLab:** stage `check` gates `build` only through
   `ai_knowledge_check`; `verify` is a manual job with `allow_failure` — details
   `docs/deploy-swarm.md` §6. **GitHub:** `verify.yml` is a manual button only.
 

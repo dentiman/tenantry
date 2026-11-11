@@ -1,0 +1,31 @@
+# Дешевий серверний дубль локального шлюзу pre-push (scripts/pre-push-gate.sh): `pnpm lint` +
+# `pnpm typecheck` на чистому checkout-і. БЕЗ e2e і БЕЗ зв'язку з деплоєм: deploy.yml не залежить
+# від цього workflow (`needs` немає), тож червоний чек нічого не блокує — лише сигналізує, що
+# хтось запушив повз локальний хук (--no-verify / SKIP_PREPUSH). Зробити його шлюзом — рішення
+# власника (docs/deploy-hetzner.md §4).
+#
+# GitHub-hosted runner (безкоштовний для публічного репо), не self-hosted Hetzner: PR з форка
+# не мусить виконуватись на сервері. Секретів немає, права — лише читання.
+name: Check
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lint and typecheck
+        run: bash scripts/ci-check.sh

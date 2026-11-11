@@ -1,0 +1,3 @@
+# pnpm lint + pnpm typecheck (офлайн). e2e/verify — ручні (AGENTS.md «Branches and CI»). Логіка і обхід — у скрипті.
+# Обхід у крайньому випадку: SKIP_PREPUSH=1 git push … (або --no-verify)
+bash scripts/pre-push-gate.sh
