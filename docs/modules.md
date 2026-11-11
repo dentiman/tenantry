@@ -157,6 +157,7 @@ flowchart TB
 | `UserLifecycleHooks` (`users`)                    | хуки **в транзакції** створення юзера; кидок відкочує створення | `chat` — членство в дефолтному каналі                   |
 | `TenantLifecycleHooks` (`tenants`, control plane) | хуки **в транзакції** створення тенанта                         | `chat` — дефолтний канал і членство адміна              |
 | `BootstrapRegistry` (`settings`)                  | прапорці `features` і секції фіч у `GET /settings/bootstrap`    | `ai` — `features.ai`; `calendar` — секція `calendar`    |
+| `ActivityAccessRegistry` (`activities`)           | охоронці сутностей: які записи стрічки бачить глядач            | `calendar` — приватні події (`calendar_event`)          |
 | `SettingsService.updateSection` (`settings`)      | зберігання секції `Tenant.settings` JSON + журнал змін          | `ai`, `calendar` — `/settings/ai`, `/settings/calendar` |
 
 Форму bootstrap-відповіді, якій потрібні типи секцій фіч, задає composition root контрактів
