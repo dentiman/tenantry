@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EvalConfigFileSchema } from './eval-config';
@@ -8,8 +8,13 @@ const DOCS = join(__dirname, '../../../../../docs/ai-sources');
 const read = (name: string): unknown => JSON.parse(readFileSync(join(DOCS, name), 'utf8'));
 
 describe('QuestionSetSchema', () => {
-  it('наявний fms-eval.json валідний як є; закомічений приклад конфігурацій — теж', () => {
+  // fms-eval.json у публічному репозиторії немає (docs/ai-platform-controls.md §10): без файлу
+  // перевірка пропускається, а не валить `pnpm test` на чистому checkout-і
+  it.skipIf(!existsSync(join(DOCS, 'fms-eval.json')))('наявний fms-eval.json валідний як є', () => {
     expect(QuestionSetSchema.safeParse(read('fms-eval.json')).success).toBe(true);
+  });
+
+  it('закомічений приклад конфігурацій валідний', () => {
     expect(EvalConfigFileSchema.safeParse(read('answer-eval-configs.json')).success).toBe(true);
   });
 
