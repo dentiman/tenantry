@@ -383,3 +383,124 @@
     linear-gradient(#000 0 0) content-box exclude,
     linear-gradient(#000 0 0);
 }
+
+/* ── PLAYGROUND (не коміт): мікросхема на фоні входу ───────────────────────── */
+:root {
+  --circuit-line: color-mix(in oklab, var(--primary) 55%, transparent);
+  --circuit-accent: oklch(0.7 0.14 200);
+  --circuit-opacity-a: 0.3;
+  --circuit-opacity-b: 0.14;
+  /* світла тема: майже біле тло — без затемнення, з ледь помітними відтінками */
+  --circuit-aura-1: color-mix(in oklab, var(--primary) 7%, transparent);
+  --circuit-aura-2: oklch(0.75 0.14 200 / 0.06);
+  --circuit-yellow: oklch(0.8 0.15 90);
+  --circuit-bottom-shade: transparent;
+  --circuit-dim: transparent;
+  --halo-strength: 0.6;
+  /* планети: освітлена сторона — глибший колір (білий на білому зникає), тінь — блідша */
+  --ghost-alpha: 0.9;
+  --ghost-hi: oklch(0.5 0.22 275);
+  --ghost-lo: white;
+}
+.dark {
+  --circuit-line: color-mix(in oklab, var(--primary) 70%, transparent);
+  --circuit-opacity-a: 0.4;
+  --circuit-opacity-b: 0.2;
+  --circuit-aura-1: color-mix(in oklab, var(--primary) 30%, transparent);
+  --circuit-aura-2: oklch(0.6 0.12 205 / 0.28);
+  --circuit-yellow: oklch(0.85 0.14 90);
+  --circuit-bottom-shade: rgb(0 0 0 / 0.45);
+  --circuit-dim: rgb(0 0 0 / 0.5);
+  --halo-strength: 0.7;
+  --ghost-alpha: 0.22;
+  --ghost-hi: white;
+  --ghost-lo: black;
+}
+
+/* Ауры бренду по кутах — відтінки по всьому фону, центр лишається тихим */
+.brand-backdrop--auth {
+  background-image:
+    linear-gradient(to top, var(--circuit-bottom-shade), transparent 28%),
+    linear-gradient(var(--circuit-dim), var(--circuit-dim)),
+    radial-gradient(60vw 55vh at 5% 0%, var(--circuit-aura-1), transparent),
+    radial-gradient(50vw 50vh at 100% 15%, var(--circuit-aura-2), transparent),
+    radial-gradient(60vw 55vh at 75% 105%, var(--circuit-aura-1), transparent),
+    radial-gradient(40vw 40vh at 0% 100%, var(--circuit-aura-2), transparent);
+}
+
+.brand-backdrop__circuit {
+  position: absolute;
+  inset: 0;
+  /* сила всього ореолу (плями, лінії, крапки): у світлій темі набагато слабше */
+  opacity: var(--halo-strength);
+}
+.brand-backdrop__circuit path,
+.brand-backdrop__circuit circle {
+  fill: none;
+  stroke: var(--circuit-line);
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.brand-backdrop__circuit .thin {
+  stroke-width: 1;
+}
+.brand-backdrop__circuit .ghosts {
+  opacity: var(--ghost-alpha);
+}
+.brand-backdrop__circuit .fill {
+  fill: var(--circuit-line);
+}
+.brand-backdrop__circuit .accent {
+  stroke: var(--circuit-accent);
+}
+.brand-backdrop__circuit .fill.accent {
+  fill: var(--circuit-accent);
+}
+.brand-backdrop__circuit .layer-a {
+  opacity: var(--circuit-opacity-a);
+}
+.brand-backdrop__circuit .layer-b {
+  opacity: var(--circuit-opacity-b);
+}
+.brand-backdrop__circuit .yellow {
+  stroke: var(--circuit-yellow);
+}
+.brand-backdrop__circuit .fill.yellow {
+  fill: var(--circuit-yellow);
+}
+
+/* Ореол навколо картки: зв'язки, блискавки, брижі */
+.brand-backdrop__circuit path {
+  vector-effect: non-scaling-stroke;
+}
+.brand-backdrop__circuit .link {
+  stroke-width: 0.9;
+}
+.brand-backdrop__circuit .glow {
+  stroke-width: 4;
+}
+.brand-backdrop__circuit .dashed {
+  stroke-dasharray: 3 6;
+}
+.brand-backdrop__circuit .ripple {
+  stroke-dasharray: 2 7;
+  stroke-width: 0.8;
+}
+.brand-backdrop__circuit .ripple.wide {
+  stroke-dasharray: 1 10;
+}
+.brand-backdrop__circuit g.accent path {
+  stroke: var(--circuit-accent);
+}
+
+
+/* Світла тема: тло входу майже біле (а не сіре сайдбара) */
+:root:not(.dark) .brand-backdrop--auth {
+  background-color: color-mix(in oklab, var(--auth-base) 20%, white);
+}
+
+/* Планети й фігури-вузли: тонкі лінії сітки */
+.brand-backdrop__circuit .mesh-line {
+  stroke-width: 0.6;
+}
