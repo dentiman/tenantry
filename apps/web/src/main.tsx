@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { UiThemeProvider } from '@saas-skeleton/ui/themes';
@@ -18,6 +18,7 @@ import { useSettingsBootstrap } from './api/generated/api';
 import { NavProvider } from '@saas-skeleton/ui/navigation';
 import { isAllowed } from './features/auth/auth.access';
 import { useAuthStore } from './features/auth/stores/auth.store';
+import { createAppQueryClient } from './lib/query-client';
 import { SlotsProvider } from './lib/slots';
 import { NAVIGATION } from './nav';
 import { SLOT_FILLS } from './slot-fills';
@@ -33,25 +34,8 @@ function handleGlobalError(error: unknown): void {
   }
 }
 
-const queryClient = new QueryClient({
-  // meta.silentError — опт-аут із глобального тоста для запитів, чия відмова є
-  // легальним станом UI, а не подією для юзера (presence: «невідомо» замість тоста)
-  queryCache: new QueryCache({
-    onError: (error, query) => {
-      if (query.meta?.silentError === true) {
-        return;
-      }
-      handleGlobalError(error);
-    },
-  }),
-  mutationCache: new MutationCache({ onError: handleGlobalError }),
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 1,
-    },
-  },
-});
+// meta.silentError (опт-аут із глобального тоста) — у `lib/query-client.ts`
+const queryClient = createAppQueryClient(handleGlobalError);
 
 /** Стабільне посилання: новий `{}` на кожен рендер перебудовував би предикат і всю навігацію */
 const NO_FEATURES: Readonly<Record<string, boolean>> = {};

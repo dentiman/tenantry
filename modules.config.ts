@@ -69,6 +69,7 @@ export const MODULES = {
       'apps/platform-web/src/lib/money.ts',
       'apps/web/src/lib/entity-routes.ts',
       'apps/web/src/lib/build-info.ts',
+      'apps/web/src/lib/query-client.ts',
       'apps/platform-web/src/components/section/',
     ],
   },
