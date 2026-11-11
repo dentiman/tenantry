@@ -162,5 +162,5 @@ RLS гарантує, що чужий тенант не видимий. Хто *
 | §2 граф модулів (`modules.config.ts`)         | `pnpm modules:check --strict` (у складі `pnpm lint`)                     |
 | §3 голий `$transaction`                       | ESLint `no-restricted-syntax`                                            |
 | §4–§7, §9                                     | рев'ю + чекліст skill-а `backend-change`                                 |
-| §10                                           | рев'ю; e2e у CI-джобі `verify`                                           |
-| усе вище                                      | GitLab `verify` (`scripts/ci-verify.sh`) перед будь-якою збіркою образів |
+| §10                                           | рев'ю; e2e — у `pnpm verify` (локально)                                  |
+| усе вище                                      | `pnpm verify` (`scripts/ci-verify.sh`) — **ручний**, не шлюз: з 2026-10-19 CI його не запускає |

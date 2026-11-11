@@ -153,7 +153,12 @@ throw new UnauthorizedException('Invalid email or password');
 ### Глобальний toast (`main.tsx` + `lib/error-toast.ts`)
 
 - `QueryCache.onError` + `MutationCache.onError` → `parseApiError` → `isGlobalApiError`
-  (network / 403 / ≥500) → `toast.add({ type: 'error' })`.
+  (network / 403 / ≥500) → `toast.add({ type: 'error' })`. Клієнт створює `createAppQueryClient`
+  (`apps/web/src/lib/query-client.ts`), а політику тоста задає `main.tsx`.
+- **Опт-аут `meta.silentError: true`** — для викликів, чия відмова є легальним станом UI, а не
+  подією для юзера (presence: «невідомо»; надсилання в чаті: рядок «не надіслано» вже і є
+  повідомленням). Діє і на запити, і на мутації (мутації він не зупиняв до 2026-11-11). Є лише в
+  `apps/web`: у `platform-web` свого `QueryClient`-фабрики з опт-аутом поки немає.
 - **Дедуп 5 с** по ключу `status:code:message` — сторінки з автооновленням (jobs, 5 с)
   не спамлять однаковими тостами.
 - **Розміщення** (`components/toast-host.tsx`, живе в root-роуті): адмінка — знизу

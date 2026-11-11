@@ -50,6 +50,13 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   історією проєкту (`docs/history-summary.md` — **демо-дані**, ведуться вручну)
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
+- `docs/database-seed.md` — the minimal seed (`db:seed`), seed identities and `db:reset`; the demo
+  dataset that builds on it is `docs/demo.md`
+- `docs/deployment-options.md` — deployment variants for this infrastructure (one VPS → managed
+  services); what the project needs running, where DB/files live, how realtime and the registry fit.
+  The two deploys actually in use are `deploy-swarm.md` and `deploy-hetzner.md`
+- `docs/ai-driven-architecture.md` — retrospective on how the stack was built with AI: file
+  structure as project memory (theses, not a reference)
 - `docs/notes/` — design journal (initial proposal, dated reviews/audits, research spikes); a
   record of how decisions were reached, not the current reference
 - `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet
@@ -117,6 +124,14 @@ Two rules that are easy to lose:
    `depends-on` field. Split a phase by the capability it touches — work that changes no
    externally observable behaviour declares `skip_specs: true` rather than inventing a
    requirement to pass validation.
+
+## Review tooling
+
+`/ecc-code-review` (local diff or PR) and `/ecc-architecture-review` (whole repo or an area, against
+this file, `docs/`, `modules.config.ts` and `openspec/specs/`) live in `.claude/commands/`, backed by
+the vendored agents in `.claude/agents/`. Reports are written to `.claude/reviews/`, which is
+gitignored: the repo is public and a report lists findings that are not fixed yet. Findings that
+turn into work belong in `docs/roadmap.md` §2.12, not in the report.
 
 ## Commands
 
@@ -227,8 +242,12 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      `seq`, one access service, no queue/socket seams yet). Pino logging,
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
-                     JWT/DB role), tenants CRUD, jobs monitoring (moved here because
-                     `pgboss.*` sits outside RLS), AI settings and the AI cost ledger/prices.
+                     JWT/DB role), tenants CRUD (+ `tenants/:id/users` for emergency user
+                     management, audited in `platform_audit_events`, and a read-only
+                     `tenants/:id/activities` feed), jobs monitoring (moved
+                     here because `pgboss.*` sits outside RLS), AI settings and the AI cost
+                     ledger/prices, and `channel-events` (the log of inbound channel events no
+                     tenant could be routed to — `channel_unroutable_events`, no `tenant_id`).
 apps/worker         NestJS application context, no HTTP. Message subscribers
                      (`src/subscribers/`) + cron via pg-boss, MailerService → Mailpit,
                      local i18next for email content. AI reply generation lives here
@@ -247,8 +266,8 @@ apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zus
                      `libs/ui`) is the default surface for record detail — prefer it over
                      `Sheet` unless the interaction is a dismiss-and-forget overlay.
 apps/platform-web    Same stack/shell pattern as apps/web (:5174, proxy → :3002). Areas:
-                     Tenants, Operations (Jobs/Queues), AI (settings, costs, prices), User
-                     settings. No org-level Settings — the platform itself is the subject. Same `src/features/<module>/` grouping, one `<module>.routes.tsx` per module.
+                     Tenants, Operations (Jobs/Queues/Channel events), AI (settings, costs,
+                     prices), User settings. No org-level Settings — the platform itself is the subject. Same `src/features/<module>/` grouping, one `<module>.routes.tsx` per module.
 libs/contracts       Zod 4 schemas + z.infer types — the only source of truth for API types.
                      Platform contracts live under the `/platform` subpath, not re-exported
                      from the root (needs an explicit `exports` entry in package.json — Vite/
@@ -428,9 +447,11 @@ The rules most easily broken:
     them — check the effective `baseUrl` whenever a subpath import behaves differently in an
     app than at the repo root.
 15. A socket event normally says "re-read" and never carries the payload itself
-    (`docs/realtime.md`). Three events carry state, and each is safe only because of the
-    guards that must be copied together with the pattern — **a payload is allowed only with a
-    monotonic counter and a REST resync**: the AI assistant's `ai.message-delta.v1` (a
+    (`docs/realtime.md`). Three events carry durable state, and each is safe only because of
+    the guards that must be copied together with the pattern — **a payload is allowed only with
+    a monotonic counter and a REST resync** (`presence.changed.v1` follows the same rule with a
+    `revision` and a REST snapshot; `chat.typing-changed.v1` is ephemeral, carries a relative
+    `expiresInMs` and loses nothing when dropped, so it needs neither): the AI assistant's `ai.message-delta.v1` (a
     monotonic `chunkSeq` within one generation attempt, a gap sends the client back to the
     REST transcript; a higher `attempt` meaning "discard and restart" — AI-0.1 replaced the
     earlier `chunkSeq === 0` rule, which also mistook a stale attempt's first frame for a
@@ -480,7 +501,7 @@ Do not revisit without an explicit user request.
 | Validation | Zod v4 |
 | Monorepo | pnpm workspaces + Turborepo (Nx rejected) |
 | UI | shadcn/ui on Base UI (style `base-nova`) for both frontends, shared via `libs/ui`. `lucide-react` icons |
-| Forms (web) | React Hook Form + zodResolver + repo wrappers in `apps/web/src/components/form/` |
+| Forms (web) | React Hook Form + zodResolver + repo wrappers in `libs/ui/src/components/form/` (only app-specific fields, e.g. the phone field, stay in `apps/web/src/components/form/`) |
 | Create user (API) | Password is required and set by the admin (argon2 hash); changing your own password is a separate security flow, not the users PATCH endpoint |
 | Files | S3 API as the storage abstraction (SeaweedFS for dev; MinIO ruled out — archived; Garage ruled out — AGPL). Presigned two-phase upload, never a proxy-through-API upload. Access only via short-lived presigned GET after authz |
 | Deploy | Docker Swarm single-node + GitLab CI via docker-context over SSH (no files copied to the server). Kubernetes/Helm out of scope |
@@ -505,7 +526,7 @@ not assumed to exist:
   reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline has no failure-visibility surface yet.
-- **Chat** beyond WhatsApp send-only (CHAT-3b webhooks and checks, 3c templates and operations; media and operator tools CHAT-2c come after WhatsApp) —
+- **Chat** beyond what shipped (WhatsApp send, webhooks, receipts and mark-as-read exist; still open: CHAT-3c templates, channel health, consent, BSUID identity, resume delivery; from 3b the typing indicator and outbound reactions; media and operator tools CHAT-2c come after WhatsApp) —
   `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
 - **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
   platform controls — `docs/ai-platform-controls.md`.

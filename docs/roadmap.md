@@ -1,6 +1,6 @@
 # Roadmap
 
-Стан на **2026-08-15**. Рішення з обґрунтуваннями — в [notes/architecture-proposal.md](notes/architecture-proposal.md);
+Стан на **2026-11-11**. Рішення з обґрунтуваннями — в [notes/architecture-proposal.md](notes/architecture-proposal.md);
 профільні деталі — у документах, на які посилається кожен рядок.
 
 Документ описує **куди йдемо** і є єдиним місцем статусу фаз (`AGENTS.md` його свідомо не
@@ -47,11 +47,21 @@
 | **Чат CHAT-0.1**                | 2026-09-22    | Перший видимий зріз чату — повний екран на REST, **без realtime**: `conversations`/`conversation_participants`/`chat_messages` під RLS, серверний `seq` через інкремент-і-повернення (він же серіалізує вставки в межах розмови), keyset-курсор по `seq`, ідемпотентне надсилання по `client_message_id` на частковому унікальному індексі, курсор прочитаного + денормалізовані непрочитані, дефолтний канал «General» із трьома місцями провізіонінгу, системні записи в тій самій стрічці (`type` + params, рендер i18next), **одна** функція доступу (RLS — межа тенанта, участь — межа людини). UI: список розмов, тред на `message-scroller`, свій композер, оптимістичний рядок у власному сторі поза кешем запитів. Свіжість — перечитування на фокус і після надсилання; місця під `publish`/`onCommit` позначені й порожні | `chat.md` §7 |
 | **Account Settings V1**         | 2026-08-29    | Розділ `/settings` (Profile / Account / Security / Notifications / Appearance) на шаблоні `satnaing/shadcn-admin`; модуль `apps/api/src/account/` без id у шляхах; зміна власного пароля з доказом старого і поверненням свіжої пари токенів, «вийти звідусіль», справжній `POST /auth/logout` замість суто клієнтського виходу. Списку пристроїв немає свідомо — сесії як сутності в моделі auth не існує                                                              | `account-settings.md`                  |
 | **Граф модулів**               | 2026-10-05    | Модуль = домен через усі застосунки й бібліотеки; рівні `infra → platform → core → feature`, явні ребра в `modules.config.ts`, перевірка `pnpm modules:check --strict` у `pnpm lint` (резолвить символи крізь barrel-и). Сім видимих порушень закрито: слоти фронтенду (`lib/slots.tsx`, `slot-fills.ts`), реєстри бекенду (`UserLifecycleHooks`, `BootstrapRegistry`, `SettingsService.updateSection` під `FOR UPDATE`), секції `ai` і `calendar` переїхали у свої модулі, platform-контракти розділено; Prisma-схема — файл на модуль (`prisma/schema/`). Невидимі для скрипта звʼязки — у плані | `modules.md` |
+| **Auth hardening AUTH-0…3**     | 2026-09-12…15 | AUTH-0: throttler на Valkey (логін, refresh, пароль), `helmet`, allowlist CORS, fail-fast env-схема, політика пароля. AUTH-1: сесія як сутність `auth_sessions` (ротація, grace-вікно, reuse-detection без видалення рядків, пристрої `/account/sessions`). AUTH-2: refresh у httpOnly-cookie (`Path=/api/auth`, `SameSite=Lax` + Origin-guard), дзеркало в platform. AUTH-3: відновлення пароля й зміна email через `verification_tokens`. Лишився AUTH-4 (2FA). Живий прогін у браузері виконано частково — `auth-hardening-plan.md` §8 | `auth-hardening-plan.md` |
+| **Аудит оператора платформи**   | 2026-10-06    | `platform_audit_events` — append-only журнал дій оператора над тенантами (без FK, без секретів); таблиця з `tenant_id`, але **без RLS**: захищена привілеями (`REVOKE ALL` для `saas_app`), а кожна дія пише ще й tenant-ову активність з актором `system`. `db:roles` більше не скасовує ці REVOKE при повторному запуску (2026-11-11), e2e звіряє фактичні привілеї з міграціями | `multi-tenancy-architecture.md` |
+| **AI-асистент AI-2a**           | 2026-10-03    | PostgreSQL 17 + pgvector у тій самій БД (tenant-таблиці `ai_knowledge_*` під RLS), embeddings і повторюваний ingest FMS-документації, **гібридний пошук** FTS + вектор за RRF (режим і поріг обрані за `pnpm ai:docs:eval`), відповіді `AiPanel` із серверно перевіреними цитатами | `ai-assistant-implementation.md` §18–19 |
+| **AI-5a/b/c — керованість**     | 2026-10-04    | Налаштування й вмикачі платформи (модель, URL, зашифрований ключ, дозволи) у platform-web; журнал витрат `ai_usage_events` + тарифи `ai_model_prices` (append-only, `NUMERIC`), звіти суперадміна; eval відповідей разом із вартістю (`pnpm ai:answers:eval`). Лишилося: перегляд набору питань власником → `ai-5c2-quality-settings` | `ai-platform-controls.md` |
+| **Демо-стенд**                  | 2026-10-10…11 | Три галузеві демо-тенанти (`db:seed:demo`), одно-клікові статичні демо-акаунти на логіні, скляні auth-екрани, публічний путівник `/about`; завантаження й скидання — ручні CI-джоби | `demo.md` |
+| **Hetzner + публічний репозиторій** | 2026-10-11 / 10-28 | Другий, незалежний таргет деплою: GitHub Actions → self-hosted runner на Hetzner, Caddy TLS на `sslip.io`, секрети лише в `/etc/saas/deploy.env`, деплой `main`. 2026-10-28 історію переписано, продукт перейменовано в **Tenantry**, публічний `dentiman/tenantry` — джерело правди; docs-only пуші не деплоять | `deploy-hetzner.md` |
+| **Версія збірки й історія**     | 2026-10-19    | Номер збірки = кількість комітів (на кожен деплой нова) внизу tenant-web і попап «About this build» з історією проєкту (`docs/history-summary.md` — демо-дані, ведуться вручну) | `build-info.md` |
+| **Система тем Tenantry**        | 2026-11-08…10 | Дефолтна палітра `tenantry` + `gray`, кожна тема в своєму файлі, режим і палітра — незалежні осі; шкала висот `surface → raised → overlay → modal`; осі картки (`fill`/`tone`/`border`/`elevation`); дві родини варіантів кнопок | `frontend/theming.md`, `frontend/ui-stack.md` |
+| **Типізовані i18n-ключі**       | 2026-11-11    | `t('…')` перевіряється `tsc` в обох фронтендах (`i18next-types.ts` + `namespaces.ts`), рантайм-ключі — через `lowercase()`/`runtimeKey()`; `meta.silentError` (опт-аут із глобального тоста) тепер діє й для мутацій — лише в tenant-web | `i18n-plan.md`, `error-handling.md` |
 
 Проєктні документи без реалізації (готові до роботи):
-фази чату `CHAT-0.2c` (сповіщення, звужена), `CHAT-2a…c` (канальне ядро на fake-адаптері),
-`CHAT-3a…c` (WhatsApp Cloud API) і `CHAT-4` — [whatsapp-channel.md](whatsapp-channel.md) §6 і
-[chat.md](chat.md) §7.3 (`0.3` і `CHAT-1` зняті 2026-10-13); інваріанти, на які вони спираються, — в §7.6,
+фази чату `CHAT-3c` (шаблони, здоровʼя каналу, згода/відписка, ідентичність за BSUID, resume доставки),
+`CHAT-2c` (вкладення, операторські інструменти) і `CHAT-4` — [whatsapp-channel.md](whatsapp-channel.md) §6 і
+[chat.md](chat.md) §7.3 (`0.3` і `CHAT-1` зняті 2026-10-13); з `CHAT-3b` лишилися індикатор набору й
+вихідні реакції; інваріанти, на які вони спираються, — в §7.6,
 беклог MT-4 у `multi-tenancy-architecture.md`,
 фази EDA-2 і EDA-3 у [event-driven-architecture.md](event-driven-architecture.md),
 фази CAL-2…CAL-4 у [calendar.md](calendar.md) (інтерактивність, командний перегляд,
@@ -118,17 +128,21 @@ permissions **замінює** його, а не додається поруч.
 
 ### 2.5. Безпека auth
 
-- reuse-detection ротованих refresh-токенів: `revokedAt` замість видалення рядка (зараз повторне
-  використання дає 401, але не відкликає інші сесії);
-- refresh у httpOnly + Secure + SameSite cookie замість localStorage (потребує TLS — робити разом
-  із п. 2.7);
-- звузити `app.enableCors()` до allowlist (зараз широкий; той самий allowlist піде в
-  `REALTIME_ALLOWED_ORIGINS`).
+AUTH-0…3 **зроблено 2026-09-12…15** (рядок у §1): throttler, `helmet`, allowlist CORS, fail-fast env,
+сесія як сутність із reuse-detection (reuse вбиває сесію, а не всі сесії юзера; глобальне відкликання —
+за прапорцем `AUTH_REUSE_REVOKES_ALL_SESSIONS`), refresh у httpOnly-cookie, відновлення пароля й
+зміна email. Лишається:
 
-**План імплементації — [auth-hardening-plan.md](auth-hardening-plan.md)**: п'ять заходів
-(AUTH-0 hardening без міграцій → AUTH-1 сесія як сутність → AUTH-2 httpOnly cookie →
-AUTH-3 відновлення доступу → AUTH-4 2FA) з чекбоксами, зафіксованими рішеннями і
-критеріями приймання.
+- **AUTH-4 — 2FA (TOTP)** і recovery-коди; `AuthResponse` стає union (ламає контракт);
+- докрутити живим кліком у браузері те, що в AUTH-2/3 перевірено лише `curl`-ом і e2e: F5 і
+  анонімне вікно, `auth.expiring.v1` → `auth.update.v1` на сокеті, platform-web F5 + 70 хв
+  (`auth-hardening-plan.md` §8);
+- throttler у `apps/platform-api` — у стеку platform-api немає Valkey (рішення D-1, перенесено).
+
+**План і журнал — [auth-hardening-plan.md](auth-hardening-plan.md)**: п'ять заходів (AUTH-0 hardening
+→ AUTH-1 сесія як сутність → AUTH-2 httpOnly cookie → AUTH-3 відновлення доступу → AUTH-4 2FA)
+із чекбоксами, зафіксованими рішеннями й критеріями приймання. Його §0 описує стан **до** AUTH-0
+(на 2026-09-12) і лишений як історія.
 
 ### 2.6. Operational maturity
 
@@ -136,15 +150,22 @@ AUTH-3 відновлення доступу → AUTH-4 2FA) з чекбокса
   Вкладка DLQ у `/jobs` (перегляд конверта, причина відмови, replay у рідну чергу), фільтр за
   `correlationId` (весь ланцюг однієї HTTP-операції одним запитом), лаг і глибина по черзі.
   Сам док позиціонує це як **наступний крок після EDA-1**: конвеєр уже кладе провалені
-  повідомлення в спільну `dlq`, але дивитися на неї поки нічим.
+  повідомлення в спільну `dlq`, але дивитися на неї поки нічим: у `platform-web` є лише
+  Jobs/Queues із лічильником `queueStats` і журнал нероутованих подій каналу
+  (`operations/channel-events`); у `dlq` немає ні споживача, ні явної retention, а збій
+  планувальника по тенанту йде тільки в `logger.error`. Найдешевший перший крок — бейдж/алерт по
+  глибині `dlq` з наявного `queueStats` і явна retention.
 - **Error tracking — Sentry або self-hosted GlitchTip** (SDK-сумісний): умовна ініціалізація по
   `SENTRY_DSN` у `main.ts` api/platform-api/worker + `captureException` у гілці ≥500
-  `AllExceptionsFilter` (tag `requestId`). Deployment-агностично, можна робити будь-коли.
+  `AllExceptionsFilter` (tag `requestId`). Deployment-агностично, можна робити будь-коли. У коді
+  Sentry поки немає зовсім.
 - **Агрегація логів — Grafana Loki + Alloy** як сервіс того самого swarm-стеку (збирає stdout
   контейнерів; пошук по `requestId`). JSON у stdout уже є — коду не змінюємо.
 - **Фікс логера під контейнер:** зараз pino пише файли в `cwd/logs`, і `Dockerfile.node` спеціально
   створює цю теку для non-root юзера — це обхід симптому. У прод-режимі має лишатись **тільки
   stdout**, файловий sink — opt-in через `LOG_FILE` (сценарій «гола VM без оркестрації»).
+  Станом на 2026-11-11 не зроблено: `logger.config.ts` пише файли з ротацією (`rotating-file-stream`,
+  10 МБ) у `cwd/logs`.
 - ~~**Наскрізний correlationId у чергах**~~ — **зроблено в EDA-1**: `correlationId` живе в
   конверті повідомлення (на HTTP-вході = pino `req.id`, він же `ApiError.requestId`),
   `MessageWorkerRegistrar` піднімає його в CLS + child-логер, похідні публікації успадковують
@@ -152,25 +173,36 @@ AUTH-3 відновлення доступу → AUTH-4 2FA) з чекбокса
   з 1 на кожному процесі.
 - **`@nestjs/terminus`** health для обох api і воркера (зараз health — саморобний, у воркера немає
   зовсім, стан видно лише через `docker service ps`).
-- **Env-валідація через Zod при старті** (fail-fast), rate limiting, helmet.
+- ~~**Env-валідація через Zod при старті** (fail-fast), rate limiting, helmet~~ — **зроблено в
+  AUTH-0** (2026-09-12): `config/env.schema.ts` в обох API, `@nestjs/throttler` на Valkey,
+  `helmet` у `app.setup.ts`. Лишається throttler у platform-api — див. §2.5.
 - **Тести:** Vitest для критичних фронтових флоу; уніфікація api-тестів Jest → Vitest (заодно
   прибере моки pg-boss/file-type через `moduleNameMapper`).
 
-### 2.7. Дозрівання деплою до справжнього проду — [deploy-swarm.md](deploy-swarm.md)
+### 2.7. Дозрівання деплою до справжнього проду — [deploy-swarm.md](deploy-swarm.md), [deploy-hetzner.md](deploy-hetzner.md)
 
-Зараз працює **тестовий прод**: усе по http на IP:port, прикладні секрети свідомо в репо.
-Що змінити перед реальним продом:
+Стенди два, обидва не «справжній прод»:
 
-- `docker/deploy.env` і `docker/seaweedfs/s3.prod.json` → CI Variables (Protected+Masked),
-  повернути в `.gitignore`;
-- reverse-proxy з TLS перед стеком: web/platform-web/S3 назад на `127.0.0.1`, для S3 **зберігати
-  Host** (він у SigV4-підписі), для `/socket.io` — `Upgrade`/`Connection` і idle timeout більший
-  за `pingInterval + pingTimeout`;
-- окремі prod-раннери і тег `deploy_prod` (зараз усе, включно з prod-job-ами, під `deploy_dev`);
+- **Hetzner** (GitHub Actions → self-hosted runner, деплой `main`, TLS через Caddy на `sslip.io`,
+  стек `saas-prod`) — це публічний показовий стенд, [deploy-hetzner.md](deploy-hetzner.md);
+- **GitLab/Swarm** (`saas-dev` у робочій мережі, деплой `dev`) — тестовий: по http на IP:port.
+  Prod-джоби GitLab свідомо вимкнені (`.prod_disabled`, `main` там лише проганяє `check`) —
+  не вмикати без прямої вказівки.
+
+Секрети **в git не лежать** (репозиторій публічний): `docker/deploy.env` і
+`docker/seaweedfs/s3.prod.json` у `.gitignore`, на Hetzner — `/etc/saas/deploy.env`, на GitLab —
+File-змінна `DEPLOY_ENV`. Що лишається зробити перед реальним продом:
+
+- окремі prod-раннери GitLab і тег `deploy_prod` (зараз усе під `deploy_dev`), якщо GitLab-прод
+  колись ввімкнуть;
 - Deploy Token (`read_registry`) замість job-token — потрібен, щойно нод стане більше однієї;
-- `deploy_prod` зняти з `when: manual`, коли піде реальний прод;
+- автоматичний гейт перед деплоєм: `verify` ручний з 2026-10-19 (рішення власника), тож `lint` і
+  `typecheck` не запускаються самі; дешевий офлайн-підмножина (`pnpm lint && pnpm typecheck`) на
+  push або `.husky/pre-push` повернула б границі модулів, ESLint-заборони й перевірку топології
+  (у `package.json` налаштовано `lint-staged`, а `.husky/pre-commit` немає);
 - регулярний бекап: `dump_db_prod` за розкладом + снапшот `${SAAS_DATA_DIR}` (postgres + seaweedfs
-  бекапити узгоджено).
+  бекапити узгоджено); зараз бекап ручний;
+- один вузол: `replicas: 1`, усе на manager.
 
 ### 2.8. Беклог MT-4 — [multi-tenancy-architecture.md](multi-tenancy-architecture.md)
 
@@ -237,22 +269,47 @@ OpenRouter + ZDR) з обліком токенів відповіді. Живи�
    §17). `ai-1d`/`ai-1e` реалізовано паралельно двома Orca-воркерами на спільній базовій
    гілці — мердж-конфлікти вийшли суто структурні.
 
-**Перегляд 2026-10-03:** наступний AI-2a відразу додає PostgreSQL 17 + `pgvector`.
-Проміжний результат AI-2a.2 — імпорт реального FMS Docs checkout і робочий
-векторний пошук по ньому; AI-2a.3 підключає відповіді `AiPanel` із цитатами,
-AI-2a.4 додає FTS у тому самому пошуку й оцінку якості. Ізоляція RLS
-закладається до першого імпорту. AI-2b додає
-керовані глобальні та tenant-документи,
-а також `settings.ai.enabled` на тенанта. AI-3 розвиває метрики/якість (частина
-потребує EDA-2); AI-4 резервується для окремо авторизованих read-only запитів до
-live-даних через доменні сервіси. Деталі, альтернативи й критерії переходу —
-[ai-assistant-retrieval-proposal.md](ai-assistant-retrieval-proposal.md); актуальна таблиця
-фаз — [ai-assistant.md](ai-assistant.md) §10. **Перший інкремент AI-2a.1 готовий:**
-PG17 + pgvector, bootstrap, tenant-таблиці, RLS та точний пошук за вектором.
-FMS preview також готовий: 141 бізнесовий документ / 553 чанки / 74 882 токени (тестовий профіль, усі статуси, без ru/engineering/workbench), без API-викликів.
-Наступне — embeddings/ingest → текстовий пошук. Детальний
-[технічний план і статус](ai-assistant-implementation-plan.md); чат ще використовує
-статичний корпус.
+**Перегляд 2026-10-03** (історія): AI-2a додав PostgreSQL 17 + `pgvector`, імпорт FMS-документації,
+відповіді `AiPanel` із цитатами (AI-2a.3) і FTS у тому самому пошуку з оцінкою якості (AI-2a.4) —
+**усе зроблено й заархівовано 2026-10-03**; чат читає знання з індексу за
+`AI_KNOWLEDGE_BACKEND=postgres`, статичний корпус лишається дефолтом і CI-базою. Фази AI-2b
+(керовані глобальні й tenant-документи), AI-3 (метрики/якість, частково залежить від EDA-2) і AI-4
+(read-only запити до live-даних через доменні сервіси) відкладено — див. курс вище. Деталі,
+альтернативи й критерії — [ai-assistant-retrieval-proposal.md](ai-assistant-retrieval-proposal.md);
+актуальна таблиця фаз — [ai-assistant.md](ai-assistant.md) §10; що саме збудовано —
+[ai-assistant-implementation.md](ai-assistant-implementation.md) §18–19 і
+[технічний план](ai-assistant-implementation-plan.md).
+
+Зміни OpenSpec `ai-5a-platform-ai-settings`, `ai-5b-cost-ledger`, `ai-5c-answer-eval` (усі задачі
+виконано) і `demo-2-auth-shell` ще лежать у `openspec/changes/`: перед архівацією треба перенести
+в `docs/` те, що лишається правдою з їхніх `design.md` (правило «promote before archiving»).
+
+### 2.11. Чат: що далі
+
+Збудовано: внутрішні розмови, канальне ядро, відповіді клієнтові, WhatsApp без вебхуків (3a),
+вебхуки Meta з підписом, розбором і квитанціями (3b1–3b2), «прочитано агентом» (3b3). Далі за
+[whatsapp-channel.md](whatsapp-channel.md) §6 і [chat.md](chat.md) §7.3: **CHAT-3c** (шаблони —
+синхронізація, вибір, змінні; здоровʼя каналу; згода/відписка; ідентичність за BSUID; `referral`;
+resume доставки), з 3b — індикатор набору й вихідні реакції, потім **CHAT-2c** (вкладення, операторські
+інструменти) і **CHAT-4**. Для `platform-web` уже є журнал нероутованих подій каналу
+(`operations/channel-events`).
+
+### 2.12. Техборг, знайдений архітектурними ревью
+
+Нічого з цього не блокує, але кожен пункт — місце, де заявлена гарантія тримається на дисципліні:
+
+- RLS-автоперевірка (`rls.e2e-spec.ts`) не дивиться на `relforcerowsecurity` і предикат політики;
+  список fail-closed-таблиць ручний. Звести до перевірки з каталога Postgres — тоді контракт нового
+  tenant-модуля (tickets/billing) перевіряється машиною;
+- немає drift-перевірки генерації: `openapi:generate` + `web:codegen` (обидві площини) і
+  `git diff --exit-code`; у tenant-клієнті лишились мертві моделі `jobs*`/`queueStats*`;
+- tenant-SPA віддається одним стартовим чанком (~2 МБ): маршрути `*.routes.tsx` імпортуються статично,
+  ледачого завантаження немає, хоча ESLint уже береже `*.nav.ts` від імпорту сторінок;
+- тема: немає тесту контракту (набір токенів у кожній `themes/*.css`, список палітр продубльований у двох
+  `index.html`), у `brand-backdrop.css` дубльований блок і мертві правила `auth-card`;
+- заборона голого `$transaction` (ESLint) не поширюється на `libs/shared`, де живуть tenant-провізіонери
+  та сервіси чату/каналів/AI;
+- `CalendarService.update`/`setAttendees` рахують diff до транзакції (відомий відкладений борг).
 
 ---
 

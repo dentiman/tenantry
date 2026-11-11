@@ -15,6 +15,7 @@
 - [Застосунки — розробка](#застосунки--розробка)
 - [Кодогенерація контрактів](#кодогенерація-контрактів)
 - [Корпус знань AI-асистента](#корпус-знань-ai-асистента)
+- [Чат і WhatsApp (dev-інструменти)](#чат-і-whatsapp-dev-інструменти)
 - [Якість коду](#якість-коду)
 - [Тести](#тести)
 - [Логи](#логи)
@@ -377,6 +378,48 @@ Eval відповідей (AI-5c): набір питань × файл конф�
 таблиця «якість × ціна відповіді», `summary.md` і `answers.json`. Пише лише журнал витрат
 (`kind = eval`); `--max-cost` обовʼязковий, якщо не `--fake`. Потребує ingest продукту в tenant-і й
 тарифів моделей. [Формат файлів і як читати звіт](ai-sources/README.md#eval-відповідей-pnpm-aianswerseval-ai-5c).
+
+## Чат і WhatsApp (dev-інструменти)
+
+Скрипти в `scripts/`. `chat:simulate` і `chat:connect-meta` ходять у запущений API під адміном
+(`--api`, `--email`, `--password`, `--tenant` перевизначають дефолти з `.env`/`.env.local`);
+`whatsapp:probe` ходить напряму в Meta Graph API. Секрети `WHATSAPP_*` беруться з кореневого `.env` і
+ніколи не друкуються. Опис фаз і потоків — [chat.md](chat.md), [whatsapp-channel.md](whatsapp-channel.md),
+[whatsapp-feature-flows.md](whatsapp-feature-flows.md).
+
+### `pnpm chat:simulate`
+
+```bash
+pnpm chat:simulate --text "Доброго дня" --from +380501234567 --name "Олена"
+pnpm chat:simulate --text "ще раз" --id sim-1            # той самий --id двічі = повтор доставки (дедуп)
+pnpm chat:simulate --status delivered --message <id>     # квитанція про вихідне: sent|delivered|read|failed
+```
+
+Симулятор вхідних клієнтських повідомлень (CHAT-2a/2b): гарантує fake-канал і шле підписане
+повідомлення на **публічний вебхук**, тож проходить увесь шлях як справжній провайдер. Потрібні
+`CHAT_DEV_TOOLS=true` і запущені `api` + `worker`.
+
+### `pnpm chat:connect-meta`
+
+```bash
+pnpm chat:connect-meta                       # підключити акаунт (або оновити токен), синхронізувати номери
+pnpm chat:connect-meta --send                # + розмова з WHATSAPP_TEST_RECIPIENT і шаблон hello_world/en_US
+pnpm chat:connect-meta --send --text "Привіт"  # + звичайний текст (лише коли вікно 24 год відкрите)
+```
+
+Повторювана жива перевірка WhatsApp (CHAT-3a): ті самі виклики API, що й екран налаштувань. Для
+`--send` потрібні запущені `api` + `worker`.
+
+### `pnpm whatsapp:probe`
+
+```bash
+pnpm whatsapp:probe                  # лише читання: debug_token, WABA, номери, підписки, шаблони
+pnpm whatsapp:probe --subscribe      # + підписка WABA з override_callback_uri (потрібен WEBHOOK_BASE_URL)
+pnpm whatsapp:probe --send           # + тестовий шаблон hello_world на WHATSAPP_TEST_RECIPIENT
+```
+
+Проба Cloud API на живому тестовому акаунті **поза продуктом** — довідка для рішень, а не частина
+застосунку (`whatsapp-feature-flows.md` §F0.5; результати — `whatsapp-research/live-probe-*.md`).
 
 ## Якість коду
 

@@ -17,7 +17,7 @@
 
 | Що шукали                                                                  | Знайдено                                                      |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `#hex`, `oklch(`, `rgb(`/`rgba(` у `.tsx`/`.ts` (`libs/ui`, обидва фронти) | **0**                                                         |
+| `#hex`, `oklch(`, `rgb(`/`rgba(` у `.tsx`/`.ts` (`libs/ui`, обидва фронти) | **0** у логіці екранів; `oklch` лишився лише там, де він виправданий: свотчі превʼю в `themes/registry.ts`, детермінований колір аватара (`lib/avatar-color.ts`), варіант `tinted` у `bubble.tsx` (зашита світлота — тема на нього не впливає), `alert.tsx` |
 | Сирі палітрові класи (`bg-slate-500`, `text-blue-600`, `bg-white`…)        | **0**                                                         |
 | Виняток                                                                    | `bg-black/10` × 3 — scrim у `dialog`, `sheet`, `alert-dialog` |
 
@@ -634,7 +634,7 @@ Orca одночасно) і тони календарної сітки. `--popov
 | `libs/ui/src/themes/registry.ts`                      | Реєстр тем: `id`, ключ назви, три свотчі превʼю (полотно / межа / primary), `DEFAULT_UI_THEME`, `isUiThemeId`, `getUiTheme`.                                   |
 | `libs/ui/src/themes/ui-theme-provider.tsx`            | `UiThemeProvider` — читає `localStorage`, ставить `document.documentElement.dataset.theme`, слухає `storage` (синхронізація вкладок); `useUiTheme()`.          |
 | `libs/ui/src/components/theme-select.tsx`             | Дропдаун вибору палітри: `DropdownMenuRadioGroup` зі свотчами.                                                                                                 |
-| `apps/web/index.html`                                 | Блокувальний скрипт: виставляє атрибут ДО першого малювання (дзеркало того, що `next-themes` робить для класу). Значення просіюється регуляркою, бо йде в DOM. |
+| `apps/web/index.html`, `apps/platform-web/index.html` | Блокувальний скрипт: виставляє атрибут ДО першого малювання (дзеркало того, що `next-themes` робить для класу). Значення просіюється **списком відомих палітр** (`['tenantry','gray']`) — дзеркало реєстру, яке ніщо не звіряє. |
 | `apps/web/src/main.tsx`                               | `<UiThemeProvider storageKey="saas_theme_palette">` усередині `ThemeProvider` next-themes.                                                                     |
 | `apps/web/src/features/account/pages/appearance.tsx`  | Другий рядок розділу: **Color theme** + `ThemeSelect` (перший лишається Theme + `ThemeSwitcher`).                                                              |
 | `apps/web/src/locales/en/{layout,user-settings}.json` | Ключі `theme.paletteLabel`, `theme.palettes.*`, `appearance.palette*`.                                                                                         |
@@ -642,14 +642,15 @@ Orca одночасно) і тони календарної сітки. `--popov
 Два контроли, а не один список: режим перемикають щодня (він у хедері), палітру обирають раз
 (вона в налаштуваннях). Злиті, вони дали б N×2 пунктів меню.
 
-`apps/platform-web` свідомо НЕ чіпали: там немає ні провайдера, ні скрипта, тож control plane
-лишається на дефолтній темі. Увімкнути = ті самі три рядки, але зі своїм ключем
-(`saas_platform_theme_palette`).
+`apps/platform-web` отримав те саме (`UiThemeProvider storageKey="saas_platform_theme_palette"` у
+`main.tsx`, блокувальний скрипт в `index.html`, `ThemeSelect` у `features/account/pages/appearance.tsx`,
+ключі `theme.palettes.*` у власному `layout.json`), тож палітру можна вибрати і в control plane.
 
 **Перевірено наживо** (dev-сервер, обидва режими): вибір у меню перемальовує сторінку миттєво,
 `localStorage` і `data-theme` збігаються, після F5 тема лишається (скрипт відпрацьовує до першого
-кадру — спалаху дефолтної теми немає), зняття атрибута повертає дефолт. Тестів на це немає —
-фронтових тестів у проєкті немає взагалі (відомий пробіл), тож нижче ручний чекліст.
+кадру — спалаху дефолтної теми немає), зняття атрибута повертає дефолт. Тестів **на теми** немає
+(у `libs/ui` Vitest є на логіку гріда, навігації й хуки, але контракт тем і паритет токенів не
+перевіряються), тож нижче ручний чекліст.
 
 ### Чекліст після зміни теми
 
@@ -665,8 +666,17 @@ Orca одночасно) і тони календарної сітки. `--popov
 2. Перевизначити ВСІ токени в обох блоках (світло + темрява), не забути `color-scheme`,
    три `--calendar-*` і трійку `--icon-strong` / `--icon` / `--icon-muted` (§1.3.2); `--event-*` НЕ оголошувати
    (§1.3.1).
-3. Додати `@import './themes/<id>.css';` у `styles.css` і рядок у `registry.ts`.
-4. Пройти чекліст із кроку 6.
+3. Додати `@import './themes/<id>.css';` у `styles.css` і рядок у `registry.ts` (разом із типом
+   `UiThemeId`).
+4. Додати `<id>` у список палітр блокувального скрипта в **обох** `index.html`
+   (`apps/web`, `apps/platform-web`) — інакше до гідратації сторінка малюється дефолтом (спалах).
+5. Додати ключ `theme.palettes.<id>` у `layout.json` обох фронтендів — інакше меню покаже сирий ключ.
+6. Пройти чекліст із розділу 4.
+
+Тобто тема — це не «три кроки», а CSS-файл плюс правки в шести місцях; автоматичної перевірки, що
+жодного не забули, немає. Базові токени, які теми перевизначають вибірково
+(`--raised-outline`, `--overlay-outline` у `styles.css`, `--glass-*`/`--auth-*` у `brand-backdrop.css`),
+в «повний набір» §2 не входять — дивись базу, перш ніж копіювати `gray.css`.
 
 Що варто тримати в голові, підбираючи значення: пари «поверхня + її foreground» мусять лишатися
 контрастними в обох режимах (`--primary` / `--primary-foreground`, `--success` / …); `--accent` —

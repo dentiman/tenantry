@@ -707,9 +707,8 @@ libs/ui/src/navigation/          механізм: defineArea/defineNavigation, 
 
 ## 8. Що далі
 
-- `/chat/$conversationId` і список розмов у `ChatSidebar` — з появою сутності розмови.
-  Реєстр `lib/entity-routes.ts` тоді дописується рядком, і сповіщення про нове
-  повідомлення веде прямо в розмову без змін шела.
+- ~~`/chat/$conversationId` і список розмов у `ChatSidebar`~~ — зроблено (chat, CHAT-0.1…):
+  розмова має власний маршрут, а `lib/entity-routes.ts` веде в неї із сповіщень і активностей.
 - Стенди інших примітивів у Playground: рядок у `playground-sidebar.tsx` + роут.
 - Назва тенанта (MT-4): бренд-плитка в шапці рейлу стає тригером дропдауна-перемикача.
 - Свідомо НЕ робимо: окремий стан згортання на кожну area (один cookie, як Cmd+B у
@@ -730,12 +729,14 @@ libs/ui/src/navigation/          механізм: defineArea/defineNavigation, 
 | Area              | Префікс          | У рейлі                      | Друга колонка             | Іконка      |
 | ----------------- | ---------------- | ----------------------------- | -------------------------- | ----------- |
 | **Tenants**       | `/tenants`       | так                            | `All tenants`               | `Building2` |
-| **Operations**    | `/operations`    | так                            | `Jobs` · `Queues`            | `Activity`  |
+| **Operations**    | `/operations`    | так                            | `Jobs` · `Queues` · `Channel events` | `Activity`  |
+| **AI**            | `/ai`            | так                            | `Settings` · `Costs` · `Prices`      | `Bot`       |
 | **User settings** | `/user-settings` | ні — з дропдауна аватара       | `Profile` · `Appearance`     | `UserCog`   |
 
 Рейл вимагає ≥2 area, інакше він декорація (саме тому в platform-web його довго
-не було) — Tenants (клієнти платформи) і Operations (машинерія системи) дають
-природну межу. Колонка Tenants має рівно один пункт — легально: контракт
+не було) — Tenants (клієнти платформи), Operations (машинерія системи) і AI (налаштування,
+витрати й тарифи моделі, AI-5) дають природну межу. `Channel events` — журнал вхідних подій
+каналу, які не вдалося привʼязати до жодного тенанта (`channel_unroutable_events`). Колонка Tenants має рівно один пункт — легально: контракт
 `Area.panel` — компонент або меню, а не обовʼязково підменю (те саме
 підтверджував порожній `ChatSidebar` у web); тут вона наповнюється на MT-4
 (оператори, сегменти тенантів). «Черги» переїхали з карток над таблицею джоб на
@@ -754,8 +755,8 @@ platform-web НЕМАЄ: суб'єкт контрол-плейну — сама 
 
 Файли шела platform-web (`src/app-shell/…`) — СКОПІЙОВАНІ з `apps/web`, не
 екстраговані в пакет: бренд (`ShieldCheck` замість `Layers`),
-футер (свій `useAuthStore` з `operator` замість `user`, logout без виклику API —
-`POST /auth/logout` у platform-api не існує), шапка колонки (тут немає
+футер (свій `useAuthStore` з `operator` замість `user`; вихід — `endSession()` з
+`POST /auth/logout` platform-api і перезавантаженням документа, як у tenant-web), шапка колонки (тут немає
 `GET /settings/bootstrap`, тож бренд статичний, без фолбека на назву тенанта).
 Так само народжувався сам `libs/ui` (UI-0): спершу два побайтово однакові
 набори, потім екстракція. Механізм навігації (реєстр area/пунктів, `AreaNav`, доступ) уже
@@ -768,8 +769,9 @@ platform-web НЕМАЄ: суб'єкт контрол-плейну — сама 
 
 Дзвінок сповіщень, presence/last-seen і стрічка активностей — tenant-фічі:
 `activities` живуть під RLS у tenant-плані, платформа їх не читає.
-Refresh-токен: у платформи access-токен (60m) напряму в localStorage без
-refresh-механіки (MT-3, свідомий trade-off). `/user-settings/profile` у
+Сесія оператора — дзеркало tenant-web (AUTH-2): access-токен (15 хв) лише в памʼяті,
+refresh — httpOnly-cookie `saas_platform_refresh` (`Path=/api/auth`) зі своїм секретом; до AUTH-2
+(MVP MT-3) токен жив у `localStorage` на 60 хв без refresh — цього більше немає. `/user-settings/profile` у
 platform-web — READ-ONLY (нема `PATCH` для `platform_users`), на відміну від
 форми в tenant-web.
 

@@ -565,8 +565,11 @@ model Customer {
 | [tenant-isolation.e2e-spec.ts](../apps/api/test/tenant-isolation.e2e-spec.ts) | Два реальні tenant-и через HTTP: список A не містить B; get/patch/delete чужого ID → 404 (не 403 — не палимо існування); зшитий/чужий JWT при авторитетній резолюції → 401; CLS-конкурентність (`runWith` A/B паралельно зі штучним чергуванням event loop) не перетікає; slug-login у B бачить лише B |
 | [platform.e2e-spec.ts](../apps/platform-api/test/platform.e2e-spec.ts)        | Operator auth, CRUD тенантів (create атомарно з admin-ом, дублікат slug → 409, невалідний slug → 400, suspend/resume), jobs-моніторинг, токен tenant-plane відхиляється platform-guard-ом                                                                                                              |
 
-Разом — 63 tenant e2e + 11 platform e2e, ганяються в CI одним пайплайном (`pnpm api:test:e2e`,
-`pnpm platform:test:e2e`), без окремого кроку на RLS — перевірка вшита в звичайний тестраннер.
+Разом — 49 tenant e2e-файлів + 6 platform (`pnpm api:test:e2e`, `pnpm platform:test:e2e`), без окремого
+кроку на RLS — перевірка вшита в звичайний тестраннер. Автоматично їх **не** ганяє жоден CI (рішення
+2026-10-19): гейт — `pnpm verify` (`scripts/ci-verify.sh`) локально перед пушем, у CI він лише ручна
+кнопка (`deploy-swarm.md` §6). Автоперевірка RLS дивиться на `rowsecurity` і наявність політики, але не
+на `relforcerowsecurity` і не на предикат — FORCE на новій таблиці тримається на міграції та рев'ю.
 
 ---
 

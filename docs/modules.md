@@ -1,6 +1,6 @@
 # Модулі, граф залежностей і реєстри фіч
 
-Стан на **2026-10-06**. Джерело правди про граф — `modules.config.ts` у корені; перевірка —
+Стан на **2026-11-11** (граф звірено з `modules.config.ts` і `pnpm modules:check --edges`). Джерело правди про граф — `modules.config.ts` у корені; перевірка —
 `pnpm modules:check` (`scripts/modules-check.ts`). Цей документ — **єдина** опора для питання
 «як тримати файли розвʼязаними»: що таке модуль, хто від кого залежить, як нижній модуль
 показує фічу вище без імпорту, що лишається центральним і чому. Правило нового коду — §5 і §8.
@@ -29,7 +29,7 @@
 | `infra`    | `infra` — БД, UI-кит, i18n, помилки, конфіг                                                                                                         | усі, **без декларації**          |
 | `platform` | `app`, `auth`, `account`, `users`, `settings`, `files`, `notifications`, `activities`, `realtime`, `messaging`, `numbering`, `tenants`, `dashboard` | `core`, `feature`, інші platform |
 | `core`     | `customers`                                                                                                                                         | `feature`                        |
-| `feature`  | `calendar`, `chat`, `ai`, `guide`, `playground`                                                                                                     | лише composition roots           |
+| `feature`  | `calendar`, `chat`, `ai`, `guide`, `playground`, `invoices-demo`                                                                                    | лише composition roots           |
 
 Правила, які перевіряє `modules:check` ще до аналізу коду:
 
@@ -43,7 +43,8 @@
   граф описує код, а не наміри.
 
 `dashboard` — platform, бо стартовий екран є в кожному форку; його віджети приходять від фіч.
-`guide` і `playground` — демо-фічі UI-кіту, форк їх зазвичай прибирає першими.
+`guide`, `playground` і `invoices-demo` — демо-фічі (UI-кіт, показ клієнтам), форк їх зазвичай
+прибирає першими; `invoices-demo` — лише фронтенд на фейкових даних, без бекенду, видаляється текою.
 
 ## 3. Граф
 
@@ -56,6 +57,8 @@ flowchart TB
     chat
     ai
     playground
+    guide
+    invoices-demo
   end
   subgraph core
     customers
@@ -71,20 +74,24 @@ flowchart TB
     realtime
     messaging
     numbering
+    tenants
+    dashboard
   end
   calendar --> customers
-  calendar --> users & settings & notifications & activities & realtime & auth
-  chat --> users & files & realtime & auth & customers & messaging & settings
+  calendar --> users & settings & notifications & activities & realtime & auth & app & dashboard
+  chat --> users & files & realtime & auth & customers & messaging & settings & activities & notifications & tenants & app
   ai --> settings & realtime & messaging & auth & app
   playground --> users & app
-  customers --> users & settings & notifications & activities & numbering & auth
+  guide --> app & auth
+  invoices-demo --> customers & app
+  customers --> users & settings & notifications & activities & numbering & auth & app
 ```
 
 Що з цього випливає для форку:
 
 - **Прибрати `calendar`, `chat` чи `ai`** — жоден модуль їх не імпортує; що лишилося звʼязаним
   без імпорту (рядки, Prisma, рядок у схемі bootstrap) — §6.
-- **Прибрати `customers`** — тягне `calendar`. Ребро `calendar → customers` мʼяке: привʼязка
+- **Прибрати `customers`** — тягне `calendar`, `chat` (привʼязка розмов до клієнта) та `invoices-demo`. Ребро `calendar → customers` мʼяке: привʼязка
   події до клієнта необовʼязкова (`calendar_events.customer_id` nullable, `SetNull`), тож
   можна або прибрати календар, або відрізати від нього вибір клієнта.
 
@@ -403,7 +410,12 @@ export default defineNavigation({
 4. Типи сповіщень, активностей, події сокета, тексти — у файлах модуля за суфіксами §5;
    у root-и додається один рядок (§7).
 5. Фронтенд: `features/<модуль>/` із `<модуль>.routes.tsx`; у `router.tsx` — рядок
-   `addChildren`, у `slot-fills.ts` — внески в слоти.
+   `addChildren`, у `slot-fills.ts` — внески в слоти. Поза папкою модуля торкаєшся ще (перелік
+   ручний, `modules:check` його не бачить): неймспейс i18n — JSON у `src/locales/en/` (або поруч
+   із фічею, як `invoices-demo`) і рядок у `i18n/namespaces.ts` (з нього ж `tsc` виводить типи ключів
+   `t()`, `i18n/i18next-types.ts`); `init<X>Sync` у `main.tsx`, якщо фіча слухає сокет; посилання
+   на сутність із стрічки активностей — `lib/entity-routes.ts`; пункти меню — `<модуль>.nav.ts`.
+   Для platform-web — той самий набір у `apps/platform-web/src/`.
 6. Таблиці — окремий файл `libs/database/prisma/schema/<модуль>.prisma`; back-relations у
    `Tenant` / `User` — у групі з коментарем-назвою модуля. Міграції — одна лінійна історія в
    `prisma/migrations/`.

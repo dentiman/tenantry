@@ -4,7 +4,7 @@
 його продовжувати». Звідки брати новий компонент — `ui-registry.md`; як ми до цього стану
 дійшли — `ui-migration-history.md`.
 
-Стан на 2026-08-26. Обидва фронти (`apps/web`, `apps/platform-web`) на одному стеку;
+Стан на 2026-11-11 (теми, шкала висот і осі картки — розділи 3 і 4; історія — `ui-migration-history.md`). Обидва фронти (`apps/web`, `apps/platform-web`) на одному стеку;
 спільний код — у `libs/ui`.
 
 ---
@@ -37,7 +37,11 @@ Source-only workspace-пакет `@saas-skeleton/ui` (той самий тип, 
 
 ```
 libs/ui/src/
-  styles.css                  ЄДИНА тема обох фронтів (:root/.dark, @theme inline, @layer base)
+  styles.css                  міст @theme inline (токен → утиліта Tailwind), @layer base, шкала висот; імпортує теми
+  themes/<id>.css             палітри (tenantry — дефолт, gray): кожна з власним світлим і темним режимом
+  themes/registry.ts          реєстр тем; ui-theme-provider.tsx — вибір палітри (data-theme)
+  card-surface.css            осі <Card>: fill / tone / border / edge / radius / elevation
+  brand-backdrop.css          брендовий фон і скляний шел (/guide, вхід) — brand-backdrop.md
   components/ui/**            вендорені примітиви реєстру (33)
   components/data-grid/**     грід (generic по TFilters/TItem)
   components/form/**          FormTextField/FormPasswordField/FormSelect + server-error
@@ -92,29 +96,35 @@ vite не читає tsconfig paths.
 
 ## 3. Тема
 
-Одна на обидва фронти — `libs/ui/src/styles.css`. Палітра перенесена з
-[HeroUI v3](https://github.com/heroui-inc/heroui/blob/v3/packages/styles/themes/default/variables.css)
-у семантичну структуру shadcn. Ми не підключаємо HeroUI і не копіюємо його компонентні
-рецепти: беремо лише модель canvas → surface → overlay, zinc-нейтралі, слабкі межі та
-багатошарові тіні. У `components.json` лишається `baseColor: "neutral"`: це метадані
-генератора, а не назва runtime-теми; фактичну палітру задають CSS-токени.
+Тем кілька, вони живуть у `libs/ui/src/themes/<id>.css` і спільні для обох фронтів. Дві незалежні
+осі: **режим** (клас `.dark`, `next-themes`) і **палітра** (атрибут `data-theme`, `UiThemeProvider`).
+Дефолт — `tenantry` (з 2026-11-08; до того `gray`): світло — холодна шкала slate з акцентом blue-600,
+темрява — палітра інтерфейсу Orca. Друга палітра — `gray` (теплі zinc-нейтралі, темний Notion).
+Модель, контракт селекторів, шкала висот і як додати тему — [theming.md](theming.md); цей розділ
+не дублює їхні значення. `styles.css` лишається мостом `@theme inline` (ім'я токена → утиліта
+Tailwind) і базовими шарами, а не єдиною темою.
 
-| Параметр    | Значення                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------- |
-| Нейтралі    | zinc, hue ≈ 286, chroma 0…0.014 — майже ахроматичні, без синьої «сталі»                           |
-| Світла тема | canvas `oklch(0.9702 0 0)`; card/popover/fields білі; поля мають мʼяку тінь і видиму zinc-обводку |
-| Темна тема  | сирий чорний canvas `oklch(0.12 0.005 285.823)`; card/popover `oklch(0.2103 0.0059 285.89)`       |
-| `--radius`  | `0.625rem`                                                                                        |
-| Тіні        | HeroUI-подібні: слабка `surface` для полів/панелей, глибша `overlay`; у dark без зовнішнього glow |
-| Шрифт       | Inter (`@fontsource-variable/inter`)                                                              |
-| Перемикач   | `attribute="class"`; storageKey `saas_theme` / `saas_platform_theme`                              |
+Палітра `gray` свого часу перенесена з
+[HeroUI v3](https://github.com/heroui-inc/heroui/blob/v3/packages/styles/themes/default/variables.css)
+у семантичну структуру shadcn. Ми не підключаємо HeroUI і не копіюємо його компонентні рецепти:
+беремо лише модель canvas → surface → overlay, слабкі межі та багатошарові тіні. У `components.json`
+лишається `baseColor: "neutral"`: це метадані генератора, а не назва runtime-теми.
+
+| Параметр       | Значення                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| Палітри        | `tenantry` (дефолт), `gray` — `themes/registry.ts`; вибір зберігається в `localStorage`              |
+| `--radius`     | `0.625rem`                                                                                           |
+| Висота         | чотири ролі: `surface → raised → overlay → modal`; утиліти `shadow-*` перенаправлені на токени теми  |
+| Шрифт          | Inter (`@fontsource-variable/inter`)                                                                 |
+| Перемикач      | режим: `attribute="class"`, `saas_theme` / `saas_platform_theme`; палітра: `saas_theme_palette` / `saas_platform_theme_palette` |
 
 ### Три свідомі відхилення від стоку
 
 Зафіксовані рішенням користувача — **не переглядати без запиту**:
 
-1. **`--primary` (і `--ring`) — точний accent HeroUI v3.** В обох темах
-   `oklch(0.6204 0.195 253.83)` із `oklch(0.9911 0 0)` foreground. Destructive також бере
+1. **`--primary` (і `--ring`) — точний accent HeroUI v3 у палітрі `gray`.** Там в обох режимах
+   `oklch(0.6204 0.195 253.83)` із `oklch(0.9911 0 0)` foreground (у `tenantry` — власний blue-600,
+   див. `theming.md`). Destructive також бере
    точні HeroUI danger-пари: `oklch(0.6532 0.2328 25.74)` у light і
    `oklch(0.594 0.1967 24.63)` у dark. Hover обчислюється так само, як у HeroUI:
    90% semantic color + 10% його foreground. Фокус синій, бо `--ring` = `--primary`.
@@ -186,7 +196,7 @@ vite не читає tsconfig paths.
 | Фон сторінки                                           | `bg-background`                                                                                                                                                                                                                                                                       |
 | Сайдбар                                                | `bg-sidebar` (+ `--sidebar-border` / `--sidebar-accent`)                                                                                                                                                                                                                              |
 | Хедер                                                  | `bg-background` + `border-b`                                                                                                                                                                                                                                                          |
-| Контентна картка                                       | `bg-card text-card-foreground shadow-sm` без зовнішнього border                                                                                                                                                                                                                       |
+| Контентна картка                                       | `<Card>` з осями `fill`/`tone`/`border`/`elevation` (`card-surface.css`): заливка й контур-накладка, тінь лише коли обрано `elevation` — не `shadow-sm` у класах                                                                                                                                                                                                                       |
 | Спливна поверхня (попап/діалог/драйвер/тост)           | `bg-popover text-popover-foreground`                                                                                                                                                                                                                                                  |
 | Поверхня наведення                                     | `hover:bg-accent` — **`accent` це НЕ бренд** (бренд це `primary`) і НЕ поверхня: з 2026-09-08 це ПРОЗОРА накладка, тому однаково читається на полотні, сайдбарі, картці й попапі                                                                                                      |
 | Вибраний / активний стан                               | **той самий `bg-accent`, що й наведення** — стан показує ЗНАК (`text-icon-strong`), а не другий відтінок фону. Окремого «сильнішого» токена в темі немає навмисно                                                                                                                     |
@@ -647,7 +657,6 @@ foreground світлий, тож панель виходить трохи св�
 | `default` | **3%**             | **8%**            | **15%** |
 | `muted`   | 7%                 | 7%                | 11%     |
 | `subtle`  | 7%                 | 7%                | 7%      |
-| `subtle`  | 7%                 | 7%                |
 
 Слабші ступені лишились на своїх відсотках навмисно: їхня заливка тьмяніша, і там ті самі
 значення читаються рівно так, як треба.
@@ -704,7 +713,8 @@ foreground світлий, тож панель виходить трохи св�
 рівно ту помилку, яку стенд має пояснювати.
 
 Окремо лишається **feature tile** — не примітив, а власний CSS із кольоровим сяйвом і
-градієнтною hairline. Тепер він один: `[data-slot='auth-card']` (сторінки входу). Плитка
+градієнтною hairline. Тепер він один — картка входу; з 2026-11-10 це вже не окремий різновид, а звичайна
+`<Card fill="muted" elevation="raised" data-auth-card>`, яку доточує `[data-auth-card]` у `brand-backdrop.css` (`brand-backdrop.md` §7.2). Старі правила `[data-slot='auth-card']` лишились у CSS як мертві. Плитка
 Product tour на дашборді була другим таким блоком і **знята** — рішення користувача
 2026-11-07: замість трьох рухомих плям, вуалі й градієнтної рамки там звичайна
 `<Card tone="warning">`. Тон несе ту саму думку («подивись сюди»), а теплим лишилось те, що й
@@ -924,6 +934,12 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 
 ## 6. Локальні правки вендореного коду
 
+> **Таблиця нижче — не повний реєстр.** Місць із міткою «ЛОКАЛЬНА ПРАВКА реєстру» понад п'ятдесят у
+> ~28 файлах; частини немає ні в §6, ні в §6.1 (зокрема `bubble.tsx`, `message-scroller.tsx`, кільця
+> `--overlay-outline`, `shadow-md` у `toast.tsx` і `dropdown-menu.tsx`, `bg-dialog` у `dialog.tsx`,
+> `alert-dialog.tsx`, `sheet.tsx`). Джерело правди — `grep -rn "ЛОКАЛЬНА ПРАВКА реєстру" libs/ui/src`;
+> цю таблицю читай як пояснення причин, а не як перелік для `shadcn diff`.
+
 Точкові плюс одна наскрізна. Усі позначені коментарем «ЛОКАЛЬНА ПРАВКА реєстру».
 
 | Файл                                | Правка                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -942,7 +958,7 @@ pnpm dlx shadcn@4.19.0 add @shadcn/<block> --dry-run
 | `ui/switch.tsx`                     | тонкий primary-blue focus `ring-1`; error-state зберігає `ring-2`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `ui/tabs.tsx`                       | HeroUI-семантика (neutral жолоб `bg-accent` як прозора накладка, `--segment` для активного) і **`size="sm"`** — у стоку розмір один; заведений, коли таби переїхали в хедер шела: жолоб 32px під метрику зони дій, тригер підбирає типографіку `Button size="sm"` через `group-data-[size=sm]/tabs-list:`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `ui/tabs.tsx`                       | HeroUI neutral list, muted inactive text, окрема `segment`-поверхня active tab і primary indicator у `line`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `ui/card.tsx`                       | HeroUI `surface-shadow` без зовнішнього border; стокові spacing, size та композиція частин                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `ui/card.tsx`                       | оси `fill`/`tone`/`border`/`edge`/`radius`/`elevation` на data-атрибутах (правила — `card-surface.css`, вигляд — токени теми); стокові spacing, size та композиція частин; `radius` частково повз `--card-radius`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `ui/select.tsx`                     | `alignItemWithTrigger: false` — попап відкривається ПІД тригером, а не накриває його; `align="start"`; ширина `min-w-(--anchor-width)`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `ui/input.tsx`                      | глушник autofill + скидання `::-webkit-search-cancel-button`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `ui/calendar.tsx`                   | знято `bg-background` з кореня — сітка прозора і бере поверхню споживача; разом із фоном пішли й обидва гасіння (`in-data-[slot=card-content]`, `in-data-[slot=popover-content]`), бо без нього це мертвий код                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
