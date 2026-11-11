@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
+import { LazyBoundary, PanelPending } from '@saas-skeleton/ui/components/route-fallbacks';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import { useSettingsBootstrap } from '../api/generated/api';
@@ -81,7 +82,13 @@ export function AreaSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {area.panel === 'menu' ? <AreaNav areaId={area.id} /> : <area.panel />}
+        {area.panel === 'menu' ? (
+          <AreaNav areaId={area.id} />
+        ) : (
+          <LazyBoundary fallback={<PanelPending />}>
+            <area.panel />
+          </LazyBoundary>
+        )}
       </SidebarContent>
     </Sidebar>
   );

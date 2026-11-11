@@ -1,10 +1,13 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { AiCostStatusSchema, AiUsageKindSchema } from '@saas-skeleton/contracts/platform';
 import { appRoute } from '../../app-shell/app.routes';
-import { AiSettingsPage } from './pages/ai-settings';
-import { AiCostsPage } from './pages/ai-costs';
-import { AiPricesPage } from './pages/ai-prices';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const AiSettingsPage = lazyPage(() => import('./pages/ai-settings'), 'AiSettingsPage');
+const AiCostsPage = lazyPage(() => import('./pages/ai-costs'), 'AiCostsPage');
+const AiPricesPage = lazyPage(() => import('./pages/ai-prices'), 'AiPricesPage');
 
 /** Area «AI» — налаштування асистента платформи (AI-5a). Layout-роут без компонента */
 export const aiRoute = createRoute({

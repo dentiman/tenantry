@@ -1,18 +1,51 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
-import { PlaygroundPage } from './pages/playground';
-import { PlaygroundCardsPage } from './pages/playground-cards';
-import { PlaygroundComboboxPage } from './pages/playground-combobox';
-import { PlaygroundDataGridPage } from './pages/playground-data-grid';
-import { PlaygroundDialogPage } from './pages/playground-dialog';
-import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
-import { PlaygroundInputPage } from './pages/playground-input';
-import { PlaygroundSelectPage } from './pages/playground-select';
-import { PlaygroundTabsPage } from './pages/playground-tabs';
-import { PlaygroundTextareaPage } from './pages/playground-textarea';
-import { PlaygroundUserSelectPage } from './pages/playground-user-select';
-import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PLAYGROUND_ENABLED } from './playground.flag';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const PlaygroundPage = lazyPage(() => import('./pages/playground'), 'PlaygroundPage');
+const PlaygroundCardsPage = lazyPage(
+  () => import('./pages/playground-cards'),
+  'PlaygroundCardsPage',
+);
+const PlaygroundComboboxPage = lazyPage(
+  () => import('./pages/playground-combobox'),
+  'PlaygroundComboboxPage',
+);
+const PlaygroundDataGridPage = lazyPage(
+  () => import('./pages/playground-data-grid'),
+  'PlaygroundDataGridPage',
+);
+const PlaygroundDialogPage = lazyPage(
+  () => import('./pages/playground-dialog'),
+  'PlaygroundDialogPage',
+);
+const PlaygroundInlineFormPage = lazyPage(
+  () => import('./pages/playground-inline-form'),
+  'PlaygroundInlineFormPage',
+);
+const PlaygroundInputPage = lazyPage(
+  () => import('./pages/playground-input'),
+  'PlaygroundInputPage',
+);
+const PlaygroundSelectPage = lazyPage(
+  () => import('./pages/playground-select'),
+  'PlaygroundSelectPage',
+);
+const PlaygroundTabsPage = lazyPage(() => import('./pages/playground-tabs'), 'PlaygroundTabsPage');
+const PlaygroundTextareaPage = lazyPage(
+  () => import('./pages/playground-textarea'),
+  'PlaygroundTextareaPage',
+);
+const PlaygroundUserSelectPage = lazyPage(
+  () => import('./pages/playground-user-select'),
+  'PlaygroundUserSelectPage',
+);
+const PlaygroundVerticalFormPage = lazyPage(
+  () => import('./pages/playground-vertical-form'),
+  'PlaygroundVerticalFormPage',
+);
 
 /**
  * Area «Playground» — візуальні стенди примітивів UI. Layout + index: стенд

@@ -1,9 +1,24 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
-import { UserSettingsAccountPage } from './pages/account';
-import { UserSettingsAppearancePage } from './pages/appearance';
-import { UserSettingsProfilePage } from './pages/profile';
-import { UserSettingsSecurityPage } from './pages/security';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const UserSettingsAccountPage = lazyPage(
+  () => import('./pages/account'),
+  'UserSettingsAccountPage',
+);
+const UserSettingsAppearancePage = lazyPage(
+  () => import('./pages/appearance'),
+  'UserSettingsAppearancePage',
+);
+const UserSettingsProfilePage = lazyPage(
+  () => import('./pages/profile'),
+  'UserSettingsProfilePage',
+);
+const UserSettingsSecurityPage = lazyPage(
+  () => import('./pages/security'),
+  'UserSettingsSecurityPage',
+);
 
 /**
  * ОСОБИСТІ налаштування — area без пункту в рейлі: вхід із дропдауна аватара, бо

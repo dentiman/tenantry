@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, type ComponentType, type ReactNode } from 'react';
+import { LazyBoundary } from '@saas-skeleton/ui/components/route-fallbacks';
 
 /**
  * Слоти — звʼязок угору по графу модулів без імпорту (docs/modules.md §4).
@@ -68,13 +69,19 @@ export function useSlotFills<P extends object>(
   }));
 }
 
-/** Рендерить усі внески слота поспіль з однаковими пропсами */
+/**
+ * Рендерить усі внески слота поспіль з однаковими пропсами. Кожен внесок у власній
+ * `LazyBoundary`: внесок може бути ледачим (`lazyComponent` у `slot-fills.ts`), і до готовності
+ * його чанка слот просто порожній, а провал чанка прибирає лише цей внесок, не сторінку.
+ */
 export function SlotOutlet<P extends object>({ slot, props }: { slot: Slot<P>; props: P }) {
   const fills = useSlotFills(slot);
   return (
     <>
       {fills.map(({ id, Component }) => (
-        <Component key={id} {...props} />
+        <LazyBoundary key={id}>
+          <Component {...props} />
+        </LazyBoundary>
       ))}
     </>
   );

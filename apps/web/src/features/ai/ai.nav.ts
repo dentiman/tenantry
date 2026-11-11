@@ -2,7 +2,10 @@ import { linkOptions } from '@tanstack/react-router';
 import { SparklesIcon } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
 import { settingsArea } from '../settings/settings.nav';
-import { AssistantSidebar } from './assistant-sidebar';
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
+
+/** Друга колонка — окремий чанк: в головний чанк area лишає лише метадані (docs/frontend/lazy-loading.md) */
+const AssistantSidebar = lazyComponent(() => import('./assistant-sidebar'), 'AssistantSidebar');
 
 /**
  * Сторінка асистента. Друга колонка — історія розмов, тобто компонент, а не меню

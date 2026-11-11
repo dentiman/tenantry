@@ -1,7 +1,10 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute, rootRoute } from '../../app-shell/app.routes';
-import { AboutPage } from './pages/about';
-import { GuidePage } from './pages/guide';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const AboutPage = lazyPage(() => import('./pages/about'), 'AboutPage');
+const GuidePage = lazyPage(() => import('./pages/guide'), 'GuidePage');
 
 /**
  * Area «Guide» — путівник по продукту. Одна сторінка без дочірніх роутів:

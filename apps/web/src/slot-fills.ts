@@ -1,12 +1,28 @@
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
 import { fillSlot, type SlotFill } from './lib/slots';
 import { shellHeaderActions, shellSidePanels } from './app-shell/slots';
 import { dashboardWidgets } from './features/dashboard/components/slots';
 import { customerOverviewCards } from './features/customers/customer-detail-slots';
 import { AiHeaderAction, AiSidePanel } from './features/ai/components/ai-shell-fills';
-import { DashboardAgendaWidget } from './features/calendar/components/dashboard-agenda-widget';
-import { CustomerEventsCard } from './features/calendar/components/customer-events-card';
-import { DashboardActivityWidget } from './features/activities/components/dashboard-activity-widget';
-import { GuideTourWidget } from './features/guide/components/guide-tour-widget';
+
+// Внески — ледачі (docs/frontend/lazy-loading.md): компонент фічі не потрапляє в головний чанк,
+// а слот-хост малює його, коли чанк підвантажився (`SlotOutlet` → `LazyBoundary`).
+const GuideTourWidget = lazyComponent(
+  () => import('./features/guide/components/guide-tour-widget'),
+  'GuideTourWidget',
+);
+const DashboardAgendaWidget = lazyComponent(
+  () => import('./features/calendar/components/dashboard-agenda-widget'),
+  'DashboardAgendaWidget',
+);
+const CustomerEventsCard = lazyComponent(
+  () => import('./features/calendar/components/customer-events-card'),
+  'CustomerEventsCard',
+);
+const DashboardActivityWidget = lazyComponent(
+  () => import('./features/activities/components/dashboard-activity-widget'),
+  'DashboardActivityWidget',
+);
 
 /**
  * Composition root слотів (docs/modules.md §4–§5): ЄДИНЕ місце, що знає, яка фіча

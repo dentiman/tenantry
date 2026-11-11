@@ -1,9 +1,12 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { JobQuerySchema } from '@saas-skeleton/contracts';
 import { appRoute } from '../../app-shell/app.routes';
-import { JobsPage } from './pages/jobs';
-import { QueuesPage } from './pages/queues';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const JobsPage = lazyPage(() => import('./pages/jobs'), 'JobsPage');
+const QueuesPage = lazyPage(() => import('./pages/queues'), 'QueuesPage');
 
 /**
  * Area «Operations» — машинерія системи (моніторинг черг). Layout-роут без

@@ -1,6 +1,12 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { settingsRoute } from '../settings/settings.routes';
-import { SettingsActivityPage } from './pages/settings-activity';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const SettingsActivityPage = lazyPage(
+  () => import('./pages/settings-activity'),
+  'SettingsActivityPage',
+);
 
 export const settingsActivityRoute = createRoute({
   getParentRoute: () => settingsRoute,

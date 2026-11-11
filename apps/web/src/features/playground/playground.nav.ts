@@ -1,8 +1,11 @@
 import { linkOptions } from '@tanstack/react-router';
 import { AlignLeftIcon, Blocks, PanelTopIcon, RectangleHorizontalIcon } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
-import { PlaygroundSidebar } from './playground-sidebar';
 import { PLAYGROUND_ENABLED } from './playground.flag';
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
+
+/** Друга колонка — окремий чанк: в головний чанк area лишає лише метадані (docs/frontend/lazy-loading.md) */
+const PlaygroundSidebar = lazyComponent(() => import('./playground-sidebar'), 'PlaygroundSidebar');
 
 export const playgroundArea = defineArea({
   id: 'playground',
