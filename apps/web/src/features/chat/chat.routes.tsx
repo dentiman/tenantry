@@ -1,9 +1,18 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
 import { settingsRoute } from '../settings/settings.routes';
-import { ChatPage } from './pages/chat';
-import { ChatConversationPage } from './pages/chat-conversation';
-import { MessagingSettingsPage } from './pages/messaging-settings';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const ChatPage = lazyPage(() => import('./pages/chat'), 'ChatPage');
+const ChatConversationPage = lazyPage(
+  () => import('./pages/chat-conversation'),
+  'ChatConversationPage',
+);
+const MessagingSettingsPage = lazyPage(
+  () => import('./pages/messaging-settings'),
+  'MessagingSettingsPage',
+);
 
 /**
  * Area «Chat». Layout + index, як і задумувалось: index лишається станом

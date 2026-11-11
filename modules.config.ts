@@ -70,6 +70,8 @@ export const MODULES = {
       'apps/web/src/lib/entity-routes.ts',
       'apps/web/src/lib/build-info.ts',
       'apps/web/src/lib/query-client.ts',
+      'apps/web/src/lib/error-reporting.ts',
+      'apps/platform-web/src/lib/error-reporting.ts',
       'apps/platform-web/src/components/section/',
     ],
   },

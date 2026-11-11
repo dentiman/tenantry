@@ -3,13 +3,23 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from 'lucide-react';
 import { buttonVariants } from '@saas-skeleton/ui/components/ui/button';
+import { LazyBoundary } from '@saas-skeleton/ui/components/route-fallbacks';
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
 import { ContextPanelPortal } from '@saas-skeleton/ui/components/context-panel-slot';
 import { AgendaList } from './agenda-list';
-import { EventPanel, type EventPanelTarget } from './event-panel';
+import type { EventPanelTarget } from './event-panel';
 import { useCalendarPreferences } from './use-calendar-preferences';
 import { EventDeleteDialog, useEventIntents } from './use-event-intents';
 import { defaultCreateStart, todayKey } from '../lib/calendar-date';
 import { DashboardWidget } from '../../dashboard/components/widget';
+
+/**
+ * Панель події — форма з date-picker, combobox-ами, вибором гостей: найважча частина календаря, а
+ * на дашборді потрібна лише коли людина відкрила чи створює подію. Окремий чанк, інакше кожен
+ * візит на дашборд (найчастіша точка входу) тягнув би її разом з агендою
+ * (docs/frontend/lazy-loading.md §2, правило про «важкий компонент усередині сторінки»).
+ */
+const EventPanel = lazyComponent(() => import('./event-panel'), 'EventPanel');
 
 /**
  * «Найближчі події» на дашборді — внесок календаря в слот `dashboardWidgets`
@@ -98,16 +108,18 @@ export function DashboardAgendaWidget() {
           дашборд лишається на екрані, поки поруч відкрита подія */}
       {target !== null && (
         <ContextPanelPortal contentKey={target.event?.id ?? 'draft'} label="DashboardAgendaWidget">
-          <EventPanel
-            target={target}
-            timeZone={timeZone}
-            weekStartsOn={preferences.weekStartsOn}
-            defaultDurationMinutes={preferences.defaultEventDurationMinutes}
-            defaultReminderMinutes={preferences.defaultReminderMinutes}
-            onClose={() => {
-              setTarget(null);
-            }}
-          />
+          <LazyBoundary name="calendar:event-panel">
+            <EventPanel
+              target={target}
+              timeZone={timeZone}
+              weekStartsOn={preferences.weekStartsOn}
+              defaultDurationMinutes={preferences.defaultEventDurationMinutes}
+              defaultReminderMinutes={preferences.defaultReminderMinutes}
+              onClose={() => {
+                setTarget(null);
+              }}
+            />
+          </LazyBoundary>
         </ContextPanelPortal>
       )}
     </DashboardWidget>

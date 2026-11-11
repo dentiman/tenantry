@@ -2,7 +2,10 @@ import { linkOptions } from '@tanstack/react-router';
 import { MessageSquareShare, MessagesSquare } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
 import { settingsArea } from '../settings/settings.nav';
-import { ChatSidebar } from './chat-sidebar';
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
+
+/** Друга колонка — окремий чанк: в головний чанк area лишає лише метадані (docs/frontend/lazy-loading.md) */
+const ChatSidebar = lazyComponent(() => import('./chat-sidebar'), 'ChatSidebar');
 
 export const chatArea = defineArea({
   id: 'chat',

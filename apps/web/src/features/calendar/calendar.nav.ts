@@ -3,7 +3,10 @@ import { CalendarCog, CalendarDays } from 'lucide-react';
 import { defineArea, defineNavigation } from '@saas-skeleton/ui/navigation';
 import { customerDetailMenu } from '../customers/customers.nav';
 import { settingsArea } from '../settings/settings.nav';
-import { CalendarSidebar } from './calendar-sidebar';
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
+
+/** Друга колонка — окремий чанк: в головний чанк area лишає лише метадані (docs/frontend/lazy-loading.md) */
+const CalendarSidebar = lazyComponent(() => import('./calendar-sidebar'), 'CalendarSidebar');
 
 /**
  * Календар — власна area, а не пункт у Workspace: у нього своя друга колонка (міні-місяць, а не

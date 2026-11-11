@@ -22,6 +22,7 @@ import { createAppQueryClient } from './lib/query-client';
 import { SlotsProvider } from './lib/slots';
 import { NAVIGATION } from './nav';
 import { SLOT_FILLS } from './slot-fills';
+import { initErrorReporting } from './lib/error-reporting';
 import './i18n';
 import './index.css';
 
@@ -61,6 +62,9 @@ function AppNavProvider({ children }: { children: ReactNode }) {
 }
 
 async function bootstrap(): Promise<void> {
+  // Збирач помилок — до всього іншого, щоб перша ж помилка не загубилась (lib/error-reporting.ts)
+  initErrorReporting();
+
   // Сесія відновлюється до першого рендера — guards бачать актуальний стан
   await initAuth();
 

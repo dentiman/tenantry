@@ -11,6 +11,7 @@ import { router } from './router';
 import { initAuth } from './features/auth/lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { showApiErrorToast } from '@saas-skeleton/ui/lib/error-toast';
+import { initErrorReporting } from './lib/error-reporting';
 import './i18n';
 import './index.css';
 
@@ -35,6 +36,9 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap(): Promise<void> {
+  // Збирач помилок — до всього іншого, щоб перша ж помилка не загубилась (lib/error-reporting.ts)
+  initErrorReporting();
+
   // Сесія відновлюється до першого рендера — guards бачать актуальний стан
   await initAuth();
 

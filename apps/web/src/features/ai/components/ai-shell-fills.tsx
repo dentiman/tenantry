@@ -1,9 +1,12 @@
+import { lazyComponent } from '@saas-skeleton/ui/lib/lazy';
 import { useActiveArea } from '@saas-skeleton/ui/navigation';
 import { assistantArea } from '../ai.nav';
 import { useAiPanelStore } from '../stores/ai-panel.store';
-import { AiPanel } from './ai-panel';
 import { AiPanelTrigger } from './ai-panel-trigger';
 import { useAiEnabled } from './use-ai-enabled';
+
+/** Панель тягне markdown-рендер і історію розмов — окремий чанк, потрібен лише відкритій панелі */
+const AiPanel = lazyComponent(() => import('./ai-panel'), 'AiPanel');
 
 /**
  * Внески асистента в оболонку (`app-shell/slots.ts`). Обидва мовчать, поки фіча вимкнена

@@ -1,12 +1,15 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { TenantQuerySchema, TenantUserQuerySchema } from '@saas-skeleton/contracts/platform';
 import { appRoute } from '../../app-shell/app.routes';
-import { TenantsPage } from './pages/tenants';
-import { TenantAccessTab } from './pages/tenant-access';
-import { TenantDetailLayout } from './pages/tenant-detail';
-import { TenantOverviewTab } from './pages/tenant-overview';
-import { TenantUsersPage } from './pages/tenant-users';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const TenantsPage = lazyPage(() => import('./pages/tenants'), 'TenantsPage');
+const TenantAccessTab = lazyPage(() => import('./pages/tenant-access'), 'TenantAccessTab');
+const TenantDetailLayout = lazyPage(() => import('./pages/tenant-detail'), 'TenantDetailLayout');
+const TenantOverviewTab = lazyPage(() => import('./pages/tenant-overview'), 'TenantOverviewTab');
+const TenantUsersPage = lazyPage(() => import('./pages/tenant-users'), 'TenantUsersPage');
 
 /**
  * Area «Tenants» — клієнти платформи. Layout-роут без компонента: навігація

@@ -70,6 +70,14 @@
     "goHome": "Back to home"
   },
   "loading": "Loading…",
+  "routeError": {
+    "title": "This page could not be opened",
+    "description": "Something went wrong while showing this page. Try again; if it keeps happening, reload the page.",
+    "chunkTitle": "This page could not be loaded",
+    "chunkDescription": "The connection dropped, or a new version of the app was released while this tab was open. Reload the page to continue.",
+    "retry": "Try again",
+    "reload": "Reload page"
+  },
   "empty": "No results found",
   "filters": {
     "reset": "Reset"

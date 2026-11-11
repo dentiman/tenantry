@@ -1,12 +1,21 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { appRoute } from '../../app-shell/app.routes';
 import { customerDetailRoute } from '../customers/customers.routes';
 import { settingsRoute } from '../settings/settings.routes';
-import { CustomerEventsTab } from './components/customer-events-tab';
 import { isCalendarView } from './lib/calendar-date';
-import { CalendarPage } from './pages/calendar';
-import { SettingsCalendarPage } from './pages/calendar-settings';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const CustomerEventsTab = lazyPage(
+  () => import('./components/customer-events-tab'),
+  'CustomerEventsTab',
+);
+const CalendarPage = lazyPage(() => import('./pages/calendar'), 'CalendarPage');
+const SettingsCalendarPage = lazyPage(
+  () => import('./pages/calendar-settings'),
+  'SettingsCalendarPage',
+);
 
 /**
  * Area «Calendar». Перегляд — у ШЛЯХУ (`/calendar/week`), період — у search

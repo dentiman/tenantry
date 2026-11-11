@@ -68,7 +68,9 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   (`staticData.backdrop`, only `/guide` so far; work screens stay solid);
   `docs/frontend/layout-structure.md` — quick visual map + naming of shell columns/
   panels (rail, area sidebar, context panel) for both frontends;
-  `docs/frontend/ui-known-issues.md` — open vendored-code issues
+  `docs/frontend/ui-known-issues.md` — open vendored-code issues;
+  `docs/frontend/lazy-loading.md` — route-level code splitting (`lazyPage`/`lazyComponent`), what stays
+  in the start chunk, bundle budget (`pnpm bundle:check`)
 - `docs/chat.md` — **the** reference for chat (human conversations). §7 is the phase plan,
   §7.6 the invariants later phases build on — don't break them. Built: internal conversations (REST + realtime, notifications) and the customer channel core on a fake
   provider — inbound, replies with ordered delivery, receipts, workflow (CHAT-0.1…2b); the real WhatsApp adapter is CHAT-3a…3c.
@@ -172,6 +174,8 @@ pnpm ai:answers:eval       # answer quality × price per configuration file (AI-
                            # --fake; writes only `eval` ledger rows — docs/ai-sources/README.md)
 pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:check +
                                             # modules:check --strict + eslint
+pnpm bundle:check          # start-chunk budget of both frontends + "no page in the start chunk" check
+                           # (docs/frontend/lazy-loading.md); builds into a temp dir, ~15 s
 pnpm deps:check            # madge: no runtime import cycles in backend apps and libs
 pnpm modules:check         # imports vs the declared module graph (modules.config.ts); `--strict`
                            # runs inside `pnpm lint`. Blind spots (string links, Prisma) — docs/modules.md §6
