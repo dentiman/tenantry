@@ -175,7 +175,7 @@ RLS діє тільки на `saas_app` — це і є той факт, що р�
 для нього нічого б не важила; а tenant-процесу така таблиця не потрібна взагалі, тому міграція
 робить `REVOKE ... FROM saas_app` (сильніше за RLS: не «лише свої рядки», а «таблиці немає»).
 `db:roles` при кожному запуску видає широкий `GRANT ... ON ALL TABLES` і знову відкликає зайве
-лише для таблиць зі списку `CONTROL_PLANE_TABLES` у `ensure-roles.ts`. **Нова таблиця з `REVOKE`
+лише для таблиць зі списку `CONTROL_PLANE_TABLES` (`libs/database/scripts/control-plane-tables.ts`, його читає `ensure-roles.ts`). **Нова таблиця з `REVOKE`
 у міграції мусить потрапити й до цього списку** — інакше перший же повторний `db:roles`
 (зміна пароля, ops-джоба `db_roles`, `ws:init`) мовчки поверне tenant-ролі повний DML. Так було
 з `platform_audit_events` і `channel_unroutable_events`. Інваріант тримає
@@ -561,15 +561,56 @@ model Customer {
 
 | Файл                                                                          | Що перевіряє                                                                                                                                                                                                                                                                                           |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [rls.e2e-spec.ts](../apps/api/test/rls.e2e-spec.ts)                           | Голий `pg`-клієнт під `saas_app`, без Nest: без контексту — нуль рядків на читанні, помилка на INSERT; `set_config` transaction-local (зникає після COMMIT); `pg_policies`-автоперевірка — кожна таблиця з `tenant_id` має RLS-політику (ловить «завели таблицю, забули політику»)                     |
+| [rls.e2e-spec.ts](../apps/api/test/rls.e2e-spec.ts)                           | Голий `pg`-клієнт під `saas_app`, без Nest: без контексту — нуль рядків на читанні (список таблиць — з каталогу), помилка на INSERT; `set_config` transaction-local (зникає після COMMIT). **Автоперевірка RLS з каталогу** — див. нижче |
 | [tenant-isolation.e2e-spec.ts](../apps/api/test/tenant-isolation.e2e-spec.ts) | Два реальні tenant-и через HTTP: список A не містить B; get/patch/delete чужого ID → 404 (не 403 — не палимо існування); зшитий/чужий JWT при авторитетній резолюції → 401; CLS-конкурентність (`runWith` A/B паралельно зі штучним чергуванням event loop) не перетікає; slug-login у B бачить лише B |
 | [platform.e2e-spec.ts](../apps/platform-api/test/platform.e2e-spec.ts)        | Operator auth, CRUD тенантів (create атомарно з admin-ом, дублікат slug → 409, невалідний slug → 400, suspend/resume), jobs-моніторинг, токен tenant-plane відхиляється platform-guard-ом                                                                                                              |
 
 Разом — 49 tenant e2e-файлів + 6 platform (`pnpm api:test:e2e`, `pnpm platform:test:e2e`), без окремого
 кроку на RLS — перевірка вшита в звичайний тестраннер. Автоматично їх **не** ганяє жоден CI (рішення
 2026-10-19): гейт — `pnpm verify` (`scripts/ci-verify.sh`) локально перед пушем, у CI він лише ручна
-кнопка (`deploy-swarm.md` §6). Автоперевірка RLS дивиться на `rowsecurity` і наявність політики, але не
-на `relforcerowsecurity` і не на предикат — FORCE на новій таблиці тримається на міграції та рев'ю.
+кнопка (`deploy-swarm.md` §6). Автоматичним на кожному пуші є лише офлайн-шлюз `pre-push`
+(`pnpm lint` + `pnpm typecheck`), а RLS-перевірка — e2e, тож вона **ручна**: перед пушем міграції
+з новою таблицею — `pnpm api:test:e2e -- rls.e2e-spec` (або `pnpm verify`).
+
+**Автоперевірка RLS з каталогу** (`describe('автоперевірка RLS з каталогу')` у `rls.e2e-spec.ts`,
+логіка — [`rls-catalog.ts`](../apps/api/test/rls-catalog.ts)). Читає `pg_class` / `pg_attribute` /
+`pg_policy` / `pg_roles` під суперюзером у тестовій БД, а не під `saas_app`: `information_schema`
+показує лише таблиці, доступні поточній ролі. Списку таблиць у тесті **нема** — нова tenant-таблиця
+потрапляє під перевірку сама. Для кожної таблиці `public` з колонкою `tenant_id`:
+
+- `relrowsecurity` **і** `relforcerowsecurity`;
+- є політика `tenant_isolation`, чий `USING` (і `WITH CHECK` там, де команда пише) **дорівнює**
+  предикату шаблону §5 — `(tenant_id = ( SELECT NULLIF(current_setting('app.tenant_id'::text, true), ''::text) …))`,
+  як його повертає `pg_get_expr`. Порівняння точне: `USING (true)` і `tenant_id = X OR true` не проходять;
+- інших PERMISSIVE-політик нема (Postgres зʼєднує їх через OR, тож кожна відкриває рядки): єдиний
+  іменований виняток — `messaging_accounts.webhook_key_lookup` (пошук за ключем вебхука до tenant-контексту);
+  RESTRICTIVE — дозволені, вони лише звужують;
+- кожна дія, на яку `saas_app` має право, покрита такою політикою (мертвий грант = зламаний запис);
+- `saas_app` не superuser і без `BYPASSRLS`.
+
+**Таблиці з `tenant_id` без RLS** — явний список винятків у тесті (зараз `platform_audit_events`).
+Для кожної перевіряється, що вона є в `CONTROL_PLANE_TABLES`
+([`control-plane-tables.ts`](../libs/database/scripts/control-plane-tables.ts), те саме джерело, що в
+`db:roles`) і що фактичні права `saas_app` (`has_table_privilege`) збігаються з записаними там — для
+такої таблиці це «жодних». Застарілий виняток (таблицю прибрали або їй дали RLS) теж провал, щоб
+список лишався чесним. `tenants` (без `tenant_id`, `own_tenant` на `id`, без FORCE через
+`resolve_tenant`) перевіряється як корінь окремо. Побічний ефект: права `saas_app` на **всі** таблиці
+з `CONTROL_PLANE_TABLES` звіряються зі списком (доповнює `db-roles.e2e-spec.ts`).
+
+**Чим довели, що перевірка ловить:** логіка винесена в чисту функцію `evaluateRlsCatalog(snapshot, rules)`,
+і негативні тести подають їй знімки з порушеннями — таблиця без RLS поза винятками, RLS без FORCE,
+`USING (true)`, `… OR true`, політика без `WITH CHECK`, стороння політика `USING (true)`, виняток із
+правами `saas_app`, виняток поза `CONTROL_PLANE_TABLES`, застарілий виняток, роль з `BYPASSRLS`, зламаний
+корінь. Окремий тест проходить той самий шлях проти **живого** каталогу: створює пробну таблицю під
+суперюзером у транзакції, яка завжди відкочується, і послідовно перевіряє «без RLS → без FORCE → `USING
+(true)` → шаблон дослівно → стороння політика → виняток із грантом» (після відкату таблиці нема). Окремий
+тест «перевірка не порожня» вимагає еталонних таблиць у каталозі, щоб порожня вибірка не давала хибного
+зеленого.
+
+**Додаючи tenant-таблицю:** міграція з `ENABLE` + `FORCE` + `tenant_isolation` дослівно за §5/§11 —
+і більше нічого в тесті правити не треба. Таблиця з `tenant_id` без RLS (control plane) — разом із
+`REVOKE` у міграції, записом у `CONTROL_PLANE_TABLES` і в `exemptTables` у `rls.e2e-spec.ts`.
+Свідоме відхилення від шаблону (друга політика, інший предикат) — запис у `extraPolicies` з причиною.
 
 ---
 

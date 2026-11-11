@@ -1,67 +1,366 @@
-/// <reference types="jest" />
-
-// MT-2: захисна сітка RLS (docs/multi-tenancy-plan.md §12).
-// Ганяється в CI разом з рештою e2e — окремий CI-крок для pg_policies не потрібен.
+// MT-2: захисна сітка RLS (docs/multi-tenancy-architecture.md §12).
+// Ганяється в `pnpm api:test:e2e` / `pnpm verify` разом з рештою e2e.
+//
+// Автоперевірка (нижче, `describe('автоперевірка RLS з каталогу')`) читає pg_class / pg_attribute /
+// pg_policy під суперюзером і для КОЖНОЇ таблиці з `tenant_id` вимагає ENABLE + FORCE RLS,
+// політику з предикатом-шаблоном міграцій і відсутність сторонніх PERMISSIVE-політик. Списку
+// таблиць у файлі нема: нова tenant-таблиця потрапляє під перевірку сама, а забута політика
+// чи FORCE валить тест. Логіка — у `rls-catalog.ts` (чиста функція) і має негативні тести.
 
 import { Client } from 'pg';
-import { buildTestDatabaseUrl } from './test-database';
+import { CONTROL_PLANE_TABLES } from '../../../libs/database/scripts/control-plane-tables';
+import {
+  evaluateRlsCatalog,
+  readRlsCatalog,
+  TENANT_PREDICATE,
+  type CatalogTable,
+  type RlsCatalog,
+  type RlsRules,
+} from './rls-catalog';
+import { buildAdminUrl, buildTestDatabaseUrl, TEST_DB_NAME } from './test-database';
 
-/** Таблиці рівня 1 (tenant-scoped) + tenants; інфра (processed_jobs, pgboss.*) — поза RLS */
-const TENANT_TABLES = [
-  'users',
-  'auth_sessions',
-  'verification_tokens',
-  'files',
-  'attachments',
-  'ai_conversations',
-  'ai_messages',
-  'ai_usage_counters',
-  'ai_usage_events',
-  'ai_knowledge_sources',
-  'ai_knowledge_documents',
-  'ai_knowledge_chunks',
-  // CHAT-2a: канали. channel_unroutable_events — свідомо поза списком (без tenant_id, без RLS)
-  'messaging_accounts',
-  'channels',
-  'channel_contacts',
-  'channel_contact_addresses',
-  'channel_webhook_events',
-  // CHAT-2b: квитанції, що випередили external_id
-  'channel_pending_statuses',
-  // CHAT-3a: журнал викликів до провайдера
-  'channel_logs',
-];
+const ROW_FOR_TENANT = (column: string): string =>
+  `(${column} = ( SELECT NULLIF(current_setting('app.tenant_id'::text, true), ''::text) AS "nullif"))`;
+
+const RULES: RlsRules = {
+  exemptTables: [
+    {
+      table: 'platform_audit_events',
+      reason: 'журнал дій оператора: захищений привілеями (REVOKE для saas_app), не RLS',
+    },
+  ],
+  controlPlane: CONTROL_PLANE_TABLES,
+  extraPolicies: [
+    {
+      table: 'messaging_accounts',
+      policy: 'webhook_key_lookup',
+      command: 'r',
+      using: `(webhook_key = ( SELECT NULLIF(current_setting('app.webhook_lookup_key'::text, true), ''::text) AS "nullif"))`,
+      reason: 'resolve_account_by_key: пошук акаунта за ключем вебхука до tenant-контексту',
+    },
+  ],
+  tenantRoot: { table: 'tenants', policy: 'own_tenant', using: ROW_FOR_TENANT('id') },
+};
 
 describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
   // Голий pg-клієнт під saas_app — БЕЗ Nest, БЕЗ extension, БЕЗ set_config:
   // саме так виглядав би «забутий» шлях повз tenant-контекст
   let db: Client;
+  // Суперюзер у ТІЙ САМІЙ тестовій БД — лише для читання каталогу й негативних проб у транзакції
+  let admin: Client;
+  let catalog: RlsCatalog;
 
   beforeAll(async () => {
     db = new Client({ connectionString: buildTestDatabaseUrl() });
     await db.connect();
+    const adminUrl = new URL(buildAdminUrl());
+    adminUrl.pathname = `/${TEST_DB_NAME}`;
+    admin = new Client({ connectionString: adminUrl.toString() });
+    await admin.connect();
+    catalog = await readRlsCatalog(admin);
   });
 
   afterAll(async () => {
     await db.end();
+    await admin.end();
   });
 
-  it('кожна таблиця з tenant_id має ENABLE RLS і політику (ловить «забули політику»)', async () => {
-    const missing = await db.query<{ table_name: string }>(`
-      SELECT c.table_name
-      FROM information_schema.columns c
-      JOIN pg_tables t ON t.tablename = c.table_name AND t.schemaname = 'public'
-      WHERE c.table_schema = 'public' AND c.column_name = 'tenant_id'
-        AND (
-          NOT t.rowsecurity
-          OR NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.tablename = c.table_name)
-        )
-    `);
-    expect(missing.rows).toEqual([]);
+  describe('автоперевірка RLS з каталогу', () => {
+    const goodPolicy = {
+      name: 'tenant_isolation',
+      command: '*' as const,
+      permissive: true,
+      using: TENANT_PREDICATE,
+      withCheck: TENANT_PREDICATE,
+    };
+    const goodTable = (name: string, patch: Partial<CatalogTable> = {}): CatalogTable => ({
+      name,
+      hasTenantId: true,
+      rowSecurity: true,
+      forceRowSecurity: true,
+      policies: [goodPolicy],
+      saasAppPrivileges: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+      ...patch,
+    });
+    const tenantsRoot = (): CatalogTable => ({
+      name: 'tenants',
+      hasTenantId: false,
+      rowSecurity: true,
+      forceRowSecurity: false,
+      policies: [
+        {
+          name: 'own_tenant',
+          command: '*',
+          permissive: true,
+          using: ROW_FOR_TENANT('id'),
+          withCheck: null,
+        },
+      ],
+      saasAppPrivileges: ['SELECT'],
+    });
+    const audit = (patch: Partial<CatalogTable> = {}): CatalogTable => ({
+      name: 'platform_audit_events',
+      hasTenantId: true,
+      rowSecurity: false,
+      forceRowSecurity: false,
+      policies: [],
+      saasAppPrivileges: [],
+      ...patch,
+    });
+    const healthy = (...tables: CatalogTable[]): RlsCatalog => ({
+      tables: [tenantsRoot(), audit(), ...tables],
+      saasApp: { exists: true, superuser: false, bypassRls: false },
+    });
+    const rulesOf = (catalogToCheck: RlsCatalog): string[] =>
+      evaluateRlsCatalog(catalogToCheck, RULES).map((f) => `${f.table}:${f.rule}`);
+
+    it('РЕАЛЬНА БД: кожна таблиця з tenant_id має ENABLE+FORCE RLS і політику-шаблон (ловить «забули політику/FORCE»)', () => {
+      expect(evaluateRlsCatalog(catalog, RULES)).toEqual([]);
+    });
+
+    it('перевірка не порожня: каталог містить еталонні tenant-таблиці всіх модулів', () => {
+      // Якщо запит каталогу колись мовчки поверне нуль рядків, «немає знахідок» нічого не доводить
+      const withTenantId = catalog.tables.filter((t) => t.hasTenantId).map((t) => t.name);
+      for (const canary of [
+        'users',
+        'customers',
+        'calendar_events',
+        'conversations',
+        'chat_messages',
+        'notifications',
+        'activities',
+        'number_series',
+        'ai_messages',
+        'channels',
+      ]) {
+        expect(withTenantId).toContain(canary);
+      }
+      expect(withTenantId.length).toBeGreaterThanOrEqual(30);
+      expect(catalog.tables.find((t) => t.name === 'platform_audit_events')?.rowSecurity).toBe(
+        false,
+      );
+    });
+
+    it('базовий здоровий знімок не дає знахідок (опорна точка негативних тестів)', () => {
+      expect(rulesOf(healthy(goodTable('widgets')))).toEqual([]);
+    });
+
+    it('ловить таблицю з tenant_id без RLS поза винятками', () => {
+      const found = rulesOf(
+        healthy(
+          goodTable('widgets', { rowSecurity: false, forceRowSecurity: false, policies: [] }),
+        ),
+      );
+      expect(found).toEqual(
+        expect.arrayContaining(['widgets:rls-disabled', 'widgets:policy-missing']),
+      );
+    });
+
+    it('ловить RLS без FORCE (власник таблиці обходить політику)', () => {
+      expect(rulesOf(healthy(goodTable('widgets', { forceRowSecurity: false })))).toEqual([
+        'widgets:force-missing',
+      ]);
+    });
+
+    it('ловить політику USING (true) — наявність політики з іменем таблиці її б не зловила', () => {
+      const leaky = goodTable('widgets', {
+        policies: [{ ...goodPolicy, using: 'true', withCheck: 'true' }],
+      });
+      expect(rulesOf(healthy(leaky))).toEqual(
+        expect.arrayContaining(['widgets:predicate-not-tenant', 'widgets:check-not-tenant']),
+      );
+    });
+
+    it('ловить предикат, що лише ЗГАДУЄ tenant-налаштування (tenant_id = X OR true)', () => {
+      const orTrue = `${TENANT_PREDICATE.slice(0, -1)} OR true)`;
+      const sneaky = goodTable('widgets', {
+        policies: [{ ...goodPolicy, using: orTrue, withCheck: orTrue }],
+      });
+      expect(rulesOf(healthy(sneaky))).toEqual(
+        expect.arrayContaining(['widgets:predicate-not-tenant']),
+      );
+    });
+
+    it('ловить політику без WITH CHECK (запис у чужий tenant)', () => {
+      const noCheck = goodTable('widgets', { policies: [{ ...goodPolicy, withCheck: null }] });
+      expect(rulesOf(healthy(noCheck))).toEqual(['widgets:check-not-tenant']);
+    });
+
+    it('ловить сторонню PERMISSIVE-політику USING (true) поряд із tenant_isolation (OR відкриває все)', () => {
+      const withLeak = goodTable('widgets', {
+        policies: [
+          goodPolicy,
+          { name: 'everyone', command: 'r', permissive: true, using: 'true', withCheck: null },
+        ],
+      });
+      expect(rulesOf(healthy(withLeak))).toEqual(['widgets:unexpected-permissive-policy']);
+    });
+
+    it('RESTRICTIVE-політика поверх шаблону не є знахідкою (вона лише звужує)', () => {
+      const narrowed = goodTable('widgets', {
+        policies: [
+          goodPolicy,
+          { name: 'not_archived', command: '*', permissive: false, using: 'true', withCheck: null },
+        ],
+      });
+      expect(rulesOf(healthy(narrowed))).toEqual([]);
+    });
+
+    it('ловить таблицю з правами saas_app, яких не покриває жодна політика', () => {
+      const selectOnly = goodTable('widgets', {
+        policies: [{ ...goodPolicy, command: 'r', withCheck: null }],
+      });
+      expect(rulesOf(healthy(selectOnly))).toEqual([
+        'widgets:privilege-without-policy',
+        'widgets:privilege-without-policy',
+        'widgets:privilege-without-policy',
+      ]);
+      expect(
+        rulesOf(healthy(goodTable('widgets', { ...selectOnly, saasAppPrivileges: ['SELECT'] }))),
+      ).toEqual([]);
+    });
+
+    it('виняток без RLS: saas_app з правами на таку таблицю — знахідка', () => {
+      expect(rulesOf(healthy())).toEqual([]); // за здорових прав виняток чистий
+      const open: RlsCatalog = {
+        ...healthy(),
+        tables: [tenantsRoot(), audit({ saasAppPrivileges: ['SELECT'] })],
+      };
+      expect(rulesOf(open)).toEqual(
+        expect.arrayContaining(['platform_audit_events:exempt-privileges']),
+      );
+    });
+
+    it('виняток, якого нема в CONTROL_PLANE_TABLES, — знахідка (db:roles повернув би DML)', () => {
+      const found = evaluateRlsCatalog(healthy(), { ...RULES, controlPlane: [] }).map(
+        (f) => `${f.table}:${f.rule}`,
+      );
+      expect(found).toContain('platform_audit_events:exempt-not-in-control-plane');
+    });
+
+    it('застарілий виняток (таблиця вже під RLS або зникла) — знахідка', () => {
+      const alreadyRls: RlsCatalog = {
+        ...healthy(),
+        tables: [
+          tenantsRoot(),
+          audit({ rowSecurity: true, forceRowSecurity: true, policies: [goodPolicy] }),
+        ],
+      };
+      expect(rulesOf(alreadyRls)).toContain('platform_audit_events:stale-exemption');
+      const gone: RlsCatalog = { ...healthy(), tables: [tenantsRoot()] };
+      expect(rulesOf(gone)).toContain('platform_audit_events:stale-exemption');
+    });
+
+    it('права saas_app на таблицю control plane розходяться зі списком db:roles — знахідка', () => {
+      const drift: RlsCatalog = {
+        ...healthy(),
+        tables: [
+          tenantsRoot(),
+          audit(),
+          {
+            name: 'platform_users',
+            hasTenantId: false,
+            rowSecurity: false,
+            forceRowSecurity: false,
+            policies: [],
+            saasAppPrivileges: ['SELECT'],
+          },
+        ],
+      };
+      expect(rulesOf(drift)).toEqual(['platform_users:control-plane-privileges']);
+    });
+
+    it('ловить роль saas_app з BYPASSRLS/superuser і зламаний корінь tenants', () => {
+      const bypass: RlsCatalog = {
+        ...healthy(),
+        saasApp: { exists: true, superuser: false, bypassRls: true },
+      };
+      expect(rulesOf(bypass)).toEqual(['(role saas_app):role-bypasses-rls']);
+
+      const brokenRoot: RlsCatalog = {
+        ...healthy(),
+        tables: [
+          { ...tenantsRoot(), policies: [{ ...tenantsRoot().policies[0]!, using: 'true' }] },
+          audit(),
+        ],
+      };
+      expect(rulesOf(brokenRoot)).toEqual(['tenants:predicate-not-tenant']);
+    });
+
+    /**
+     * Те саме, але проти ЖИВОГО каталогу: тимчасова таблиця створюється під суперюзером у
+     * транзакції, яку завжди відкочуємо, тож БД не засмічується, а запити `readRlsCatalog`
+     * перевіряються разом із чистою функцією — а не лише на вигаданих знімках.
+     */
+    it('живий каталог: пробна таблиця проходить шлях «без RLS → без FORCE → USING (true) → шаблон»', async () => {
+      const probe = 'zz_rls_probe';
+      const rulesFor = async (rules: RlsRules = RULES): Promise<string[]> =>
+        evaluateRlsCatalog(await readRlsCatalog(admin), rules)
+          .filter((f) => f.table === probe)
+          .map((f) => f.rule);
+
+      await admin.query('BEGIN');
+      try {
+        await admin.query(`CREATE TABLE public.${probe} (id text PRIMARY KEY, tenant_id text)`);
+        expect(await rulesFor()).toEqual(
+          expect.arrayContaining(['rls-disabled', 'force-missing', 'policy-missing']),
+        );
+
+        await admin.query(`ALTER TABLE public.${probe} ENABLE ROW LEVEL SECURITY`);
+        await admin.query(
+          `CREATE POLICY tenant_isolation ON public.${probe} FOR ALL USING (true) WITH CHECK (true)`,
+        );
+        expect(await rulesFor()).toEqual(
+          expect.arrayContaining(['force-missing', 'predicate-not-tenant', 'check-not-tenant']),
+        );
+
+        await admin.query(`ALTER TABLE public.${probe} FORCE ROW LEVEL SECURITY`);
+        await admin.query(`DROP POLICY tenant_isolation ON public.${probe}`);
+        await admin.query(`
+          CREATE POLICY tenant_isolation ON public.${probe} FOR ALL
+            USING ("tenant_id" = (SELECT nullif(current_setting('app.tenant_id', true), '')))
+            WITH CHECK ("tenant_id" = (SELECT nullif(current_setting('app.tenant_id', true), '')))
+        `);
+        expect(await rulesFor()).toEqual([]); // шаблон міграцій дослівно — знахідок нема
+
+        await admin.query(`GRANT SELECT, INSERT ON public.${probe} TO saas_app`);
+        expect(await rulesFor()).toEqual([]); // SELECT/INSERT покриті політикою FOR ALL
+
+        await admin.query(`CREATE POLICY leak ON public.${probe} FOR SELECT USING (true)`);
+        expect(await rulesFor()).toEqual(['unexpected-permissive-policy']);
+        await admin.query(`DROP POLICY leak ON public.${probe}`);
+
+        // Виняток без RLS: права saas_app на таку таблицю — дірка
+        await admin.query(`DROP POLICY tenant_isolation ON public.${probe}`);
+        await admin.query(`ALTER TABLE public.${probe} DISABLE ROW LEVEL SECURITY`);
+        const asExempt: RlsRules = {
+          ...RULES,
+          exemptTables: [...RULES.exemptTables, { table: probe, reason: 'проба' }],
+          controlPlane: [...CONTROL_PLANE_TABLES, { table: probe, saasApp: 'none' }],
+        };
+        expect(await rulesFor(asExempt)).toEqual(
+          expect.arrayContaining(['exempt-privileges', 'control-plane-privileges']),
+        );
+      } finally {
+        await admin.query('ROLLBACK');
+      }
+
+      const after = await admin.query(`SELECT to_regclass('public.${probe}') AS found`);
+      expect(after.rows[0]).toEqual({ found: null }); // БД чиста
+    });
   });
 
   it('без tenant-контексту читання дає НУЛЬ рядків (fail-closed), не помилку і не все', async () => {
-    for (const table of [...TENANT_TABLES, 'tenants']) {
+    // Список — з каталогу, не вручну: усі tenant-таблиці під RLS, які saas_app може читати
+    const readable = catalog.tables
+      .filter(
+        (t) =>
+          (t.hasTenantId && t.rowSecurity && t.saasAppPrivileges.includes('SELECT')) ||
+          t.name === RULES.tenantRoot.table,
+      )
+      .map((t) => t.name);
+    expect(readable.length).toBeGreaterThanOrEqual(30);
+    for (const table of readable) {
       const result = await db.query<{ count: string }>(`SELECT count(*) FROM "${table}"`);
       expect({ table, count: result.rows[0]?.count }).toEqual({ table, count: '0' });
     }
@@ -280,12 +579,26 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
         return r.rows[0]?.count;
       };
       await inTenant(tenantA, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses', 'channel_logs']) {
+        for (const table of [
+          'messaging_accounts',
+          'channels',
+          'channel_contacts',
+          'channel_webhook_events',
+          'channel_pending_statuses',
+          'channel_logs',
+        ]) {
           expect({ table, seen: Number(await count(table)) > 0 }).toEqual({ table, seen: true });
         }
       });
       await inTenant(tenantB, async () => {
-        for (const table of ['messaging_accounts', 'channels', 'channel_contacts', 'channel_webhook_events', 'channel_pending_statuses', 'channel_logs']) {
+        for (const table of [
+          'messaging_accounts',
+          'channels',
+          'channel_contacts',
+          'channel_webhook_events',
+          'channel_pending_statuses',
+          'channel_logs',
+        ]) {
           expect({ table, count: await count(table) }).toEqual({ table, count: '0' });
         }
       });
@@ -302,9 +615,11 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
         await db.query(`UPDATE channels SET is_default = false WHERE account_id = $1`, [accountId]);
         await make('rls-chan-def-1', 'rls-def-ext-1', true);
       });
-      await expect(inTenant(tenantA, async () => { await make('rls-chan-def-2', 'rls-def-ext-2', true); })).rejects.toThrow(
-        /channels_account_default_key/,
-      );
+      await expect(
+        inTenant(tenantA, async () => {
+          await make('rls-chan-def-2', 'rls-def-ext-2', true);
+        }),
+      ).rejects.toThrow(/channels_account_default_key/);
       // не-default у тому самому акаунті — можна
       await inTenant(tenantA, async () => {
         await make('rls-chan-def-3', 'rls-def-ext-3', false);
@@ -333,7 +648,10 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
       );
       expect(found.rows).toEqual([{ tenant_id: tenantA, account_id: accountId }]);
 
-      const wrongProvider = await db.query(`SELECT * FROM resolve_account_by_key('meta_cloud', $1)`, [webhookKey]);
+      const wrongProvider = await db.query(
+        `SELECT * FROM resolve_account_by_key('meta_cloud', $1)`,
+        [webhookKey],
+      );
       expect(wrongProvider.rows).toEqual([]);
       const unknown = await db.query(`SELECT * FROM resolve_account_by_key('fake', 'no-such-key')`);
       expect(unknown.rows).toEqual([]);
@@ -344,18 +662,26 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
       expect(direct.rows[0]?.count).toBe('0');
       // і після виклику функції налаштування не лишається діючим
       await db.query(`SELECT * FROM resolve_account_by_key('fake', $1)`, [webhookKey]);
-      const afterCall = await db.query<{ count: string }>(`SELECT count(*) FROM messaging_accounts`);
+      const afterCall = await db.query<{ count: string }>(
+        `SELECT count(*) FROM messaging_accounts`,
+      );
       expect(afterCall.rows[0]?.count).toBe('0');
     });
 
     it('вимкнений акаунт невидимий для пошуку за ключем, як невідомий', async () => {
       await inTenant(tenantA, async () => {
-        await db.query(`UPDATE messaging_accounts SET status = 'DISABLED' WHERE id = $1`, [accountId]);
+        await db.query(`UPDATE messaging_accounts SET status = 'DISABLED' WHERE id = $1`, [
+          accountId,
+        ]);
       });
-      const found = await db.query(`SELECT * FROM resolve_account_by_key('fake', $1)`, [webhookKey]);
+      const found = await db.query(`SELECT * FROM resolve_account_by_key('fake', $1)`, [
+        webhookKey,
+      ]);
       expect(found.rows).toEqual([]);
       await inTenant(tenantA, async () => {
-        await db.query(`UPDATE messaging_accounts SET status = 'CONNECTED' WHERE id = $1`, [accountId]);
+        await db.query(`UPDATE messaging_accounts SET status = 'CONNECTED' WHERE id = $1`, [
+          accountId,
+        ]);
       });
     });
 
@@ -364,7 +690,9 @@ describe('RLS enforcement (SQL-рівень, роль saas_app)', () => {
         /permission denied/,
       );
       await expect(
-        db.query(`INSERT INTO channel_unroutable_events (id, provider, key_hash, reason) VALUES ('x','fake','h','r')`),
+        db.query(
+          `INSERT INTO channel_unroutable_events (id, provider, key_hash, reason) VALUES ('x','fake','h','r')`,
+        ),
       ).rejects.toThrow(/permission denied/);
       await expect(
         db.query(`SELECT record_unroutable_event('fake', 'rls-chan-hash', 'unknown_key', NULL)`),
