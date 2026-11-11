@@ -68,7 +68,10 @@ Prisma в браузерний бандл). Перевіряє ESLint.
 | Умовний `updateMany` + `count`                                       | «оновити, лише якщо стан той, що я бачив» | `AuthSessionService.rotate` (`where: { id, tokenHash }`) |
 | Атомарний інкремент-і-повернення                                     | лічильники, порядкові номери              | `ChatService` `lastSeq: { increment: 1 }`                |
 | Унікальний індекс → 409                                              | ідемпотентне створення                    | `chat_messages.client_message_id` (частковий unique)     |
-| `SELECT … FOR UPDATE` через `$queryRaw` **всередині** `withTenantTx` | кілька залежних записів одного агрегату   | — (першим буде календар)                                 |
+| `SELECT … FOR UPDATE` через `$queryRaw` **всередині** `withTenantTx` | кілька залежних записів одного агрегату   | `UsersService.assertAnotherActiveAdmin` — «лишається хоч один активний ADMIN» (`users-last-admin.e2e-spec`) |
+
+Блокуються рядки ВСІХ, хто бере участь у рішенні, в детермінованому порядку (`ORDER BY id`): двоє адмінів,
+що знімають роль один з одного, серіалізуються без дедлока, і другий бачить уже один рядок.
 
 `$queryRaw`/`$executeRaw` поза `withTenantTx` під RLS мовчки бачить нуль рядків (AGENTS.md,
 правило 16).

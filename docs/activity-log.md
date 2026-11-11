@@ -503,7 +503,7 @@ const rows = await this.prisma.activity.findMany({
 Клієнт набір типів змінити не може.
 
 Дозволено: `customer.*` (створено, змінено відповідального, архівовано, відновлено, видалено),
-`user.created` / `user.enabled` / `user.disabled`. **Свідомо ні:**
+`user.created` / `user.deleted` / `user.enabled` / `user.disabled`. **Свідомо ні:**
 
 - безпекові — `user.password_changed`, `user.sessions_revoked`, `user.email_changed`: це не
   справа колег;

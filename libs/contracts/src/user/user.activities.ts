@@ -23,6 +23,14 @@ export const USER_ACTIVITIES = defineActivityTypes(
         user: EntityRefSchema, // kind: 'user'
       }),
     },
+    // Хто і кого видалив. Лінк `user:<id>` лишається на неіснуючого юзера — журнал переживає
+    // сутність, а label — снапшот (рядка в `users` уже немає). Назву/email беремо ДО видалення
+    'user.deleted': {
+      workspace: true,
+      payload: z.object({
+        user: EntityRefSchema,
+      }),
+    },
     'user.password_changed': {
       restricted: true,
       payload: z.object({
