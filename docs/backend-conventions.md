@@ -164,6 +164,8 @@ RLS гарантує, що чужий тенант не видимий. Хто *
 | §2 шари бібліотек, фронтенд без backend-лібів | ESLint `no-restricted-imports`                                           |
 | §2 граф модулів (`modules.config.ts`)         | `pnpm modules:check --strict` (у складі `pnpm lint`)                     |
 | §3 голий `$transaction`                       | ESLint `no-restricted-syntax`                                            |
+| tenant-таблиця: RLS + FORCE + політика-шаблон (§7) | e2e `rls.e2e-spec.ts` — перевірка з каталогу Postgres для **кожної** таблиці з `tenant_id`, список не ручний (`multi-tenancy-architecture.md` §12); ручна, у `pnpm verify` |
 | §4–§7, §9                                     | рев'ю + чекліст skill-а `backend-change`                                 |
 | §10                                           | рев'ю; e2e — у `pnpm verify` (локально)                                  |
-| усе вище                                      | `pnpm verify` (`scripts/ci-verify.sh`) — **ручний**, не шлюз: з 2026-10-19 CI його не запускає |
+| рядки вище, що йдуть через `pnpm lint` / `pnpm typecheck` | **автоматично перед `git push`** (`.husky/pre-push`, `scripts/pre-push-gate.sh`, ≈75 с); обхід — `SKIP_PREPUSH=1` / `--no-verify` |
+| усе вище, плюс e2e (RLS, ізоляція, §4/§10) | `pnpm verify` (`scripts/ci-verify.sh`) — **ручний**, не шлюз: з 2026-10-19 CI його не запускає |

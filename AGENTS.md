@@ -161,6 +161,8 @@ pnpm web:dev                        # tenant web   http://localhost:5173
 pnpm platform:web:dev               # platform web http://localhost:5174
 pnpm openapi:generate && pnpm web:codegen                   # after tenant contract/controller changes
 pnpm platform:openapi:generate && pnpm platform:web:codegen # after platform contract/controller changes
+pnpm codegen:check         # regenerate both planes, fail if committed artifacts drifted (~20 s, no DB;
+                           # part of `pnpm verify`, not of the pre-push hook)
 pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact in libs/shared (after
                            # any corpus edit; `pnpm lint` and CI run `ai:knowledge:check` first)
 pnpm ai:docs:preview       # external Markdown docs → admission + chunks + tokens; offline, no DB/keys
@@ -231,7 +233,10 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   on every rollout.
 - **Neither CI runs `verify` automatically** (owner decision 2026-10-19: too slow). The gate is
   local: run `pnpm verify` (`scripts/ci-verify.sh`) before pushing to `dev`; `pnpm release:hetzner`
-  does it before pushing. **GitLab:** stage `check` gates `build` only through
+  does it before pushing. What *is* automatic on every `git push` is the offline half —
+  `.husky/pre-push` runs `pnpm lint` + `pnpm typecheck` (~75 s; skipped for docs-only pushes;
+  emergency bypass `SKIP_PREPUSH=1`, see `docs/commands.md` "Хуки git"); e2e, unit and the demo seed
+  stay manual. **GitLab:** stage `check` gates `build` only through
   `ai_knowledge_check`; `verify` is a manual job with `allow_failure` — details
   `docs/deploy-swarm.md` §6. **GitHub:** `verify.yml` is a manual button only.
 

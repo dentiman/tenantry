@@ -12,7 +12,12 @@ import { AppModule } from './app.module';
 import { buildOpenApiConfig, openApiDocumentOptions } from './openapi.config';
 
 async function generate(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+    // Без цього Nest при помилці ініціалізації (напр., невалідний env) мовчки робить
+    // process.exit(1), а catch нижче нічого не отримує — генерація падала без повідомлення
+    abortOnError: false,
+  });
   app.setGlobalPrefix('api');
 
   const doc = cleanupOpenApiDoc(

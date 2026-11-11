@@ -305,7 +305,8 @@ orval → типізовані TanStack Query хуки. **Ручних типі�
 
 ```bash
 pnpm openapi:generate
-# → apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
+# → apps/api/openapi.json (ts-node; env валідується на старті — потрібні JWT_SECRET і ENCRYPTION_KEY,
+#   напр. з .env; помилка конфігурації тепер видна, раніше скрипт мовчки падав з кодом 1)
 
 pnpm platform:openapi:generate
 # → apps/platform-api/openapi.json
@@ -323,7 +324,27 @@ pnpm platform:web:codegen
 
 Після будь-якої зміни контрактів/контролерів завжди прогнати парою: спершу
 `*openapi:generate`, потім відповідний `*:codegen` — обидва артефакти комітяться
-в репозиторій.
+в репозиторій. orval-конфіги мають `clean: true`: файли, яких генератор більше не створює (мертві
+моделі після переїзду ендпоінтів), видаляються при кожній генерації; чиститься лише
+`src/api/generated`, рукописний `src/api/http-client.ts` лежить поза ним.
+
+### `pnpm codegen:check`
+
+```bash
+pnpm codegen:check
+# → перегенеровує ОБИДВІ площини (openapi:generate → web:codegen, platform:openapi:generate →
+#   platform:web:codegen) і падає (exit 1), якщо apps/{api,platform-api}/openapi.json або
+#   apps/{web,platform-web}/src/api/generated відрізняються від того, що було на диску до запуску
+```
+
+`scripts/codegen-check.sh`. БД, Valkey і workspace-слот не потрібні (Nest лише збирає DI-граф);
+потрібні `node_modules` і згенерований Prisma-клієнт (`pnpm db:generate`, офлайн). ≈18–20 с.
+Оточення фіксоване (`env -i` + dummy-секрети), тож результат не залежить від локальних
+`.env`/`.env.local` — перевірено: з `.env.local` слота й без нього артефакти ідентичні. Порівнює стан
+**до/після** генерації, а не `git diff`, тому не залежить від того, закомічені вже правки; при
+дрейфі залишає перегенеровані файли на диску — лишається переглянути `git diff` і закомітити.
+Входить у `scripts/ci-verify.sh` (і в `ci-check.sh`), але **не** в `pre-push`: ≈20 с — задовго для
+хука, який і так ≈75 с; рішення про додавання — за власником.
 
 ---
 
@@ -480,7 +501,7 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 ### `bash scripts/ci-verify.sh`
 
 Повний CI-гейт локально — те саме, що GitLab-джоба `verify` (там вона лише ручна кнопка, не шлюз, тож перед пушем у `dev` її проганяють тут): `pnpm install` → `db:generate` →
-`lint` → `typecheck` → `test` → e2e обох API. Postgres і Valkey — одноразові контейнери у
+`lint` → `typecheck` → `codegen:check` → `test` → демо-сід ×2 → e2e обох API. Postgres і Valkey — одноразові контейнери у
 власній docker-мережі, тож dev-стек і workspace-слоти не зачіпаються; потрібен лише Docker.
 Перший прогін довгий (холодний pnpm store), далі store береться з тому
 `saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
@@ -499,6 +520,40 @@ force-push). Пуш `dev` у GitLab запускає розкат `saas-dev`; He
 з чистим деревом проганяє той самий `verify`, потім через `git-sync` ставить `dev` і `main` на HEAD
 на обох remote-ах (пуш у `github/main` запускає розкат). Verify у GitHub-пайплайн свідомо не
 входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
+
+### Хуки git (husky) і легкий гейт
+
+`pnpm install` ставить husky (`prepare`), хуки лежать у `.husky/`. Повний `verify` ручний, а ці
+два — автоматичні й офлайн (без Docker і БД):
+
+| Хук | Що робить | Час |
+| --- | --- | --- |
+| `pre-commit` | `lint-staged`: ESLint (`--fix --max-warnings 0`) по staged `*.ts`/`*.tsx` | ≈3 с на файл |
+| `pre-push` | `scripts/pre-push-gate.sh`: `pnpm lint` і `pnpm typecheck` паралельно | ≈75 с холодно (lint ≈80 с сам по собі, typecheck 24 с / 0.4 с з кешу turbo) |
+
+`lint-staged` свідомо **без `prettier --write`**: 430 файлів репозиторію не відповідають
+`.prettierrc` (у тому числі більшість `docs/*.md`), тож хук переписував би цілі файли за кожну
+дотичну правку, а `pnpm-lock.yaml` і згенеровані клієнти теж потрапили б під формат. Повернути —
+після окремого коміту `pnpm format` на всьому дереві (рішення власника).
+
+`pre-push` не ганяє перевірки, коли нема що перевіряти: видалення гілки/тегу, пуш без нових
+комітів, пуш лише документації (`README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `docs/**`,
+`openspec/**` — ті самі шляхи, що пропускає `deploy.yml`; винятки `docs/ai-knowledge/**` і
+`docs/history-summary.md`). Без `node_modules` падає з підказкою; без згенерованого Prisma-клієнта
+сам виконує `pnpm db:generate`.
+
+**Обхід у крайньому випадку:** `SKIP_PREPUSH=1 git push …` — шлюз сам пише, що саме не
+перевірено; або `git commit/push --no-verify` (git — мовчки). e2e, unit і демо-сід шлюз **не**
+запускає — це `pnpm verify`.
+
+**Взаємодія зі скриптами пуша.** `pnpm git:sync` ганяє шлюз один раз до своїх двох пушів
+(GitHub, потім GitLab), а хук у них пропускає змінна `PREPUSH_GATE_DONE`. `pnpm release:hetzner`
+після `verify` виставляє її сама (verify уже містить lint і typecheck), тож повторів нема;
+`SKIP_VERIFY=1` скасовує лише важкий verify — легкий шлюз усе одно відпрацює у `git-sync`
+(крім пушу лише документації), вимкнути його теж — `SKIP_PREPUSH=1`.
+
+Серверний дубль легкого шлюзу — `bash scripts/ci-check.sh` (Docker, чистий checkout, ≈2.7 хв
+холодно) і `.github/workflows/check.yml` (push у `dev`, PR, вручну; не блокує деплой).
 
 ### `pnpm format` / `pnpm format:check`
 

@@ -39,6 +39,7 @@
     "platform:web:build": "pnpm --filter @saas-skeleton/platform-web build",
     "platform:web:codegen": "pnpm --filter @saas-skeleton/platform-web codegen",
     "openapi:generate": "pnpm --filter @saas-skeleton/api openapi:generate",
+    "codegen:check": "bash scripts/codegen-check.sh",
     "verify": "bash scripts/ci-verify.sh",
     "release:hetzner": "bash scripts/hetzner/release.sh",
     "git:sync": "bash scripts/git-sync.sh",
@@ -85,11 +86,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings 0 --no-warn-ignored",
-      "prettier --write"
-    ],
-    "*.{json,md,yaml,yml,css}": [
-      "prettier --write"
+      "eslint --fix --max-warnings 0 --no-warn-ignored"
     ]
   },
   "devDependencies": {

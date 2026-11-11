@@ -233,7 +233,7 @@ cache_write + output × output + за_запит` (reasoning уже в output).
 | Налаштування/модель | `ai-llm.module.ts` (`PlatformAiRuntime`, `AI_RUNTIME`), `platform/platform-ai-settings*.ts` | провайдер і модель на кожну генерацію — звідси ж провайдер для рядка журналу |
 | System-scope cron | `libs/shared/src/messaging/topology.ts` (`cron:`), `definitions/ai.messages.ts` (`scope: 'system'`), `apps/worker/src/subscribers/ai-purge-conversations.subscriber.ts` | патерн для добору вартості й синхронізації цін |
 | Control plane | `apps/platform-api/src/ai-settings/`, `apps/platform-web/src/features/ai/pages/ai-settings.tsx`, area «AI» (`features/ai/ai-sidebar.tsx`) | сюди — `Costs` і `Prices` |
-| Ролі БД | `libs/database/scripts/ensure-roles.ts` (`CONTROL_PLANE_TABLES`) | нові таблиці control plane **треба** внести в список, інакше `db:roles` скасує REVOKE міграції |
+| Ролі БД | `libs/database/scripts/control-plane-tables.ts` (`CONTROL_PLANE_TABLES`; читає `ensure-roles.ts`) | нові таблиці control plane **треба** внести в список, інакше `db:roles` скасує REVOKE міграції |
 
 ### 6.2. Порядок робіт (пропозиція)
 
@@ -270,7 +270,7 @@ cache_write + output × output + за_запит` (reasoning уже в output).
 
 - **Prettier — лише на змінені файли.** Репозиторій не prettier-чистий: масовий запуск на
   теку переформатовує десятки чужих файлів (так було в AI-5a — довелося відкочувати).
-- **Нова таблиця control plane → `CONTROL_PLANE_TABLES`** в `ensure-roles.ts` (тип треба буде
+- **Нова таблиця control plane → `CONTROL_PLANE_TABLES`** в `control-plane-tables.ts` (тип треба буде
   розширити режимом «select + insert» для журналу, якщо його пише `saas_app`).
 - **Міграція не може `UPDATE` tenant-рядки** (FORCE RLS діє й на власника) — backfill лише через
   `ADD COLUMN … DEFAULT` або STORED generated (CLAUDE.md правило 17).

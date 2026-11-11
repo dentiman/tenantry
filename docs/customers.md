@@ -223,8 +223,9 @@ CREATE POLICY tenant_isolation ON "customers"
   WITH CHECK (tenant_id = (SELECT nullif(current_setting('app.tenant_id', true), '')));
 ```
 
-Тест `rls.e2e-spec.ts` ловить пропуск автоматично: він звіряє `pg_policies` з переліком
-таблиць, що мають `tenant_id`. Забути політику неможливо — впаде наявний тест.
+Тест `rls.e2e-spec.ts` ловить пропуск автоматично: він читає каталог Postgres і для кожної таблиці
+з `tenant_id` вимагає ENABLE + FORCE RLS та політику `tenant_isolation` з предикатом-шаблоном
+(`multi-tenancy-architecture.md` §12). Забути політику, FORCE чи підмінити предикат неможливо.
 
 ---
 
