@@ -36,15 +36,21 @@ export type CustomerWithContacts = Prisma.CustomerGetPayload<{
   include: typeof CUSTOMER_DETAIL_INCLUDE;
 }>;
 
+/** Межа колонки `customers.number` (INT4): більше значення Postgres відкидає помилкою діапазону */
+const MAX_CUSTOMER_NUMBER = 2_147_483_647;
+
 /**
  * «C-000123», «000123» і «123» — той самий номер: із запиту лишаються самі цифри.
- * null — у пошуку цифр немає взагалі, отже номер шукати нічого.
+ * null — шукати номер нічого: цифр немає взагалі, або число не вміщається в INT4. Другий випадок
+ * — звичайний пошук по ІПН чи телефону («5260250995»): `WHERE number = 5260250995` не дав би
+ * збігів, а впав би 500-ю на всьому пошуку; тож таке число просто не є номером клієнта, і решта
+ * умов (name/email/taxId) працює як завжди.
  */
 function parseNumberSearch(search: string): number | null {
   const digits = search.replace(/\D/g, '');
   if (digits === '') return null;
   const value = Number.parseInt(digits, 10);
-  return Number.isSafeInteger(value) ? value : null;
+  return Number.isSafeInteger(value) && value <= MAX_CUSTOMER_NUMBER ? value : null;
 }
 
 @Injectable()
