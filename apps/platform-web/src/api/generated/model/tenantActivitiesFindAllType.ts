@@ -12,6 +12,7 @@ export type TenantActivitiesFindAllType =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TenantActivitiesFindAllType = {
   usercreated: 'user.created',
+  userdeleted: 'user.deleted',
   userpassword_changed: 'user.password_changed',
   usersessions_revoked: 'user.sessions_revoked',
   userenabled: 'user.enabled',

@@ -1,4 +1,5 @@
 import { AI_SETTINGS_DEFAULTS, AiSettingsSchema, type AiSettings } from '@saas-skeleton/contracts';
+import { stripUntilStable } from './strip-fence';
 
 /**
  * Персона й інструкції організації (секція `settings.ai`, крок AI-1c) — єдиний
@@ -42,10 +43,11 @@ const FENCE = 'organization_instructions';
  * Вирізається з тексту тенанта, щоб той не зміг «закрити» свою огорожу й
  * продовжити нібито поза нею.
  */
-const FENCE_TAG = new RegExp(`<\\s*/?\\s*${FENCE}\\s*>`, 'gi');
+const FENCE_TAG = new RegExp(`<\\s*/?\\s*${FENCE}\\b[^>]*>`, 'gi');
 
+/** До нерухомої точки: вкладений `<</tag>/tag>` не має скластися в справжній тег після вирізання */
 function stripFence(text: string): string {
-  return text.replace(FENCE_TAG, '').trim();
+  return stripUntilStable(text, FENCE_TAG).trim();
 }
 
 /**

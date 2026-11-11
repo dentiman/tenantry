@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { ActivityListResponse } from '@saas-skeleton/contracts';
+import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
 import { ActivitiesService } from './activities.service';
 import { ActivityQueryDto, WorkspaceActivityQueryDto } from './dto/activity-query.dto';
 import { ActivityListResponseDto } from './dto/activity-response.dto';
@@ -14,8 +15,11 @@ export class ActivitiesController {
 
   @Get()
   @ApiOkResponse({ type: ActivityListResponseDto.Output })
-  async findAll(@Query() query: ActivityQueryDto): Promise<ActivityListResponse> {
-    const { items, nextCursor } = await this.activitiesService.findAll(query);
+  async findAll(
+    @Query() query: ActivityQueryDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<ActivityListResponse> {
+    const { items, nextCursor } = await this.activitiesService.findAll(query, actor);
     return { items: items.map(toActivityResponse), nextCursor };
   }
 

@@ -45,6 +45,14 @@ export const WORKSPACE_ACTIVITY_TYPES: readonly ActivityType[] = ACTIVITY_TYPES.
   (type) => (ACTIVITY_DEFINITIONS[type] as ActivityTypeDef).workspace === true,
 );
 
+/**
+ * Безпекові типи (`restricted: true`): у стрічці сутності їх бачить лише субʼєкт і ADMIN —
+ * сервер фільтрує за цим списком у самому запиті (`ActivitiesService.findAll`).
+ */
+export const RESTRICTED_ACTIVITY_TYPES: readonly ActivityType[] = ACTIVITY_TYPES.filter(
+  (type) => (ACTIVITY_DEFINITIONS[type] as ActivityTypeDef).restricted === true,
+);
+
 export type ActivityDefinition = ActivityTypeDef & { readonly texts: TypeTexts };
 
 /** Визначення за рядком із відповіді API; `undefined` — фронт старіший за бекенд */

@@ -22,6 +22,7 @@
   },
   "fieldErrors": {
     "already_exists": "Already exists",
+    "last_admin": "At least one active administrator must remain in the organization",
     "invalid_type": "Invalid value",
     "too_big": "Value is too large",
     "too_small": "Value is too small",

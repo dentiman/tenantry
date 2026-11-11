@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ActivitiesModule } from '../activities/activities.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { SettingsModule } from '../settings/settings.module';
+import { CalendarActivityGuard } from './calendar-activity.guard';
 import { CalendarAccessService } from './calendar.access';
 import { CalendarController } from './calendar.controller';
 import { CalendarService } from './calendar.service';
@@ -17,9 +19,15 @@ import { CalendarSettingsService } from './calendar-settings.service';
 @Module({
   // RealtimeModule — за `RealtimeEmitter` (дельти в room-и учасників). Напрямок
   // залежності саме такий: realtime свідомо не знає про доменні модулі
-  imports: [SettingsModule, RealtimeModule],
+  // ActivitiesModule — реєстр доступу до стрічки: приватні події календаря з неї ховаються
+  imports: [SettingsModule, RealtimeModule, ActivitiesModule],
   controllers: [CalendarController, CalendarSettingsController],
-  providers: [CalendarService, CalendarAccessService, CalendarSettingsService],
+  providers: [
+    CalendarService,
+    CalendarAccessService,
+    CalendarSettingsService,
+    CalendarActivityGuard,
+  ],
   exports: [CalendarService],
 })
 export class CalendarModule {}

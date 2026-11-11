@@ -12,6 +12,7 @@ export type ActivitiesFindAllType =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ActivitiesFindAllType = {
   usercreated: 'user.created',
+  userdeleted: 'user.deleted',
   userpassword_changed: 'user.password_changed',
   usersessions_revoked: 'user.sessions_revoked',
   userenabled: 'user.enabled',

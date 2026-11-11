@@ -613,6 +613,7 @@
               "type": "string",
               "enum": [
                 "user.created",
+                "user.deleted",
                 "user.password_changed",
                 "user.sessions_revoked",
                 "user.enabled",
@@ -1833,6 +1834,7 @@
                   "type": "string",
                   "enum": [
                     "user.created",
+                    "user.deleted",
                     "user.password_changed",
                     "user.sessions_revoked",
                     "user.enabled",
