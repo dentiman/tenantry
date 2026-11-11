@@ -96,7 +96,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   the next AI phase) and `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured
   results — read before touching anything under `ai/`). `docs/ai-sources/README.md` — operator
   guide for an external documentation source (FMS) and the `ai:docs:*` / `ai:answers:eval` CLIs;
-  `docs/ai-sources/fms-eval.json` is a **draft** question set pending product-owner review.
+  the FMS question set and manifest (`fms-eval.json`, `fms-pilot.json`) are **not in the repo**, so
+  those CLIs need `--questions` pointing at your own file (see `docs/ai-platform-controls.md` §10).
   `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost).
 
 ## Planning layers
@@ -528,7 +529,8 @@ not assumed to exist:
   messaging pipeline has no failure-visibility surface yet.
 - **Chat** beyond what shipped (WhatsApp send, webhooks, receipts and mark-as-read exist; still open: CHAT-3c templates, channel health, consent, BSUID identity, resume delivery; from 3b the typing indicator and outbound reactions; media and operator tools CHAT-2c come after WhatsApp) —
   `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
-- **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
-  platform controls — `docs/ai-platform-controls.md`.
+- **AI assistant** is finished and parked: AI-5a/b/c shipped and archived, AI-2b/AI-3/AI-4
+  postponed, `ai-5c2-quality-settings` not started (waits for an own `saas` eval set). Where it
+  stopped and the order to resume — `docs/ai-platform-controls.md` §10.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

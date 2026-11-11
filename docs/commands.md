@@ -360,6 +360,9 @@ pnpm ai:docs:ingest --source fms --root <checkout> --manifest docs/ai-sources/fm
 pnpm ai:docs:search --product fms --tenant default --role ADMIN --query "..." [--limit 5]
 ```
 
+> Дефолтні `docs/ai-sources/fms-eval.json` і `fms-pilot.json` у репозиторії **відсутні** — передавайте
+> власні файли (`--questions`, `--manifest`); див. [ai-platform-controls.md](ai-platform-controls.md) §10.
+
 Операторські CLI (AI-2a.2): ingest пише embeddings у `ai_knowledge_*` обраного tenant-а й
 атомарно публікує ревізію (повтор без змін — нуль викликів API); search — питання → top-K
 опублікованих чанків. `pnpm ai:docs:eval --tenant default` порівнює режими пошуку й пороги

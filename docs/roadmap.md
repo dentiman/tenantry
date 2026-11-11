@@ -50,7 +50,7 @@
 | **Auth hardening AUTH-0…3**     | 2026-09-12…15 | AUTH-0: throttler на Valkey (логін, refresh, пароль), `helmet`, allowlist CORS, fail-fast env-схема, політика пароля. AUTH-1: сесія як сутність `auth_sessions` (ротація, grace-вікно, reuse-detection без видалення рядків, пристрої `/account/sessions`). AUTH-2: refresh у httpOnly-cookie (`Path=/api/auth`, `SameSite=Lax` + Origin-guard), дзеркало в platform. AUTH-3: відновлення пароля й зміна email через `verification_tokens`. Лишився AUTH-4 (2FA). Живий прогін у браузері виконано частково — `auth-hardening-plan.md` §8 | `auth-hardening-plan.md` |
 | **Аудит оператора платформи**   | 2026-10-06    | `platform_audit_events` — append-only журнал дій оператора над тенантами (без FK, без секретів); таблиця з `tenant_id`, але **без RLS**: захищена привілеями (`REVOKE ALL` для `saas_app`), а кожна дія пише ще й tenant-ову активність з актором `system`. `db:roles` більше не скасовує ці REVOKE при повторному запуску (2026-11-11), e2e звіряє фактичні привілеї з міграціями | `multi-tenancy-architecture.md` |
 | **AI-асистент AI-2a**           | 2026-10-03    | PostgreSQL 17 + pgvector у тій самій БД (tenant-таблиці `ai_knowledge_*` під RLS), embeddings і повторюваний ingest FMS-документації, **гібридний пошук** FTS + вектор за RRF (режим і поріг обрані за `pnpm ai:docs:eval`), відповіді `AiPanel` із серверно перевіреними цитатами | `ai-assistant-implementation.md` §18–19 |
-| **AI-5a/b/c — керованість**     | 2026-10-04    | Налаштування й вмикачі платформи (модель, URL, зашифрований ключ, дозволи) у platform-web; журнал витрат `ai_usage_events` + тарифи `ai_model_prices` (append-only, `NUMERIC`), звіти суперадміна; eval відповідей разом із вартістю (`pnpm ai:answers:eval`). Лишилося: перегляд набору питань власником → `ai-5c2-quality-settings` | `ai-platform-controls.md` |
+| **AI-5a/b/c — керованість**     | 2026-10-04    | Налаштування й вмикачі платформи (модель, URL, зашифрований ключ, дозволи) у platform-web; журнал витрат `ai_usage_events` + тарифи `ai_model_prices` (append-only, `NUMERIC`), звіти суперадміна; eval відповідей разом із вартістю (`pnpm ai:answers:eval`). Заархівовано 2026-11-11; `ai-5c2-quality-settings` не розпочато — `ai-platform-controls.md` §10 | `ai-platform-controls.md` |
 | **Демо-стенд**                  | 2026-10-10…11 | Три галузеві демо-тенанти (`db:seed:demo`), одно-клікові статичні демо-акаунти на логіні, скляні auth-екрани, публічний путівник `/about`; завантаження й скидання — ручні CI-джоби | `demo.md` |
 | **Hetzner + публічний репозиторій** | 2026-10-11 / 10-28 | Другий, незалежний таргет деплою: GitHub Actions → self-hosted runner на Hetzner, Caddy TLS на `sslip.io`, секрети лише в `/etc/saas/deploy.env`, деплой `main`. 2026-10-28 історію переписано, продукт перейменовано в **Tenantry**, публічний `dentiman/tenantry` — джерело правди; docs-only пуші не деплоять | `deploy-hetzner.md` |
 | **Версія збірки й історія**     | 2026-10-19    | Номер збірки = кількість комітів (на кожен деплой нова) внизу tenant-web і попап «About this build» з історією проєкту (`docs/history-summary.md` — демо-дані, ведуться вручну) | `build-info.md` |
@@ -234,8 +234,9 @@ AI-3 (вкладення, експорт) і AI-4 (доменні tools) від�
 2. **AI-5b — журнал витрат** (реалізовано): фактична (від провайдера) і розрахункова (за тарифом)
    вартість кожного виклику, вартість відповіді, тарифи з історією, звітність суперадміна.
 3. **AI-5c — якість**: eval відповідей разом із вартістю (реалізовано: `pnpm ai:answers:eval`).
-   Далі — перегляд набору питань власником, потім `ai-5c2-quality-settings` (вибір моделі й
-   налаштувань якості за результатами eval).
+   `ai-5c2-quality-settings` (вибір моделі й параметрів якості за eval) **не розпочато**: перегляд
+   набору питань не відбувся, а сам FMS-набір у репозиторії відсутній. Асистент закінчений і
+   зупинений; де саме й що далі — [ai-platform-controls.md](ai-platform-controls.md) §10.
 
 AI-2a зроблено й заархівовано 2026-10-03: FMS-документація в чаті з перевіреними цитатами,
 гібридний пошук за eval ([ai-assistant-implementation.md](ai-assistant-implementation.md)
@@ -280,9 +281,9 @@ OpenRouter + ZDR) з обліком токенів відповіді. Живи�
 [ai-assistant-implementation.md](ai-assistant-implementation.md) §18–19 і
 [технічний план](ai-assistant-implementation-plan.md).
 
-Зміни OpenSpec `ai-5a-platform-ai-settings`, `ai-5b-cost-ledger`, `ai-5c-answer-eval` (усі задачі
-виконано) і `demo-2-auth-shell` ще лежать у `openspec/changes/`: перед архівацією треба перенести
-в `docs/` те, що лишається правдою з їхніх `design.md` (правило «promote before archiving»).
+Зміни OpenSpec `ai-5a`, `ai-5b`, `ai-5c` і `demo-2-auth-shell` заархівовані 2026-11-11 (рішення з їхніх
+`design.md` уже були в `docs/`, поведінка — у `openspec/specs/ai-assistant/*` і `openspec/specs/auth/sign-in-page`).
+`openspec/changes/` порожній — у польоті нічого немає.
 
 ### 2.11. Чат: що далі
 

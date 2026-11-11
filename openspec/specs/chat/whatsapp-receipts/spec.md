@@ -1,7 +1,7 @@
 # chat/whatsapp-receipts Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b2-meta-inbound-receipts. Update Purpose after archive.
+Defines how Meta delivery statuses (sent, delivered, read, failed) update the delivery state of our outbound messages, including the reason for a failure and the requirement that the number is subscribed.
 
 ## Requirements
 
