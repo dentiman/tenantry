@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Дешева серверна перевірка коміту: `pnpm lint` + `pnpm typecheck` в одноразовому контейнері —
+# Дешева серверна перевірка коміту: `pnpm lint` + `pnpm typecheck` + `pnpm codegen:check` в одноразовому контейнері —
 # без Postgres/Valkey і без e2e (їх робить повний scripts/ci-verify.sh, ручний). Це той самий
 # офлайн-набір, що локальний pre-push (scripts/pre-push-gate.sh), тільки на чистому checkout-і.
 # Використовує .github/workflows/check.yml; локально — `bash scripts/ci-check.sh` (потрібен лише Docker).
@@ -27,4 +27,5 @@ docker run --rm \
     pnpm db:generate
     pnpm lint
     pnpm typecheck
+    pnpm codegen:check
   '

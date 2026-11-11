@@ -10,6 +10,9 @@ export default defineConfig({
       httpClient: 'axios',
       mode: 'split',
       prettier: true,
+      // Прибирає файли, яких генератор більше не створює (мертві моделі після переїзду
+      // ендпоінтів). Чиститься лише src/api/generated — рукописний http-client.ts лежить вище.
+      clean: true,
       override: {
         mutator: {
           path: 'src/api/http-client.ts',

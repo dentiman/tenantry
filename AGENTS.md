@@ -161,6 +161,8 @@ pnpm web:dev                        # tenant web   http://localhost:5173
 pnpm platform:web:dev               # platform web http://localhost:5174
 pnpm openapi:generate && pnpm web:codegen                   # after tenant contract/controller changes
 pnpm platform:openapi:generate && pnpm platform:web:codegen # after platform contract/controller changes
+pnpm codegen:check         # regenerate both planes, fail if committed artifacts drifted (~20 s, no DB;
+                           # part of `pnpm verify`, not of the pre-push hook)
 pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact in libs/shared (after
                            # any corpus edit; `pnpm lint` and CI run `ai:knowledge:check` first)
 pnpm ai:docs:preview       # external Markdown docs → admission + chunks + tokens; offline, no DB/keys

@@ -308,8 +308,10 @@ resume доставки), з 3b — індикатор набору й вихі�
   каталогу Postgres для кожної таблиці з `tenant_id` (ENABLE + FORCE, предикат-шаблон дослівно, жодних
   сторонніх PERMISSIVE-політик, явні винятки зі звіркою прав із `CONTROL_PLANE_TABLES`), із негативними
   тестами — `multi-tenancy-architecture.md` §12. Лишається: вона e2e, тобто ручна (`pnpm verify`);
-- немає drift-перевірки генерації: `openapi:generate` + `web:codegen` (обидві площини) і
-  `git diff --exit-code`; у tenant-клієнті лишились мертві моделі `jobs*`/`queueStats*`;
+- ~~немає drift-перевірки генерації~~ — **зроблено**: `pnpm codegen:check` (`scripts/codegen-check.sh`,
+  ≈20 с, без БД) перегенеровує обидві площини й падає на розбіжності; у `verify` і в `ci-check.sh`, не в
+  `pre-push`. Мертві моделі (`jobs*`, `queueStats*`, `workspace*`, `registerDto`, `aiSettingsDtoOutput`) зникли
+  разом з `clean: true` у orval-конфігах. Лишається: вона теж ручна (`pnpm verify`) — рішення про `pre-push` за власником;
 - tenant-SPA віддається одним стартовим чанком (~2 МБ): маршрути `*.routes.tsx` імпортуються статично,
   ледачого завантаження немає, хоча ESLint уже береже `*.nav.ts` від імпорту сторінок;
 - тема: немає тесту контракту (набір токенів у кожній `themes/*.css`, список палітр продубльований у двох

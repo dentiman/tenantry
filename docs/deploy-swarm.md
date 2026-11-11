@@ -126,7 +126,7 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 **check** — до будь-якої збірки, на кожній гілці:
 - `ai_knowledge_check` — закомічений корпус знань AI не розійшовся з `docs/ai-knowledge`;
 - `verify` — **ручна кнопка, не шлюз** (рішення власника 2026-10-19: прогін забирав надто багато
-  часу; перевірка — локально перед пушем). `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` →
+  часу; перевірка — локально перед пушем). `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` → `codegen:check` →
   unit → e2e обох API. Postgres (той самий pgvector-образ і digest) і Valkey — одноразові
   контейнери на власній docker-мережі джоби; checkout монтується read-only і копіюється в
   node-контейнер (shell-executor не зміг би прибрати root-овий `node_modules`). pnpm store

@@ -305,7 +305,8 @@ orval → типізовані TanStack Query хуки. **Ручних типі�
 
 ```bash
 pnpm openapi:generate
-# → apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
+# → apps/api/openapi.json (ts-node; env валідується на старті — потрібні JWT_SECRET і ENCRYPTION_KEY,
+#   напр. з .env; помилка конфігурації тепер видна, раніше скрипт мовчки падав з кодом 1)
 
 pnpm platform:openapi:generate
 # → apps/platform-api/openapi.json
@@ -323,7 +324,27 @@ pnpm platform:web:codegen
 
 Після будь-якої зміни контрактів/контролерів завжди прогнати парою: спершу
 `*openapi:generate`, потім відповідний `*:codegen` — обидва артефакти комітяться
-в репозиторій.
+в репозиторій. orval-конфіги мають `clean: true`: файли, яких генератор більше не створює (мертві
+моделі після переїзду ендпоінтів), видаляються при кожній генерації; чиститься лише
+`src/api/generated`, рукописний `src/api/http-client.ts` лежить поза ним.
+
+### `pnpm codegen:check`
+
+```bash
+pnpm codegen:check
+# → перегенеровує ОБИДВІ площини (openapi:generate → web:codegen, platform:openapi:generate →
+#   platform:web:codegen) і падає (exit 1), якщо apps/{api,platform-api}/openapi.json або
+#   apps/{web,platform-web}/src/api/generated відрізняються від того, що було на диску до запуску
+```
+
+`scripts/codegen-check.sh`. БД, Valkey і workspace-слот не потрібні (Nest лише збирає DI-граф);
+потрібні `node_modules` і згенерований Prisma-клієнт (`pnpm db:generate`, офлайн). ≈18–20 с.
+Оточення фіксоване (`env -i` + dummy-секрети), тож результат не залежить від локальних
+`.env`/`.env.local` — перевірено: з `.env.local` слота й без нього артефакти ідентичні. Порівнює стан
+**до/після** генерації, а не `git diff`, тому не залежить від того, закомічені вже правки; при
+дрейфі залишає перегенеровані файли на диску — лишається переглянути `git diff` і закомітити.
+Входить у `scripts/ci-verify.sh` (і в `ci-check.sh`), але **не** в `pre-push`: ≈20 с — задовго для
+хука, який і так ≈75 с; рішення про додавання — за власником.
 
 ---
 
@@ -480,7 +501,7 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 ### `bash scripts/ci-verify.sh`
 
 Повний CI-гейт локально — те саме, що GitLab-джоба `verify` (там вона лише ручна кнопка, не шлюз, тож перед пушем у `dev` її проганяють тут): `pnpm install` → `db:generate` →
-`lint` → `typecheck` → `test` → e2e обох API. Postgres і Valkey — одноразові контейнери у
+`lint` → `typecheck` → `codegen:check` → `test` → демо-сід ×2 → e2e обох API. Postgres і Valkey — одноразові контейнери у
 власній docker-мережі, тож dev-стек і workspace-слоти не зачіпаються; потрібен лише Docker.
 Перший прогін довгий (холодний pnpm store), далі store береться з тому
 `saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
