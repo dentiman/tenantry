@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { chunkFileNames, manualChunks } from '../../libs/ui/src/build/chunking';
 
 export default defineConfig(({ mode }) => {
   // Workspace slots (docs/workspace-slots.md): порти й ціль проксі беруть зсув від
@@ -33,6 +34,15 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     define: { __APP_BUILD__: buildInfo },
+    build: {
+      // Нарізка й імена чанків — libs/ui/src/build/chunking.ts (docs/frontend/lazy-loading.md §4)
+      rollupOptions: {
+        output: {
+          manualChunks,
+          chunkFileNames,
+        },
+      },
+    },
     // Vite не читає tsconfig paths — аліас дублюється тут (див. коментар у tsconfig.json)
     resolve: {
       alias: {

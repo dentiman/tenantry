@@ -19,6 +19,7 @@
     "./components/page-header": "./src/components/page-header.tsx",
     "./components/page-header-slot": "./src/components/page-header-slot.tsx",
     "./components/resize-handle": "./src/components/resize-handle.tsx",
+    "./components/route-fallbacks": "./src/components/route-fallbacks.tsx",
     "./components/theme-select": "./src/components/theme-select.tsx",
     "./components/theme-switcher": "./src/components/theme-switcher.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",

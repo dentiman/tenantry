@@ -3,6 +3,7 @@ import path from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { chunkFileNames, manualChunks } from '../../libs/ui/src/build/chunking';
 
 export default defineConfig(({ mode }) => {
   // Workspace slots (docs/workspace-slots.md): той самий підхід, що apps/web/vite.config.ts —
@@ -13,6 +14,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    build: {
+      // Дзеркало apps/web/vite.config.ts: нарізка й імена — libs/ui/src/build/chunking.ts
+      // (docs/frontend/lazy-loading.md §4)
+      rollupOptions: {
+        output: { manualChunks, chunkFileNames },
+      },
+    },
     resolve: {
       // Vite не читає tsconfig paths — аліас @ дублюється тут (див. tsconfig.json)
       alias: {
