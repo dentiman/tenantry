@@ -48,7 +48,7 @@ export function AreaSidebar() {
         {area.panel === 'menu' ? (
           <AreaNav areaId={area.id} />
         ) : (
-          <LazyBoundary fallback={<PanelPending />}>
+          <LazyBoundary fallback={<PanelPending />} name={`area-panel:${area.id}`}>
             <area.panel />
           </LazyBoundary>
         )}

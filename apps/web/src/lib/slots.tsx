@@ -79,7 +79,7 @@ export function SlotOutlet<P extends object>({ slot, props }: { slot: Slot<P>; p
   return (
     <>
       {fills.map(({ id, Component }) => (
-        <LazyBoundary key={id}>
+        <LazyBoundary key={id} name={`slot:${slot.name}/${id}`}>
           <Component {...props} />
         </LazyBoundary>
       ))}

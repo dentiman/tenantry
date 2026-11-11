@@ -13,6 +13,7 @@ import {
 } from '@saas-skeleton/ui/components/ui/empty';
 import { Skeleton } from '@saas-skeleton/ui/components/ui/skeleton';
 import { isChunkLoadError } from '@saas-skeleton/ui/lib/lazy';
+import { reportError } from '@saas-skeleton/ui/lib/report-error';
 
 /**
  * Запасні екрани ледачого завантаження — спільні для обох фронтів, підключаються ОДИН раз у
@@ -106,21 +107,34 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
 /**
  * Межа для `lazyComponent` усередині сторінки, слота чи панелі: `Suspense` на час завантаження
  * чанка + перехоплення помилки (інакше провал чанка валив би весь екран до найближчої межі
- * роута). Помилку в слоті не показуємо екраном: внесок просто зникає, решта сторінки працює.
+ * роута).
+ *
+ * Свідоме рішення: помилку в слоті не показуємо екраном — внесок просто зникає, решта сторінки
+ * працює (віджет дашборда не має права покласти дашборд). Тому ТИХОЮ ця межа бути не може:
+ * кожна перехоплена помилка йде в `reportError` (`libs/ui/src/lib/report-error.ts` — туди ж
+ * підключається Sentry), а провал чанка позначений в контексті, щоб його можна було відфільтрувати
+ * від справжніх багів.
  */
 export function LazyBoundary({
   children,
   fallback = null,
+  name,
 }: {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Хто саме (id внеску слота, імʼя панелі) — потрапляє в контекст звіту */
+  name?: string;
 }) {
   return (
     <CatchBoundary
       getResetKey={() => 'lazy-boundary'}
       errorComponent={() => null}
       onCatch={(error) => {
-        console.error('[lazy] failed to render a lazy component', error);
+        reportError({
+          error,
+          source: 'lazy-boundary',
+          context: { name, isChunkLoadError: isChunkLoadError(error) },
+        });
       }}
     >
       <Suspense fallback={fallback}>{children}</Suspense>

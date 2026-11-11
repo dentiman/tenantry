@@ -1,5 +1,6 @@
 import { createRouter } from '@tanstack/react-router';
 import { RouteError, RoutePending } from '@saas-skeleton/ui/components/route-fallbacks';
+import { reportError } from '@saas-skeleton/ui/lib/report-error';
 import type { RouteAccess } from './features/auth/auth.access';
 import { appIndexRoute, appRoute, notFoundRoute, rootRoute } from './app-shell/app.routes';
 import { loginRoute } from './features/auth/auth.routes';
@@ -63,7 +64,9 @@ const routeTree = rootRoute.addChildren([
  * - `defaultPendingMs`/`defaultPendingMinMs` — скелет з'являється лише якщо перехід триває
  *   довше 300 мс і тоді тримається не менше 300 мс: швидкі переходи не мигають, а повільні
  *   не виглядають зависанням (до цього стара сторінка лишається на місці);
- * - спільні `RoutePending`/`RouteError` — на роутах їх не оголошуємо.
+ * - спільні `RoutePending`/`RouteError` — на роутах їх не оголошуємо;
+ * - `defaultOnCatch` — кожна помилка межі роута йде в `reportError` (єдина точка для Sentry,
+ *   `src/lib/error-reporting.ts`); у production роутер сам її не логує.
  */
 export const router = createRouter({
   routeTree,
@@ -72,6 +75,9 @@ export const router = createRouter({
   defaultPendingMinMs: 300,
   defaultPendingComponent: RoutePending,
   defaultErrorComponent: RouteError,
+  defaultOnCatch: (error) => {
+    reportError({ error, source: 'route' });
+  },
 });
 
 declare module '@tanstack/react-router' {
