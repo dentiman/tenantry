@@ -43,6 +43,10 @@ coverage/
 .claude/skills/archify/test/
 .claude/skills/archify/examples/*.html
 
+# Звіти /ecc-code-review і /ecc-architecture-review: репозиторій публічний, а у звіті —
+# ще не виправлені знахідки (зокрема безпекові). Лишаються локальними.
+.claude/reviews/
+
 # Сирий експорт чужих вебхуків (docs/whatsapp-research/*-webhook-sample-*.md): у репо не кладемо
 whatsapp_webhook_log.csv
 
