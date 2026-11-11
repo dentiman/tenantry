@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { Alert, AlertDescription } from '@saas-skeleton/ui/components/ui/alert';
@@ -104,7 +105,7 @@ export function ConnectWhatsAppDialog({ accountId, trigger }: Props) {
 
   const error = (field: string): ReactElement | null => {
     const found = errors[field];
-    return found ? <FieldError>{t(found.key, found.params)}</FieldError> : null;
+    return found ? <FieldError>{t(...runtimeKey(found.key, found.params))}</FieldError> : null;
   };
 
   return (

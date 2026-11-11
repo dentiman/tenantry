@@ -270,10 +270,10 @@ export function PlaygroundComboboxPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.serverSearch.title')}
+                    {t('combobox.sections.usage.serverSearch.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.serverSearch.description')}
+                    {t('combobox.sections.usage.serverSearch.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -284,10 +284,10 @@ export function PlaygroundComboboxPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.countrySelect.title')}
+                    {t('combobox.sections.usage.countrySelect.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.countrySelect.description')}
+                    {t('combobox.sections.usage.countrySelect.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -298,10 +298,10 @@ export function PlaygroundComboboxPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.chipsMulti.title')}
+                    {t('combobox.sections.usage.chipsMulti.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.chipsMulti.description')}
+                    {t('combobox.sections.usage.chipsMulti.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -312,10 +312,10 @@ export function PlaygroundComboboxPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.customerSelect.title')}
+                    {t('combobox.sections.usage.customerSelect.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.customerSelect.description')}
+                    {t('combobox.sections.usage.customerSelect.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">

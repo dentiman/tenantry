@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { Link, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '../lib/i18n-keys';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -120,7 +121,7 @@ export function AreaNav({ areaId }: { areaId: string }) {
                   }}
                 >
                   <Icon />
-                  <span>{t(item.label)}</span>
+                  <span>{t(...runtimeKey(item.label))}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );

@@ -120,11 +120,11 @@ export function PlaygroundTextareaPage() {
             </ExampleTile>
             <ExampleTile
               code="field-sizing-content"
-              description={t('textarea.live.autoGrow.description')}
+              description={t('textarea.sections.live.autoGrow.description')}
             >
               <Textarea
-                placeholder={t('textarea.live.autoGrow.placeholder')}
-                defaultValue={t('textarea.live.autoGrow.sample')}
+                placeholder={t('textarea.sections.live.autoGrow.placeholder')}
+                defaultValue={t('textarea.sections.live.autoGrow.sample')}
                 className="min-h-16"
               />
             </ExampleTile>
@@ -140,10 +140,10 @@ export function PlaygroundTextareaPage() {
             <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {t('textarea.usage.wrapper.title')}
+                  {t('textarea.sections.usage.wrapper.title')}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t('textarea.usage.wrapper.description')}
+                  {t('textarea.sections.usage.wrapper.description')}
                 </p>
               </div>
               <label htmlFor="wrapper-sample" className="text-sm font-medium text-foreground">
@@ -152,7 +152,7 @@ export function PlaygroundTextareaPage() {
               <Textarea
                 id="wrapper-sample"
                 rows={3}
-                defaultValue={t('textarea.usage.wrapper.sample')}
+                defaultValue={t('textarea.sections.usage.wrapper.sample')}
               />
               <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
                 FormTextareaField
@@ -162,15 +162,15 @@ export function PlaygroundTextareaPage() {
             <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {t('textarea.usage.group.title')}
+                  {t('textarea.sections.usage.group.title')}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t('textarea.usage.group.description')}
+                  {t('textarea.sections.usage.group.description')}
                 </p>
               </div>
               <textarea
                 className="w-full rounded-lg border border-input bg-field px-3 py-2 min-h-16 text-sm text-foreground placeholder:text-muted-foreground"
-                defaultValue={t('textarea.usage.group.sample')}
+                defaultValue={t('textarea.sections.usage.group.sample')}
                 rows={3}
               />
               <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">

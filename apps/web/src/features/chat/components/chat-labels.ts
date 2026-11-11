@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { formatTime } from '@saas-skeleton/ui/lib/format';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import type { ChatMessage, Conversation } from './use-chat';
 
 /**
@@ -92,7 +93,8 @@ export function systemEntryText(message: ChatMessage, t: TFunction<'chat'>): str
     case 'conversation.status_changed':
       return t('system.statusChanged', {
         actor,
-        status: t(`status.${(payload.to ?? 'OPEN').toLowerCase()}`),
+        // Статус приходить із payload-а запису: новіший сервер може надіслати невідомий фронту
+        status: t(...runtimeKey(`status.${(payload.to ?? 'OPEN').toLowerCase()}`)),
       });
     default:
       return '';

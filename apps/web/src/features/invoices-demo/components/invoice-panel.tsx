@@ -9,6 +9,7 @@ import { ScrollArea } from '@saas-skeleton/ui/components/ui/scroll-area';
 import { isOverdue, type MockInvoice } from '../data/mock-invoices';
 import { formatMonth, Money, Muted, notImplemented } from './invoice-format';
 import { InvoiceStatusBadge } from './invoice-status-badge';
+import type invoicesDemoEn from '../invoices-demo.en.json';
 
 /** Секція панелі: підпис дрібним приглушеним, вміст під ним — той самий ритм, що в ContactPanel */
 function Section({ title, children }: { title: ReactNode; children: ReactNode }) {
@@ -36,7 +37,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
  */
 export function InvoicePanel({ invoice, onClose }: { invoice: MockInvoice; onClose: () => void }) {
   const { t } = useTranslation('invoices-demo');
-  const field = (id: string) => t(`fields.${id}`);
+  const field = (id: keyof (typeof invoicesDemoEn)['fields']) => t(`fields.${id}`);
   const method = (value: MockInvoice['paymentMethod']) =>
     value === null ? t('method.none') : t(`method.${value}`);
   const demo = (action: string) => {

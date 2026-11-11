@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import type invoicesDemoEn from '../invoices-demo.en.json';
 import { ChevronDown, Plus } from 'lucide-react';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
@@ -104,7 +105,7 @@ function buildFields(
   t: TFunction<'invoices-demo'>,
   onOpen: (invoice: MockInvoice) => void,
 ): DataGridField<MockInvoice>[] {
-  const label = (id: string) => t(`fields.${id}`);
+  const label = (id: keyof (typeof invoicesDemoEn)['fields']) => t(`fields.${id}`);
   const method = (value: PaymentMethod | null) =>
     value === null ? <Muted value={null} /> : t(`method.${value}`);
   // Номери документів і SAP — однакові приховані колонки «число або тире»
@@ -404,7 +405,7 @@ export function InvoicesDemoPage() {
   // кнопками, решта — у «More», щоб смуга вибору не розросталась на кілька рядків
   const bulkPrimary = ['sendEmail', 'charge', 'directDebitFile'] as const;
   const bulkMore = ['registerTaxConfirmations', 'createInSap', 'suspendServices'] as const;
-  const runBulk = (id: string, count: number) => {
+  const runBulk = (id: (typeof bulkPrimary)[number] | (typeof bulkMore)[number], count: number) => {
     notImplemented(t('demoToast.bulk', { action: t(`bulk.${id}`), count }), t);
   };
 

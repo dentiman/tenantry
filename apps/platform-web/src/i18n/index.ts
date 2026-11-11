@@ -2,22 +2,8 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
 import { en as zodEn } from 'zod/locales';
-import {
-  DEFAULT_LOCALE,
-  SUPPORTED_LOCALES,
-  activitiesEn,
-  commonEn,
-  errorsEn,
-  validationEn,
-} from '@saas-skeleton/i18n';
-import authEn from '../locales/en/auth.json';
-import layoutEn from '../locales/en/layout.json';
-import tenantsEn from '../locales/en/tenants.json';
-import tenantUsersEn from '../locales/en/tenant-users.json';
-import jobsEn from '../locales/en/jobs.json';
-import userSettingsEn from '../locales/en/user-settings.json';
-import aiEn from '../locales/en/ai.json';
-import chatEn from '../locales/en/chat.json';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@saas-skeleton/i18n';
+import { resources } from './namespaces';
 
 export const LOCALE_STORAGE_KEY = 'saas_platform_locale';
 
@@ -39,23 +25,7 @@ function detectLocale(): string {
 }
 
 void i18n.use(initReactI18next).init({
-  resources: {
-    en: {
-      common: commonEn,
-      errors: errorsEn,
-      validation: validationEn,
-      // Стрічка подій тенанта на його картці — той самий рендер, що в tenant-web
-      activities: activitiesEn,
-      auth: authEn,
-      layout: layoutEn,
-      tenants: tenantsEn,
-      'tenant-users': tenantUsersEn,
-      jobs: jobsEn,
-      'user-settings': userSettingsEn,
-      ai: aiEn,
-      chat: chatEn,
-    },
-  },
+  resources,
   lng: detectLocale(),
   fallbackLng: DEFAULT_LOCALE,
   defaultNS: 'common',

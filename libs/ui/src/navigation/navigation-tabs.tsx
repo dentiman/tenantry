@@ -1,5 +1,6 @@
 import { Link, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '../lib/i18n-keys';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { useMenuItems } from './nav-provider';
 import type { NavMenu } from './registry';
@@ -40,7 +41,7 @@ export function NavigationTabs({
               render={<Link to={item.link.to} params={params} />}
             >
               {Icon && <Icon />}
-              {t(item.label)}
+              {t(...runtimeKey(item.label))}
             </TabsTrigger>
           );
         })}

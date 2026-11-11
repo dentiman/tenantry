@@ -208,15 +208,15 @@ export function PlaygroundSelectPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('select.usage.calendarReminders.title')}
+                    {t('select.sections.usage.calendarReminders.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('select.usage.calendarReminders.description')}
+                    {t('select.sections.usage.calendarReminders.description')}
                   </p>
                 </div>
                 <Select
                   items={[
-                    { value: '0', label: t('select.usage.calendarReminders.atStart') },
+                    { value: '0', label: t('select.sections.usage.calendarReminders.atStart') },
                     { value: '5', label: '5 min' },
                     { value: '15', label: '15 min' },
                     { value: '30', label: '30 min' },
@@ -230,7 +230,7 @@ export function PlaygroundSelectPage() {
                   <SelectContent>
                     <SelectGroup>
                       {[
-                        { value: '0', label: t('select.usage.calendarReminders.atStart') },
+                        { value: '0', label: t('select.sections.usage.calendarReminders.atStart') },
                         { value: '5', label: '5 min' },
                         { value: '15', label: '15 min' },
                         { value: '30', label: '30 min' },
@@ -250,17 +250,17 @@ export function PlaygroundSelectPage() {
               <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('select.usage.weekStarts.title')}
+                    {t('select.sections.usage.weekStarts.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('select.usage.weekStarts.description')}
+                    {t('select.sections.usage.weekStarts.description')}
                   </p>
                 </div>
                 <Select
                   items={[
-                    { value: '1', label: t('select.usage.weekStarts.monday') },
-                    { value: '0', label: t('select.usage.weekStarts.sunday') },
-                    { value: '6', label: t('select.usage.weekStarts.saturday') },
+                    { value: '1', label: t('select.sections.usage.weekStarts.monday') },
+                    { value: '0', label: t('select.sections.usage.weekStarts.sunday') },
+                    { value: '6', label: t('select.sections.usage.weekStarts.saturday') },
                   ]}
                   value="1"
                   onValueChange={noop}
@@ -271,9 +271,9 @@ export function PlaygroundSelectPage() {
                   <SelectContent>
                     <SelectGroup>
                       {[
-                        { value: '1', label: t('select.usage.weekStarts.monday') },
-                        { value: '0', label: t('select.usage.weekStarts.sunday') },
-                        { value: '6', label: t('select.usage.weekStarts.saturday') },
+                        { value: '1', label: t('select.sections.usage.weekStarts.monday') },
+                        { value: '0', label: t('select.sections.usage.weekStarts.sunday') },
+                        { value: '6', label: t('select.sections.usage.weekStarts.saturday') },
                       ].map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
@@ -291,10 +291,10 @@ export function PlaygroundSelectPage() {
             <div className="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {t('select.usage.filterBar.title')}
+                  {t('select.sections.usage.filterBar.title')}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t('select.usage.filterBar.description')}
+                  {t('select.sections.usage.filterBar.description')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -363,7 +363,9 @@ export function PlaygroundSelectPage() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{t('select.interactivity.hint')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('select.sections.interactivity.hint')}
+              </p>
             </div>
           </ShowcaseCard>
 

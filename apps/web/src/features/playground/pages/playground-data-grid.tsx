@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import type playgroundEn from '../../../locales/en/playground.json';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@saas-skeleton/ui/components/ui/tabs';
 import { DateTimeCell } from '@saas-skeleton/ui/components/date-time-cell';
@@ -106,7 +107,8 @@ function Text({ value }: { value: string | null }) {
 }
 
 function buildFields(t: TFunction<'playground'>): DataGridField<MockInvoice>[] {
-  const label = (id: string) => t(`dataGrid.fields.${id}`);
+  const label = (id: keyof (typeof playgroundEn)['dataGrid']['fields']) =>
+    t(`dataGrid.fields.${id}`);
   const money = (id: 'subtotal' | 'discount' | 'tax' | 'total' | 'amountPaid' | 'balanceDue') => ({
     id,
     header: label(id),

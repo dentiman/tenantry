@@ -56,6 +56,14 @@ apps/web/src/locales/en/
 2. `apps/web`: i18next + react-i18next init (suspense off, fallback `en`),
    детекція localStorage `saas_locale` → `navigator.language` → `'en'`;
    TS-augmentation для типізованих ключів.
+   Як це зроблено (2026-11-11): `apps/<app>/src/i18n/i18next-types.ts` розширює саме `i18next`
+   (`CustomTypeOptions` живе там; розширення `react-i18next` мовчки нічого не типізувало), а
+   перелік неймспейсів виводиться з `namespaces.ts` (`(typeof resources)['en']`) — новий
+   неймспейс типізується тим самим рядком, яким реєструється. Опечатка в `t('…')` — помилка
+   `tsc`. Для ключів, зібраних у рантаймі, є два шляхи (`libs/ui/src/lib/i18n-keys.ts`):
+   `lowercase()` і літеральні мапи — коли джерело є відомим обʼєднанням і ключ МОЖНА перевірити;
+   `runtimeKey()` / `runtimeTransKey()` — коли ключ приходить із реєстру чи з сервера (тоді
+   наявність тексту тримає `registry-texts.test.ts`, а не типи).
 3. Виніс УСІХ наявних рядків адмінки в ключі: auth (login/register), users
    (таблиця, форми, діалоги), jobs (фільтри, стани — лейбли по значенню enum),
    dashboard, layout/навігація, common.

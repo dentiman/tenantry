@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import { AreaNav, useDisplayedArea } from '@saas-skeleton/ui/navigation';
@@ -37,7 +38,9 @@ export function AreaSidebar() {
             сірим — активний розділ. Знак живе в рейлі, тут лишився самий текст */}
         <div className="grid leading-tight">
           <span className="truncate font-semibold">{t('brand')}</span>
-          <span className="truncate text-xs text-muted-foreground">{t(area.label)}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {t(...runtimeKey(area.label))}
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>

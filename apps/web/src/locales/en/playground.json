@@ -166,7 +166,8 @@
       "api": "API reference"
     },
     "placeholders": {
-      "search": "Search…"
+      "search": "Search…",
+      "pickOne": "Pick one…"
     },
     "empty": "Nothing found",
     "sections": {
@@ -412,7 +413,8 @@
     },
     "placeholders": {
       "disabled": "Read-only notes…",
-      "invalid": "This field has an error"
+      "invalid": "This field has an error",
+      "small": "A short note…"
     },
     "rows": {
       "small": {
