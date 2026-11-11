@@ -315,7 +315,9 @@ messaging, сокет), а `socket-events` одразу каже про тран
 
 1. **Маршрути модуля — у його теці**: `features/<модуль>/<модуль>.routes.tsx` — визначення
    (`createRoute`, `validateSearch`, `beforeLoad`, `staticData`, search-схеми й їхні типи, які
-   сторінки імпортують звідси, а не з `router.tsx`). Оболонка (root, гейт сесії, 404) —
+   сторінки імпортують звідси, а не з `router.tsx`). Компонент сторінки підключається ліниво
+   (`lazyPage(() => import('./pages/x'), 'XPage')`) — сторінка стає окремим чанком, а файл
+   маршрутів лишається легким (`docs/frontend/lazy-loading.md`). Оболонка (root, гейт сесії, 404) —
    `app-shell/app.routes.tsx`, гейти — `features/auth/auth.guards.ts`.
 2. **Дочірній маршрут імпортує батьківський з модуля нижче** — це звичайне ребро вниз за графом.
    Маршрут фічі може висіти під чужим лейаутом: `settingsCalendarRoute` (календар) — під
@@ -403,7 +405,11 @@ export default defineNavigation({
 4. Типи сповіщень, активностей, події сокета, тексти — у файлах модуля за суфіксами §5;
    у root-и додається один рядок (§7).
 5. Фронтенд: `features/<модуль>/` із `<модуль>.routes.tsx`; у `router.tsx` — рядок
-   `addChildren`, у `slot-fills.ts` — внески в слоти.
+   `addChildren`, у `slot-fills.ts` — внески в слоти. **Сторінки — ліниві**:
+   `const XPage = lazyPage(() => import('./pages/x'), 'XPage')` у `*.routes.tsx`, внески слотів і
+   `panel` area — `lazyComponent(...)`; статичний імпорт `pages/*` у routes/router/slot-fills
+   ловить ESLint, склад стартового чанка — `pnpm bundle:check`
+   (`docs/frontend/lazy-loading.md`).
 6. Таблиці — окремий файл `libs/database/prisma/schema/<модуль>.prisma`; back-relations у
    `Tenant` / `User` — у групі з коментарем-назвою модуля. Міграції — одна лінійна історія в
    `prisma/migrations/`.

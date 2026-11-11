@@ -407,6 +407,17 @@ pnpm deps:check  # → madge --circular по apps/{api,platform-api,worker}/src 
 Падає на будь-якому циклі runtime-імпортів (type-only імпорти не рахуються, `.madgerc`).
 Секунди; входить у `pnpm lint`.
 
+### `pnpm bundle:check`
+
+```bash
+pnpm bundle:check            # збирає web і platform-web у тимчасову теку, звіряє стартовий JS з бюджетом
+pnpm bundle:check --report   # + найбільші чанки й що з них у стартовому наборі
+```
+
+Бюджет (`BUDGETS` у `scripts/bundle-check.ts`) і перевірка, що сторінки модулів не потрапили в
+стартовий чанк, — `docs/frontend/lazy-loading.md` §5. Не входить у `pnpm lint` і `verify`
+(потрібен `vite build`); запускати після змін у `router.tsx`/`slot-fills.ts`/залежностях і перед релізом.
+
 ### `pnpm modules:check`
 
 ```bash

@@ -181,7 +181,7 @@ pathname; префікси не можуть вкладатися одне в о
 ```
 rootRoute                     beforeLoad: нормалізатор legacy-URL (§4)
 ├ /login
-└ appRoute  id:'app'  requireAuth  component: AppShell  notFoundComponent
+└ appRoute  id:'app'  requireAuth  component: AppShell (ліниво)  notFoundComponent
   ├ /                         → redirect /workspace
   ├ /workspace                layout (без component — Outlet рендерить роутер)
   │ ├ /                       DashboardPage
@@ -203,6 +203,12 @@ rootRoute                     beforeLoad: нормалізатор legacy-URL (�
   └ $                         NotFoundPage — шлях поза будь-якою area
 ```
 
+- **Ліниве завантаження.** `AppShell` і всі сторінки — окремі чанки (`lazyPage`); гейт `requireAuth`,
+  `staticData` (`access`, `layout`, `backdrop`) і навігація лишаються у стартовому чанку, бо потрібні
+  роутеру до завантаження будь-якого компонента. Поки чанк вантажиться, стара сторінка лишається на
+  місці, а після 300 мс — скелет `RoutePending` у outlet-і (шел і `backdrop` не зникають); провал чанка
+  — `RouteError` там само. Колонка area (`panel`) теж ледача й обгорнута в `LazyBoundary` усередині
+  `AreaSidebar`. Деталі й бюджет — `docs/frontend/lazy-loading.md`.
 - **Layout-роут area без `component`**: TanStack Router рендерить `Outlet` сам, а
   навігація area живе в шелі. Layout потрібен саме як вузол — на ньому сидить доступ
   (`staticData.access` для settings) і до нього дописуються дочірні роути.
@@ -591,7 +597,7 @@ apps/web/src/app-shell/
   app-shell.tsx                  провайдери, дві колонки, SidebarInset
   slots.ts                       слоти шела для фіч: кнопки хедера, бічні колонки (AI)
   app-rail.tsx                   перший рівень: бренд, пункти area
-  area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст
+  area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст (panel — ледача, LazyBoundary)
   workspace.nav.ts               area Workspace (сама оболонка); пункти — у модулів
   account-footer.tsx             нижня смуга шела: AppFooterBar + дропдаун профілю
 apps/web/src/nav.ts              composition root: glob по `*.nav.ts` → реєстр навігації

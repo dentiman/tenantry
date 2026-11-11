@@ -46,6 +46,9 @@ libs/ui/src/
   components/page-header.tsx        хедер сторінки: крихти + підзаголовок + дії
   components/theme-switcher.tsx
   components/user-identity.tsx
+  components/route-fallbacks.tsx  RoutePending/RouteError/PanelPending/LazyBoundary (ліниве завантаження)
+  lib/lazy.ts                 lazyPage (маршрут) / lazyComponent (важкий компонент) — docs/frontend/lazy-loading.md
+  build/chunking.ts           manualChunks + імена чанків для vite.config обох апок (не в exports)
   api/api-error.ts            нормалізація конверта ApiError
   lib/{utils,page-items,format,error-toast}.ts
   hooks/use-mobile.ts
