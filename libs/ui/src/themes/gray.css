@@ -35,7 +35,6 @@
   --card-fill-muted: var(--muted);
   --card-fill-subtle: color-mix(in oklab, var(--muted) 50%, transparent);
   --card-fill-nested: color-mix(in oklab, var(--foreground) 2.8%, transparent);
-  --card-outline-nested: color-mix(in oklab, var(--foreground) 8%, transparent);
   /* БЕЗ тіні — пробуємо, чи вистачить самих заливок і межі. Якщо рівні
      зіллються, повертати сюди `var(--surface-shadow)`: це один токен. */
   --card-elevation: none;
@@ -195,7 +194,6 @@
   --card-fill-muted: color-mix(in oklab, var(--card-base) 30%, transparent);
   --card-fill-subtle: color-mix(in oklab, var(--card-base) 15%, transparent);
   --card-fill-nested: color-mix(in oklab, var(--foreground) 1.8%, transparent);
-  --card-outline-nested: color-mix(in oklab, var(--foreground) 3%, transparent);
   --card-elevation: none;
   --card-foreground: var(--foreground);
   --popover: #252525; /* --c-popBac  висота передається світлом */

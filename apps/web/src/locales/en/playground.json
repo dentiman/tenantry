@@ -15,7 +15,8 @@
     "verticalForm": "Vertical form",
     "inlineForm": "Inline form",
     "dataGrid": "Data grid",
-    "cards": "Cards"
+    "cards": "Cards",
+    "popups": "Popups"
   },
   "eyebrow": "Design system",
   "origin": {
@@ -1031,6 +1032,67 @@
         "label": "none",
         "description": "For a card that runs into the edge of the canvas, where a rounded corner hangs in the air."
       }
+    }
+  },
+  "popups": {
+    "title": "Popups",
+    "description": "Menus, lists, popovers and hover cards lie on top of page text, so on a brand backdrop a solid surface turns into a grey patch. Here they are glass: a dense tinted fill with a strong blur, so the colour of the backdrop shows through and the text underneath does not. Tune the two knobs and carry the result into brand-backdrop.css §5.",
+    "sceneHint": {
+      "glass": "A brand backdrop is on: the popups below use the glass fill (--popover-glass) and backdrop blur.",
+      "solid": "No backdrop: work screens. Popups stay on the opaque --popover — the knobs have no effect here."
+    },
+    "tune": {
+      "alpha": "Fill opacity",
+      "blur": "Blur",
+      "reset": "Reset"
+    },
+    "triggers": {
+      "title": "Triggers",
+      "description": "Every popup primitive that renders through a portal. Open them over the text below."
+    },
+    "menu": {
+      "trigger": "Account",
+      "label": "My account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "showDone": "Show completed",
+      "more": "More",
+      "export": "Export",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "select": {
+      "any": "Anyone",
+      "me": "Me",
+      "team": "My team"
+    },
+    "combobox": {
+      "placeholder": "Search a framework…"
+    },
+    "popover": {
+      "trigger": "Popover",
+      "title": "Quick filter",
+      "description": "A small form-like popup. Its fill is the same glass as the menus.",
+      "cancel": "Cancel",
+      "apply": "Apply"
+    },
+    "hover": {
+      "trigger": "Hover card",
+      "title": "Northwind Logistics",
+      "description": "A peek card shown on hover. Same surface, no interaction inside."
+    },
+    "context": {
+      "trigger": "Right-click here",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "underlay": {
+      "title": "Text underneath",
+      "p1": "The foundation for building multi-tenant CRM and ERP products. Sign-in, organizations, background jobs, files, live updates, notifications and the UI are already done — a new product starts straight from its own business logic.",
+      "p2": "Each organization sees only its own data — the database itself guarantees this, not developer discipline. Customers and Calendar inside are working reference modules: a new section copies their structure instead of inventing its own.",
+      "p3": "A new domain module — tickets, billing, inventory — should take days, not weeks. Everything every SaaS repeats is solved once and the same way, so the team spends its time on what makes the product different.",
+      "p4": "Key guarantees — organization isolation, an event only together with the saved fact, files bypassing the server — are built into the design, so a new module cannot forget them. Open any popup above and read through this paragraph: if a line stays legible behind the menu, raise the opacity."
     }
   }
 }

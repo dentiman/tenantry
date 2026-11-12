@@ -29,6 +29,10 @@ const PlaygroundInputPage = lazyPage(
   () => import('./pages/playground-input'),
   'PlaygroundInputPage',
 );
+const PlaygroundPopupsPage = lazyPage(
+  () => import('./pages/playground-popups'),
+  'PlaygroundPopupsPage',
+);
 const PlaygroundSelectPage = lazyPage(
   () => import('./pages/playground-select'),
   'PlaygroundSelectPage',
@@ -113,6 +117,17 @@ export const playgroundComponentsCardsRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
   path: 'cards',
   component: PlaygroundCardsPage,
+});
+
+/**
+ * General Components: Popups — меню, списки й картки-підказки на різних фонах. Окремий
+ * стенд, бо попап лежить поверх тексту сторінки, і суцільний `--popover` на брендовому
+ * склі виглядає сірою плямою: тут добирають густину скла й розмиття.
+ */
+export const playgroundComponentsPopupsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'popups',
+  component: PlaygroundPopupsPage,
 });
 
 /** General Components: Combobox — пошук-з-попапом, фундамент усіх бізнес-селектів */

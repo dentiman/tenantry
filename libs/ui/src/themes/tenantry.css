@@ -46,7 +46,6 @@
   --card-fill-muted: var(--muted);
   --card-fill-subtle: color-mix(in oklab, var(--muted) 50%, transparent);
   --card-fill-nested: color-mix(in oklab, var(--foreground) 2.8%, transparent);
-  --card-outline-nested: color-mix(in oklab, var(--foreground) 8%, transparent);
   /* БЕЗ тіні — пробуємо, чи вистачить самих заливок і межі. Якщо рівні
      зіллються, повертати сюди `var(--surface-shadow)`: це один токен. */
   --card-elevation: none;
@@ -202,7 +201,6 @@
   --card-fill-muted: color-mix(in oklab, var(--card-base) 30%, transparent);
   --card-fill-subtle: color-mix(in oklab, var(--card-base) 15%, transparent);
   --card-fill-nested: color-mix(in oklab, var(--foreground) 1.8%, transparent);
-  --card-outline-nested: color-mix(in oklab, var(--foreground) 3%, transparent);
   --card-elevation: none;
   --card-foreground: var(--foreground);
   /* Попап в Orca стоїть на 0.325 і читається тільки тому, що лежить над
@@ -343,13 +341,4 @@
      довша й щільніша: тінь лишається під вікном, без ореола довкола. */
   --modal-shadow:
     0 2px 4px rgb(0 0 0 / 16%), 0 8px 18px -8px rgb(0 0 0 / 28%), 0 18px 32px -14px rgb(0 0 0 / 36%);
-  /* Скляний блік вітринних сторінок (`brand-backdrop.css`, `.dark` = 0-1-0;
-     цей селектор 0-3-0, тож перекриває) ВИМКНЕНО саме в цій темі. Блік — це
-     `inset 0 1px 0` зсередини верхнього краю, а `--surface-shadow` тут дає
-     контур ЗЗОВНІ того ж краю: разом вони лягали двома світлими лініями в
-     сусідніх пікселях (у профілі картки /guide — 0.274 ззовні і 0.356
-     зсередини), і верх картки читався вдвічі товщим за решту контуру. В інших
-     темах конфлікту немає: там `--surface-shadow` — розмита тінь, і блік
-     лишається єдиною лінією, тож вимикати його глобально не можна. */
-  --glass-highlight: inset 0 0 0 0 transparent;
 }

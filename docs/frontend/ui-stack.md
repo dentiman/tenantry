@@ -717,7 +717,7 @@ foreground світлий, тож панель виходить трохи св�
 
 Окремо лишається **feature tile** — не примітив, а власний CSS із кольоровим сяйвом і
 градієнтною hairline. Тепер він один — картка входу; з 2026-11-10 це вже не окремий різновид, а звичайна
-`<Card fill="muted" elevation="raised" data-auth-card>`, яку доточує `[data-auth-card]` у `brand-backdrop.css` (`brand-backdrop.md` §7.2). Старі правила `[data-slot='auth-card']` лишились у CSS як мертві. Плитка
+`<Card fill="muted" elevation="raised" data-auth-card>`, яку доточує `[data-auth-card]` у `brand-backdrop.css` (`brand-backdrop.md` §7.2). Старі правила `[data-slot='auth-card']` видалено 2026-11-12. Плитка
 Product tour на дашборді була другим таким блоком і **знята** — рішення користувача
 2026-11-07: замість трьох рухомих плям, вуалі й градієнтної рамки там звичайна
 `<Card tone="warning">`. Тон несе ту саму думку («подивись сюди»), а теплим лишилось те, що й

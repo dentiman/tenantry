@@ -16,7 +16,8 @@ export const guideRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/guide',
   component: GuidePage,
-  staticData: { backdrop: 'brand' },
+  // Експеримент: свій спокійний фон зі світлом ліворуч (`brand-backdrop.css` §4)
+  staticData: { backdrop: 'brand', backdropVariant: 'guide' },
 });
 
 /**

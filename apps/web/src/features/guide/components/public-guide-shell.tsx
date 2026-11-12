@@ -54,7 +54,7 @@ export function PublicGuideShell({ children }: { children: ReactNode }) {
         { '--sidebar-width': 'calc(14rem + var(--sidebar-width-icon) + 2px)' } as CSSProperties
       }
     >
-      <BrandBackdrop />
+      <BrandBackdrop variant="guide" />
 
       <Sidebar collapsible="icon" className="overflow-hidden">
         <div className="flex min-h-0 flex-1">

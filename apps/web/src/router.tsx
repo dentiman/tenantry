@@ -64,6 +64,7 @@ import {
   playgroundComponentsCardsRoute,
   playgroundComponentsComboboxRoute,
   playgroundComponentsInputRoute,
+  playgroundComponentsPopupsRoute,
   playgroundComponentsSelectRoute,
   playgroundComponentsTextareaRoute,
   playgroundComponentsTabsRoute,
@@ -129,6 +130,7 @@ const routeTree = rootRoute.addChildren([
         playgroundComponentsComboboxRoute,
         playgroundComponentsDataGridRoute,
         playgroundComponentsInputRoute,
+        playgroundComponentsPopupsRoute,
         playgroundComponentsSelectRoute,
         playgroundComponentsTabsRoute,
         playgroundComponentsTextareaRoute,
@@ -193,6 +195,12 @@ declare module '@tanstack/react-router' {
      * даних. Стилі — `libs/ui/src/brand-backdrop.css`.
      */
     backdrop?: 'brand';
+    /**
+     * Який фон під `backdrop: 'brand'`: `shell` (дефолт, три плями й точки), `auth` (фон
+     * сторінок входу: база кольору сайдбара й ауры по кутах, без точок) або `guide` (те саме,
+     * але світло зліва, на стику колонки й контенту). Без `backdrop` ні на що не впливає.
+     */
+    backdropVariant?: 'shell' | 'auth' | 'guide';
     /**
      * Хто може відкрити сторінку (лейаут → усі діти). ЄДИНЕ джерело: гейт `requireAuth` на
      * `appRoute` відсікає за ним перехід, а меню й рейл (`libs/ui/src/navigation`) ховають

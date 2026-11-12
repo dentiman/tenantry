@@ -8,21 +8,26 @@
  * пішов би під непрозорий `body`.
  *
  * Варіант `auth` — для сторінок входу (`auth-shell.tsx`), див. §7 brand-backdrop.md.
+ * Варіант `guide` — путівник: той самий спокійний фон, але світло зліва, на стику
+ * бічної колонки й контенту (§4 у `brand-backdrop.css`).
  *
  * Сам по собі нічого не робить із шелом — поверхні стають склом від атрибута
  * `data-backdrop` на обгортці. Стилі й токени — `brand-backdrop.css`.
  */
-export function BrandBackdrop({ variant = 'shell' }: { variant?: 'shell' | 'auth' }) {
+export function BrandBackdrop({ variant = 'shell' }: { variant?: 'shell' | 'auth' | 'guide' }) {
   // `auth` — сторінки входу (`AuthShell`): ті самі три плями, але зібрані в одну ауру
   // по центру вікна і БЕЗ точок; геометрію й кольори дає модифікатор `--auth` у CSS
-  const isAuth = variant === 'auth';
+  // `guide` — те саме без точок, але з іншою геометрією ауры (світло ліворуч)
+  const isCalm = variant !== 'shell';
+  const className =
+    variant === 'shell' ? 'brand-backdrop' : `brand-backdrop brand-backdrop--${variant}`;
 
   return (
-    <div aria-hidden className={isAuth ? 'brand-backdrop brand-backdrop--auth' : 'brand-backdrop'}>
+    <div aria-hidden className={className}>
       <div className="brand-backdrop__glow brand-backdrop__glow--1" />
       <div className="brand-backdrop__glow brand-backdrop__glow--2" />
       <div className="brand-backdrop__glow brand-backdrop__glow--3" />
-      {!isAuth && <div className="brand-backdrop__dots" />}
+      {!isCalm && <div className="brand-backdrop__dots" />}
     </div>
   );
 }

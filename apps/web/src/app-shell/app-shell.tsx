@@ -67,6 +67,7 @@ export function AppShell() {
   // Так само від сторінки — брендовий фон і скляний шел над ним
   // (`libs/ui/src/brand-backdrop.css`). Робочі екрани його не оголошують
   const backdrop = matches.at(-1)?.staticData.backdrop;
+  const backdropVariant = matches.at(-1)?.staticData.backdropVariant;
 
   /**
    * Прокрутка скидається на початок при переході на іншу сторінку.
@@ -112,7 +113,7 @@ export function AppShell() {
         >
           {/* Фон — ПЕРША дитина і без z-index: так він під фіксованим
             сайдбаром і під `SidebarInset`, але над непрозорим `body` */}
-          {backdrop === 'brand' && <BrandBackdrop />}
+          {backdrop === 'brand' && <BrandBackdrop variant={backdropVariant} />}
 
           {/* collapsible="icon": згортання стискає контейнер до ширини рейлу, а
             overflow-hidden відрізає панель. Тобто SidebarTrigger і Cmd+B тепер
