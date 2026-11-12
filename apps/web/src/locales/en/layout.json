@@ -32,9 +32,9 @@
     "system": "System",
     "paletteLabel": "Switch color theme",
     "palettes": {
-      "tenantry": "Tenantry",
-      "gray": "Gray",
-      "ink": "Ink"
+      "default": "Default",
+      "slate": "Slate",
+      "graphite": "Graphite"
     }
   }
 }

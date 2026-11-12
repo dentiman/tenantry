@@ -11,7 +11,7 @@
  * Додати тему = файл CSS + `@import` у `styles.css` + рядок тут.
  * Контракт і план — `docs/frontend/theming.md`.
  */
-export type UiThemeId = 'tenantry' | 'gray' | 'ink';
+export type UiThemeId = 'default' | 'slate' | 'graphite';
 
 export interface UiTheme {
   id: UiThemeId;
@@ -29,9 +29,9 @@ export interface UiTheme {
  * палітра інтерфейсу Orca (`themes/tenantry.css`). Дзеркалом одне одному
  * режими не є навмисно: спільним лишається контракт ролей, а не палітра.
  */
-const TENANTRY_THEME: UiTheme = {
-  id: 'tenantry',
-  labelKey: 'theme.palettes.tenantry',
+const SLATE_THEME: UiTheme = {
+  id: 'slate',
+  labelKey: 'theme.palettes.slate',
   swatch: [
     'oklch(0.984 0.003 247.858)',
     'oklch(0.929 0.013 255.508)',
@@ -40,12 +40,12 @@ const TENANTRY_THEME: UiTheme = {
 };
 
 /**
- * Палітра Notion: теплі zinc-нейтралі у світлі, темний Notion у темряві. Була
- * дефолтною до 2026-11-08.
+ * Палітра Notion: теплі zinc-нейтралі у світлі, глибокий темний Notion (#191919)
+ * у темряві. Була дефолтною до 2026-11-08 як `gray`; перейменована 2026-11-12.
  */
-const GRAY_THEME: UiTheme = {
-  id: 'gray',
-  labelKey: 'theme.palettes.gray',
+const GRAPHITE_THEME: UiTheme = {
+  id: 'graphite',
+  labelKey: 'theme.palettes.graphite',
   swatch: ['oklch(0.9702 0 0)', 'oklch(0.9 0.004 286.32)', 'oklch(0.6204 0.195 253.83)'],
 };
 
@@ -57,16 +57,16 @@ const GRAY_THEME: UiTheme = {
  * — Atlassian Design System (Jira), у темряві bold-кнопка інвертована: світла
  * заливка, темний текст.
  */
-const INK_THEME: UiTheme = {
-  id: 'ink',
-  labelKey: 'theme.palettes.ink',
+const DEFAULT_THEME: UiTheme = {
+  id: 'default',
+  labelKey: 'theme.palettes.default',
   swatch: ['oklch(0.97 0.003 265)', 'oklch(0.905 0.005 265)', '#1868db'],
 };
 
 /** Порядок = порядок пунктів у меню вибору */
-export const UI_THEMES: readonly UiTheme[] = [TENANTRY_THEME, GRAY_THEME, INK_THEME];
+export const UI_THEMES: readonly UiTheme[] = [DEFAULT_THEME, SLATE_THEME, GRAPHITE_THEME];
 
-export const DEFAULT_UI_THEME: UiThemeId = TENANTRY_THEME.id;
+export const DEFAULT_UI_THEME: UiThemeId = DEFAULT_THEME.id;
 
 /**
  * Валідація на КОЖНОМУ читанні ззовні (localStorage, атрибут): id теми може
@@ -79,5 +79,5 @@ export function isUiThemeId(value: unknown): value is UiThemeId {
 
 /** Тема за id з гарантованим фолбеком — щоб виклик не тягнув перевірку на undefined */
 export function getUiTheme(id: UiThemeId): UiTheme {
-  return UI_THEMES.find((theme) => theme.id === id) ?? TENANTRY_THEME;
+  return UI_THEMES.find((theme) => theme.id === id) ?? DEFAULT_THEME;
 }

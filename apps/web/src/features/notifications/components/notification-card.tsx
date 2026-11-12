@@ -97,14 +97,18 @@ export function NotificationCard({
         render={asButton ? <button type="button" /> : undefined}
         className={cn(
           'w-full items-start text-left transition-colors',
-          // Той самий матеріал, що картки дашборда (`Card`): без обводки
-          // (variant="default" — border-transparent), світла тінь замість
-          // межі. У світлій темі тінь читається (bg-card біліший за
-          // bg-sidebar панелі); у темній тіні не працюють — підняття дає
-          // світліший колір (bg-popover світліший за bg-sidebar/card у
-          // темній темі), а не shadow. Однаково незалежно від read/unread —
-          // стан непрочитаного показує крапка + жирність тексту нижче
-          floating ? 'bg-popover shadow-md' : 'bg-card shadow-sm dark:bg-popover dark:shadow-none',
+          // Той самий матеріал, що картки дашборда (`Card`): внутрішній контур
+          // `--card-outline-default` (той самий токен і та сама геометрія
+          // `-outline-offset-1`, що в `card-surface.css`) плюс тінь рівня
+          // `surface`. Доти контуру не було, і в темах із білим шелом (`ink`)
+          // біла картка на білій панелі лишалась без краю; периметр у самій
+          // тіні теми не годиться — на `Card` він подвоював лінію. У темній
+          // тіні не працюють — підняття дає світліший колір (bg-popover
+          // світліший за bg-sidebar/card), а не shadow. Однаково незалежно
+          // від read/unread — стан непрочитаного показує крапка + жирність
+          floating
+            ? 'bg-popover shadow-md'
+            : 'bg-card shadow-sm outline-1 -outline-offset-1 outline-(--card-outline-default) dark:bg-popover dark:shadow-none',
           menu && 'pr-10',
           // Наведення НЕ міняє колір: блакитна обводка `hover:border-primary/50`
           // тут читалась як стан «вибрано» — брендовий колір у списку означає
@@ -166,11 +170,13 @@ export function NotificationCard({
             <DropdownMenuTrigger
               render={
                 <Button
-                  variant="secondary"
-                  size="icon-xs"
-                  radius="full"
+                  // Той самий тригер, що «…» у рядку гріда (`data-grid.tsx`): ghost
+                  // icon-sm без тіні й без власного радіуса. Доти тут була кругла
+                  // secondary-кнопка з `shadow-md` — чужий елемент поруч із меню
+                  // стандартного набору (рішення власника 2026-11-12).
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={menu.ariaLabel}
-                  className="size-6 shadow-md"
                   // Меню — не «відкрити сповіщення»: клік не має підніматися до картки
                   onClick={(e) => {
                     e.stopPropagation();

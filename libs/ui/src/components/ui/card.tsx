@@ -11,7 +11,8 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *   border характер лінії       solid | dashed | dotted
  *   edge   акцентна смуга 3px   boolean (колір = tone на повну силу)
  *   radius скруглення кутів     default | sm (радіус контролів) | none
- *   elevation висота над полотном flat | raised (самостійна картка-сцена)
+ *   elevation висота над полотном flat | surface (плитка в списку) | raised (картка-сцена)
+ *             | overlay (плитка, яку тягнуть)
  *
  * Самі значення — `libs/ui/src/card-surface.css` (там і чому заливка
  * напівпрозора, і чому у світлій темі альфа інша). Тут лише data-атрибути:
@@ -35,7 +36,7 @@ interface CardSurfaceProps {
    * Висота над полотном. `raised` — рівень `--raised-shadow` шкали висот теми;
    * лише для картки, яка на екрані одна (вхід). Усе плаваюче — `Popover`/`Dialog`
    */
-  elevation?: 'flat' | 'raised';
+  elevation?: 'flat' | 'surface' | 'raised' | 'overlay';
   /** Щільність заливки. Усе, крім `default`/`opaque`, без підняття */
   fill?: 'default' | 'muted' | 'subtle' | 'ghost' | 'opaque' | 'nested';
   size?: 'default' | 'sm';

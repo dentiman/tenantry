@@ -1,7 +1,7 @@
 /**
- * ТЕМА «Gray» (`gray`) — палітра Notion: теплі zinc-нейтралі у світлі й темний
+ * ТЕМА «Graphite» (`graphite`, до 2026-11-12 — `graphite`) — палітра Notion: теплі zinc-нейтралі у світлі й темний
  * Notion цілком у темряві. Була дефолтною з 2026-09-08 до 2026-11-08, коли
- * дефолтом стала `tenantry`; збережена як повноцінна тема, а не як архів.
+ * дефолтом стала `slate`; збережена як повноцінна тема, а не як архів.
  *
  * Асиметрія режимів свідома: світло — zinc-шкала HeroUI, темрява — власні
  * токени Notion. Режими ніхто не бачить одночасно, спільним лишається контракт
@@ -20,7 +20,7 @@
  * ПОДІЙ (`--event-*`) — спільна база всіх тем і теж лишається в `styles.css`.
  */
 
-:root[data-theme='gray'] {
+:root[data-theme='graphite'] {
   --radius: 0.625rem;
   color-scheme: light;
   --background: oklch(0.9702 0 0);
@@ -112,6 +112,10 @@
      без другого кільця; чистий primary на 1px кричав. 60% бренду, решта — колір
      обводки поля, тож тон сидить між межею й акцентом у будь-якому режимі. */
   --ring: color-mix(in oklab, var(--primary) 60%, var(--input));
+  /* Базові 10% кільця попапа і 8% контуру картки `default` — як було до того, як ці
+     значення стали токенами теми (2026-11-12, `default` бере сильніші, за Jira). */
+  --overlay-outline: color-mix(in oklab, var(--foreground) 10%, var(--popover));
+  --card-outline-default: color-mix(in oklab, var(--foreground) 8%, transparent);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -161,7 +165,7 @@
     0 40px 96px -16px rgb(0 0 0 / 11%);
 }
 
-:root[data-theme='gray'].dark {
+:root[data-theme='graphite'].dark {
   /* ── Темний режим дефолту: ТЕМНИЙ NOTION ЦІЛКОМ ───────────────────────────
      Це не «схоже на Notion», а їхні власні токени, зняті з живого CSS-бандла
      app.notion.com (`_assets/84388-*.css`, вересень 2026): 265 перевизначень
@@ -267,6 +271,9 @@
      без другого кільця; чистий primary на 1px кричав. 60% бренду, решта — колір
      обводки поля, тож тон сидить між межею й акцентом у будь-якому режимі. */
   --ring: color-mix(in oklab, var(--primary) 60%, var(--input));
+  /* Контур картки `default` у темряві — 3%: на найщільнішій заливці 7% кричали */
+  --card-outline-default: color-mix(in oklab, var(--foreground) 3%, transparent);
+  --overlay-outline: color-mix(in oklab, var(--foreground) 10%, var(--popover));
   --chart-1: #4fa7ff; /* --c-palUiBlu700 (dark) */
   --chart-2: #529e72;
   --chart-3: #c77d48;

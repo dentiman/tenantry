@@ -787,7 +787,7 @@
   },
   "cards": {
     "title": "Card",
-    "description": "One primitive, three independent axes. The surface is never a variant name — it is fill × tone × border, and the same card keeps its meaning on a work canvas, on a brand backdrop, and in either theme.",
+    "description": "One primitive, four independent axes. The surface is never a variant name — it is fill × tone × border × elevation, and the same card keeps its meaning on a work canvas, on a brand backdrop, and in either theme.",
     "importLabel": "SHARED IMPORT",
     "scene": {
       "solid": {
@@ -820,6 +820,10 @@
         "title": "nested — a panel inside a card",
         "description": "The one role that measures itself against its PARENT, not the canvas. Everything else on this axis is a share of the base fill, and a share of the base is invisible on a surface that is already raised."
       },
+      "elevation": {
+        "title": "Axis 4 — elevation",
+        "description": "How far the card stands off the canvas. Four steps of the theme's shared shadow ladder, so a tile, its drag ghost and a menu over it read as one staircase. Dark keeps shadows short and dense — there the level is carried by the fill."
+      },
       "tone": {
         "title": "Axis 2 — tone",
         "description": "Colour mixed into the neutral base at 14%, border at 22%. Source is the event palette, shared with the calendar."
@@ -838,7 +842,7 @@
       },
       "combined": {
         "title": "Axes combine",
-        "description": "The point of three axes instead of variant names: every pair is a real state and needs no name of its own."
+        "description": "The point of axes instead of variant names: every pair is a real state and needs no name of its own."
       },
       "anatomy": {
         "title": "Anatomy",
@@ -995,6 +999,16 @@
         "label": "Edge without a tone",
         "code": "edge",
         "description": "Neutral keeps a grey marker: the colour is there with zero strength, so it never reaches the fill but the edge still has something to draw."
+      },
+      "boardCard": {
+        "label": "Board card",
+        "code": "elevation=\"surface\" radius=\"sm\"",
+        "description": "A Jira-style card in a column: control radius, outline and a hairline shadow — it stands on the column, not painted on it."
+      },
+      "dragging": {
+        "label": "Board card, dragging",
+        "code": "elevation=\"overlay\" radius=\"sm\"",
+        "description": "The same card in flight over its neighbours: popover level, same fill and outline, only the height changed."
       }
     },
     "matrix": {
@@ -1031,6 +1045,24 @@
       "none": {
         "label": "none",
         "description": "For a card that runs into the edge of the canvas, where a rounded corner hangs in the air."
+      }
+    },
+    "elevation": {
+      "flat": {
+        "label": "flat (default)",
+        "description": "No shadow at all: a card in a page grid is a level of fill, not a floating object."
+      },
+      "surface": {
+        "label": "surface — a tile in a list",
+        "description": "Outline plus a hairline shadow under the bottom edge: the tile stands ON the surface. The Jira board card at rest."
+      },
+      "raised": {
+        "label": "raised — a card that is the scene",
+        "description": "The sign-in card: alone on the canvas, so it may carry a real shadow."
+      },
+      "overlay": {
+        "label": "overlay — in flight",
+        "description": "The same tile while it is being dragged over its neighbours: the popover level, nothing above it but dialogs."
       }
     }
   },

@@ -17,14 +17,15 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *      вітринної сторінки (кнопка входу під публічним путівником). Це не метрика форм —
  *      у формах і таблицях він не вживається; додано, щоб велику кнопку давав примітив,
  *      а не `h-*` на місці виклику.
- * Фокус — суцільне `ring-2` кольору `--ring` (наш синій) з відступом 2px.
- * Сам відступ ПРОЗОРИЙ (`ring-offset-transparent`), а не кольору полотна:
- * проміжок між кнопкою і кільцем мусить показувати поверхню, на якій кнопка
- * стоїть, інакше на тонованій картці навколо фокуса з'являється смужка
- * кольору полотна.
+ * Фокус — суцільне `ring-2` кольору `--ring` (приглушений primary теми) впритул
+ * до кнопки, БЕЗ відступу і без перефарбування `border`. Доти було
+ * `border-ring` + `ring-2` + `ring-offset-2`: разом 1 + 2 + 2 = смуга на 4–5px,
+ * яка при поверненні фокуса (закрите меню, діалог) читалась як товста рамка.
+ * Рішення власника 2026-11-12: рівно 2px. Відступ прибрано, а не зроблено
+ * кольору полотна: на тонованій картці він малював би смужку чужого кольору.
  */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,opacity,transform] outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,opacity,transform] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

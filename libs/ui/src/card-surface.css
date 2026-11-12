@@ -80,11 +80,9 @@
    контуру фактично немає. Доти його підміняла тінь, і коли вона пішла, біла
    картка лишилась зовсім без краю — 8% повертають їй видиму лінію. */
 [data-slot='card'][data-fill='default'] {
-  --card-outline: color-mix(in oklab, var(--foreground) 8%, transparent);
-}
-
-.dark [data-slot='card'][data-fill='default'] {
-  --card-outline: color-mix(in oklab, var(--foreground) 3%, transparent);
+  /* Рівень — токен теми (2026-11-12): 8% у світлі `slate`/`graphite`, 14% в `default`
+     (як `--ds-border` Jira), 3% у темряві в усіх */
+  --card-outline: var(--card-outline-default);
 }
 
 /* Приглушена і примарна НЕ мають підняття: у світлі саме тінь відрізняє
@@ -131,13 +129,9 @@
    головний. */
 [data-slot='card'][data-fill='nested'] {
   --card-surface: var(--card-fill-nested);
-  --card-outline: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --card-outline: var(--card-outline-default);
 
   box-shadow: none;
-}
-
-.dark [data-slot='card'][data-fill='nested'] {
-  --card-outline: color-mix(in oklab, var(--foreground) 3%, transparent);
 }
 
 /* Виняток для випадків, де під карткою не має просвічувати нічого */
@@ -159,6 +153,35 @@
    це `Popover`/`Dialog`, а не картка з великою тінню. */
 [data-slot='card'][data-elevation='raised'] {
   box-shadow: var(--raised-shadow);
+}
+
+/* Два рівні, додані 2026-11-12 за дошкою Jira (`elevation.surface.raised` +
+   `shadow.raised` для картки в колонці, `shadow.overlay` — поки її тягнуть):
+     surface — плитка в списку/колонці: контур + ледь помітна тінь під нижнім
+               краєм, щоб плитка стояла НА поверхні, а не була намальована на ній;
+     overlay — та сама плитка в польоті (drag), над сусідами: рівень попапа.
+   Обидва — сходинки спільної шкали теми, тож плитка, її «політ» і меню над нею
+   читаються однією драбиною. Картка-сцена (`raised`) лишається між ними. */
+/* НЕ `var(--surface-shadow)`: той токен обслуговує поля й сегменти, у яких немає
+   власної обводки, тож у темряві він — кільце `0 0 0 1px`, а у світлі несе
+   шар-периметр або блюр, що обходить усі чотири сторони. Поруч із внутрішнім
+   `outline` картки це давало ДВІ лінії одного тону (2026-11-12, обидва режими).
+   Тут тінь лише ПІД нижнім краєм за побудовою: від'ємний spread −1px ховає її
+   під контур, зсув 1px виводить тільки знизу, блюр 1px робить цей край м'яким.
+   Контур лишається один — `--card-outline`. Чорний, не тонований: у темряві
+   тонована тінь на 0.22 не читається, у світлі різниці немає. Альфа в темряві
+   вища, бо чорне на темному полотні вдвічі слабше за те саме на білому
+   (ADS `shadow.raised`: 25% у світлі, 50% у темряві). */
+[data-slot='card'][data-elevation='surface'] {
+  box-shadow: 0 1px 1px -1px rgb(0 0 0 / 22%);
+}
+
+.dark [data-slot='card'][data-elevation='surface'] {
+  box-shadow: 0 1px 1px -1px rgb(0 0 0 / 50%);
+}
+
+[data-slot='card'][data-elevation='overlay'] {
+  box-shadow: var(--overlay-shadow);
 }
 
 /* ── Ступінь для ТОНОВАНИХ карток ────────────────────────────────────────────

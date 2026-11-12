@@ -24,15 +24,27 @@ const FILLS = ['default', 'muted', 'subtle', 'ghost', 'opaque', 'nested'] as con
 /* Для матриці — лише видимі ступені: `ghost` зводить тон нанівець разом із
    заливкою, `opaque` існує як виняток і тону не несе */
 const MATRIX_FILLS = ['default', 'muted', 'subtle'] as const;
+const ELEVATIONS = ['flat', 'surface', 'raised', 'overlay'] as const;
+type Elevation = (typeof ELEVATIONS)[number];
 const TONES = ['neutral', 'info', 'success', 'warning', 'danger', 'accent'] as const;
 const BORDERS = ['solid', 'dashed', 'dotted'] as const;
 const RADII = ['default', 'sm', 'none'] as const;
-const COMBINED = ['planned', 'warning', 'dropzone', 'positive', 'event', 'edgeNeutral'] as const;
+const COMBINED = [
+  'planned',
+  'warning',
+  'dropzone',
+  'positive',
+  'event',
+  'edgeNeutral',
+  'boardCard',
+  'dragging',
+] as const;
 const RELATED = ['popover', 'dialog', 'alert', 'contextPanel'] as const;
 
 type Fill = (typeof FILLS)[number];
 type Tone = (typeof TONES)[number];
 type Border = (typeof BORDERS)[number];
+type Radius = (typeof RADII)[number];
 
 /**
  * Каталог карткових поверхонь: три незалежні осі замість імен різновидів.
@@ -204,6 +216,31 @@ export function PlaygroundCardsPage() {
                 </Card>
               </Sample>
             </div>
+          </Section>
+
+          {/* Вісь висоти — сходинки спільної шкали тіней теми (theming.md §1.3.6):
+              surface/overlay додані 2026-11-12 за дошкою Jira (картка в колонці /
+              картка, яку тягнуть). У темряві тіні короткі й щільні, рівень
+              читається заливкою — це не дефект зразка. */}
+          <Section
+            id="cards-elevation"
+            title={t('cards.sections.elevation.title')}
+            description={t('cards.sections.elevation.description')}
+          >
+            <Grid>
+              {ELEVATIONS.map((elevation) => (
+                <Sample
+                  key={elevation}
+                  caption={t(`cards.elevation.${elevation}.label`)}
+                  code={`elevation="${elevation}"`}
+                  note={t(`cards.elevation.${elevation}.description`)}
+                >
+                  <Card size="sm" elevation={elevation}>
+                    <SampleBody />
+                  </Card>
+                </Sample>
+              ))}
+            </Grid>
           </Section>
 
           <Section
@@ -399,7 +436,14 @@ export function PlaygroundCardsPage() {
 
 const COMBINED_PROPS: Record<
   (typeof COMBINED)[number],
-  { border?: Border; edge?: boolean; fill?: Fill; tone?: Tone }
+  {
+    border?: Border;
+    edge?: boolean;
+    elevation?: Elevation;
+    fill?: Fill;
+    radius?: Radius;
+    tone?: Tone;
+  }
 > = {
   planned: { fill: 'muted', border: 'dashed' },
   warning: { tone: 'warning', fill: 'muted' },
@@ -407,6 +451,9 @@ const COMBINED_PROPS: Record<
   positive: { tone: 'success', fill: 'muted' },
   event: { tone: 'info', edge: true },
   edgeNeutral: { edge: true },
+  // Дошка Jira: картка в колонці і та сама картка, поки її тягнуть (2026-11-12)
+  boardCard: { elevation: 'surface', radius: 'sm' },
+  dragging: { elevation: 'overlay', radius: 'sm' },
 };
 
 /** Заголовок секції прямо на полотні — замість картки-обгортки, див. шапку файла */
