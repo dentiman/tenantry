@@ -33,7 +33,8 @@
     "paletteLabel": "Switch color theme",
     "palettes": {
       "tenantry": "Tenantry",
-      "gray": "Gray"
+      "gray": "Gray",
+      "ink": "Ink"
     }
   }
 }

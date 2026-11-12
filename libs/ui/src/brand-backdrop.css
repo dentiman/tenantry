@@ -321,6 +321,16 @@
    (`/playground/components/popups`) ставить їх на `<html>` наживо. Заливка оголошена
    на `:root` (див. §1: `var()` підставляється там, де ОГОЛОШЕНО), тож бере значення
    теми й режиму без циклу. */
+/* Кільце попапа на склі — знову НАПІВПРОЗОРЕ: база (`styles.css`) і темні блоки
+   тем домішують `--popover`, щоб лінія не залежала від підкладки, але на
+   скляному попапі суцільна лінія тону `--popover` читалась би рамкою чужого
+   кольору. Друга пара селекторів — 0-3-0, щоб перебити темні блоки тем
+   (`:root[data-theme].dark`), які стоять вище за порядком імпорту. */
+:root:has([data-backdrop='brand']),
+:root.dark:has([data-backdrop='brand']) {
+  --overlay-outline: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+
 :root {
   --popup-glass-alpha: 60%;
   --popup-blur: 30px;

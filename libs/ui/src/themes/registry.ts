@@ -11,7 +11,7 @@
  * Додати тему = файл CSS + `@import` у `styles.css` + рядок тут.
  * Контракт і план — `docs/frontend/theming.md`.
  */
-export type UiThemeId = 'tenantry' | 'gray';
+export type UiThemeId = 'tenantry' | 'gray' | 'ink';
 
 export interface UiTheme {
   id: UiThemeId;
@@ -49,8 +49,22 @@ const GRAY_THEME: UiTheme = {
   swatch: ['oklch(0.9702 0 0)', 'oklch(0.9 0.004 286.32)', 'oklch(0.6204 0.195 253.83)'],
 };
 
+/**
+ * «Стандартна» будова поверхонь без інверсій: полотно — найглибше, шел, бічні
+ * панелі, картки й діалог на одній сходинці над ним в обох режимах, у темряві
+ * «вище = світліше» (Notion/M3/Atlassian). Нейтралі майже без хроми. Додана
+ * 2026-11-12 як еталон для §3.3 theming.md. Акценти (primary/secondary/danger)
+ * — Atlassian Design System (Jira), у темряві bold-кнопка інвертована: світла
+ * заливка, темний текст.
+ */
+const INK_THEME: UiTheme = {
+  id: 'ink',
+  labelKey: 'theme.palettes.ink',
+  swatch: ['oklch(0.97 0.003 265)', 'oklch(0.905 0.005 265)', '#1868db'],
+};
+
 /** Порядок = порядок пунктів у меню вибору */
-export const UI_THEMES: readonly UiTheme[] = [TENANTRY_THEME, GRAY_THEME];
+export const UI_THEMES: readonly UiTheme[] = [TENANTRY_THEME, GRAY_THEME, INK_THEME];
 
 export const DEFAULT_UI_THEME: UiThemeId = TENANTRY_THEME.id;
 

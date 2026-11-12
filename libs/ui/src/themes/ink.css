@@ -1,0 +1,257 @@
+/**
+ * ТЕМА «Ink» (`ink`) — третя палітра, зібрана як ЕТАЛОН «стандартної» будови
+ * поверхонь (`docs/frontend/theming.md` §3.3). Дві відмінності від `tenantry`
+ * і `gray`, і обидві — не смак, а патерн, спільний для GitHub (Primer),
+ * Slack, Linear і JetBrains Islands:
+ *
+ *   1. ШЕЛ І БІЧНІ ПАНЕЛІ СВІТЛІШІ ЗА ПОЛОТНО В ОБОХ РЕЖИМАХ (рішення власника
+ *      2026-11-12). Полотно контенту — найглибша поверхня; рейл, бічне меню,
+ *      права панель, шторки й діалог стоять на ОДНІЙ сходинці над ним (Notion
+ *      dark: `bacSec` #202020 над `bacPri` #191919; JetBrains Islands: панелі
+ *      світліші за головне вікно). Напрямок сходинки не міняється при
+ *      перемиканні режиму — у `gray` він дзеркальний, у `tenantry` шел стоїть
+ *      НИЖЧЕ полотна («силует Orca», експеримент, а не правило).
+ *   2. У ТЕМРЯВІ «ВИЩЕ = СВІТЛІШЕ» без винятків (Material 3 surface
+ *      containers, Atlassian `elevation.surface.*`, Notion): полотно → картка
+ *      → попап → підняті дрібниці. `tenantry` веде діалог на сходинці ПОЛОТНА
+ *      (рішення 2026-11-10); тут діалог — на сходинці сайдбара й картки (одна
+ *      «піднята» поверхня над полотном, яке під scrim ще темнішає), а поля
+ *      всередині нього — на сходинку СВІТЛІШІ за вікно (`--field` = `raised`),
+ *      як у решти тем: поле читається заливкою, а не лише обводкою.
+ *
+ * Нейтралі майже без хроми (0.004…0.006 на hue ≈ 265): це нижче навіть за
+ * Orca (0.011…0.015) і ближче до бази Linear (LCH C=2). Чистий сірий, холодний
+ * лише натяком. Акцент — той самий blue-600, що в `tenantry`: primary у цій
+ * серії тем не предмет, ним займемось окремо.
+ *
+ * КОНТРАКТ ТЕМИ — той самий, що в `gray.css`: два блоки, повний набір токенів,
+ * `color-scheme` обовʼязковий, `--event-*` не оголошується (спільна база).
+ */
+:root[data-theme='ink'] {
+  --radius: 0.625rem;
+  color-scheme: light;
+  /* Полотно — на сходинку ТЕМНІШЕ за білий шел і білі картки: контент лежить
+     у «жолобі», навігація й картки стоять над ним. Той самий zinc-50, що
+     полотно `gray`, лише холодніший натяком. */
+  --background: oklch(0.97 0.003 265);
+  --foreground: oklch(0.21 0.008 265);
+  --card: oklch(1 0 0);
+  /* ── Поверхня картки (`card-surface.css`) ─────────────────────────────────
+     Світло: картка біла на майже білому полотні — напівпрозорість нічого не
+     дасть (рівняння в `card-surface.css` виводить базу >1), тож заливки
+     готові: `default` піднята (біла), `muted` втоплена в `--muted`. */
+  --card-base: var(--card);
+  --card-fill: var(--card);
+  --card-fill-muted: var(--muted);
+  --card-fill-subtle: color-mix(in oklab, var(--muted) 50%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 2.8%, transparent);
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --dialog: var(--popover);
+  --dialog-header: var(--popover);
+  --popover-foreground: var(--foreground);
+  /* ── Акценти: Atlassian Design System (Jira, палітра 2025 «refresh»),
+     зняті з токенів `--ds-*` сторінки Jira і пакета `@atlaskit/tokens@20.11`
+     (2026-11-12). Три ролі → три токени ADS:
+       primary     = `background.brand.bold`   #1868DB, текст `text.inverse` #fff
+       secondary   = `background.neutral`      #0515240F — НАКЛАДКА ~6%, не
+                     суцільний сірий: та сама кнопка на полотні, картці й у
+                     діалозі лишається «на сходинку темнішою за підкладку»
+       destructive = `background.danger.bold`  #C9372C, текст #fff
+     Hover — теж із ADS (`*-hovered`), а не наша формула «+10% foreground»:
+     у світлі bold-кнопки ТЕМНІШАЮТЬ (#1558BC, #AE2E24). */
+  --primary: #1868db;
+  --primary-foreground: #ffffff;
+  --secondary: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --secondary-foreground: var(--foreground);
+  --segment: oklch(1 0 0);
+  --segment-foreground: var(--foreground);
+  --muted: oklch(0.962 0.004 265);
+  --muted-foreground: oklch(0.55 0.015 265);
+  /* Шкала знаків — три рівні від `--foreground` (theming.md §1.3.2) */
+  --icon-strong: color-mix(in oklab, var(--foreground) 89%, transparent);
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent);
+  --icon-muted: color-mix(in oklab, var(--foreground) 33.3%, transparent);
+  /* Накладка hover/вибраного — прозора частка `--foreground` (§1.3.3), тож на
+     білому полотні, на сірому шелі й на білому попапі дає ту саму різницю */
+  --accent: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --accent-foreground: var(--foreground);
+  --destructive: #c9372c; /* ADS background.danger.bold */
+  --destructive-foreground: #ffffff;
+  --success: oklch(0.51 0.145 163.225);
+  --success-foreground: oklch(0.985 0.002 265);
+  --warning: oklch(0.545 0.179 58.318);
+  --warning-foreground: oklch(0.985 0.002 265);
+  --border: oklch(0.905 0.005 265); /* zinc-200, холодніший натяком */
+  --field: oklch(1 0 0);
+  --input: oklch(0.85 0.008 265); /* обводка поля контрастніша за розділювач (§5) */
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: #1558bc; /* ADS background.brand.bold.hovered */
+  --destructive-hover: #ae2e24; /* ADS background.danger.bold.hovered */
+  /* Фокус — ПРИГЛУШЕНИЙ primary (2026-11-12): обводка поля у фокусі 1px цього кольору,
+     без другого кільця; чистий primary на 1px кричав. 60% бренду, решта — колір
+     обводки поля, тож тон сидить між межею й акцентом у будь-якому режимі. */
+  --ring: color-mix(in oklab, var(--primary) 60%, var(--input));
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 4%, transparent);
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --calendar-day-hover: var(--accent);
+  /* Шел — БІЛИЙ, на сходинку світліший за полотно: рейл, бічне меню і права
+     панель читаються як одна піднята поверхня, розділена `--sidebar-border`;
+     тієї ж світлоти картки, попап і діалог. */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  /* Шкала висот — та сама будова, що в `tenantry` у світлі: довга прозора тінь */
+  --surface-shadow:
+    0 2px 4px 0 rgb(0 0 0 / 4%), 0 1px 2px 0 rgb(0 0 0 / 6%), 0 0 1px 0 rgb(0 0 0 / 6%);
+  --overlay-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 6%), 0 -6px 12px 0 rgb(0 0 0 / 3%), 0 14px 28px 0 rgb(0 0 0 / 8%);
+  --raised-shadow:
+    0 1px 2px color-mix(in oklab, var(--foreground) 4%, transparent),
+    0 6px 14px -6px color-mix(in oklab, var(--foreground) 8%, transparent),
+    0 14px 28px -14px color-mix(in oklab, var(--foreground) 6%, transparent);
+  --modal-shadow:
+    0 4px 12px -2px rgb(0 0 0 / 4%), 0 16px 40px -8px rgb(0 0 0 / 7%),
+    0 40px 96px -16px rgb(0 0 0 / 11%);
+}
+
+/* ── ТЕМРЯВА: чотири сходинки, кожна записана один раз ────────────────────────
+   Та сама механіка, що в `tenantry.dark` (`--tone-*`), але драбина БЕЗ
+   інверсій: полотно — найглибше, усе інше над ним (Material 3 surface →
+   surface-container-*, Atlassian surface → raised → overlay, Notion
+   #191919 → #202020 → #252525):
+
+     canvas    0.220  полотно, хедер                               (surface)
+     surface   0.270  рейл, бічне меню, права панель, шторка,
+                      картка, ДІАЛОГ і його шапка                  (container-low / raised)
+     raised    0.305  попап, меню, список, тост, ПОЛЕ              (container-high / overlay)
+     emphasis  0.335  чіпи, `--muted`, `--secondary`               (container-highest)
+
+   Сайдбар і діалог НАВМИСНО на одній сходинці (рішення власника 2026-11-12):
+   обоє — «піднята поверхня над контентом», діалог від сторінки відділяють
+   scrim (який ще й притемнює полотно), тінь і контур, а не власний тон.
+   Крок ≈ 0.035…0.05 L — помітна, але не крикляча різниця (JetBrains Islands
+   радить мінімум 1.20:1 між головним вікном і панелями; 0.22 → 0.27 дає
+   ~1.25). Усі сходинки на одному hue/chroma, тож тінь і контур лише
+   підкреслюють драбину, а не малюють її. */
+:root[data-theme='ink'].dark {
+  color-scheme: dark;
+  --tone-canvas: oklch(0.22 0.006 265);
+  --tone-surface: oklch(0.27 0.006 265);
+  --tone-raised: oklch(0.305 0.006 265);
+  --tone-emphasis: oklch(0.335 0.006 265);
+  --background: var(--tone-canvas);
+  --foreground: oklch(0.93 0.003 265);
+  --card: var(--tone-surface);
+  /* База напівпрозорої картки: 0.6·base + 0.4·0.22 = 0.27 → base = 0.303.
+     На полотні картка лишається 0.27, на брендовому фоні — темнішою разом
+     із ним (той самий прийом, що в `tenantry`/`gray`). */
+  --card-base: oklch(0.303 0.006 265);
+  --card-fill: color-mix(in oklab, var(--card-base) 60%, transparent);
+  --card-fill-muted: color-mix(in oklab, var(--card-base) 30%, transparent);
+  --card-fill-subtle: color-mix(in oklab, var(--card-base) 15%, transparent);
+  --card-fill-nested: color-mix(in oklab, var(--foreground) 1.8%, transparent);
+  --card-elevation: none;
+  --card-foreground: var(--foreground);
+  /* Попап СВІТЛІШИЙ за картку (Notion `--c-popBac`, M3 surface-container-high):
+     висота передається світлом, тінь лише дублює. */
+  --popover: var(--tone-raised);
+  /* Діалог і шторка — на сходинці САЙДБАРА й картки (див. шапку блоку): одна
+     піднята поверхня над полотном. Поля в ньому на сходинку світліші
+     (`--field` = `raised`), тому читаються заливкою без хитрощів із тоном вікна. Шапка не
+     виділяється: вікно — одна поверхня. Меню над діалогом лишається на
+     `raised`, тобто ще на сходинку світліше — драбина без розривів. */
+  --dialog: var(--tone-surface);
+  --dialog-header: var(--tone-surface);
+  --popover-foreground: var(--foreground);
+  /* ── Акценти: ADS dark (Jira, див. світлий блок). Головне — ІНВЕРСІЯ bold-
+     кнопки, яку й узято з Jira: заливка світло-синя `background.brand.bold`
+     #669DF1, а текст ТЕМНИЙ `text.inverse` #1F1F21 — не білий на насиченому
+     синьому. Той самий синій служить текстом посилань і іконок бренду
+     (`text.brand`, `link`), тож на 0.22 він не «провалюється». Hover у темряві
+     СВІТЛІШАЄ (#8FB8F6, #FD9891), тому формула «+10% foreground» тут
+     непридатна — foreground кнопки темний і затемнив би її. */
+  --primary: #669df1;
+  --primary-foreground: #1f1f21;
+  --secondary: color-mix(
+    in oklab,
+    var(--foreground) 7%,
+    transparent
+  ); /* ADS background.neutral #CECED912 */
+  --secondary-foreground: var(--foreground);
+  --segment: color-mix(in oklab, var(--foreground) 96%, var(--background));
+  --segment-foreground: var(--background);
+  --muted: var(--tone-emphasis);
+  --muted-foreground: oklch(0.71 0.006 265);
+  --icon-strong: color-mix(in oklab, var(--foreground) 87%, transparent);
+  --icon: color-mix(in oklab, var(--foreground) 46%, transparent);
+  --icon-muted: color-mix(in oklab, var(--foreground) 28.2%, transparent);
+  --accent: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --accent-foreground: var(--foreground);
+  --destructive: #f87168; /* ADS background.danger.bold — теж із темним текстом */
+  --destructive-foreground: #1f1f21;
+  --success: oklch(0.71 0.133 157.4);
+  --success-foreground: var(--background);
+  --warning: oklch(0.791 0.162 88);
+  --warning-foreground: var(--background);
+  /* Межа — напівпрозора накладка, світліша за будь-яку поверхню під нею
+     (правило `tenantry` §2). 8%: на полотні 0.22 суцільних 7% уже замало. */
+  --border: color-mix(in oklab, var(--foreground) 8%, transparent);
+  /* Поле СВІТЛІШЕ за будь-яку підкладку (рішення власника 2026-11-12, як у
+     `tenantry`/`gray`): на полотні (0.22), на картці й у діалозі (0.27) воно
+     читається заливкою на сходинці `raised`. Обводка через це слабша, ніж
+     була при втопленому варіанті, але сильніша за `--border`: поле стоїть на
+     тій самій сходинці, що попап, і лінія мусить відокремлювати його від
+     сусідніх піднятих плиток. */
+  --field: var(--tone-raised);
+  --input: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --field-hover: color-mix(in oklab, var(--field) 90%, var(--foreground) 2%);
+  --primary-hover: #8fb8f6; /* ADS background.brand.bold.hovered */
+  --destructive-hover: #fd9891; /* ADS background.danger.bold.hovered */
+  /* Фокус — ПРИГЛУШЕНИЙ primary (2026-11-12): обводка поля у фокусі 1px цього кольору,
+     без другого кільця; чистий primary на 1px кричав. 60% бренду, решта — колір
+     обводки поля, тож тон сидить між межею й акцентом у будь-якому режимі. */
+  --ring: color-mix(in oklab, var(--primary) 60%, var(--input));
+  --chart-1: #669df1;
+  --chart-2: oklch(0.71 0.133 157.4);
+  --chart-3: oklch(0.791 0.162 88);
+  --chart-4: oklch(0.66 0.13 300);
+  --chart-5: oklch(0.66 0.15 16.4);
+  --calendar-grid-line: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --calendar-weekend: color-mix(in oklab, var(--foreground) 3%, transparent);
+  --calendar-in-view: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --calendar-day-hover: var(--accent);
+  --sidebar: var(--tone-surface); /* рейл, бічне меню, права панель */
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  /* Шов шела — непрозорий і світліший за обидві поверхні, які розділяє
+     (0.27 | 0.22), але тьмяніший за межу контенту на картці — та сама
+     ієрархія, що в `tenantry` */
+  --sidebar-border: oklch(0.3 0.006 265);
+  --sidebar-ring: var(--ring);
+  /* Висоти — будова `tenantry.dark`: щільні короткі чорні тіні (квантування,
+     theming.md §1.3.6), контур поверхні несе `ring`/`outline` самого примітиву */
+  --surface-shadow: 0 0 0 1px var(--border);
+  --overlay-shadow:
+    0 1px 3px rgb(0 0 0 / 18%), 0 6px 14px -4px rgb(0 0 0 / 30%), 0 14px 26px -10px rgb(0 0 0 / 34%);
+  --overlay-outline: color-mix(in oklab, var(--foreground) 14%, var(--popover));
+  --raised-shadow:
+    0 1px 2px rgb(0 0 0 / 20%), 0 6px 14px -6px rgb(0 0 0 / 28%), 0 14px 28px -14px rgb(0 0 0 / 30%);
+  --modal-shadow:
+    0 2px 4px rgb(0 0 0 / 16%), 0 8px 18px -8px rgb(0 0 0 / 28%), 0 18px 32px -14px rgb(0 0 0 / 36%);
+}

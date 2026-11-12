@@ -48,10 +48,10 @@ export function GuideTourWidget() {
       role="region"
       aria-labelledby="guide-tour-title"
       tone="warning"
-      // `fill="muted"` — найтихіший із ПОМІТНИХ ступенів тону (9% замість 18%,
-      // `card-surface.css`): плитка лишається теплою, але вже не кричить на
-      // дашборді поруч із білими віджетами. Рішення користувача.
-      fill="muted"
+      // `fill="subtle"` — найтихіший ступінь тону (4% замість 18%, `card-surface.css`):
+      // лише натяк теплого кольору, плитка майже зрівняна з нейтральними віджетами
+      // дашборда. Рішення власника 2026-11-12 (до того — `muted`, 9%).
+      fill="subtle"
       className="flex-row gap-3 p-4 lg:col-span-3"
     >
       <CompassIcon className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />

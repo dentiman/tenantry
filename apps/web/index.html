@@ -32,7 +32,7 @@
     <script>
       try {
         var palette = localStorage.getItem('saas_theme_palette');
-        if (['tenantry', 'gray'].indexOf(palette) !== -1) {
+        if (['tenantry', 'gray', 'ink'].indexOf(palette) !== -1) {
           document.documentElement.dataset.theme = palette;
         }
       } catch (e) {
