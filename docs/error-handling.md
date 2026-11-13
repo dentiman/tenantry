@@ -53,7 +53,7 @@
 | `code`        | enum (закритий)              | Машинний код — фронт світчиться по ньому, **не** по `message`     |
 | `message`     | `string`                     | Людське повідомлення; для 5xx завжди замасковане                  |
 | `fieldErrors` | `{field, message, code?, params?}[]` (опц.) | Прив'язка до полів request-схеми; вкладеність через крапку |
-| `requestId`   | `string` (опц.)              | id запиту з pino-http — кореляція відповіді з рядком у лозі       |
+| `requestId`   | `string` (опц.)              | trace-id запиту (32 hex) — поле `trace_id` у логах, `docs/observability.md` |
 
 **I18N-2** (`libs/contracts/src/error/error.schema.ts`): `FieldError.code` — машинний код помилки
 поля (Zod issue code: `too_small`, `invalid_format`… або бізнес-код `already_exists`), `params` —
@@ -101,7 +101,8 @@
 - **Маскування 5xx**: жоден внутрішній message/stack не виходить назовні. Деталі — тільки в лог
   (`logger.error` з повним `err`), відповідь містить `requestId` для кореляції.
 - **Логування**: 5xx → `error` (з винятком і stack), 4xx → `warn` (з `code` і `fieldErrors`).
-- **`requestId`** — з pino-http (`req.id`), додається в кожен envelope.
+- **`requestId`** — з pino-http (`req.id` = trace-id з `traceparent` фронтенду або згенерований),
+  додається в кожен envelope.
 
 ### Підводні камені Prisma 7 + adapter-pg (перевірено на живо)
 

@@ -139,7 +139,8 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      // ЛОКАЛЬНА ПРАВКА реєстру: перенос рядка в описі (id запиту під текстом помилки API).
+      className={cn('text-sm break-words whitespace-pre-line text-muted-foreground', className)}
       {...props}
     />
   );

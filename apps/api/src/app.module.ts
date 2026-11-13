@@ -10,6 +10,7 @@ import {
   NotificationsModule as SharedNotificationsModule,
   NumberingModule as SharedNumberingModule,
   StorageModule,
+  createLoggerConfig,
 } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
@@ -27,7 +28,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RedisModule } from './redis/redis.module';
 import { AppThrottlerModule } from './common/app-throttler.module';
-import { loggerConfig } from './common/logger';
 import { validateApiEnv } from './config/env.schema';
 
 @Module({
@@ -38,7 +38,7 @@ import { validateApiEnv } from './config/env.schema';
       // AUTH-0: невалідний env валить старт, а не проявляється через тиждень
       validate: validateApiEnv,
     }),
-    LoggerModule.forRootAsync(loggerConfig),
+    LoggerModule.forRootAsync(createLoggerConfig({ service: 'api' })),
     // MT: ЄДИНЕ місце, де застосунок знає про мультитенантність (§6 плану).
     // MT-3: SlugTenantResolver — поле `tenant` (slug) у Login → resolve_tenant();
     // порожнє поле → env-fallback (N=1 працює як раніше); MT-4: піддомени

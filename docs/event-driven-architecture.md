@@ -18,7 +18,7 @@
 | `updateQueue` синхронізує всю політику | політика `policy` **не оновлюється**, лише warn | `UpdateQueueOptions = Omit<Queue, 'name' \| 'partition' \| 'policy'>` — pg-boss не дає змінити політику в місці |
 | `eventId` | `messageId` | конверт спільний для подій і команд, тому ім'я нейтральне |
 | окремі `defineJob`/`defineEvent` як два шляхи | `defineCommand`/`defineEvent` + **один** runtime | §3.1.1 — «усе працює однаково» |
-| `correlationId` = pino `req.id` як є | + `genReqId` = uuid (з повагою до `X-Request-Id`) | дефолт pino — лічильник від 1 на кожному процесі: після рестарту й на другій репліці id повторюються, і кореляція ланцюга втрачає сенс |
+| `correlationId` = pino `req.id` як є | + `genReqId` = trace-id з `traceparent` або новий, 32 hex (`docs/observability.md` §1; спершу був uuid з повагою до `X-Request-Id`) | дефолт pino — лічильник від 1 на кожному процесі: після рестарту й на другій репліці id повторюються, і кореляція ланцюга втрачає сенс |
 
 Документ відповідає на конкретне питання: чи витримає наявний шар черг реальну бізнес-подію
 з багатьма підписниками, і що саме треба змінити, щоб витримав. Еталонний сценарій —
@@ -390,7 +390,8 @@ export const eventEnvelopeSchema = z.object({
    переюзати його, не заводити другий.
 2. **Кореляція наскрізна.** `correlationId` береться з `req.id` (pino-http вже його
    генерує і вже віддає юзеру в `ApiError.requestId`). Один id тримає HTTP-запит, 5 job-ів
-   і всі похідні події. Один `grep` по логах — уся картина.
+   і всі похідні події. Один `grep` по логах — уся картина (поле `trace_id`,
+   `docs/observability.md`).
 3. **Причинність.** `causationId` дає дерево, а не плаский список: видно, що
    `billing.invoice-posted.v1` спричинена саме цим `invoice.paid`.
 

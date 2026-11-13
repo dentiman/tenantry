@@ -19,8 +19,8 @@ import {
   NotificationsModule,
   StorageModule,
   createChannelAdapterRegistry,
+  createLoggerConfig,
 } from '@saas-skeleton/shared';
-import { loggerConfig } from './logger.config';
 import { validateWorkerEnv } from './config/env.schema';
 import { AiLeaseGuard } from './ai/ai-lease.guard';
 import { ChannelsIngestSubscriber } from './chat/channels-ingest.subscriber';
@@ -54,7 +54,7 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
       // AUTH-3: без валідного ENCRYPTION_KEY воркер не розшифрує жоден токен у payload
       validate: validateWorkerEnv,
     }),
-    LoggerModule.forRootAsync(loggerConfig),
+    LoggerModule.forRootAsync(createLoggerConfig({ service: 'worker' })),
     // MT: без резолвера — tenantId приходить у конверті (MessageWorkerRegistrar піднімає CLS)
     TenancyModule.forRoot(),
     PrismaModule,

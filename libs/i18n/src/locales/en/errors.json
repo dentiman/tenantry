@@ -18,7 +18,8 @@
     "accessDeniedTitle": "Access denied",
     "serviceUnavailableTitle": "Service unavailable",
     "tooManyRequestsTitle": "Too many attempts",
-    "serverErrorTitle": "Server error"
+    "serverErrorTitle": "Server error",
+    "requestId": "Request ID: {{id}}"
   },
   "fieldErrors": {
     "already_exists": "Already exists",

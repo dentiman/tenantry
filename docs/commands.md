@@ -633,18 +633,23 @@ pnpm platform:test:e2e
 ### `pnpm logs:tail` / `pnpm logs:clean`
 
 ```bash
-pnpm logs:tail   # → tail -f apps/api/logs/api-pretty.log
-pnpm logs:clean  # → rm -rf apps/api/logs/*.log*
+pnpm logs:tail   # → pretty-логи api, platform-api і worker одним потоком
+pnpm logs:trace <trace-id>    # усі записи однієї операції з усіх процесів (docs/observability.md §4)
+pnpm logs:errors --since 15m  # помилки за проміжок
+pnpm debug:jobs <trace-id>    # джоби pg-boss цього ланцюга (потребує БД)
+pnpm logs:clean  # → видаляє логи всіх трьох застосунків (apps/{api,platform-api,worker}/logs)
 ```
 
 Pino-логи пишуться в `join(process.cwd(), 'logs')` — команди `api` треба запускати з cwd
-`apps/api` (`pnpm --filter` це гарантує).
+`apps/api` (`pnpm --filter` це гарантує). Поля запису, id операції й редагування секретів —
+`docs/observability.md`.
 
 У dev кожен застосунок пише у свою теку `apps/{api,platform-api,worker}/logs/` з **ротацією за
 розміром**: 10 МБ на файл, два попередні поруч (`<дата>-NN-worker.log`) і службовий `*.log.txt`
 з історією ротації — тобто ≤ ~30 МБ на файл логу. Без ротації лог воркера (cron щохвилини) за
-кілька днів доростав до сотень мегабайтів. Прод api ротує свій файл так само (добово, 30 днів,
-gzip); worker і platform-api у проді пишуть лише в stdout.
+кілька днів доростав до сотень мегабайтів. Кожен застосунок пише JSON (`<service>.log`) і
+читабельну копію (`<service>-pretty.log`). У проді всі три процеси пишуть лише в stdout; файл
+(добова ротація, 30 файлів, gzip) вмикається через `LOG_FILE=1`.
 
 ---
 

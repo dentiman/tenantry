@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { LOG_CONTEXT } from '@saas-skeleton/shared/logging';
 import type { Request } from 'express';
+import { ClsService } from 'nestjs-cls';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { PlatformJwtPayload } from '../decorators/current-operator.decorator';
 
@@ -20,6 +22,7 @@ export class PlatformJwtGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly cls: ClsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,6 +47,8 @@ export class PlatformJwtGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
+    // `user.id` (оператор) у кожен лог-запис запиту — mixin логера
+    this.cls.set(LOG_CONTEXT.userId, request.operator.sub);
 
     return true;
   }

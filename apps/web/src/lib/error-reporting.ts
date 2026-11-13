@@ -1,4 +1,6 @@
-import { setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
+import { sendToDevLogSink } from '@saas-skeleton/ui/lib/dev-log-sink';
+import { installGlobalErrorHandlers, setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
+import { buildInfo } from './build-info';
 
 /**
  * ЄДИНЕ місце підключення збирача помилок цього фронтенду (docs/frontend/lazy-loading.md §6).
@@ -14,17 +16,30 @@ import { setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
  * });
  * ```
  *
- * Що саме сюди вже приходить: помилки меж роутів (`defaultOnCatch` у `router.tsx`) і всі
+ * Що саме сюди приходить: помилки меж роутів (`defaultOnCatch` у `router.tsx`), усі
  * перехоплення `LazyBoundary` (внески слотів, панелі area; `context.isChunkLoadError` —
- * провал чанка, його варто фільтрувати від справжніх багів). Що сюди НЕ приходить і підʼєднується
- * окремо при впровадженні: глобальні `window.onerror`/`unhandledrejection` (їх ставить сам
- * Sentry.init) і помилки API — `handleGlobalError` у `main.tsx` (5xx вже логує бекенд за
- * `requestId`; чи дублювати їх у Sentry — рішення на момент впровадження).
+ * провал чанка, його варто фільтрувати від справжніх багів), глобальні `error` /
+ * `unhandledrejection` вікна (`source: 'window'`; Sentry.init ставить їх сам — тоді виклик
+ * `installGlobalErrorHandlers` прибрати) і невдалі запити до API: мережа та 5xx
+ * (`source: 'api'`, `context.requestId` — trace-id, за яким ланцюг шукається в логах бекенда).
+ * До кожного звіту додаються маршрут, версія збірки й id користувача (без email).
  *
  * Викликається в `main.tsx` ДО першого рендера, щоб перша ж помилка потрапила до збирача.
  */
-export function initErrorReporting(): void {
-  setErrorReporter(({ error, source, context }) => {
-    console.error(`[web:${source}]`, error, context ?? '');
+/** `getUserId` передає composition root (`main.tsx`): цей файл про сесію не знає (docs/modules.md) */
+export function initErrorReporting(getUserId: () => string | undefined): void {
+  setErrorReporter((report) => {
+    const extras = {
+      route: window.location.pathname,
+      version: buildInfo.version,
+      userId: getUserId(),
+    };
+    console.error(`[web:${report.source}]`, report.error, { ...report.context, ...extras });
+    // Dev: той самий звіт — у `apps/web/logs/web.log`, поруч із логами бекенда
+    // (`pnpm logs:trace`). У збірці приймача немає — туди піде зовнішній збирач
+    if (import.meta.env.DEV) {
+      sendToDevLogSink(report, extras);
+    }
   });
+  installGlobalErrorHandlers();
 }

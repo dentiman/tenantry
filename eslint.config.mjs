@@ -70,6 +70,11 @@ export default tseslint.config(
       '**/coverage/',
       '**/generated/',
       '**/prisma.config.ts',
+      // Корінь репо: не під жодним tsconfig-проектом (апки/libs/scripts мають свій), тож
+      // projectService не знаходить для нього проект. `pnpm lint` його й так не перевіряє
+      // (lint:eslint обходить лише apps/*, libs/*, scripts) — без цього падав лише pre-commit
+      // lint-staged, який бере всі застосовані *.ts без винятку.
+      'modules.config.ts',
       '**/*.js',
       '**/*.mjs',
       '**/test/**/*.e2e-spec.ts',

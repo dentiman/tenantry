@@ -37,6 +37,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/activity-log.md` — activity feed (`activities`/`activity_links`)
 - `docs/file-storage.md` — S3 presigned upload/download flow
 - `docs/error-handling.md` — `ApiError` envelope and normalization rules
+- `docs/observability.md` — log record fields (OpenTelemetry names), the one operation id
+  (`traceparent` → `requestId` → `correlationId` → `trace_id`), redaction, what is not built yet
 - `docs/i18n-plan.md` — localization approach and phases
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
@@ -178,6 +180,9 @@ pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:c
                                             # modules:check --strict + eslint
 pnpm bundle:check          # start-chunk budget of both frontends + "no page in the start chunk" check
                            # (docs/frontend/lazy-loading.md); builds into a temp dir, ~15 s
+pnpm logs:trace <id>       # every log line of one operation across api/worker/platform-api and both
+                           # frontends (id = `requestId` from an API error); `pnpm logs:errors --since 15m`;
+                           # `pnpm debug:jobs <id>` = its pg-boss jobs. Debug with these first — docs/observability.md §4
 pnpm deps:check            # madge: no runtime import cycles in backend apps and libs
 pnpm modules:check         # imports vs the declared module graph (modules.config.ts); `--strict`
                            # runs inside `pnpm lint`. Blind spots (string links, Prisma) — docs/modules.md §6

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { installProcessErrorHandlers } from '@saas-skeleton/shared';
 import { WorkerModule } from './worker.module';
 
 async function bootstrap(): Promise<void> {
@@ -9,6 +10,7 @@ async function bootstrap(): Promise<void> {
   });
   const logger = app.get(Logger);
   app.useLogger(logger);
+  installProcessErrorHandlers(logger);
   // Workspace slots (docs/workspace-slots.md): щоб не плутати, який checkout зараз обробляє джоби
   logger.log(`workspace slot: ${process.env.WORKSPACE_SLOT ?? '0 (default)'}`, 'Bootstrap');
   app.enableShutdownHooks();

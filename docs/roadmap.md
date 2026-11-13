@@ -161,11 +161,13 @@ AUTH-0…3 **зроблено 2026-09-12…15** (рядок у §1): throttler, 
   Sentry поки немає зовсім.
 - **Агрегація логів — Grafana Loki + Alloy** як сервіс того самого swarm-стеку (збирає stdout
   контейнерів; пошук по `requestId`). JSON у stdout уже є — коду не змінюємо.
-- **Фікс логера під контейнер:** зараз pino пише файли в `cwd/logs`, і `Dockerfile.node` спеціально
-  створює цю теку для non-root юзера — це обхід симптому. У прод-режимі має лишатись **тільки
-  stdout**, файловий sink — opt-in через `LOG_FILE` (сценарій «гола VM без оркестрації»).
-  Станом на 2026-11-11 не зроблено: `logger.config.ts` пише файли з ротацією (`rotating-file-stream`,
-  10 МБ) у `cwd/logs`.
+- ~~**Фікс логера під контейнер**~~ — **зроблено 2026-11-13** разом зі спільною фабрикою логера
+  (`libs/shared/src/logging/`, [observability.md](observability.md)): у проді лише stdout, файл —
+  `LOG_FILE=1`; однакові поля за угодами OpenTelemetry (`trace_id`, `tenant.id`, `user.id`,
+  `service.name`), id операції у форматі `traceparent` від фронтенду до джоб, редагування
+  секретів у всіх трьох процесах (platform-api до цього писав токени операторів у лог). Далі за
+  планом: приймач помилок фронтенду, команди `logs:trace` / `debug:jobs`, структурні логи сокетів
+  — observability.md §6.
 - ~~**Наскрізний correlationId у чергах**~~ — **зроблено в EDA-1**: `correlationId` живе в
   конверті повідомлення (на HTTP-вході = pino `req.id`, він же `ApiError.requestId`),
   `MessageWorkerRegistrar` піднімає його в CLS + child-логер, похідні публікації успадковують

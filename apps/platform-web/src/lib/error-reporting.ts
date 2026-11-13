@@ -1,4 +1,5 @@
-import { setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
+import { sendToDevLogSink } from '@saas-skeleton/ui/lib/dev-log-sink';
+import { installGlobalErrorHandlers, setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
 
 /**
  * ЄДИНЕ місце підключення збирача помилок цього фронтенду (docs/frontend/lazy-loading.md §6).
@@ -23,8 +24,19 @@ import { setErrorReporter } from '@saas-skeleton/ui/lib/report-error';
  *
  * Викликається в `main.tsx` ДО першого рендера, щоб перша ж помилка потрапила до збирача.
  */
-export function initErrorReporting(): void {
-  setErrorReporter(({ error, source, context }) => {
-    console.error(`[platform-web:${source}]`, error, context ?? '');
+/** `getUserId` передає composition root (`main.tsx`): цей файл про сесію не знає (docs/modules.md) */
+export function initErrorReporting(getUserId: () => string | undefined): void {
+  setErrorReporter((report) => {
+    const extras = {
+      route: window.location.pathname,
+      userId: getUserId(),
+    };
+    console.error(`[platform-web:${report.source}]`, report.error, { ...report.context, ...extras });
+    // Dev: той самий звіт — у `apps/platform-web/logs/platform-web.log`, поруч із логами бекенда
+    // (`pnpm logs:trace`). У збірці приймача немає — туди піде зовнішній збирач
+    if (import.meta.env.DEV) {
+      sendToDevLogSink(report, extras);
+    }
   });
+  installGlobalErrorHandlers();
 }

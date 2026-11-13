@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import type { AuthTokens } from '@saas-skeleton/contracts';
+import { TRACEPARENT_HEADER, ensureTraceparent, newTraceparent } from '@saas-skeleton/ui/api/trace-context';
 import { useAuthStore } from '../features/auth/stores/auth.store';
 
 // AUTH-2: withCredentials — без нього браузер не покладе httpOnly refresh-cookie
@@ -8,6 +9,8 @@ import { useAuthStore } from '../features/auth/stores/auth.store';
 export const axiosInstance = axios.create({ baseURL: '/', withCredentials: true });
 
 axiosInstance.interceptors.request.use((config) => {
+  // id операції для наскрізного пошуку в логах (бекенд бере з нього trace-id запиту)
+  ensureTraceparent(config.headers);
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -27,7 +30,7 @@ export async function refreshTokens(): Promise<AuthTokens> {
     const { data } = await axios.post<AuthTokens>(
       '/api/auth/refresh',
       {},
-      { withCredentials: true },
+      { withCredentials: true, headers: { [TRACEPARENT_HEADER]: newTraceparent() } },
     );
     useAuthStore.getState().setTokens(data);
     return data;

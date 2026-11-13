@@ -2,6 +2,8 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { TenantContextService } from '@saas-skeleton/database';
 import type { Job, WorkOptions } from 'pg-boss';
+import { LOG_FIELDS } from '../logging/log-fields';
+import { traceIdFromUuid } from '../logging/trace-context';
 import { MessageContextService } from './message-context.service';
 import { messageEnvelopeSchema, SYSTEM_ACTOR, type MessageEnvelope } from './message-envelope';
 import {
@@ -167,11 +169,14 @@ export class MessageWorkerRegistrar implements OnApplicationBootstrap {
     }
 
     const meta = {
-      jobId: job.id,
-      queue: consumer.queue,
-      messageId: envelope.messageId,
-      correlationId: envelope.correlationId,
-      ...(envelope.tenantId && { tenantId: envelope.tenantId }),
+      // Явно, а не з mixin-а: ці записи пишуться ПОЗА CLS-контекстом повідомлення
+      [LOG_FIELDS.jobId]: job.id,
+      [LOG_FIELDS.queue]: consumer.queue,
+      [LOG_FIELDS.messageId]: envelope.messageId,
+      [LOG_FIELDS.messageName]: envelope.name,
+      [LOG_FIELDS.traceId]: envelope.correlationId,
+      ...(envelope.tenantId && { [LOG_FIELDS.tenantId]: envelope.tenantId }),
+      ...(envelope.actor.type === 'user' && { [LOG_FIELDS.userId]: envelope.actor.id }),
     };
     const startedAt = Date.now();
     this.logger.debug(meta, `Message started: ${envelope.name} (${job.id})`);
@@ -224,7 +229,8 @@ export class MessageWorkerRegistrar implements OnApplicationBootstrap {
       occurredAt: new Date().toISOString(),
       tenantId: null,
       actor: SYSTEM_ACTOR,
-      correlationId: job.id,
+      // uuid без дефісів — той самий формат trace-id, що й на HTTP-вході
+      correlationId: traceIdFromUuid(job.id),
       causationId: null,
       data: {},
     };
@@ -259,7 +265,7 @@ export class MessageWorkerRegistrar implements OnApplicationBootstrap {
       data: job.data,
     });
     this.logger.error(
-      { queue, jobId: job.id, err: error },
+      { [LOG_FIELDS.queue]: queue, [LOG_FIELDS.jobId]: job.id, err: error },
       `Job moved to ${DEAD_LETTER_QUEUE}: ${job.id}`,
     );
   }

@@ -1,6 +1,7 @@
 export * from './auth';
 export * from './crypto';
 export * from './errors';
+export * from './logging';
 export * from './messaging';
 export * from './storage';
 export * from './activities';

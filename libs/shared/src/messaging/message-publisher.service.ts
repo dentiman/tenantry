@@ -5,6 +5,8 @@ import { fromPrisma } from 'pg-boss';
 import type { SendOptions } from 'pg-boss';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { LOG_FIELDS } from '../logging/log-fields';
+import { traceIdFromUuid } from '../logging/trace-context';
 import { MessageContextService } from './message-context.service';
 import type { MessageDefinition } from './message-definition';
 import { SYSTEM_ACTOR, type MessageActor, type MessageEnvelope } from './message-envelope';
@@ -92,9 +94,9 @@ export class MessagePublisher {
 
     this.logger.debug(
       {
-        messageId: envelope.messageId,
-        name: envelope.name,
-        correlationId: envelope.correlationId,
+        [LOG_FIELDS.messageId]: envelope.messageId,
+        [LOG_FIELDS.messageName]: envelope.name,
+        [LOG_FIELDS.traceId]: envelope.correlationId,
         consumers: entry.consumers.length,
       },
       `Published ${definition.name} to ${String(entry.consumers.length)} consumer(s)`,
@@ -120,7 +122,7 @@ export class MessagePublisher {
       // явно переданий актор > актор ланцюга з CLS > система
       actor: actor ?? this.messageContext.getActor() ?? SYSTEM_ACTOR,
       // корінь ланцюга: поза HTTP-контекстом кореляція починається з самого повідомлення
-      correlationId: this.messageContext.getCorrelationId() ?? messageId,
+      correlationId: this.messageContext.getCorrelationId() ?? traceIdFromUuid(messageId),
       causationId: this.messageContext.getCausationId() ?? null,
       data: definition.schema.parse(data),
     };

@@ -1,5 +1,5 @@
 export { TenancyModule, type TenancyModuleOptions } from './tenancy.module';
-export { TenantContextService } from './tenant-context.service';
+export { TenantContextService, TENANT_ID_KEY } from './tenant-context.service';
 export {
   TenantResolver,
   StaticTenantResolver,

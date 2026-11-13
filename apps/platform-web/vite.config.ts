@@ -4,6 +4,7 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { chunkFileNames, manualChunks } from '../../libs/ui/src/build/chunking';
+import { clientLogSink } from '../../libs/ui/src/build/client-log-sink';
 
 export default defineConfig(({ mode }) => {
   // Workspace slots (docs/workspace-slots.md): той самий підхід, що apps/web/vite.config.ts —
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = `http://localhost:${rootEnv.PLATFORM_PORT ?? '3002'}`;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), clientLogSink({ service: 'platform-web', appDir: __dirname })],
     build: {
       // Дзеркало apps/web/vite.config.ts: нарізка й імена — libs/ui/src/build/chunking.ts
       // (docs/frontend/lazy-loading.md §4)

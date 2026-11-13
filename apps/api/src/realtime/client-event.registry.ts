@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { TenantContextService } from '@saas-skeleton/database';
+import { LOG_CONTEXT, newTraceId } from '@saas-skeleton/shared';
+import { ClsService } from 'nestjs-cls';
 import type {
   ClientEventAck,
   ClientEventErrorCode,
@@ -74,7 +76,10 @@ export class ClientEventRegistry {
   private readonly events = new Map<string, RegisteredEvent>();
   private readonly windows = new WeakMap<TenantSocket, Map<string, Window>>();
 
-  constructor(private readonly tenantContext: TenantContextService) {}
+  constructor(
+    private readonly tenantContext: TenantContextService,
+    private readonly cls: ClsService,
+  ) {}
 
   /** Двічі те саме імʼя — помилка зборки модулів: впаде на старті, а не тихо перепише обробник */
   register<D extends ClientSocketEventDef>(
@@ -137,23 +142,36 @@ export class ClientEventRegistry {
     // Identity лише з перевіреного токена сокета; клієнт не називає ні tenant, ні юзера
     const { userId, tenantId, role } = socket.data;
     try {
-      const data = await this.tenantContext.runWith(
-        tenantId,
-        async () => await event.handler({ socket, userId, tenantId, role, payload: parsed.data }),
-      );
-      // Відповідь звіряється зі своєю схемою: розбіжність — баг обробника, а не клієнта
-      respond({ ok: true, data: event.definition.ack.parse(data) });
+      const data = await this.tenantContext.runWith(tenantId, async () => {
+        // Подія сокета — корінь власного ланцюга, як HTTP-запит: логи обробника й джоби, які
+        // він опублікує, несуть один `trace_id` і `user.id` (docs/observability.md)
+        this.cls.set(LOG_CONTEXT.traceId, newTraceId());
+        this.cls.set(LOG_CONTEXT.userId, userId);
+        try {
+          const result = await event.handler({
+            socket,
+            userId,
+            tenantId,
+            role,
+            payload: parsed.data,
+          });
+          // Відповідь звіряється зі своєю схемою: розбіжність — баг обробника, а не клієнта
+          return event.definition.ack.parse(result);
+        } catch (error) {
+          // Усередині контексту, щоб запис отримав `trace_id` ланцюга. Без payload-а: у ньому
+          // може бути чужий контент
+          if (this.toCode(error) === 'INTERNAL') {
+            this.logger.error(
+              { err: error, 'socket.id': socket.id, 'socket.event': name },
+              `Socket event ${name} failed`,
+            );
+          }
+          throw error;
+        }
+      });
+      respond({ ok: true, data });
     } catch (error) {
-      const code = this.toCode(error);
-      if (code === 'INTERNAL') {
-        // Деталі лише в лог, без payload-а: у ньому може бути чужий контент
-        this.logger.error(
-          `Socket event ${name} failed for socket ${socket.id}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-      refuse(code);
+      refuse(this.toCode(error));
     }
   }
 

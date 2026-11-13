@@ -24,7 +24,11 @@ function toastTitle(parsed: ParsedApiError): string {
 
 /** `code` покриває всі ApiErrorCode — перекладений опис; без code (network/parse-помилка) — вже перекладений message */
 function toastDescription(parsed: ParsedApiError): string {
-  return parsed.code ? i18n.t(`errors:codes.${parsed.code}`) : parsed.message;
+  const text = parsed.code ? i18n.t(`errors:codes.${parsed.code}`) : parsed.message;
+  // id запиту — щоб людина могла назвати його підтримці, а той знайшов ланцюг у логах
+  return parsed.requestId === undefined
+    ? text
+    : `${text}\n${i18n.t('errors:toast.requestId', { id: parsed.requestId })}`;
 }
 
 export function showApiErrorToast(parsed: ParsedApiError): void {

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { AuthUpdateSchema, REALTIME_EVENTS, TENANT_NAMESPACE } from '@saas-skeleton/contracts';
 import type { AuthUpdateResult } from '@saas-skeleton/contracts';
+import { LOG_FIELDS } from '@saas-skeleton/shared';
 import { AUTH_EXPIRY_WARNING_MS, sessionRoom, tenantRoom, userRoom } from './realtime.constants';
 import { ClientEventRegistry } from './client-event.registry';
 import { RealtimeAuthError, toHandshakeError } from './realtime.errors';
@@ -29,6 +30,18 @@ interface AuthTimers {
  * заснув»: там lease догорає по TTL, інакше кожен тунель у метро миготів би
  * offline→online (docs/realtime-internals.md § «Режими відмов»).
  */
+/**
+ * Записи життєвого циклу сокета пишуться поза CLS-контекстом (це не запит і не джоба), тому
+ * поля ідентичності додаються явно — тими самими іменами, що їх ставить mixin логера.
+ */
+function socketLogFields(socket: TenantSocket): Record<string, string> {
+  return {
+    'socket.id': socket.id,
+    [LOG_FIELDS.userId]: socket.data.userId,
+    [LOG_FIELDS.tenantId]: socket.data.tenantId,
+  };
+}
+
 const INTENTIONAL_DISCONNECTS = new Set([
   'client namespace disconnect',
   'server namespace disconnect',
@@ -73,7 +86,7 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
               ? error
               : new RealtimeAuthError('INTERNAL', 'Realtime handshake failed');
           if (authError.code === 'INTERNAL') {
-            this.logger.error(`Socket handshake failed: ${String(error)}`);
+            this.logger.error({ err: error, 'socket.id': socket.id }, 'Socket handshake failed');
           }
           next(toHandshakeError(authError));
         });
@@ -111,7 +124,8 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
 
     await this.presence.onConnect(tenantId, userId, socket.id);
     this.logger.debug(
-      `Socket ${socket.id} connected (user ${userId}, recovered: ${String(socket.recovered)})`,
+      { ...socketLogFields(socket), recovered: socket.recovered },
+      'Socket connected',
     );
   }
 
@@ -126,7 +140,7 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
       // продовжить її heartbeat-ом і offline взагалі не станеться
       this.presence.forgetSocket(tenantId, userId, socket.id);
     }
-    this.logger.debug(`Socket ${socket.id} disconnected (${reason})`);
+    this.logger.debug({ ...socketLogFields(socket), reason }, 'Socket disconnected');
   }
 
   /**
@@ -164,7 +178,7 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
       if (error instanceof RealtimeAuthError) {
         return { status: 'rejected', code: error.code };
       }
-      this.logger.error(`auth.update.v1 failed for socket ${socket.id}: ${String(error)}`);
+      this.logger.error({ ...socketLogFields(socket), err: error }, 'auth.update.v1 failed');
       return { status: 'rejected', code: 'INTERNAL' };
     }
   }
@@ -189,7 +203,10 @@ export class RealtimeGateway implements OnGatewayInit<TenantNamespace>, OnGatewa
 
     const hard = setTimeout(
       () => {
-        this.logger.debug(`Socket ${socket.id} closed: access token expired without update`);
+        this.logger.debug(
+          socketLogFields(socket),
+          'Socket closed: access token expired without update',
+        );
         socket.disconnect(true);
       },
       Math.max(msToExpiry, 0),
