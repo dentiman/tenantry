@@ -51,6 +51,7 @@ libs/ui/src/
   components/theme-switcher.tsx
   components/user-identity.tsx
   components/route-fallbacks.tsx  RoutePending/RouteError/PanelPending/LazyBoundary (ліниве завантаження)
+  components/step-progress.tsx    прогрес списком етапів (pending/running/done/failed/skipped); дані дає споживач
   lib/lazy.ts                 lazyPage (маршрут) / lazyComponent (важкий компонент) — docs/frontend/lazy-loading.md
   build/chunking.ts           manualChunks + імена чанків для vite.config обох апок (не в exports)
   api/api-error.ts            нормалізація конверта ApiError
@@ -522,6 +523,21 @@ RO — канал єдиний, тому шел має другий, незал�
 - **Координати `sticky` всередині сторінки зсунулись на висоту хедера.** `ActivityPanel`
   стояв на `lg:top-[4.5rem]` (хедер 3.5rem + відступ 1rem) — став `lg:top-4`. Будь-який
   новий `sticky` всередині контенту рахується від верху СКРОЛЕРА, а не вікна.
+
+### Прогрес: смужка і список етапів
+
+Два рівні, обидва — чисте відображення:
+
+- `Progress` (примітив реєстру) — одне число. `value={null}` — індетермінований стан.
+- `StepProgress` (`components/step-progress.tsx`, власний: у реєстрі степера немає) — список
+  `{ key, label, status, current?, total?, description? }`. Стан кроку — фіксований enum
+  `pending | running | done | failed | skipped`; самі кроки задає джерело. Смужка під кроком
+  зʼявляється лише для `running` з обома числами. Підписи приходять уже перекладеними (пакет не
+  знає неймспейсів застосунку); слова стану для екранного читача — `common:steps.status.*`.
+  Стан видно не лише кольором: у кожного свій значок, поточний крок має `aria-current="step"`.
+
+Те, що виконується довше за один екран, показують не у власному компоненті, а через лоток
+активності шела (`app-shell.md` §5.7).
 
 ### Регіони тостів
 

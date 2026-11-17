@@ -37,6 +37,10 @@ const PlaygroundSelectPage = lazyPage(
   () => import('./pages/playground-select'),
   'PlaygroundSelectPage',
 );
+const PlaygroundStepProgressPage = lazyPage(
+  () => import('./pages/playground-step-progress'),
+  'PlaygroundStepProgressPage',
+);
 const PlaygroundTabsPage = lazyPage(() => import('./pages/playground-tabs'), 'PlaygroundTabsPage');
 const PlaygroundTextareaPage = lazyPage(
   () => import('./pages/playground-textarea'),
@@ -149,6 +153,16 @@ export const playgroundComponentsSelectRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
   path: 'select',
   component: PlaygroundSelectPage,
+});
+
+/**
+ * General Components: StepProgress — прогрес списком етапів. Той самий стенд наповнює
+ * справжню чергу завантажень фейковими файлами, щоб побачити лоток активності в хедері.
+ */
+export const playgroundComponentsStepProgressRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'step-progress',
+  component: PlaygroundStepProgressPage,
 });
 
 /** General Components: Textarea — багаторядкове текстове поле */

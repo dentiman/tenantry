@@ -22,6 +22,7 @@ import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../features/notifications/components/notification-bell';
 import { SlotOutlet } from '../lib/slots';
 import { AppFooterBar } from './account-footer';
+import { ActivityTray } from './activity-tray';
 import { AppRail } from './app-rail';
 import { AreaSidebar } from './area-sidebar';
 import { shellHeaderActions, shellSidePanels } from './slots';
@@ -145,6 +146,8 @@ export function AppShell() {
               <SidebarTrigger className="-ml-2" />
               <PageHeaderSlot className="min-w-0 flex-1" />
               <div className="ml-auto flex items-center gap-1">
+                {/* Що зараз виконується (завантаження, згодом операції); порожній — нічого не малює */}
+                <ActivityTray />
                 <NotificationBell />
                 <ThemeSwitcher />
                 {/* Кнопки фіч (асистент) — слот, оболонка їх не імпортує (docs/modules.md §4) */}

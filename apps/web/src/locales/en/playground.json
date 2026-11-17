@@ -16,7 +16,8 @@
     "inlineForm": "Inline form",
     "dataGrid": "Data grid",
     "cards": "Cards",
-    "popups": "Popups"
+    "popups": "Popups",
+    "stepProgress": "Step progress"
   },
   "eyebrow": "Design system",
   "origin": {
@@ -1125,6 +1126,37 @@
       "p2": "Each organization sees only its own data — the database itself guarantees this, not developer discipline. Customers and Calendar inside are working reference modules: a new section copies their structure instead of inventing its own.",
       "p3": "A new domain module — tickets, billing, inventory — should take days, not weeks. Everything every SaaS repeats is solved once and the same way, so the team spends its time on what makes the product different.",
       "p4": "Key guarantees — organization isolation, an event only together with the saved fact, files bypassing the server — are built into the design, so a new module cannot forget them. Open any popup above and read through this paragraph: if a line stays legible behind the menu, raise the opacity."
+    }
+  },
+  "stepProgress": {
+    "title": "Step progress",
+    "description": "Progress shown as a list of stages: the first is done, the second is running, the rest are waiting. The component only renders a list it is given — a file upload feeds it today, a server operation will feed it the same shape later. The same items appear in the activity tray in the header.",
+    "importLabel": "Shared import",
+    "steps": {
+      "prepare": "Preparing",
+      "transfer": "Uploading",
+      "verify": "Checking the file",
+      "report": "Building the report"
+    },
+    "failedReason": "The file is not an image",
+    "sections": {
+      "states": {
+        "title": "States",
+        "description": "A step is pending, running, done, failed or skipped. Each state has its own marker and is named in hidden text, so it never depends on colour alone. A running step shows a bar only when it reports measurable progress."
+      },
+      "tray": {
+        "title": "Activity tray",
+        "description": "These buttons put simulated files into the real upload queue: nothing is sent to storage, but the queue, the three-at-a-time limit, cancel, retry and the tray in the header behave exactly as with real files. Open another page while they run — they keep going."
+      }
+    },
+    "states": {
+      "indeterminate": "No current/total — the step runs without a bar."
+    },
+    "simulate": {
+      "five": "Simulate 5 uploads",
+      "failing": "Simulate 2, one fails",
+      "started_one": "{{count}} started",
+      "started_other": "{{count}} started"
     }
   }
 }

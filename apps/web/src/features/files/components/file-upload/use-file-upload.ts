@@ -1,9 +1,6 @@
 import { useCallback, useState } from 'react';
-import axios from 'axios';
-import { filesComplete, filesCreate } from '../../../../api/generated/api';
 import type { FileResponseDtoOutput } from '../../../../api/generated/model/fileResponseDtoOutput';
-import type { CreateFileUploadDtoMimeType } from '../../../../api/generated/model/createFileUploadDtoMimeType';
-import { parseApiError } from '@saas-skeleton/ui/api/api-error';
+import { uploadQueue, useUploadStore, type FileUploadEntry } from '../../stores/upload.store';
 
 export type FileUploadState =
   | { status: 'idle' }
@@ -12,45 +9,69 @@ export type FileUploadState =
   | { status: 'done'; file: FileResponseDtoOutput }
   | { status: 'error'; message: string };
 
+/** Стан одного завантаження з черги, як його бачить екран, що чекає на файл */
+export function toFileUploadState(entry: FileUploadEntry | undefined): FileUploadState {
+  switch (entry?.phase) {
+    case undefined:
+    case 'canceled':
+      // Скасування — не помилка: екран повертається до вибору файлу
+      return { status: 'idle' };
+    case 'queued':
+    case 'preparing':
+      return { status: 'uploading', progress: 0 };
+    case 'transferring':
+      return {
+        status: 'uploading',
+        progress: entry.total > 0 ? Math.round((entry.loaded / entry.total) * 100) : 0,
+      };
+    case 'verifying':
+      return { status: 'processing' };
+    case 'done':
+      return entry.result ? { status: 'done', file: entry.result } : { status: 'processing' };
+    case 'failed':
+      return { status: 'error', message: entry.errorMessage ?? '' };
+  }
+}
+
 /**
- * Двофазний upload (зафіксований флоу файлової підсистеми):
- * POST /files → PENDING + presigned PUT → байти напряму в сховище (минаючи API) →
- * POST /files/:id/complete → READY. Повертає null при помилці — стан у state.
+ * Завантаження одного файлу для екрана, що чекає на результат. Саме завантаження живе в черзі
+ * застосунку (`stores/upload.store.ts`): воно триває, якщо екран закрили, і видно в лотку
+ * активності. Хук — лише погляд на свій запис у черзі; API той самий, що до черги.
+ *
+ * `upload` повертає null при помилці або скасуванні — причина в `state`.
  */
 export function useFileUpload() {
-  const [state, setState] = useState<FileUploadState>({ status: 'idle' });
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  // Підсумок тримаємо окремо: успішний запис зникає з черги за кілька секунд, а екран
+  // мусить і далі бачити `done`
+  const [settled, setSettled] = useState<FileUploadState | null>(null);
+  const entry = useUploadStore((state) =>
+    uploadId === null ? undefined : state.uploads.find((upload) => upload.id === uploadId),
+  );
 
   const upload = useCallback(async (file: File): Promise<FileResponseDtoOutput | null> => {
-    setState({ status: 'uploading', progress: 0 });
-    try {
-      const { file: created, uploadUrl } = await filesCreate({
-        filename: file.name,
-        // Реальну відповідність вмісту заявленому MIME перевіряє бекенд по magic bytes
-        mimeType: file.type as CreateFileUploadDtoMimeType,
-        size: file.size,
-      });
-      // Сирий axios без інтерсепторів: авторизація зашита в підпис presigned URL,
-      // Bearer-заголовок чужому origin-у не потрібен і не має туди витікати
-      await axios.put(uploadUrl, file, {
-        headers: { 'Content-Type': file.type },
-        onUploadProgress: (event) => {
-          const progress = event.total ? Math.round((event.loaded / event.total) * 100) : 0;
-          setState({ status: 'uploading', progress });
-        },
-      });
-      setState({ status: 'processing' });
-      const ready = await filesComplete(created.id);
-      setState({ status: 'done', file: ready });
-      return ready;
-    } catch (error) {
-      setState({ status: 'error', message: parseApiError(error).message });
-      return null;
+    setSettled(null);
+    const handle = uploadQueue.add(file);
+    setUploadId(handle.id);
+    const outcome = await handle.done;
+    if (outcome.status === 'done') {
+      setSettled({ status: 'done', file: outcome.result });
+      return outcome.result;
     }
+    setSettled(
+      outcome.status === 'failed'
+        ? { status: 'error', message: outcome.message }
+        : { status: 'idle' },
+    );
+    return null;
   }, []);
 
+  /** Відвʼязати екран від завантаження; сам запис лишається в черзі й лотку */
   const reset = useCallback(() => {
-    setState({ status: 'idle' });
+    setUploadId(null);
+    setSettled(null);
   }, []);
 
+  const state: FileUploadState = settled ?? toFileUploadState(entry);
   return { state, upload, reset };
 }

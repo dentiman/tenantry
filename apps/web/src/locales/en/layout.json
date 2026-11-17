@@ -18,6 +18,25 @@
   },
   "accountMenu": "Account menu",
   "logout": "Log out",
+  "activity": {
+    "title": "Activity",
+    "active_one": "{{count}} active",
+    "active_other": "{{count}} active",
+    "failed_one": "{{count}} failed",
+    "failed_other": "{{count}} failed",
+    "done": "Done",
+    "status": {
+      "queued": "Waiting",
+      "running": "In progress",
+      "succeeded": "Completed",
+      "failed": "Failed",
+      "canceled": "Cancelled"
+    },
+    "cancel": "Cancel {{title}}",
+    "retry": "Retry {{title}}",
+    "dismiss": "Dismiss {{title}}",
+    "toggleSteps": "Show steps of {{title}}"
+  },
   "build": {
     "open": "About this build, version {{version}}",
     "title": "About this build",

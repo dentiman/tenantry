@@ -6,6 +6,16 @@
     "menu": "Row actions",
     "close": "Close"
   },
+  "steps": {
+    "progress": "Step progress",
+    "status": {
+      "pending": "waiting",
+      "running": "in progress",
+      "done": "done",
+      "failed": "failed",
+      "skipped": "skipped"
+    }
+  },
   "copy": {
     "action": "Copy",
     "copied": "Copied",
@@ -55,6 +65,13 @@
     "add": "Add a user",
     "remove": "Remove user",
     "reorder": "Reorder user"
+  },
+  "uploads": {
+    "steps": {
+      "prepare": "Preparing",
+      "transfer": "Uploading",
+      "verify": "Checking the file"
+    }
   },
   "dropzone": {
     "prompt": "Drop a file here or choose one",

@@ -136,6 +136,14 @@ export function PlaygroundSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/step-progress'}
+                      render={<Link to="/playground/components/step-progress" />}
+                    >
+                      {t('nav.stepProgress')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
                       isActive={pathname === '/playground/components/textarea'}
                       render={<Link to="/playground/components/textarea" />}
                     >

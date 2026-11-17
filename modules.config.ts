@@ -67,6 +67,8 @@ export const MODULES = {
       'apps/web/src/components/phone-number.tsx',
       'apps/web/src/lib/uuid.ts',
       'apps/web/src/lib/slots.tsx',
+      // Реєстр активності: джерела роботи (черга завантажень) → лоток у шелі (docs/frontend/app-shell.md)
+      'apps/web/src/lib/activity.ts',
       'apps/web/src/lib/payload-values.ts',
       'apps/platform-web/src/lib/money.ts',
       'apps/web/src/lib/entity-routes.ts',
@@ -345,7 +347,7 @@ export const MODULES = {
   },
   playground: {
     tier: 'feature',
-    dependsOn: ['app', 'users'],
+    dependsOn: ['app', 'files', 'users'],
     summary: 'Пісочниця компонентів (демо, не продукт).',
     paths: ['apps/web/src/features/playground/'],
   },
