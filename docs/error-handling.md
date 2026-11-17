@@ -70,6 +70,8 @@
 | `FORBIDDEN`           | 403  | Немає прав (RBAC — у беклозі)                       | —                  |
 | `NOT_FOUND`           | 404  | Ресурс не знайдено (явно або Prisma P2025)          | —                  |
 | `CONFLICT`            | 409  | Унікальність/конфлікт стану (P2002, явний конфлікт) | так, якщо відоме поле |
+| `IDEMPOTENCY_IN_PROGRESS` | 409 | Запит з цим `Idempotency-Key` уже застосовано, але його відповідь недоступна; заголовок `Retry-After` (`docs/idempotency.md` §3) | — |
+| `IDEMPOTENCY_KEY_REUSED` | 422 | Той самий `Idempotency-Key` з іншим запитом (`docs/idempotency.md` §4) | — |
 | `CHANNEL_WINDOW_CLOSED` | 422 | Вікно вільного тексту каналу закрите (CHAT-2b); фронт пояснює правило й пропонує нотатку | — |
 | `INTERNAL_ERROR`      | 500  | Невідомий виняток; message завжди замаскований      | —                  |
 | `SERVICE_UNAVAILABLE` | 503  | БД/залежність недоступна — клієнту можна ретраїти   | —                  |

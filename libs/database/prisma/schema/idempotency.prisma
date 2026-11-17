@@ -1,0 +1,32 @@
+// Ключі ідемпотентності REST-мутацій (docs/idempotency.md). Рядок вставляється В ТІЙ САМІЙ
+// транзакції, що й ефект запиту (`IdempotencyService.claim(tx)`), тому видимий рядок
+// означає «ефект закомічено» — стану «ключ зайнято, результат невідомий» не існує.
+// Невдалий запит відкочує рядок разом з усім іншим, тож тут лежать лише успішні.
+model IdempotencyKey {
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+  // Значення заголовка `Idempotency-Key`: 1–255 друкованих ASCII-символів
+  key      String @db.VarChar(255)
+
+  // Шаблон маршруту (`POST /api/customers`) — лише для діагностики
+  operation   String
+  // sha256(метод + URL + канонічний JSON тіла): той самий ключ з іншим запитом → 422
+  requestHash String @map("request_hash")
+
+  // Відповідь першого успішного запиту. Зберігається ОДРАЗУ ПІСЛЯ коміту окремим UPDATE
+  // (тіло відповіді будує контролер, уже поза транзакцією); NULL = «застосовано, відповідь
+  // ще записується або втрачена разом із процесом» → повтор отримує 409 IDEMPOTENCY_IN_PROGRESS
+  responseStatus Int?  @map("response_status")
+  responseBody   Json? @map("response_body")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("IdempotencyKeyOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, userId, key])
+  // Нічна чистка: рядки старші за добу (cleanup-processed-jobs.subscriber)
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}

@@ -6,6 +6,7 @@ import {
   ActivitiesModule as SharedActivitiesModule,
   AiModule as SharedAiModule,
   CryptoModule,
+  IdempotencyModule,
   MessagingModule,
   NotificationsModule as SharedNotificationsModule,
   NumberingModule as SharedNumberingModule,
@@ -55,6 +56,8 @@ import { validateApiEnv } from './config/env.schema';
     SharedActivitiesModule,
     SharedNotificationsModule,
     SharedNumberingModule,
+    // Idempotency-Key: interceptor + `claim(tx)` для ендпоінтів з @Idempotent() (docs/idempotency.md)
+    IdempotencyModule,
     SharedAiModule,
     AuthModule,
     PasswordResetModule,

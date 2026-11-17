@@ -24,6 +24,7 @@ import type {
 } from '@saas-skeleton/contracts';
 import { NumberingService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
+import { Idempotent } from '../common/idempotent.decorator';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -78,6 +79,7 @@ export class CustomersController {
   }
 
   @Post()
+  @Idempotent()
   @ApiCreatedResponse({ type: CustomerDetailResponseDto.Output })
   async create(
     @Body() dto: CreateCustomerDto,

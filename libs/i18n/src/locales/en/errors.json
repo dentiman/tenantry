@@ -8,6 +8,8 @@
     "FORBIDDEN": "Access denied",
     "NOT_FOUND": "Not found",
     "CONFLICT": "Conflict",
+    "IDEMPOTENCY_IN_PROGRESS": "This action has already been submitted. Refresh the page to see the result.",
+    "IDEMPOTENCY_KEY_REUSED": "This request was already sent with different data. Please try again.",
     "CHANNEL_WINDOW_CLOSED": "The 24-hour reply window is closed",
     "TOO_MANY_REQUESTS": "Wait a minute and try again.",
     "INTERNAL_ERROR": "Internal server error",

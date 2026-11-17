@@ -565,7 +565,7 @@ model Customer {
 | [tenant-isolation.e2e-spec.ts](../apps/api/test/tenant-isolation.e2e-spec.ts) | Два реальні tenant-и через HTTP: список A не містить B; get/patch/delete чужого ID → 404 (не 403 — не палимо існування); зшитий/чужий JWT при авторитетній резолюції → 401; CLS-конкурентність (`runWith` A/B паралельно зі штучним чергуванням event loop) не перетікає; slug-login у B бачить лише B |
 | [platform.e2e-spec.ts](../apps/platform-api/test/platform.e2e-spec.ts)        | Operator auth, CRUD тенантів (create атомарно з admin-ом, дублікат slug → 409, невалідний slug → 400, suspend/resume), jobs-моніторинг, токен tenant-plane відхиляється platform-guard-ом                                                                                                              |
 
-Разом — 49 tenant e2e-файлів + 6 platform (`pnpm api:test:e2e`, `pnpm platform:test:e2e`), без окремого
+Разом — 52 tenant e2e-файли + 6 platform (`pnpm api:test:e2e`, `pnpm platform:test:e2e`), без окремого
 кроку на RLS — перевірка вшита в звичайний тестраннер. Автоматично їх **не** ганяє жоден CI (рішення
 2026-10-19): гейт — `pnpm verify` (`scripts/ci-verify.sh`) локально перед пушем, у CI він лише ручна
 кнопка (`deploy-swarm.md` §6). Автоматичним на кожному пуші є лише офлайн-шлюз `pre-push`

@@ -77,6 +77,13 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   §7.6 the invariants later phases build on — don't break them. Built: internal conversations (REST + realtime, notifications) and the customer channel core on a fake
   provider — inbound, replies with ordered delivery, receipts, workflow (CHAT-0.1…2b); the real WhatsApp adapter is CHAT-3a…3c.
   `docs/bulk-operations.md` — **design only, not implemented** (a disabled demo slot on `/users`).
+- `docs/idempotency.md` — **the** reference for the `Idempotency-Key` header on REST mutations: the key
+  is committed in the transaction of the effect (`IdempotencyService.claim(tx)`), a repeat replays the
+  first response, failures leave nothing; how to opt an endpoint in, how the web client derives the key.
+- `docs/user-operations.md` — **design only, not implemented** (except its idempotency layer, above):
+  `UserOperation` (the user-visible resource behind a `202`, with a percentage or a dynamic list of
+  steps), the client-side upload manager, the shared `StepProgress` view and activity tray; why the name
+  is not `Operation`/`Job`/`Task`; phases are the `uo-N-…` changes (§10).
 - `docs/whatsapp-channel.md` — **the** plan for the first external channel, WhatsApp Cloud API (design
   only, nothing built): decisions of 2026-10-13 (WhatsApp only, provider-neutral core so a second
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
@@ -404,6 +411,9 @@ The rules most easily broken:
   (`CalendarService.update`/`setAttendees` still do — known debt, deferred).
 - **After commit**: `onCommit` only for lossy accelerators (socket emit); anything that must
   happen goes through `publish(tx, …)`.
+- **A `POST` that must not run twice** (create, start an operation) gets `@Idempotent()` on the
+  endpoint **and** `await this.idempotency.claim(tx)` first in its `withTenantTx` — one without the
+  other answers `500` to a keyed request (`docs/idempotency.md` §5).
 - **RLS is the tenant boundary only**; who may see or change a record inside the tenant is the
   module's single access function (`calendar.access.ts`, `conversation-access.service.ts`).
 - **An invariant change ships with the e2e that would break without it** (negative, concurrent

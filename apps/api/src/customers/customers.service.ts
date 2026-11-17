@@ -10,7 +10,12 @@ import type {
   UpdateCustomer,
   UpdateCustomerContact,
 } from '@saas-skeleton/contracts';
-import { ActivityRecorder, NotificationRecorder, NumberingService } from '@saas-skeleton/shared';
+import {
+  ActivityRecorder,
+  IdempotencyService,
+  NotificationRecorder,
+  NumberingService,
+} from '@saas-skeleton/shared';
 import type { ActivityActor } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
 import { normalizePhonePair } from '../common/phone';
@@ -64,6 +69,7 @@ export class CustomersService {
     private readonly notifications: NotificationRecorder,
     private readonly numbering: NumberingService,
     private readonly settings: SettingsService,
+    private readonly idempotency: IdempotencyService,
   ) {}
 
   async findAll(query: CustomerQuery): Promise<{
@@ -154,6 +160,9 @@ export class CustomersService {
     // (перевірки власника й externalId вище), зроблено поза ним. Зовнішнього
     // I/O у цій транзакції бути не може — воно тримало б чергу на створення
     const customer = await this.tenantTx.withTenantTx(async (tx) => {
+      // Idempotency-Key (docs/idempotency.md): ключ комітиться разом із кастомером. Першим —
+      // до блокування лічильника: дублікат чекає тут, а не тримаючи чергу на номери
+      await this.idempotency.claim(tx);
       const number = await this.numbering.allocate(tx, CUSTOMER_SERIES);
 
       const created = await tx.customer.create({

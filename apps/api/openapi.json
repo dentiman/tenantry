@@ -725,7 +725,8 @@
         ],
         "tags": [
           "customers"
-        ]
+        ],
+        "x-idempotency-key": true
       }
     },
     "/api/customers/{id}": {
@@ -1540,7 +1541,8 @@
         ],
         "tags": [
           "calendar"
-        ]
+        ],
+        "x-idempotency-key": true
       }
     },
     "/api/calendar/agenda": {

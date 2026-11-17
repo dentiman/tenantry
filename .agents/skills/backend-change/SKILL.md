@@ -29,6 +29,9 @@ Read the feature doc of the module you touch first (`docs/<feature>.md`, see the
    (mail, generation, recompute) → `publish(tx, …)` + topology entry (§5).
 7. **Async work.** State the idempotency key, retry vs `NonRetryableMessageError`, and what the
    user sees if the job lands in `dlq` (§6).
+7a. **A `POST` that must not run twice** (create, start an operation): `@Idempotent()` on the
+    endpoint and `await this.idempotency.claim(tx)` as the first statement of its `withTenantTx`
+    (`docs/idempotency.md` §5). Not for responses that carry a secret.
 8. **Access.** RLS covers the tenant boundary only. Record-level access goes through the
    module's single access function, used by reads and writes alike (§7).
 9. **Abstraction.** Only for a swappable implementation, a shared rule, or a needed dependency

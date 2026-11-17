@@ -24,6 +24,7 @@ import type {
   CalendarEventResponse,
 } from '@saas-skeleton/contracts';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
+import { Idempotent } from '../common/idempotent.decorator';
 import { CalendarAccessService } from './calendar.access';
 import { CalendarService } from './calendar.service';
 import {
@@ -95,6 +96,7 @@ export class CalendarController {
   }
 
   @Post('events')
+  @Idempotent()
   @ApiCreatedResponse({ type: CalendarEventResponseDto.Output })
   async create(
     @Body() dto: CreateCalendarEventDto,

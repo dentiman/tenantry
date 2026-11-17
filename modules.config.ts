@@ -42,6 +42,8 @@ export const MODULES = {
       'libs/shared/src/errors/',
       'libs/shared/src/logging/',
       'libs/shared/src/crypto/',
+      // Idempotency-Key для REST-мутацій (docs/idempotency.md): залежить лише від БД і контракту помилок
+      'libs/shared/src/idempotency/',
       'libs/contracts/src/error/',
       'libs/contracts/src/pagination/',
       'libs/contracts/src/money/',

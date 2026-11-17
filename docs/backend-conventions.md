@@ -68,6 +68,7 @@ Prisma в браузерний бандл). Перевіряє ESLint.
 | Умовний `updateMany` + `count`                                       | «оновити, лише якщо стан той, що я бачив» | `AuthSessionService.rotate` (`where: { id, tokenHash }`) |
 | Атомарний інкремент-і-повернення                                     | лічильники, порядкові номери              | `ChatService` `lastSeq: { increment: 1 }`                |
 | Унікальний індекс → 409                                              | ідемпотентне створення                    | `chat_messages.client_message_id` (частковий unique)     |
+| `Idempotency-Key` + `claim(tx)`                                      | повтор того самого `POST` (мережа, подвійний клік) | `CustomersService.create` (`docs/idempotency.md`) |
 | `SELECT … FOR UPDATE` через `$queryRaw` **всередині** `withTenantTx` | кілька залежних записів одного агрегату   | `UsersService.assertAnotherActiveAdmin` — «лишається хоч один активний ADMIN» (`users-last-admin.e2e-spec`) |
 
 Блокуються рядки ВСІХ, хто бере участь у рішенні, в детермінованому порядку (`ORDER BY id`): двоє адмінів,
@@ -109,6 +110,12 @@ Prisma в браузерний бандл). Перевіряє ESLint.
    а не «тиша»). Еталон — стан-машина AI-повідомлення (`ai-message-state.service.ts`).
 
 Деталі: `docs/event-driven-architecture.md`.
+
+**Те саме на вході з HTTP.** `POST`, який не можна виконати двічі (створення сутності, запуск
+операції), отримує `@Idempotent()` на ендпоінті й `await this.idempotency.claim(tx)` першим
+стейтментом у своїй `withTenantTx`: ключ із заголовка `Idempotency-Key` комітиться разом з ефектом,
+повтор отримує першу відповідь. Одне без іншого — `500` на запит із ключем. Еталони:
+`CustomersService.create`, `CalendarService.create`; деталі й обмеження — `docs/idempotency.md`.
 
 ## 7. RLS — межа тенанта, доступ до запису — окрема функція
 
@@ -166,6 +173,7 @@ RLS гарантує, що чужий тенант не видимий. Хто *
 | §3 голий `$transaction`                       | ESLint `no-restricted-syntax`                                            |
 | tenant-таблиця: RLS + FORCE + політика-шаблон (§7) | e2e `rls.e2e-spec.ts` — перевірка з каталогу Postgres для **кожної** таблиці з `tenant_id`, список не ручний (`multi-tenancy-architecture.md` §12); ручна, у `pnpm verify` |
 | §4–§7, §9                                     | рев'ю + чекліст skill-а `backend-change`                                 |
+| §6 `@Idempotent()` без `claim(tx)`            | `IdempotencyInterceptor` → 500 на запит із ключем; ловить e2e ендпоінта   |
 | §10                                           | рев'ю; e2e — у `pnpm verify` (локально)                                  |
 | рядки вище, що йдуть через `pnpm lint` / `pnpm typecheck` | **автоматично перед `git push`** (`.husky/pre-push`, `scripts/pre-push-gate.sh`, ≈75 с); обхід — `SKIP_PREPUSH=1` / `--no-verify` |
 | усе вище, плюс e2e (RLS, ізоляція, §4/§10) | `pnpm verify` (`scripts/ci-verify.sh`) — **ручний**, не шлюз: з 2026-10-19 CI його не запускає |
