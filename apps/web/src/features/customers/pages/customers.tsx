@@ -13,6 +13,7 @@ import {
 import { parseApiError } from '@saas-skeleton/ui/api/api-error';
 import type { CustomerListResponseDtoOutputItemsItem } from '../../../api/generated/model/customerListResponseDtoOutputItemsItem';
 import { CreateCustomerModal } from '../components/create-customer-modal';
+import { ExportCustomersButton } from '../components/export-customers-button';
 import { PhoneNumber } from '../../../components/phone-number';
 import { formatCustomerAddress } from '../customer-address';
 import { CustomerIdentity } from '../components/customer-identity';
@@ -277,7 +278,12 @@ export function CustomersPage() {
         label="CustomersPage"
         breadcrumbs={[{ label: t('title') }]}
         subtitle={t('subtitle')}
-        actions={<CreateCustomerModal />}
+        actions={
+          <div className="flex items-center gap-2">
+            <ExportCustomersButton />
+            <CreateCustomerModal />
+          </div>
+        }
       />
 
       {/* Смуга на всю ширину, без відступів і скруглень: у режимі `bleed`

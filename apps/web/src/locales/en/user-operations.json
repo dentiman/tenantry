@@ -1,0 +1,36 @@
+{
+  "actions": {
+    "download": "Download",
+    "export": "Export"
+  },
+  "errors": {
+    "STALLED": "Stopped responding and was cancelled. Try again.",
+    "INVALID_PARAMS": "The request could not be processed.",
+    "INTERNAL": "Something went wrong. Try again."
+  },
+  "types": {
+    "customers": {
+      "export": {
+        "steps": {}
+      }
+    }
+  },
+  "export": {
+    "started": "Export started — follow it in the activity tray.",
+    "tooLarge": "Too many customers to export at once (limit {{maximum}}). Narrow the filters."
+  },
+  "notifications": {
+    "type": {
+      "user_operation": {
+        "succeeded": "<b>{{operation}}</b> is ready. Click to download.",
+        "failed": "<b>{{operation}}</b> could not be completed."
+      }
+    },
+    "label": {
+      "user_operation": {
+        "succeeded": "Background task finished",
+        "failed": "Background task failed"
+      }
+    }
+  }
+}

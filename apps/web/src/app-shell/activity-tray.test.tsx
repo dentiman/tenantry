@@ -18,23 +18,29 @@ describe('activity chip', () => {
     renderToStaticMarkup(<ActivityChipContent summary={summary} />);
 
   it('shows the number of active items and their combined percentage', () => {
-    const html = chip({ active: 3, failed: 1, percent: 64 });
+    const html = chip({ active: 3, failed: 1, succeeded: 0, percent: 64 });
     expect(html).toContain('activity.active');
     expect(html).toContain('64%');
   });
 
   it('omits the percentage when nothing measurable is running', () => {
-    expect(chip({ active: 1, failed: 0, percent: null })).not.toContain('%');
+    expect(chip({ active: 1, failed: 0, succeeded: 0, percent: null })).not.toContain('%');
   });
 
   it('asks for attention when only failures are left', () => {
-    const html = chip({ active: 0, failed: 2, percent: null });
+    const html = chip({ active: 0, failed: 2, succeeded: 0, percent: null });
     expect(html).toContain('activity.failed');
     expect(html).not.toContain('activity.active');
   });
 
   it('shows completion while only just-finished items remain', () => {
-    expect(chip({ active: 0, failed: 0, percent: null })).toContain('activity.done');
+    expect(chip({ active: 0, failed: 0, succeeded: 1, percent: null })).toContain('activity.done');
+  });
+
+  it('does not claim completion when only cancelled items remain', () => {
+    const html = chip({ active: 0, failed: 0, succeeded: 0, percent: null });
+    expect(html).not.toContain('activity.done');
+    expect(html).toContain('activity.title');
   });
 });
 
@@ -87,6 +93,12 @@ describe('activity row', () => {
     const done = row({ status: 'succeeded' });
     expect(done).toContain('activity.status.succeeded');
     expect(done).not.toContain('activity.dismiss');
+  });
+
+  it('a succeeded item with an action shows it and can be dismissed', () => {
+    const html = row({ status: 'succeeded', action: { label: 'Download', run: () => undefined } });
+    expect(html).toContain('Download');
+    expect(html).toContain('activity.dismiss');
   });
 
   it('offers the step view only for an item made of stages', () => {

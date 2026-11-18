@@ -18,6 +18,7 @@ import playgroundEn from '../locales/en/playground.json';
 import settingsEn from '../locales/en/settings.json';
 import userSettingsEn from '../locales/en/user-settings.json';
 import usersEn from '../locales/en/users.json';
+import userOperationsEn from '../locales/en/user-operations.json';
 
 /**
  * Усі неймспейси застосунку. Окремо від `index.ts`, бо той ініціалізує i18next із
@@ -44,5 +45,6 @@ export const resources = {
     customers: customersEn,
     'invoices-demo': invoicesDemoEn, // invoices-demo
     'user-settings': userSettingsEn,
+    'user-operations': userOperationsEn,
   },
 };

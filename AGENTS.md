@@ -80,10 +80,10 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/idempotency.md` — **the** reference for the `Idempotency-Key` header on REST mutations: the key
   is committed in the transaction of the effect (`IdempotencyService.claim(tx)`), a repeat replays the
   first response, failures leave nothing; how to opt an endpoint in, how the web client derives the key.
-- `docs/user-operations.md` — **design only, not implemented** (except its idempotency layer, above):
-  `UserOperation` (the user-visible resource behind a `202`, with a percentage or a dynamic list of
-  steps), the client-side upload manager, the shared `StepProgress` view and activity tray; why the name
-  is not `Operation`/`Job`/`Task`; phases are the `uo-N-…` changes (§10).
+- `docs/user-operations.md` — **the** reference for `UserOperation`: the user-visible resource behind a
+  `202` (owner-only, guarded transitions, heartbeat + stall sweeper, 30-day retention, private result
+  file), how to add an operation type, the upload queue, `StepProgress` and the activity tray. Built:
+  the runtime and the customer CSV export; operations with steps/cursor (import) are the next phase (§10).
 - `docs/whatsapp-channel.md` — **the** plan for the first external channel, WhatsApp Cloud API (design
   only, nothing built): decisions of 2026-10-13 (WhatsApp only, provider-neutral core so a second
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
@@ -261,7 +261,8 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      (Socket.IO gateway), calendar, ai (assistant conversation + citation
                      read; the current conversation has no id in its path — only reply ids
                      and history `/ai/conversations/:id` do), chat (CHAT-0.1: internal conversations, server-assigned
-                     `seq`, one access service, no queue/socket seams yet). Pino logging,
+                     `seq`, one access service, no queue/socket seams yet), user-operations
+                     (owner-only read/cancel/result link of `UserOperation`). Pino logging,
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
                      JWT/DB role), tenants CRUD (+ `tenants/:id/users` for emergency user
@@ -411,6 +412,8 @@ The rules most easily broken:
   (`CalendarService.update`/`setAttendees` still do — known debt, deferred).
 - **After commit**: `onCommit` only for lossy accelerators (socket emit); anything that must
   happen goes through `publish(tx, …)`.
+- **Work a user waits on for minutes** (export, import) is a `UserOperation` run by
+  `UserOperationRunner`, not a `runOnce` subscriber — `docs/user-operations.md` §5.
 - **A `POST` that must not run twice** (create, start an operation) gets `@Idempotent()` on the
   endpoint **and** `await this.idempotency.claim(tx)` first in its `withTenantTx` — one without the
   other answers `500` to a keyed request (`docs/idempotency.md` §5).

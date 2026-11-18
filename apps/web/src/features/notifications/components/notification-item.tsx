@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { NotificationResponseDtoOutput } from '../../../api/generated/model/notificationResponseDtoOutput';
+import { entityAction } from '../../../lib/entity-actions';
 import { entityLink } from '../../../lib/entity-routes';
 import { NotificationCard } from './notification-card';
 
@@ -33,9 +34,11 @@ export function NotificationItem({
   const isArchived = notification.archivedAt !== null;
   // Ціль може бути невідомого фронту типу — тоді картка не клікабельна, але
   // прочитати/архівувати її все одно можна
+  // Ціль веде або на сторінку, або до дії (завантажити результат операції)
   const hasTarget =
     notification.target !== null &&
-    entityLink(notification.target.kind, notification.target.id) !== null;
+    (entityLink(notification.target.kind, notification.target.id) !== null ||
+      entityAction(notification.target.kind) !== null);
 
   return (
     <li>

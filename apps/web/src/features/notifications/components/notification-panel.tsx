@@ -31,6 +31,7 @@ import {
 } from '../../../api/generated/api';
 import type { NotificationResponseDtoOutput } from '../../../api/generated/model/notificationResponseDtoOutput';
 import type { NotificationsFindAllFilter } from '../../../api/generated/model/notificationsFindAllFilter';
+import { entityAction } from '../../../lib/entity-actions';
 import { entityLink, entityPath } from '../../../lib/entity-routes';
 import { NotificationItem } from './notification-item';
 import { NotificationPreferences } from './notification-preferences';
@@ -124,6 +125,12 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
     if (link && entityPath(link) !== pathname) {
       void navigate(link);
       onClose();
+      return;
+    }
+    // Ціль без сторінки — дія (завантажити файл операції); панель лишається відкритою
+    const action = notification.target ? entityAction(notification.target.kind) : null;
+    if (action && notification.target) {
+      action(notification.target.id);
     }
   };
 

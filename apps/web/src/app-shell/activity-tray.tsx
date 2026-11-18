@@ -1,6 +1,8 @@
 import {
   CheckIcon,
   ChevronRightIcon,
+  DownloadIcon,
+  ListIcon,
   RotateCwIcon,
   TriangleAlertIcon,
   XIcon,
@@ -76,8 +78,8 @@ export function ActivityTrayView({ items }: { items: readonly ActivityItem[] }) 
 }
 
 /**
- * Три режими чипа: щось виконується → кількість і спільний відсоток; лишилися тільки
- * помилки → увага; лишилося тільки щойно завершене → галочка (за мить зникне разом із чипом).
+ * Режими чипа: щось виконується → кількість і спільний відсоток; лишилися помилки → увага;
+ * лишилося успішно завершене → галочка; лишилися тільки скасовані → назва лотка.
  */
 export function ActivityChipContent({ summary }: { summary: ActivitySummary }) {
   const { t } = useTranslation('layout');
@@ -100,10 +102,19 @@ export function ActivityChipContent({ summary }: { summary: ActivitySummary }) {
       </>
     );
   }
+  if (summary.succeeded > 0) {
+    return (
+      <>
+        <CheckIcon aria-hidden className="text-icon" />
+        <span>{t('activity.done')}</span>
+      </>
+    );
+  }
+  // Лишилися тільки скасовані: «готово» тут збрехало б — просто назва лотка
   return (
     <>
-      <CheckIcon aria-hidden className="text-icon" />
-      <span>{t('activity.done')}</span>
+      <ListIcon aria-hidden className="text-icon" />
+      <span>{t('activity.title')}</span>
     </>
   );
 }
@@ -152,6 +163,12 @@ export function ActivityRow({ item }: { item: ActivityItem }) {
           </p>
         </div>
         <div className="flex shrink-0 items-center">
+          {item.action ? (
+            <Button variant="ghost" size="xs" onClick={item.action.run}>
+              <DownloadIcon />
+              {item.action.label}
+            </Button>
+          ) : null}
           {item.onRetry ? (
             <Button
               variant="ghost"
@@ -172,7 +189,7 @@ export function ActivityRow({ item }: { item: ActivityItem }) {
               <XIcon />
             </Button>
           ) : null}
-          {!isActive && item.status !== 'succeeded' ? (
+          {!isActive && (item.status !== 'succeeded' || item.action) ? (
             <Button
               variant="ghost"
               size="icon-xs"

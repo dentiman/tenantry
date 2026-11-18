@@ -49,6 +49,15 @@ describe('activity registry', () => {
     expect(ids()).toEqual([]);
   });
 
+  it('keeps a succeeded item that offers an action until it is dismissed', () => {
+    useActivityStore
+      .getState()
+      .upsert(item({ id: 'export', status: 'succeeded', action: { label: 'Download', run: () => undefined } }));
+
+    vi.advanceTimersByTime(SUCCEEDED_LINGER_MS * 10);
+    expect(ids()).toEqual(['export']);
+  });
+
   it('keeps failed and cancelled items until they are dismissed', () => {
     const { upsert } = useActivityStore.getState();
     upsert(item({ id: 'failed', status: 'failed' }));
@@ -74,7 +83,7 @@ describe('summarizeActivity', () => {
       item({ id: 'big', progress: { current: 50, total: 900 } }),
       item({ id: 'small', progress: { current: 100, total: 100 } }),
     ]);
-    expect(summary).toEqual({ active: 2, failed: 0, percent: 15 });
+    expect(summary).toEqual({ active: 2, failed: 0, succeeded: 0, percent: 15 });
   });
 
   it('counts queued items as active and ignores finished ones in the percentage', () => {
@@ -84,7 +93,7 @@ describe('summarizeActivity', () => {
       item({ id: 'done', status: 'succeeded', progress: { current: 100, total: 100 } }),
       item({ id: 'bad', status: 'failed' }),
     ]);
-    expect(summary).toEqual({ active: 2, failed: 1, percent: 25 });
+    expect(summary).toEqual({ active: 2, failed: 1, succeeded: 1, percent: 25 });
   });
 
   it('reports no percentage when nothing measurable is active', () => {

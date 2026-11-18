@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { StepStatus } from '@saas-skeleton/contracts';
 import { CheckIcon, MinusIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Progress } from '@saas-skeleton/ui/components/ui/progress';
@@ -6,11 +7,10 @@ import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { cn } from '@saas-skeleton/ui/lib/utils';
 
 /**
- * Стан кроку — єдиний фіксований enum моделі (docs/user-operations.md §4). Самі кроки
- * динамічні: їх набір задає джерело (завантаження файлу, згодом серверна операція).
- * З появою серверної моделі (uo-2) тип переїде в `libs/contracts`, а цей файл його імпортує.
+ * Стан кроку — єдиний фіксований enum моделі (docs/user-operations.md §4); живе в контрактах,
+ * бо той самий тип приходить із сервера в `UserOperation.steps`. Самі кроки динамічні.
  */
-export type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+export type { StepStatus };
 
 export interface StepProgressItem {
   key: string;

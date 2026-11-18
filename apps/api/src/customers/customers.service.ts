@@ -2,19 +2,26 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { PrismaService, TenantTransactions } from '@saas-skeleton/database';
 import type { Prisma } from '@saas-skeleton/database';
 import { CustomerStatus } from '@saas-skeleton/database';
-import type { CustomerContact } from '@saas-skeleton/database';
+import type { CustomerContact, UserOperation } from '@saas-skeleton/database';
 import type {
   CreateCustomer,
   CreateCustomerContact,
   CustomerQuery,
+  ExportCustomers,
   UpdateCustomer,
   UpdateCustomerContact,
 } from '@saas-skeleton/contracts';
+import { CUSTOMER_EXPORT_MAX_ROWS } from '@saas-skeleton/contracts';
 import {
   ActivityRecorder,
   IdempotencyService,
+  MessagePublisher,
   NotificationRecorder,
   NumberingService,
+  UserOperationsService,
+  customerListOrderBy,
+  customerListWhere,
+  exportCustomersCommand,
 } from '@saas-skeleton/shared';
 import type { ActivityActor } from '@saas-skeleton/shared';
 import type { JwtPayload } from '../auth/decorators/current-user.decorator';
@@ -41,23 +48,6 @@ export type CustomerWithContacts = Prisma.CustomerGetPayload<{
   include: typeof CUSTOMER_DETAIL_INCLUDE;
 }>;
 
-/** Межа колонки `customers.number` (INT4): більше значення Postgres відкидає помилкою діапазону */
-const MAX_CUSTOMER_NUMBER = 2_147_483_647;
-
-/**
- * «C-000123», «000123» і «123» — той самий номер: із запиту лишаються самі цифри.
- * null — шукати номер нічого: цифр немає взагалі, або число не вміщається в INT4. Другий випадок
- * — звичайний пошук по ІПН чи телефону («5260250995»): `WHERE number = 5260250995` не дав би
- * збігів, а впав би 500-ю на всьому пошуку; тож таке число просто не є номером клієнта, і решта
- * умов (name/email/taxId) працює як завжди.
- */
-function parseNumberSearch(search: string): number | null {
-  const digits = search.replace(/\D/g, '');
-  if (digits === '') return null;
-  const value = Number.parseInt(digits, 10);
-  return Number.isSafeInteger(value) && value <= MAX_CUSTOMER_NUMBER ? value : null;
-}
-
 @Injectable()
 export class CustomersService {
   private readonly logger = new Logger(CustomersService.name);
@@ -70,6 +60,8 @@ export class CustomersService {
     private readonly numbering: NumberingService,
     private readonly settings: SettingsService,
     private readonly idempotency: IdempotencyService,
+    private readonly userOperations: UserOperationsService,
+    private readonly publisher: MessagePublisher,
   ) {}
 
   async findAll(query: CustomerQuery): Promise<{
@@ -78,39 +70,9 @@ export class CustomersService {
     page: number;
     limit: number;
   }> {
-    const { page, limit, status, kind, ownerId, tag, search, includeArchived, sortBy, sortOrder } =
-      query;
-    const searchedNumber = search ? parseNumberSearch(search) : null;
-
-    const where: Prisma.CustomerWhereInput = {
-      ...(kind && { kind }),
-      ...(ownerId && { ownerId }),
-      ...(tag && { tags: { has: tag } }),
-      // Явний статус має пріоритет: ?status=ARCHIVED показує саме архівних без
-      // додаткових прапорців. Без нього архівні приховані — у цьому й сенс архіву
-      ...(status
-        ? { status }
-        : includeArchived
-          ? {}
-          : { status: { not: CustomerStatus.ARCHIVED } }),
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' as const } },
-          { legalName: { contains: search, mode: 'insensitive' as const } },
-          { email: { contains: search, mode: 'insensitive' as const } },
-          { taxId: { contains: search, mode: 'insensitive' as const } },
-          // Номер тепер число, тому не `contains`, а ТОЧНИЙ збіг по цифрах із
-          // запиту: людина, яка вводить «C-000123» або «123», хоче саме цей
-          // запис, а не всі, де така послідовність десь трапилась
-          ...(searchedNumber !== null ? [{ number: searchedNumber }] : []),
-        ],
-      }),
-    };
-
-    // tie-breaker по id обов'язковий — інакше пагінація "пливе" при рівних значеннях sortBy
-    const orderBy = sortBy
-      ? [{ [sortBy]: sortOrder ?? 'asc' }, { id: 'desc' as const }]
-      : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
+    const { page, limit } = query;
+    const where = customerListWhere(query);
+    const orderBy = customerListOrderBy(query);
 
     const [items, total] = await Promise.all([
       this.prisma.customer.findMany({
@@ -125,6 +87,46 @@ export class CustomersService {
 
     this.logger.log(`Fetched ${String(items.length)} customers (total: ${String(total)})`);
     return { items, total, page, limit };
+  }
+
+  /**
+   * Запустити експорт у CSV як операцію користувача (openspec: customers/export). Кількість
+   * рахується ДО транзакції: межа — запобіжник від явно завеликого файлу, а не інваріант, тож
+   * guard не потрібен (воркер запише те, що збігатиметься на момент роботи). Операція і job
+   * зʼявляються в одній транзакції разом із ключем ідемпотентності.
+   */
+  async startExport(filters: ExportCustomers, actor: JwtPayload): Promise<UserOperation> {
+    const matching = await this.prisma.customer.count({ where: customerListWhere(filters) });
+    if (matching > CUSTOMER_EXPORT_MAX_ROWS) {
+      throw new BadRequestException({
+        message: `Export is limited to ${String(CUSTOMER_EXPORT_MAX_ROWS)} customers, filter matches ${String(matching)}`,
+        fieldErrors: [
+          {
+            field: 'filters',
+            message: 'Too many customers to export',
+            code: 'export_too_large',
+            params: { maximum: CUSTOMER_EXPORT_MAX_ROWS, actual: matching },
+          },
+        ],
+      });
+    }
+    return this.tenantTx.withTenantTx(async (tx) => {
+      await this.idempotency.claim(tx);
+      const operation = await this.userOperations.start(tx, {
+        type: 'customers.export',
+        userId: actor.sub,
+        // Назва — імʼя майбутнього файлу: нею підписані лоток і сповіщення
+        title: `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+        params: filters,
+      });
+      await this.publisher.publish(
+        tx,
+        exportCustomersCommand,
+        { userOperationId: operation.id },
+        { actor: { type: 'user', id: actor.sub, label: actor.email } },
+      );
+      return operation;
+    });
   }
 
   /** Картка віддає контакти разом із кастомером — окремого GET на контакти немає */

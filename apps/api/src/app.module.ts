@@ -11,6 +11,7 @@ import {
   NotificationsModule as SharedNotificationsModule,
   NumberingModule as SharedNumberingModule,
   StorageModule,
+  UserOperationsModule as SharedUserOperationsModule,
   createLoggerConfig,
 } from '@saas-skeleton/shared';
 import { HealthController } from './health.controller';
@@ -27,6 +28,7 @@ import { FilesModule } from './files/files.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { UserOperationsModule } from './user-operations/user-operations.module';
 import { RedisModule } from './redis/redis.module';
 import { AppThrottlerModule } from './common/app-throttler.module';
 import { validateApiEnv } from './config/env.schema';
@@ -58,6 +60,8 @@ import { validateApiEnv } from './config/env.schema';
     SharedNumberingModule,
     // Idempotency-Key: interceptor + `claim(tx)` для ендпоінтів з @Idempotent() (docs/idempotency.md)
     IdempotencyModule,
+    // Операції користувача: створення/переходи (спільні з воркером) — docs/user-operations.md
+    SharedUserOperationsModule,
     SharedAiModule,
     AuthModule,
     PasswordResetModule,
@@ -72,6 +76,7 @@ import { validateApiEnv } from './config/env.schema';
     ActivitiesModule,
     NotificationsModule,
     RealtimeModule,
+    UserOperationsModule,
   ],
   controllers: [HealthController],
 })

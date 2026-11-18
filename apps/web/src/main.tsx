@@ -15,6 +15,9 @@ import { initNotificationSync } from './features/notifications/realtime/notifica
 import { initCalendarSync } from './features/calendar/realtime/calendar-sync';
 import { initAiSync } from './features/ai/realtime/ai-sync';
 import { initChatSync } from './features/chat/realtime/chat-sync';
+import { initUserOperationsSync } from './features/user-operations/user-operations-sync';
+import { downloadUserOperationResult } from './features/user-operations/user-operations.source';
+import { registerEntityAction } from './lib/entity-actions';
 import { useSettingsBootstrap } from './api/generated/api';
 import { NavProvider } from '@saas-skeleton/ui/navigation';
 import { isAllowed } from './features/auth/auth.access';
@@ -86,6 +89,11 @@ async function bootstrap(): Promise<void> {
   initCalendarSync(queryClient);
   initAiSync(queryClient);
   initChatSync(queryClient);
+  initUserOperationsSync();
+  // Клік по сповіщенню «експорт готовий» завантажує файл: у операції немає сторінки
+  registerEntityAction('user_operation', (id) => {
+    void downloadUserOperationResult(id);
+  });
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {

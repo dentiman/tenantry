@@ -11,3 +11,5 @@ export * from './ai';
 export * from './chat';
 export * from './channels';
 export * from './idempotency';
+export * from './user-operations';
+export * from './customers';

@@ -1,0 +1,60 @@
+// Операції користувача (docs/user-operations.md): ресурс за відповіддю `202` для роботи, що живе
+// довше за запит. Належить ініціатору: видалення користувача прибирає його операції каскадом
+// (рішення 2026-11-17). Кожна зміна стану — умовний updateMany з очікуваним поточним станом і
+// `revision + 1`, тож фінальний стан ніколи не перезаписується пізнім записувачем.
+model UserOperation {
+  id       String @id @default(uuid())
+  tenantId String @default(dbgenerated("nullif(current_setting('app.tenant_id'::text, true), ''::text)")) @map("tenant_id")
+  userId   String @map("user_id")
+  // Закритий реєстр у контрактах (USER_OPERATION_TYPES); у БД — рядок, новий тип без міграції
+  type     String
+  // Назва для людини, яку дає тип операції (для експорту — імʼя файлу): дані, не перекладений
+  // текст. Нею підписані лоток і сповіщення — і тоді, коли результату ще немає
+  title    String
+
+  status UserOperationStatus @default(QUEUED)
+
+  // Вимірюваний прогрес; null — невизначений або ще не почався
+  progressCurrent Int?  @map("progress_current")
+  progressTotal   Int?  @map("progress_total")
+  // Динамічний список кроків [{ key, status, current?, total? }] — пише один воркер, читається
+  // завжди разом з операцією, тому jsonb, а не дочірня таблиця
+  steps           Json?
+  // Монотонний лічильник змін: сокет-подія несе його, клієнт перечитує, коли він новіший
+  revision        Int   @default(0)
+
+  params    Json
+  // Підсумок типу операції (rowCount, filename) — без ключів сховища
+  result    Json?
+  // Ключ обʼєкта результату в S3. Не рядок `files`: загальний API файлів відкрив би його
+  // всьому тенанту, а результат бачить лише ініціатор
+  resultKey String? @map("result_key")
+  errorCode String? @map("error_code")
+
+  // Кооперативне скасування: воркер перевіряє між порціями роботи
+  cancelRequestedAt DateTime? @map("cancel_requested_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  // Останній знак життя воркера; sweeper валить RUNNING, що мовчить довше за поріг
+  heartbeatAt DateTime? @map("heartbeat_at")
+  finishedAt  DateTime? @map("finished_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserOperationOwner", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+
+  // Список «мої операції», новіші вище
+  @@index([tenantId, userId, createdAt(sort: Desc)])
+  // Системні cron-и (BYPASSRLS, по всіх тенантах): зависли й прострочені
+  @@index([status, heartbeatAt])
+  @@index([finishedAt])
+  @@map("user_operations")
+}
+
+enum UserOperationStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}

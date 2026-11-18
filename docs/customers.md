@@ -480,6 +480,7 @@ await tx.$queryRaw`
 | `PATCH`  | `/customers/:id`                     | Редагування атрибутів (без `number`, без `status`)                                                                                |
 | `PATCH`  | `/customers/:id/status`              | Зміна статусу — подія, з активністю                                                                                               |
 | `DELETE` | `/customers/:id`                     | Видалення (§7)                                                                                                                    |
+| `POST`   | `/customers/export`                  | Експорт у CSV з фільтрами гріда — `202` з операцією користувача (нижче)                                                           |
 | `POST`   | `/customers/:id/contacts`            | Додати контакт                                                                                                                    |
 | `PATCH`  | `/customers/:id/contacts/:contactId` | Редагувати                                                                                                                        |
 | `DELETE` | `/customers/:id/contacts/:contactId` | Видалити                                                                                                                          |
@@ -489,6 +490,17 @@ Contact самостійний). Це також знімає питання а�
 його кастомера. Ендпоінтів на **читання** контактів немає: вони приходять разом із карткою
 (`GET /customers/:id` віддає `CustomerDetailResponse` з `contacts`) — інакше та сама
 інформація мала б два шляхи отримання і два стани кешу на фронті.
+
+**Експорт у CSV** (2026-11-18, openspec `customers/export`) — перший споживач операцій користувача
+(`docs/user-operations.md` §5). Фільтри — ті самі, що в `GET /customers`, без пагінації: умову
+списку будує спільна `customerListWhere`/`customerListOrderBy` (`libs/shared/src/customers/`), тож
+файл містить рівно те, що показує список, на всіх сторінках. Межа — 50 000 клієнтів
+(`CUSTOMER_EXPORT_MAX_ROWS`), понад неї — `400` з `fieldErrors[].code = export_too_large` до
+створення операції. Файл: UTF-8 з BOM, заголовки англійською (номер як у гріді, назва, тип,
+статус, email, телефон, email відповідального, теги, час створення в UTC); клітинка, що
+починається з `= + - @`, табуляції чи CR, отримує апостроф попереду — захист від formula injection.
+Ціна захисту: телефони в E.164 (`+31…`) теж ідуть з апострофом. Кнопка «Export» — у хедері
+сторінки клієнтів, поруч зі створенням.
 
 Фід подій **нового ендпоінта не потребує**: `GET /activities?entityType=customer&entityId=…`
 працює з першого дня.

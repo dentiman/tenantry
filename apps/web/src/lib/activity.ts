@@ -25,6 +25,11 @@ export interface ActivityItem {
   errorMessage?: string | undefined;
   /** Для порядку в лотку: новіші вище */
   startedAt: number;
+  /**
+   * Головна дія над результатом («Download»). Елемент із дією не зникає сам після успіху:
+   * людина мусить устигнути нею скористатися — прибирає його вона або джерело.
+   */
+  action?: { label: string; run: () => void } | undefined;
   onCancel?: (() => void) | undefined;
   onRetry?: (() => void) | undefined;
   /**
@@ -64,7 +69,7 @@ export const useActivityStore = create<ActivityState>()((set, get) => ({
       return { items: [...items].sort((a, b) => b.startedAt - a.startedAt) };
     });
     // Таймер живе тут, а не в лотку: успішний елемент зникає й тоді, коли попап закритий
-    if (item.status === 'succeeded') {
+    if (item.status === 'succeeded' && !item.action) {
       if (!lingerTimers.has(item.id)) {
         lingerTimers.set(
           item.id,
@@ -91,6 +96,7 @@ export interface ActivitySummary {
   /** queued + running */
   active: number;
   failed: number;
+  succeeded: number;
   /** Спільний відсоток активних елементів із вимірюваним прогресом; null — міряти нічим */
   percent: number | null;
 }
@@ -98,11 +104,15 @@ export interface ActivitySummary {
 export function summarizeActivity(items: readonly ActivityItem[]): ActivitySummary {
   let active = 0;
   let failed = 0;
+  let succeeded = 0;
   let current = 0;
   let total = 0;
   for (const item of items) {
     if (item.status === 'failed') {
       failed += 1;
+    }
+    if (item.status === 'succeeded') {
+      succeeded += 1;
     }
     if (item.status !== 'queued' && item.status !== 'running') {
       continue;
@@ -113,5 +123,10 @@ export function summarizeActivity(items: readonly ActivityItem[]): ActivitySumma
       total += item.progress.total;
     }
   }
-  return { active, failed, percent: total > 0 ? Math.floor((current / total) * 100) : null };
+  return {
+    active,
+    failed,
+    succeeded,
+    percent: total > 0 ? Math.floor((current / total) * 100) : null,
+  };
 }

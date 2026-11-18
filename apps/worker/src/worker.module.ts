@@ -17,7 +17,9 @@ import {
   CryptoModule,
   MessagingModule,
   NotificationsModule,
+  NumberingModule,
   StorageModule,
+  UserOperationsModule,
   createChannelAdapterRegistry,
   createLoggerConfig,
 } from '@saas-skeleton/shared';
@@ -45,6 +47,10 @@ import { EmailChangeEmailSubscriber } from './subscribers/email-change-email.sub
 import { EmailChangedNoticeSubscriber } from './subscribers/email-changed-notice.subscriber';
 import { MailerService } from './mail/mailer.service';
 import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
+import { ExportCustomersSubscriber } from './customers/export-customers.subscriber';
+import { UserOperationEventsTransport } from './user-operations/user-operation-events.transport';
+import { SweepStalledUserOperationsSubscriber } from './user-operations/sweep-stalled-user-operations.subscriber';
+import { PurgeFinishedUserOperationsSubscriber } from './user-operations/purge-finished-user-operations.subscriber';
 
 @Module({
   imports: [
@@ -65,6 +71,10 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     CryptoModule,
     ActivitiesModule,
     NotificationsModule,
+    // Номери клієнтів у файлі експорту — той самий формат серії, що в гріді
+    NumberingModule,
+    // Операції користувача: runner, sweeper, purger (docs/user-operations.md)
+    UserOperationsModule,
     ChatSharedModule,
     AiModule,
     // ai-1a: провайдер LLM (і його ключ) — лише тут, api його не будує (design.md D5)
@@ -104,6 +114,10 @@ import { WorkerRealtimeEmitter } from './realtime/worker-realtime.emitter';
     EmailChangeEmailSubscriber,
     EmailChangedNoticeSubscriber,
     MailerService,
+    UserOperationEventsTransport,
+    ExportCustomersSubscriber,
+    SweepStalledUserOperationsSubscriber,
+    PurgeFinishedUserOperationsSubscriber,
   ],
 })
 export class WorkerModule {}

@@ -9,6 +9,7 @@ import { CALENDAR_SOCKET_EVENTS } from './calendar/calendar.socket-events';
 import { AI_SOCKET_EVENTS } from './ai/ai.socket-events';
 import { CHAT_SOCKET_EVENTS } from './chat/chat.socket-events';
 import { CHAT_CLIENT_SOCKET_EVENTS } from './chat/chat.client-events';
+import { USER_OPERATION_SOCKET_EVENTS } from './user-operation/user-operation.socket-events';
 
 /**
  * Composition root протоколу сокета (docs/modules.md §7.2): усі події server → client
@@ -20,6 +21,7 @@ export const SERVER_SOCKET_EVENTS = {
   ...CALENDAR_SOCKET_EVENTS,
   ...AI_SOCKET_EVENTS,
   ...CHAT_SOCKET_EVENTS,
+  ...USER_OPERATION_SOCKET_EVENTS,
 };
 
 /** Імена подій за ключем — `REALTIME_EVENTS.calendarEventChanged` замість рядка */

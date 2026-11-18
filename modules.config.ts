@@ -46,6 +46,7 @@ export const MODULES = {
       'libs/shared/src/idempotency/',
       'libs/contracts/src/error/',
       'libs/contracts/src/pagination/',
+      'libs/contracts/src/progress/',
       'libs/contracts/src/money/',
       'libs/contracts/src/phone/',
       'libs/contracts/src/time/',
@@ -72,6 +73,7 @@ export const MODULES = {
       'apps/web/src/lib/payload-values.ts',
       'apps/platform-web/src/lib/money.ts',
       'apps/web/src/lib/entity-routes.ts',
+      'apps/web/src/lib/entity-actions.ts',
       'apps/web/src/lib/build-info.ts',
       'apps/web/src/lib/query-client.ts',
       'apps/web/src/lib/error-reporting.ts',
@@ -237,6 +239,20 @@ export const MODULES = {
       'libs/shared/src/numbering/',
     ],
   },
+  'user-operations': {
+    tier: 'platform',
+    dependsOn: ['activities', 'auth', 'files', 'messaging', 'notifications', 'realtime'],
+    summary:
+      'Операції користувача (docs/user-operations.md): ресурс за `202`, прогрес/кроки, скасування, лоток активності.',
+    paths: [
+      'libs/contracts/src/user-operation/',
+      'libs/shared/src/user-operations/',
+      'libs/shared/src/messaging/definitions/user-operations.messages.ts',
+      'apps/api/src/user-operations/',
+      'apps/worker/src/user-operations/',
+      'apps/web/src/features/user-operations/',
+    ],
+  },
   tenants: {
     tier: 'platform',
     dependsOn: ['activities', 'app', 'auth', 'users'],
@@ -261,13 +277,27 @@ export const MODULES = {
   // ------------------------------------------------------------------- core
   customers: {
     tier: 'core',
-    dependsOn: ['activities', 'app', 'auth', 'notifications', 'numbering', 'settings', 'users'],
+    dependsOn: [
+      'activities',
+      'app',
+      'auth',
+      'files',
+      'messaging',
+      'notifications',
+      'numbering',
+      'settings',
+      'user-operations',
+      'users',
+    ],
     summary: 'Клієнти та їхні контакти — еталонний домен, є в кожному форку за замовчуванням.',
     paths: [
       'apps/web/src/features/dashboard/',
       'apps/web/src/features/customers/',
       'libs/contracts/src/customer/',
+      'libs/shared/src/messaging/definitions/customers.messages.ts',
+      'libs/shared/src/customers/',
       'apps/api/src/customers/',
+      'apps/worker/src/customers/',
     ],
   },
 
@@ -390,6 +420,7 @@ export const COMPOSITION_ROOTS: readonly string[] = [
   'libs/contracts/src/activity-types.ts',
   'libs/contracts/src/notification-types.ts',
   'libs/contracts/src/socket-events.ts',
+  'libs/contracts/src/user-operation-types.ts',
   'libs/database/prisma/seed.ts',
   'libs/database/prisma/seed-demo/',
   'libs/contracts/src/*/index.ts',

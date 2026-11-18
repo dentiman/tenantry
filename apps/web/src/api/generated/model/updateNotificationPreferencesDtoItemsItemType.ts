@@ -24,4 +24,6 @@ export const UpdateNotificationPreferencesDtoItemsItemType = {
   authsession_reuse_detected: 'auth.session_reuse_detected',
   chatmessage_received: 'chat.message_received',
   chatcustomer_message_received: 'chat.customer_message_received',
+  user_operationsucceeded: 'user_operation.succeeded',
+  user_operationfailed: 'user_operation.failed',
 } as const;
