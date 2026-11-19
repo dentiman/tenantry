@@ -40,7 +40,9 @@ export function NotificationToastList() {
         anchor="top"
         className="border-0 bg-transparent shadow-none"
       >
-        <ToastContent className="p-0">
+        {/* overflow-visible: круглий × картки виходить за її кут (-top-2 -left-2), а
+            стоковий `overflow-hidden` ToastContent його обрізав усередині тоста */}
+        <ToastContent className="overflow-visible p-0">
           <NotificationCard
             notification={notification}
             className="w-full"
