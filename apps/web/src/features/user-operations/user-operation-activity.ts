@@ -36,6 +36,7 @@ export function toActivityItem(
   return {
     id: operation.id,
     title: operation.title,
+    kind: 'operation',
     status: STATUS[operation.status],
     progress: active && operation.progress ? operation.progress : undefined,
     steps: operation.steps?.map((step) => ({

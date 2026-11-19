@@ -16,7 +16,7 @@
     }
   },
   "export": {
-    "started": "Export started — follow it in the activity tray.",
+    "started": "Export started — follow it in the activity dock.",
     "tooLarge": "Too many customers to export at once (limit {{maximum}}). Narrow the filters."
   },
   "notifications": {

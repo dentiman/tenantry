@@ -4,7 +4,7 @@ import type { StepProgressItem } from '@saas-skeleton/ui/components/step-progres
 /**
  * Реєстр активності — «що зараз виконується для користувача» (docs/user-operations.md §6.3).
  *
- * Нейтральний шар між ДЖЕРЕЛАМИ роботи й лотком у шелі: джерело (черга завантажень; згодом
+ * Нейтральний шар між ДЖЕРЕЛАМИ роботи й доком активності в шелі: джерело (черга завантажень; згодом
  * `UserOperation` із сервера) публікує сюди свої елементи, лоток читає лише цей стор. Тому шел
  * не імпортує жодної фічі, а фіча — шел: обидва залежать униз, від цього файлу.
  *
@@ -25,41 +25,57 @@ export interface ActivityItem {
   errorMessage?: string | undefined;
   /** Для порядку в лотку: новіші вище */
   startedAt: number;
-  /**
-   * Головна дія над результатом («Download»). Елемент із дією не зникає сам після успіху:
-   * людина мусить устигнути нею скористатися — прибирає його вона або джерело.
-   */
+  /** Що це за робота — для заголовка дока («Uploading 3 items») */
+  kind?: 'upload' | 'operation' | undefined;
+  /** Головна дія над результатом («Download») */
   action?: { label: string; run: () => void } | undefined;
   onCancel?: (() => void) | undefined;
   onRetry?: (() => void) | undefined;
   /**
    * Прибрати елемент. Власник елемента — джерело: воно забирає його у себе й викликає
-   * `remove`. Реєстр сам елементів не видаляє, лише просить про це (кнопка, авто-прибирання).
+   * `remove`. Реєстр сам елементів не видаляє, лише просить про це (кнопка рядка, хрестик дока).
    */
   onDismiss: () => void;
 }
 
-/** Скільки успішний елемент лишається в лотку «виконаним», перш ніж зникнути сам */
-export const SUCCEEDED_LINGER_MS = 4000;
+const COLLAPSED_KEY = 'saas_activity_dock_collapsed';
+
+function readCollapsed(): boolean {
+  try {
+    return typeof window !== 'undefined' && window.localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeCollapsed(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+  } catch {
+    // Приватне вікно чи заблоковане сховище: стан просто не переживе перезавантаження
+  }
+}
 
 interface ActivityState {
   items: readonly ActivityItem[];
+  /** Док згорнуто до заголовка; памʼятається між перезавантаженнями сторінки */
+  collapsed: boolean;
   upsert: (item: ActivityItem) => void;
   remove: (id: string) => void;
-}
-
-const lingerTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-function clearLinger(id: string): void {
-  const timer = lingerTimers.get(id);
-  if (timer !== undefined) {
-    clearTimeout(timer);
-    lingerTimers.delete(id);
-  }
+  setCollapsed: (collapsed: boolean) => void;
+  /**
+   * Розгорнути док. Кличе той, хто щойно ЗАПУСТИВ роботу за дією людини (нове завантаження,
+   * кнопка «Export»), — щоб вона побачила, що робота пішла. Відновлення операцій після
+   * перезавантаження сторінки його не кличе: там діє збережений стан.
+   */
+  reveal: () => void;
+  /** Закрити док: активне скасувати, усе прибрати (хрестик у заголовку) */
+  closeAll: () => void;
 }
 
 export const useActivityStore = create<ActivityState>()((set, get) => ({
   items: [],
+  collapsed: readCollapsed(),
   upsert: (item) => {
     set((state) => {
       const exists = state.items.some((current) => current.id === item.id);
@@ -68,27 +84,27 @@ export const useActivityStore = create<ActivityState>()((set, get) => ({
         : [...state.items, item];
       return { items: [...items].sort((a, b) => b.startedAt - a.startedAt) };
     });
-    // Таймер живе тут, а не в лотку: успішний елемент зникає й тоді, коли попап закритий
-    if (item.status === 'succeeded' && !item.action) {
-      if (!lingerTimers.has(item.id)) {
-        lingerTimers.set(
-          item.id,
-          setTimeout(() => {
-            lingerTimers.delete(item.id);
-            const current = get().items.find((candidate) => candidate.id === item.id);
-            if (current?.status === 'succeeded') {
-              current.onDismiss();
-            }
-          }, SUCCEEDED_LINGER_MS),
-        );
-      }
-    } else {
-      clearLinger(item.id);
-    }
   },
   remove: (id) => {
-    clearLinger(id);
     set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
+  },
+  setCollapsed: (collapsed) => {
+    writeCollapsed(collapsed);
+    set({ collapsed });
+  },
+  reveal: () => {
+    if (get().collapsed) {
+      get().setCollapsed(false);
+    }
+  },
+  closeAll: () => {
+    // Копія: onDismiss джерела змінює `items` просто під час обходу
+    for (const item of [...get().items]) {
+      if (item.status === 'queued' || item.status === 'running') {
+        item.onCancel?.();
+      }
+      item.onDismiss();
+    }
   },
 }));
 
@@ -129,4 +145,41 @@ export function summarizeActivity(items: readonly ActivityItem[]): ActivitySumma
     succeeded,
     percent: total > 0 ? Math.floor((current / total) * 100) : null,
   };
+}
+
+/** Що написати в заголовку дока — одним рядком про все, що в ньому лежить */
+export type ActivityHeadline =
+  | { tone: 'active'; uploadsOnly: boolean; count: number; percent: number | null }
+  | { tone: 'failed'; count: number }
+  | { tone: 'done'; uploadsOnly: boolean; count: number }
+  | { tone: 'idle' };
+
+/**
+ * Пріоритет: щось виконується → помилки → завершене → (лишилися тільки скасовані) нейтрально.
+ * `uploadsOnly` дає точніші слова («Uploading 3 items», «2 uploads complete»), коли в групі
+ * самі завантаження; змішаний склад підписується загально.
+ */
+export function activityHeadline(items: readonly ActivityItem[]): ActivityHeadline {
+  const summary = summarizeActivity(items);
+  const uploadsOnly = (status: (item: ActivityItem) => boolean): boolean =>
+    items.filter(status).every((item) => item.kind === 'upload');
+  if (summary.active > 0) {
+    return {
+      tone: 'active',
+      uploadsOnly: uploadsOnly((item) => item.status === 'queued' || item.status === 'running'),
+      count: summary.active,
+      percent: summary.percent,
+    };
+  }
+  if (summary.failed > 0) {
+    return { tone: 'failed', count: summary.failed };
+  }
+  if (summary.succeeded > 0) {
+    return {
+      tone: 'done',
+      uploadsOnly: uploadsOnly((item) => item.status === 'succeeded'),
+      count: summary.succeeded,
+    };
+  }
+  return { tone: 'idle' };
 }

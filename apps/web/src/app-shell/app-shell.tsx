@@ -22,7 +22,7 @@ import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../features/notifications/components/notification-bell';
 import { SlotOutlet } from '../lib/slots';
 import { AppFooterBar } from './account-footer';
-import { ActivityTray } from './activity-tray';
+import { ActivityDock } from './activity-dock';
 import { AppRail } from './app-rail';
 import { AreaSidebar } from './area-sidebar';
 import { shellHeaderActions, shellSidePanels } from './slots';
@@ -138,7 +138,7 @@ export function AppShell() {
               єдина в застосунку лишалась постійною і забирала 15px у КОЖНОЇ
               сторінки. Побічний виграш: хедер тепер поза скролером, а не
               `sticky` над ним */}
-          <SidebarInset className="h-svh min-w-0 overflow-hidden">
+          <SidebarInset className="relative h-svh min-w-0 overflow-hidden">
             <header
               data-slot="app-header"
               className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6"
@@ -146,8 +146,6 @@ export function AppShell() {
               <SidebarTrigger className="-ml-2" />
               <PageHeaderSlot className="min-w-0 flex-1" />
               <div className="ml-auto flex items-center gap-1">
-                {/* Що зараз виконується (завантаження, згодом операції); порожній — нічого не малює */}
-                <ActivityTray />
                 <NotificationBell />
                 <ThemeSwitcher />
                 {/* Кнопки фіч (асистент) — слот, оболонка їх не імпортує (docs/modules.md §4) */}
@@ -172,6 +170,11 @@ export function AppShell() {
                 <Outlet />
               </div>
             </ScrollArea>
+
+            {/* Док активності (завантаження, операції) — у правому нижньому куті робочої області,
+                поверх контенту; порожній нічого не малює. Усередині Inset, тому відкриті
+                праві колонки зсувають його, а не ховаються під ним */}
+            <ActivityDock />
           </SidebarInset>
 
           {/* Контекстна панель — СУСІД `SidebarInset`, а не його дитина: вона

@@ -20,11 +20,10 @@
   "logout": "Log out",
   "activity": {
     "title": "Activity",
-    "active_one": "{{count}} active",
-    "active_other": "{{count}} active",
+    "active_one": "{{count}} in progress",
+    "active_other": "{{count}} in progress",
     "failed_one": "{{count}} failed",
     "failed_other": "{{count}} failed",
-    "done": "Done",
     "status": {
       "queued": "Waiting",
       "running": "In progress",
@@ -35,7 +34,22 @@
     "cancel": "Cancel {{title}}",
     "retry": "Retry {{title}}",
     "dismiss": "Dismiss {{title}}",
-    "toggleSteps": "Show steps of {{title}}"
+    "toggleSteps": "Show steps of {{title}}",
+    "uploading_one": "Uploading {{count}} item",
+    "uploading_other": "Uploading {{count}} items",
+    "uploadsComplete_one": "{{count}} upload complete",
+    "uploadsComplete_other": "{{count}} uploads complete",
+    "completed_one": "{{count}} completed",
+    "completed_other": "{{count}} completed",
+    "expand": "Expand activity",
+    "collapse": "Collapse activity",
+    "close": "Close activity",
+    "cancelAll": {
+      "title": "Cancel everything in progress?",
+      "description": "Closing the panel stops the uploads and tasks that are still running. Items that already finished stay finished.",
+      "keep": "Keep running",
+      "confirm": "Cancel all"
+    }
   },
   "build": {
     "open": "About this build, version {{version}}",

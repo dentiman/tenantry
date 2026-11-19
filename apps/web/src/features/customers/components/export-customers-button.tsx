@@ -7,6 +7,7 @@ import { toast } from '@saas-skeleton/ui/components/ui/toast';
 import { parseApiError, isGlobalApiError } from '@saas-skeleton/ui/api/api-error';
 import { customersExport } from '../../../api/generated/api';
 import type { ExportCustomersDto } from '../../../api/generated/model/exportCustomersDto';
+import { useActivityStore } from '../../../lib/activity';
 import { trackUserOperation } from '../../user-operations/user-operations.source';
 import { CustomersSearchSchema } from '../customers.routes';
 
@@ -30,6 +31,7 @@ export function ExportCustomersButton() {
     setPending(true);
     try {
       trackUserOperation(await customersExport(exportFiltersFromSearch(search)));
+      useActivityStore.getState().reveal();
     } catch (error) {
       const parsed = parseApiError(error);
       const tooLarge = parsed.fieldErrors.find((field) => field.code === 'export_too_large');

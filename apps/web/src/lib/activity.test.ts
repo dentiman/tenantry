@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  SUCCEEDED_LINGER_MS,
+  activityHeadline,
   summarizeActivity,
   useActivityStore,
   type ActivityItem,
@@ -23,11 +23,7 @@ const ids = (): string[] => useActivityStore.getState().items.map((i) => i.id);
 
 describe('activity registry', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    useActivityStore.setState({ items: [] });
-  });
-  afterEach(() => {
-    vi.useRealTimers();
+    useActivityStore.setState({ items: [], collapsed: false });
   });
 
   it('keeps the newest item first and replaces an item by id', () => {
@@ -40,40 +36,76 @@ describe('activity registry', () => {
     expect(useActivityStore.getState().items[1]?.status).toBe('failed');
   });
 
-  it('removes a succeeded item by itself after a short while', () => {
-    useActivityStore.getState().upsert(item({ id: 'a', status: 'succeeded' }));
+  it('keeps finished items until the dock is closed', () => {
+    vi.useFakeTimers();
+    const { upsert } = useActivityStore.getState();
+    upsert(item({ id: 'done', status: 'succeeded' }));
+    upsert(item({ id: 'failed', status: 'failed' }));
 
-    vi.advanceTimersByTime(SUCCEEDED_LINGER_MS - 1);
-    expect(ids()).toEqual(['a']);
-    vi.advanceTimersByTime(1);
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    expect(ids().sort()).toEqual(['done', 'failed']);
+    vi.useRealTimers();
+  });
+
+  it('closing the dock cancels what is active and removes everything', () => {
+    const cancel = vi.fn();
+    const cancelFinished = vi.fn();
+    const { upsert, closeAll } = useActivityStore.getState();
+    upsert(item({ id: 'running', onCancel: cancel }));
+    upsert(item({ id: 'queued', status: 'queued', onCancel: cancel }));
+    upsert(item({ id: 'done', status: 'succeeded', onCancel: cancelFinished }));
+
+    closeAll();
+
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(cancelFinished).not.toHaveBeenCalled();
     expect(ids()).toEqual([]);
   });
 
-  it('keeps a succeeded item that offers an action until it is dismissed', () => {
-    useActivityStore
-      .getState()
-      .upsert(item({ id: 'export', status: 'succeeded', action: { label: 'Download', run: () => undefined } }));
+  it('reveal expands a collapsed dock and leaves an expanded one alone', () => {
+    const store = useActivityStore.getState();
+    store.setCollapsed(true);
+    expect(useActivityStore.getState().collapsed).toBe(true);
+    store.reveal();
+    expect(useActivityStore.getState().collapsed).toBe(false);
+  });
+});
 
-    vi.advanceTimersByTime(SUCCEEDED_LINGER_MS * 10);
-    expect(ids()).toEqual(['export']);
+describe('activityHeadline', () => {
+  it('names uploads when only uploads are active', () => {
+    expect(
+      activityHeadline([
+        item({ id: 'a', kind: 'upload', progress: { current: 50, total: 100 } }),
+        item({ id: 'b', kind: 'upload', status: 'queued', progress: { current: 0, total: 100 } }),
+        item({ id: 'old', kind: 'operation', status: 'succeeded' }),
+      ]),
+    ).toEqual({ tone: 'active', uploadsOnly: true, count: 2, percent: 25 });
   });
 
-  it('keeps failed and cancelled items until they are dismissed', () => {
-    const { upsert } = useActivityStore.getState();
-    upsert(item({ id: 'failed', status: 'failed' }));
-    upsert(item({ id: 'canceled', status: 'canceled' }));
-
-    vi.advanceTimersByTime(SUCCEEDED_LINGER_MS * 10);
-    expect(ids().sort()).toEqual(['canceled', 'failed']);
+  it('speaks generally about a mixed active set', () => {
+    expect(
+      activityHeadline([item({ id: 'a', kind: 'upload' }), item({ id: 'b', kind: 'operation' })]),
+    ).toEqual({ tone: 'active', uploadsOnly: false, count: 2, percent: null });
   });
 
-  it('does not remove an item that was restarted before the timer fired', () => {
-    const { upsert } = useActivityStore.getState();
-    upsert(item({ id: 'a', status: 'succeeded' }));
-    upsert(item({ id: 'a', status: 'running' }));
+  it('puts failures before completions once nothing is active', () => {
+    expect(
+      activityHeadline([
+        item({ id: 'a', status: 'failed' }),
+        item({ id: 'b', status: 'succeeded' }),
+      ]),
+    ).toEqual({ tone: 'failed', count: 1 });
+  });
 
-    vi.advanceTimersByTime(SUCCEEDED_LINGER_MS * 2);
-    expect(ids()).toEqual(['a']);
+  it('reports completions, and stays neutral when only cancelled items remain', () => {
+    expect(
+      activityHeadline([
+        item({ id: 'a', kind: 'upload', status: 'succeeded' }),
+        item({ id: 'b', kind: 'upload', status: 'succeeded' }),
+        item({ id: 'c', status: 'canceled' }),
+      ]),
+    ).toEqual({ tone: 'done', uploadsOnly: true, count: 2 });
+    expect(activityHeadline([item({ id: 'c', status: 'canceled' })])).toEqual({ tone: 'idle' });
   });
 });
 

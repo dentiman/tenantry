@@ -77,6 +77,7 @@ export function toActivityItem(
   return {
     id: entry.id,
     title: entry.source.name,
+    kind: 'upload',
     status: STATUS[entry.phase],
     // Відсоток рахується за байтами: до початку передачі — нуль із повного розміру, щоб
     // файл у черзі чесно тягнув спільний відсоток униз

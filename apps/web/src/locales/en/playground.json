@@ -1130,7 +1130,7 @@
   },
   "stepProgress": {
     "title": "Step progress",
-    "description": "Progress shown as a list of stages: the first is done, the second is running, the rest are waiting. The component only renders a list it is given — a file upload feeds it today, a server operation will feed it the same shape later. The same items appear in the activity tray in the header.",
+    "description": "Progress shown as a list of stages: the first is done, the second is running, the rest are waiting. The component only renders a list it is given — a file upload feeds it today, a server operation will feed it the same shape later. The same items appear in the activity dock in the bottom-right corner.",
     "importLabel": "Shared import",
     "steps": {
       "prepare": "Preparing",
@@ -1145,8 +1145,8 @@
         "description": "A step is pending, running, done, failed or skipped. Each state has its own marker and is named in hidden text, so it never depends on colour alone. A running step shows a bar only when it reports measurable progress."
       },
       "tray": {
-        "title": "Activity tray",
-        "description": "These buttons put simulated files into the real upload queue: nothing is sent to storage, but the queue, the three-at-a-time limit, cancel, retry and the tray in the header behave exactly as with real files. Open another page while they run — they keep going."
+        "title": "Activity dock",
+        "description": "These buttons put simulated files into the real upload queue: nothing is sent to storage, but the queue, the three-at-a-time limit, cancel, retry and the dock in the bottom-right corner behave exactly as with real files. Open another page while they run — they keep going."
       }
     },
     "states": {

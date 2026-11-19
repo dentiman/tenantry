@@ -81,6 +81,11 @@ export const uploadQueue = createUploadQueue<File, FileResponseDtoOutput>({
         activity.remove(gone.id);
       }
     }
+    // Нове завантаження — дія людини: док розгортається, щоб вона побачила, що робота пішла
+    const known = new Set(previous.map((entry) => entry.id));
+    if (entries.some((entry) => !known.has(entry.id))) {
+      activity.reveal();
+    }
     for (const entry of entries) {
       // Посилання на запис міняється лише разом із ним — незмінені не чіпаємо
       if (!previous.includes(entry)) {
