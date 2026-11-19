@@ -49,6 +49,7 @@
     "lint:eslint": "for dir in apps/* libs/* scripts; do eslint \"$dir\" --max-warnings 0 || exit 1; done",
     "modules:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/modules-check.ts",
     "bundle:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/bundle-check.ts",
+    "ui:cube-tile": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ui-cube-tile.ts",
     "deps:check": "madge --circular apps/api/src apps/platform-api/src apps/worker/src libs/contracts/src libs/database/src libs/shared/src",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

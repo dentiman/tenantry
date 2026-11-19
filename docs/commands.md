@@ -474,6 +474,17 @@ pnpm deps:check  # → madge --circular по apps/{api,platform-api,worker}/src 
 Падає на будь-якому циклі runtime-імпортів (type-only імпорти не рахуються, `.madgerc`).
 Секунди; входить у `pnpm lint`.
 
+### `pnpm ui:cube-tile`
+
+```bash
+pnpm ui:cube-tile            # перегенерувати libs/ui/src/assets/cube-tile.svg
+pnpm ui:cube-tile --check    # звірити закомічений SVG із генератором (нічого не пише)
+```
+
+Вихідник фактури картки `<Card texture="cubes">` (`scripts/ui-cube-tile.ts`): параметри малюнка
+(сітка, форми, шов, ступені тону) живуть у скрипті, у бандл іде лише згенерований SVG. Після зміни
+параметрів комітити скрипт і SVG разом. Деталі — `docs/frontend/ui-stack.md`, опція `texture`.
+
 ### `pnpm bundle:check`
 
 ```bash

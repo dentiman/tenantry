@@ -10,6 +10,7 @@ import { cn } from '@saas-skeleton/ui/lib/utils';
  *   tone   колір                neutral | info | success | warning | danger | accent
  *   border характер лінії       solid | dashed | dotted
  *   edge   акцентна смуга 3px   boolean (колір = tone на повну силу)
+ *   texture брендова фактура     none | cubes (кладка з кубиків кольором tone)
  *   radius скруглення кутів     default | sm (радіус контролів) | none
  *   elevation висота над полотном flat | surface (плитка в списку) | raised (картка-сцена)
  *             | overlay (плитка, яку тягнуть)
@@ -42,6 +43,11 @@ interface CardSurfaceProps {
   size?: 'default' | 'sm';
   /** Скруглення кутів. `sm` — той самий радіус, що в кнопок і полів */
   radius?: 'default' | 'sm' | 'none';
+  /**
+   * Брендова фактура поверх заливки. `cubes` — бліда кладка з кубиків кольором
+   * `tone`; для акцентних і вітринних поверхонь, не для робочих карток
+   */
+  texture?: 'none' | 'cubes';
   /** Колір поверхні й межі. Джерело — палітра подій, спільна з календарем */
   tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'accent';
 }
@@ -54,6 +60,7 @@ function Card({
   fill = 'default',
   radius = 'default',
   size = 'default',
+  texture = 'none',
   tone = 'neutral',
   ...props
 }: React.ComponentProps<'div'> & CardSurfaceProps) {
@@ -67,6 +74,7 @@ function Card({
       data-edge={edge || undefined}
       data-radius={radius}
       data-elevation={elevation}
+      data-texture={texture === 'none' ? undefined : texture}
       className={cn(
         'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         className,

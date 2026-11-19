@@ -856,6 +856,10 @@
       "related": {
         "title": "Related surfaces",
         "description": "Other panels that look card-like but are not cards. Reach for these instead of restyling a Card."
+      },
+      "texture": {
+        "title": "Texture",
+        "description": "An optional brand texture on top of the fill: texture=\"cubes\" lays the whole card with a fine, faint masonry of squares and stretched blocks. It is one static SVG tile used as a mask, so it repeats at a fixed size and takes the colour of the tone. Meant for accent and showcase surfaces, not for work cards with tables and forms."
       }
     },
     "anatomy": {
@@ -1065,6 +1069,11 @@
         "label": "overlay — in flight",
         "description": "The same tile while it is being dragged over its neighbours: the popover level, nothing above it but dialogs."
       }
+    },
+    "texture": {
+      "onTone": "With a tone — the texture follows it",
+      "onNeutral": "On a neutral card — only the texture is coloured (--card-texture-color)",
+      "sizes": "Different sizes — the tile repeats, it never stretches"
     }
   },
   "popups": {

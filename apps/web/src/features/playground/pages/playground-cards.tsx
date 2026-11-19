@@ -39,6 +39,8 @@ const COMBINED = [
   'boardCard',
   'dragging',
 ] as const;
+/* Тони, якими фактуру можна пофарбувати на НЕЙТРАЛЬНІЙ картці (без `tone`) */
+const TEXTURE_TINTS = ['accent', 'info', 'success', 'warning', 'danger'] as const;
 const RELATED = ['popover', 'dialog', 'alert', 'contextPanel'] as const;
 
 type Fill = (typeof FILLS)[number];
@@ -132,6 +134,59 @@ export function PlaygroundCardsPage() {
               {t(`cards.scene.${scene}.hint`)}
             </p>
           </section>
+
+          {/* Першою, бо це найновіша опція поверхні (2026-11-19) і її ще
+              оцінюють на око; решта секцій — усталений каталог осей */}
+          <Section
+            id="cards-texture"
+            title={t('cards.sections.texture.title')}
+            description={t('cards.sections.texture.description')}
+          >
+            <p className="mb-3 text-sm font-medium text-foreground">{t('cards.texture.onTone')}</p>
+            <Grid>
+              {TONES.map((tone) => (
+                <Sample
+                  key={tone}
+                  caption={t(`cards.tone.${tone}.label`)}
+                  code={`texture="cubes" tone="${tone}"`}
+                >
+                  <Card texture="cubes" tone={tone} className="min-h-48">
+                    <SampleBody />
+                  </Card>
+                </Sample>
+              ))}
+            </Grid>
+            <p className="mt-10 mb-3 text-sm font-medium text-foreground">
+              {t('cards.texture.onNeutral')}
+            </p>
+            <Grid>
+              {TEXTURE_TINTS.map((tone) => (
+                <Sample
+                  key={tone}
+                  caption={t(`cards.tone.${tone}.label`)}
+                  code={`texture="cubes" className="${TEXTURE_TINT_CLASS[tone]}"`}
+                >
+                  <Card texture="cubes" className={`min-h-48 ${TEXTURE_TINT_CLASS[tone]}`}>
+                    <SampleBody />
+                  </Card>
+                </Sample>
+              ))}
+            </Grid>
+            {/* Плитка не розтягується, а повторюється: кубики однакові на картці
+                будь-якого розміру. Тут це видно на крайніх пропорціях. */}
+            <p className="mt-10 mb-3 text-sm font-medium text-foreground">
+              {t('cards.texture.sizes')}
+            </p>
+            <div className="flex flex-wrap items-start gap-6">
+              {TEXTURE_SIZES.map(({ className, id }) => (
+                <Card key={id} texture="cubes" tone="accent" className={className}>
+                  <CardHeader>
+                    <CardTitle>{id}</CardTitle>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </Section>
 
           <Section
             id="cards-fill"
@@ -433,6 +488,25 @@ export function PlaygroundCardsPage() {
     </div>
   );
 }
+
+/* Колір фактури на НЕЙТРАЛЬНІЙ картці — токенами опції, без `tone`. Класи
+   записані повністю (не збираються з частин), інакше Tailwind їх не побачить */
+const TEXTURE_TINT_CLASS: Record<(typeof TEXTURE_TINTS)[number], string> = {
+  accent: '[--card-texture-color:var(--primary)] [--card-texture-opacity:0.1]',
+  info: '[--card-texture-color:var(--event-blue-line)] [--card-texture-opacity:0.1]',
+  success: '[--card-texture-color:var(--event-green-line)] [--card-texture-opacity:0.1]',
+  warning: '[--card-texture-color:var(--warning)] [--card-texture-opacity:0.1]',
+  danger: '[--card-texture-color:var(--event-red-line)] [--card-texture-opacity:0.1]',
+};
+
+/* Крайні пропорції: менша за плитку (256px), вузька висока, широка низька і
+   велика, де плитка повторюється кілька разів в обидва боки */
+const TEXTURE_SIZES = [
+  { id: '160 × 96', className: 'h-24 w-40' },
+  { id: '200 × 420', className: 'h-[420px] w-[200px]' },
+  { id: '640 × 120', className: 'h-[120px] w-[640px] max-w-full' },
+  { id: '900 × 420', className: 'h-[420px] w-[900px] max-w-full' },
+] as const;
 
 const COMBINED_PROPS: Record<
   (typeof COMBINED)[number],
