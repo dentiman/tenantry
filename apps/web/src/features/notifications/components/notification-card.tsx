@@ -151,7 +151,10 @@ export function NotificationCard({
           radius="full"
           aria-label={closeLabel}
           title={closeLabel}
-          className="absolute -top-2 -left-2 z-10 hidden size-5 shadow-md group-focus-within:flex group-hover:flex"
+          // Фон НЕпрозорий: secondary — це 8% foreground поверх прозорого, а × виступає за
+          // картку, тож крізь нього просвічував текст/сторінка. Той самий відтінок,
+          // але змішаний з --popover (фон тоста), а не з transparent
+          className="absolute -top-2 -left-2 z-10 hidden size-5 bg-[color-mix(in_oklab,var(--foreground)_8%,var(--popover))] shadow-md group-focus-within:flex group-hover:flex hover:bg-[color-mix(in_oklab,var(--foreground)_15%,var(--popover))]"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
