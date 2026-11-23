@@ -25,6 +25,14 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Nest 12: глобальні APP_GUARD тепер застосовуються й до обробників WebSocket-гейтвеїв
+    // (у 11 SocketModule створював GuardsContextCreator без config — глобальних guard-ів там
+    // не було). Цей guard читає HTTP-заголовки; сокет автентифікує handshake-middleware тим
+    // самим AccessTokenService, а `auth.update.v1` перевіряє новий токен у самому обробнику
+    if (context.getType() !== 'http') {
+      return true;
+    }
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

@@ -10,7 +10,7 @@
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
     "openapi:generate": "ts-node -r tsconfig-paths/register src/openapi.ts",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules --max-old-space-size=8192' jest --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",
