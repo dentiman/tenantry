@@ -12,9 +12,8 @@
     // УВАГА: paths у наслідуваному конфігу ЗАМІНЮЄТЬСЯ, а не зливається — після цього
     // @saas-skeleton/* резолвиться через workspace-симлінки в node_modules (exports),
     // як у platform-web. Дзеркало аліаса — vite.config.ts resolve.alias.
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "vite.config.ts", "vitest.config.ts", "orval.config.ts"]
