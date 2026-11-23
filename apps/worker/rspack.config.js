@@ -4,6 +4,9 @@ const nodeExternals = require('webpack-node-externals');
 module.exports = function (options) {
   return {
     ...options,
+    // Nest CLI 12 бере devtool для rspack із tsconfig `sourceMap: true` (карти йшли б у прод-образ,
+    // ~14 МБ); webpack-дефолти вмикали карти лише з `--debug` — лишаємо ту саму поведінку
+    devtool: process.argv.includes('--debug') ? 'inline-source-map' : false,
     externals: [
       nodeExternals({
         allowlist: [/^@saas-skeleton\//],

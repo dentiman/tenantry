@@ -425,8 +425,8 @@ The rules most easily broken:
 ## Critical rules and pitfalls
 
 1. A new shared library needs three coordinated edits: `tsconfig.base.json` paths,
-   the consuming app's `tsconfig.json` paths, and its `webpack.config.js` alias/allowlist —
-   tsc does not rewrite runtime aliases, so webpack needs its own entry.
+   the consuming app's `tsconfig.json` paths, and its `rspack.config.js` alias/allowlist (Nest CLI 12 `builder: rspack`, wired in `nest-cli.json`) —
+   tsc does not rewrite runtime aliases, so the bundler needs its own entry.
 2. Zod 4: normalize before format validation —
    `z.string().trim().toLowerCase().pipe(z.email())`. Never `z.coerce.date()` in response
    schemas — dates on the wire are `z.iso.datetime()` strings; mappers call

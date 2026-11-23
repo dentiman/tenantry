@@ -70,7 +70,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 **Правки в репо (мінімальні, потрібні для деплою):**
 - `libs/database/package.json` — `prisma` перенесено devDependencies→dependencies (CLI потрібен
   у runtime для entrypoint-міграцій);
-- `.npmrc` — `shamefully-hoist=true` (плоский node_modules: webpack-бандли тримають npm-депи
+- `.npmrc` — `shamefully-hoist=true` (плоский node_modules: rspack-бандли (раніше webpack) тримають npm-депи
   external, у runtime-образ копіюється лише кореневий node_modules — без hoisting isolated-симлінки
   губляться і `require('argon2'/'sharp'/'pg-boss'/'prisma')` падає).
 - **Жодних змін бізнес-коду.** (Prisma 7 `prisma-client`-генератор + `@prisma/adapter-pg` —
@@ -92,7 +92,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 ## 4. Образи (механіка)
 
 **`Dockerfile.node`** — 3 стадії: `builder` (повний install → `prisma generate` → `nest build`
-webpack-бандл `apps/$APP/dist/main.js`) → `prod-deps` (`pnpm install --prod`, лише runtime-депи)
+rspack-бандл `apps/$APP/dist/main.js` + чанки; Nest CLI 12 `builder: rspack`) → `prod-deps` (`pnpm install --prod`, лише runtime-депи)
 → `runtime` (тонкий, non-root; копіює кореневий `node_modules` + `dist` + prisma-схему/config).
 `api` у стеку override-ить `entrypoint` на `entrypoint-api.sh`; `platform-api`/`worker` —
 дефолтний CMD `node apps/$APP/dist/main.js`.

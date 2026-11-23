@@ -41,7 +41,7 @@ apps/web/src/locales/en/
   було б передчасною абстракцією; тримаємо worker на плейн `i18next` з власними ресурсами.
   Якщо колись з'явиться реально спільний контент (бренд, спільні лейбли) — тоді й переносити
   в `libs/i18n`, за трьома місцями з правила №1 CLAUDE.md (`tsconfig.base.json` вже готовий
-  з I18N-1; додати `apps/worker/tsconfig.json` paths + `apps/worker/webpack.config.js` alias).
+  з I18N-1; додати `apps/worker/tsconfig.json` paths + `apps/worker/rspack.config.js` alias).
 - Ключі `errors.json`/`validation.json` тримаються синхронними з contracts вручну;
   дисципліна: новий код помилки → у тому ж PR ключ у `errors.json`.
 
