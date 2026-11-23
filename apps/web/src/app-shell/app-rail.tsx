@@ -1,6 +1,7 @@
 import { Layers } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import {
   Sidebar,
   SidebarContent,
@@ -167,7 +168,7 @@ function AppRailItem({ area, isActive }: { area: Area; isActive: boolean }) {
   const { t } = useTranslation('layout');
   const { isMobile, setOpen, setOpenMobile, toggleSidebar } = useSidebar();
   const Icon = area.icon;
-  const label = t(area.label);
+  const label = t(...runtimeKey(area.label));
 
   // hidden: false — інакше tooltip-а не буде НІКОЛИ: реєстровий SidebarMenuButton
   // показує його лише при `state === 'collapsed'`, а `useSidebar()` віддає стан

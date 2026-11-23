@@ -1,6 +1,7 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { activityDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import type { ActivityResponse } from '@saas-skeleton/contracts';
+import { runtimeTransKey } from '../lib/i18n-keys';
 import { payloadValues } from '../lib/payload-values';
 
 /**
@@ -30,7 +31,7 @@ export function ActivityMessage({ activity }: { activity: ActivityResponse }) {
   return (
     <Trans
       t={t}
-      i18nKey={`${textKeyBase(definition.texts)}${key}`}
+      i18nKey={runtimeTransKey(`${textKeyBase(definition.texts)}${key}`)}
       values={{
         ...payloadValues(payload),
         // actorLabel — снапшот того, хто натиснув (реальна людина доїжджає навіть у подіях,

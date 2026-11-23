@@ -1,8 +1,15 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
 import { settingsRoute } from '../settings/settings.routes';
-import { AiAssistantConversationPage, AiAssistantPage } from './pages/ai-assistant';
-import { SettingsAiPage } from './pages/ai-settings';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const AiAssistantConversationPage = lazyPage(
+  () => import('./pages/ai-assistant'),
+  'AiAssistantConversationPage',
+);
+const AiAssistantPage = lazyPage(() => import('./pages/ai-assistant'), 'AiAssistantPage');
+const SettingsAiPage = lazyPage(() => import('./pages/ai-settings'), 'SettingsAiPage');
 
 /** AI-1c: персона й інструкції асистента — ADMIN-only, як і вся area (`staticData.access` на `settingsRoute`) */
 export const settingsAiRoute = createRoute({

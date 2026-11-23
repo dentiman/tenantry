@@ -10,7 +10,7 @@ export interface AiHistoryRow {
 
 /**
  * Відбирає ЗАВЕРШЕНІ пари питання/відповідь для контексту моделі
- * (docs/ai-assistant-review-gaps.md п.2, design.md D8).
+ * (docs/notes/ai-assistant-review-gaps.md п.2, design.md D8).
  *
  * Пара — це (USER seq=k, ASSISTANT seq=k+1, ASSISTANT.status === COMPLETE). Питання,
  * чия відповідь провалилась або була зупинена, у контекст НЕ потрапляє — інакше

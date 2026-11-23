@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -21,9 +22,14 @@ import type {
   CustomerContactResponse,
   CustomerDetailResponse,
   CustomerListResponse,
+  UserOperationResponse,
 } from '@saas-skeleton/contracts';
 import { NumberingService } from '@saas-skeleton/shared';
 import { CurrentUser, type JwtPayload } from '../auth/decorators/current-user.decorator';
+import { Idempotent } from '../common/idempotent.decorator';
+import { UserOperationResponseDto } from '../user-operations/user-operation.dto';
+import { toUserOperationResponse } from '../user-operations/user-operations.mapper';
+import { ExportCustomersDto } from './dto/export-customers.dto';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -71,6 +77,22 @@ export class CustomersController {
     };
   }
 
+  /**
+   * Експорт у CSV — операція користувача (docs/user-operations.md): 202 з операцією одразу,
+   * файл будує воркер. Фільтри — ті самі, що в списку. Повтор із тим самим `Idempotency-Key`
+   * повертає ту саму операцію. Шлях оголошено ДО `:id`, інакше `export` став би id-шником.
+   */
+  @Post('export')
+  @Idempotent()
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiAcceptedResponse({ type: UserOperationResponseDto.Output })
+  async export(
+    @Body() dto: ExportCustomersDto,
+    @CurrentUser() actor: JwtPayload,
+  ): Promise<UserOperationResponse> {
+    return toUserOperationResponse(await this.customersService.startExport(dto, actor));
+  }
+
   @Get(':id')
   @ApiOkResponse({ type: CustomerDetailResponseDto.Output })
   async findOne(@Param('id') id: string): Promise<CustomerDetailResponse> {
@@ -78,6 +100,7 @@ export class CustomersController {
   }
 
   @Post()
+  @Idempotent()
   @ApiCreatedResponse({ type: CustomerDetailResponseDto.Output })
   async create(
     @Body() dto: CreateCustomerDto,

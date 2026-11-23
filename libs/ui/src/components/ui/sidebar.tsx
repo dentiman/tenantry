@@ -227,7 +227,13 @@ function Sidebar({
           // Adjust the padding for floating and inset variants.
           variant === 'floating' || variant === 'inset'
             ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
+            : // ЛОКАЛЬНА ПРАВКА реєстру: у реєстрі `border-r`/`border-l` стоять без
+              // кольору й падають на `--border`. В апстрімі це непомітно, бо там
+              // `--sidebar-border` дорівнює `--border`; у наших темах це різні
+              // тони (тема `tenantry` розводить межу контенту й шов шела), і зовнішня
+              // межа сайдбару мусить бути зі шкали САЙДБАРУ — як `ring-sidebar-border`
+              // на `sidebar-inner` і `bg-sidebar-border` у `SidebarSeparator` поруч.
+              'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l border-sidebar-border',
           className,
         )}
         {...props}

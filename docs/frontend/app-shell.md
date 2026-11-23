@@ -181,7 +181,7 @@ pathname; префікси не можуть вкладатися одне в о
 ```
 rootRoute                     beforeLoad: нормалізатор legacy-URL (§4)
 ├ /login
-└ appRoute  id:'app'  requireAuth  component: AppShell  notFoundComponent
+└ appRoute  id:'app'  requireAuth  component: AppShell (ліниво)  notFoundComponent
   ├ /                         → redirect /workspace
   ├ /workspace                layout (без component — Outlet рендерить роутер)
   │ ├ /                       DashboardPage
@@ -203,6 +203,12 @@ rootRoute                     beforeLoad: нормалізатор legacy-URL (�
   └ $                         NotFoundPage — шлях поза будь-якою area
 ```
 
+- **Ліниве завантаження.** `AppShell` і всі сторінки — окремі чанки (`lazyPage`); гейт `requireAuth`,
+  `staticData` (`access`, `layout`, `backdrop`) і навігація лишаються у стартовому чанку, бо потрібні
+  роутеру до завантаження будь-якого компонента. Поки чанк вантажиться, стара сторінка лишається на
+  місці, а після 300 мс — скелет `RoutePending` у outlet-і (шел і `backdrop` не зникають); провал чанка
+  — `RouteError` там само. Колонка area (`panel`) теж ледача й обгорнута в `LazyBoundary` усередині
+  `AreaSidebar`. Деталі й бюджет — `docs/frontend/lazy-loading.md`.
 - **Layout-роут area без `component`**: TanStack Router рендерить `Outlet` сам, а
   навігація area живе в шелі. Layout потрібен саме як вузол — на ньому сидить доступ
   (`staticData.access` для settings) і до нього дописуються дочірні роути.
@@ -584,6 +590,41 @@ viewport.
 сторінка поруч скролиться вікном і панель лишається на місці, але при цьому не виходить
 із потоку — інакше вона не віднімала б ширину, а накривала контент.
 
+### 5.7 Док активності: що зараз виконується
+
+У правому нижньому куті робочої області стоїть `ActivityDock` (`app-shell/activity-dock.tsx`,
+`openspec/specs/app-shell/activity-tray`; взірець — вікно завантажень Google Drive, рішення
+2026-11-19, до того це був чип у хедері). Панель приклеєна до нижнього краю (скруглення лише згори),
+лежить поверх контенту й сторінку не зсуває; без елементів не малює нічого.
+
+- **Заголовок** — зведення одним рядком (`activityHeadline`): «Uploading 3 items · 64%» або
+  «N in progress», далі «N failed», далі «2 uploads complete» / «N completed»; лишилися тільки
+  скасовані — «Activity». Відсоток — за сумою `current`/`total` активних, тобто за обсягом.
+- **Шеврон** згортає док до заголовка; стан памʼятається в `localStorage`. Нова робота, запущена
+  дією людини (завантаження, «Export»), розгортає док (`reveal()`); відновлення операцій після
+  перезавантаження сторінки — ні.
+- **Хрестик** закриває док: усе прибирається, активне скасовується — тому посеред роботи спершу
+  питає підтвердження.
+- **Рядок**: значок за розширенням назви, назва, праворуч стан (кільце прогресу, очікування,
+  галочка, помилка). Під курсором, у фокусі й на дотикових екранах на місці стану — дії: «Download»
+  (`action`), повтор (`onRetry`), скасувати, прибрати. Рядок з `steps` розгортається кліком по
+  назві у `StepProgress` (`ui-stack.md`).
+- **Завершені елементи самі не зникають** — лежать, доки їх не приберуть або не закриють док.
+- **Місце**: док монтується всередині `SidebarInset` (`absolute`), тому його правий край — край
+  робочої області: контекстна панель і асистент зсувають його лівіше, а не ховаються під ним. На
+  вузькому екрані — на всю ширину.
+
+**Док не знає джерел.** Він читає реєстр `apps/web/src/lib/activity.ts` — стор елементів
+`{ id, title, kind?, status, progress?, steps?, action?, onCancel?, onRetry?, onDismiss }`. Джерела
+публікують туди свої елементи (`upsert`/`remove`): черга завантажень
+(`features/files/stores/upload.store.ts`) і операції користувача
+(`features/user-operations/user-operations.source.ts`, `docs/user-operations.md` §6.3). Це дані, а
+не слот компонентів: усі джерела малюються одним рядком, і лише так заголовок рахує спільне.
+Власник елемента — джерело: реєстр сам нічого не видаляє, кнопки рядка й хрестик дока викликають
+`onDismiss`/`onCancel`, а джерело забирає елемент у себе й робить `remove`.
+
+Стенд: Playground → Components → Step progress (симуляція черги без сховища).
+
 ## 6. Файли
 
 ```
@@ -591,7 +632,7 @@ apps/web/src/app-shell/
   app-shell.tsx                  провайдери, дві колонки, SidebarInset
   slots.ts                       слоти шела для фіч: кнопки хедера, бічні колонки (AI)
   app-rail.tsx                   перший рівень: бренд, пункти area
-  area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст
+  area-sidebar.tsx               друга колонка: шапка з назвою area + її вміст (panel — ледача, LazyBoundary)
   workspace.nav.ts               area Workspace (сама оболонка); пункти — у модулів
   account-footer.tsx             нижня смуга шела: AppFooterBar + дропдаун профілю
 apps/web/src/nav.ts              composition root: glob по `*.nav.ts` → реєстр навігації
@@ -707,9 +748,8 @@ libs/ui/src/navigation/          механізм: defineArea/defineNavigation, 
 
 ## 8. Що далі
 
-- `/chat/$conversationId` і список розмов у `ChatSidebar` — з появою сутності розмови.
-  Реєстр `lib/entity-routes.ts` тоді дописується рядком, і сповіщення про нове
-  повідомлення веде прямо в розмову без змін шела.
+- ~~`/chat/$conversationId` і список розмов у `ChatSidebar`~~ — зроблено (chat, CHAT-0.1…):
+  розмова має власний маршрут, а `lib/entity-routes.ts` веде в неї із сповіщень і активностей.
 - Стенди інших примітивів у Playground: рядок у `playground-sidebar.tsx` + роут.
 - Назва тенанта (MT-4): бренд-плитка в шапці рейлу стає тригером дропдауна-перемикача.
 - Свідомо НЕ робимо: окремий стан згортання на кожну area (один cookie, як Cmd+B у
@@ -730,12 +770,14 @@ libs/ui/src/navigation/          механізм: defineArea/defineNavigation, 
 | Area              | Префікс          | У рейлі                      | Друга колонка             | Іконка      |
 | ----------------- | ---------------- | ----------------------------- | -------------------------- | ----------- |
 | **Tenants**       | `/tenants`       | так                            | `All tenants`               | `Building2` |
-| **Operations**    | `/operations`    | так                            | `Jobs` · `Queues`            | `Activity`  |
+| **Operations**    | `/operations`    | так                            | `Jobs` · `Queues` · `Channel events` | `Activity`  |
+| **AI**            | `/ai`            | так                            | `Settings` · `Costs` · `Prices`      | `Bot`       |
 | **User settings** | `/user-settings` | ні — з дропдауна аватара       | `Profile` · `Appearance`     | `UserCog`   |
 
 Рейл вимагає ≥2 area, інакше він декорація (саме тому в platform-web його довго
-не було) — Tenants (клієнти платформи) і Operations (машинерія системи) дають
-природну межу. Колонка Tenants має рівно один пункт — легально: контракт
+не було) — Tenants (клієнти платформи), Operations (машинерія системи) і AI (налаштування,
+витрати й тарифи моделі, AI-5) дають природну межу. `Channel events` — журнал вхідних подій
+каналу, які не вдалося привʼязати до жодного тенанта (`channel_unroutable_events`). Колонка Tenants має рівно один пункт — легально: контракт
 `Area.panel` — компонент або меню, а не обовʼязково підменю (те саме
 підтверджував порожній `ChatSidebar` у web); тут вона наповнюється на MT-4
 (оператори, сегменти тенантів). «Черги» переїхали з карток над таблицею джоб на
@@ -754,8 +796,8 @@ platform-web НЕМАЄ: суб'єкт контрол-плейну — сама 
 
 Файли шела platform-web (`src/app-shell/…`) — СКОПІЙОВАНІ з `apps/web`, не
 екстраговані в пакет: бренд (`ShieldCheck` замість `Layers`),
-футер (свій `useAuthStore` з `operator` замість `user`, logout без виклику API —
-`POST /auth/logout` у platform-api не існує), шапка колонки (тут немає
+футер (свій `useAuthStore` з `operator` замість `user`; вихід — `endSession()` з
+`POST /auth/logout` platform-api і перезавантаженням документа, як у tenant-web), шапка колонки (тут немає
 `GET /settings/bootstrap`, тож бренд статичний, без фолбека на назву тенанта).
 Так само народжувався сам `libs/ui` (UI-0): спершу два побайтово однакові
 набори, потім екстракція. Механізм навігації (реєстр area/пунктів, `AreaNav`, доступ) уже
@@ -768,8 +810,9 @@ platform-web НЕМАЄ: суб'єкт контрол-плейну — сама 
 
 Дзвінок сповіщень, presence/last-seen і стрічка активностей — tenant-фічі:
 `activities` живуть під RLS у tenant-плані, платформа їх не читає.
-Refresh-токен: у платформи access-токен (60m) напряму в localStorage без
-refresh-механіки (MT-3, свідомий trade-off). `/user-settings/profile` у
+Сесія оператора — дзеркало tenant-web (AUTH-2): access-токен (15 хв) лише в памʼяті,
+refresh — httpOnly-cookie `saas_platform_refresh` (`Path=/api/auth`) зі своїм секретом; до AUTH-2
+(MVP MT-3) токен жив у `localStorage` на 60 хв без refresh — цього більше немає. `/user-settings/profile` у
 platform-web — READ-ONLY (нема `PATCH` для `platform_users`), на відміну від
 форми в tenant-web.
 

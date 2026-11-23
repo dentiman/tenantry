@@ -12,7 +12,11 @@ import {
 import { Field, FieldDescription, FieldLabel } from '@saas-skeleton/ui/components/ui/field';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { MessageSquareTextIcon } from 'lucide-react';
-import { UserMultiList, UserMultiSelect, UserRowNote } from '../../users/components/user-multi-select';
+import {
+  UserMultiList,
+  UserMultiSelect,
+  UserRowNote,
+} from '../../users/components/user-multi-select';
 
 interface StandProps {
   children: ReactNode;

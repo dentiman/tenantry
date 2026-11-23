@@ -15,6 +15,18 @@ import type { Response } from 'express';
  */
 @Injectable()
 export class AppThrottlerGuard extends ThrottlerGuard {
+  /**
+   * Nest 12: глобальні APP_GUARD тепер застосовуються й до WS-обробників (у 11 — ні). Лімітер
+   * тут HTTP-only (tracker із `req.ip`, заголовки відповіді), тож для сокета пропускаємо:
+   * повідомлення сокета не повинні ділити один «безіменний» бакет.
+   */
+  override canActivate(context: ExecutionContext): Promise<boolean> {
+    if (context.getType() !== 'http') {
+      return Promise.resolve(true);
+    }
+    return super.canActivate(context);
+  }
+
   protected override async throwThrottlingException(
     context: ExecutionContext,
     detail: ThrottlerLimitDetail,

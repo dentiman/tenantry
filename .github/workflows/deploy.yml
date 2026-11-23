@@ -19,6 +19,17 @@ name: CI/CD
 on:
   push:
     branches: [main]
+    # Документація публікується без збірки/деплою. Дані, які читає застосунок, — винятки.
+    paths:
+      - '**'
+      - '!README.md'
+      - '!AGENTS.md'
+      - '!CLAUDE.md'
+      - '!LICENSE'
+      - '!docs/**'
+      - '!openspec/**'
+      - 'docs/ai-knowledge/**'
+      - 'docs/history-summary.md'
   workflow_dispatch:
 
 permissions:

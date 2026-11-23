@@ -6,6 +6,16 @@
     "menu": "Row actions",
     "close": "Close"
   },
+  "steps": {
+    "progress": "Step progress",
+    "status": {
+      "pending": "waiting",
+      "running": "in progress",
+      "done": "done",
+      "failed": "failed",
+      "skipped": "skipped"
+    }
+  },
   "copy": {
     "action": "Copy",
     "copied": "Copied",
@@ -56,6 +66,13 @@
     "remove": "Remove user",
     "reorder": "Reorder user"
   },
+  "uploads": {
+    "steps": {
+      "prepare": "Preparing",
+      "transfer": "Uploading",
+      "verify": "Checking the file"
+    }
+  },
   "dropzone": {
     "prompt": "Drop a file here or choose one",
     "choose": "Choose file",
@@ -70,6 +87,14 @@
     "goHome": "Back to home"
   },
   "loading": "Loading…",
+  "routeError": {
+    "title": "This page could not be opened",
+    "description": "Something went wrong while showing this page. Try again; if it keeps happening, reload the page.",
+    "chunkTitle": "This page could not be loaded",
+    "chunkDescription": "The connection dropped, or a new version of the app was released while this tab was open. Reload the page to continue.",
+    "retry": "Try again",
+    "reload": "Reload page"
+  },
   "empty": "No results found",
   "filters": {
     "reset": "Reset"

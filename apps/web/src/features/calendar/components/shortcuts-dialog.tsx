@@ -17,7 +17,7 @@ import { Kbd, KbdGroup } from '@saas-skeleton/ui/components/ui/kbd';
  * рядки перелічені руками: генерувати їх з мапи означало б показувати `d`/`w`
  * замість людських назв і однаково тримати другий словник для підписів.
  */
-const ROWS: { id: string; keys: string[] }[] = [
+const ROWS = [
   { id: 'today', keys: ['T'] },
   { id: 'day', keys: ['D'] },
   { id: 'week', keys: ['W'] },
@@ -28,7 +28,7 @@ const ROWS: { id: string; keys: string[] }[] = [
   { id: 'create', keys: ['N', 'C'] },
   { id: 'help', keys: ['?'] },
   { id: 'close', keys: ['Esc'] },
-];
+] as const satisfies readonly { id: string; keys: readonly string[] }[];
 
 export function ShortcutsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { t } = useTranslation('calendar');

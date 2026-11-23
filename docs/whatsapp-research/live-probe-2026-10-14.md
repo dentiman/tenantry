@@ -30,8 +30,8 @@
 
 | Що | Результат |
 | --- | --- |
-| Підписка номера (`POST /{phone-id}` з `webhook_configuration { override_callback_uri, verify_token }`) | прийнято, Meta пройшла GET-рукостискання з нашим verify token; зворотне читання: `phone_number` = наша адреса, `whatsapp_business_account`/`application` = fms-dev (недоторкані) |
-| Скидання (`override_callback_uri: ""`) | знімає лише рівень номера; ефективне призначення знову fms-dev; повторна підписка з `replaceHost` працює |
+| Підписка номера (`POST /{phone-id}` з `webhook_configuration { override_callback_uri, verify_token }`) | прийнято, Meta пройшла GET-рукостискання з нашим verify token; зворотне читання: `phone_number` = наша адреса, `whatsapp_business_account`/`application` = legacy-dev (недоторкані) |
+| Скидання (`override_callback_uri: ""`) | знімає лише рівень номера; ефективне призначення знову legacy-dev; повторна підписка з `replaceHost` працює |
 | Вхідний текст з телефону | `messages[].type = text` з `from_user_id` (BSUID) і `contacts[].user_id`; `x-hub-signature-256` валідний над сирими байтами |
 | Статуси нашого відправлення | `sent`, `delivered` з нашим id у `biz_opaque_callback_data`; `pricing` = `service` / `free_customer_service` (вікно відкрите вхідним) |
 | Заголовки запиту Meta | `user-agent: facebookexternalua`, `x-hub-signature` і `x-hub-signature-256`, `content-type: application/json` |

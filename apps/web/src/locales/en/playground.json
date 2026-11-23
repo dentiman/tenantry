@@ -14,7 +14,10 @@
     "dialog": "Dialog scroll",
     "verticalForm": "Vertical form",
     "inlineForm": "Inline form",
-    "dataGrid": "Data grid"
+    "dataGrid": "Data grid",
+    "cards": "Cards",
+    "popups": "Popups",
+    "stepProgress": "Step progress"
   },
   "eyebrow": "Design system",
   "origin": {
@@ -36,6 +39,7 @@
   "navigation": {
     "overview": "Button overview",
     "variants": "Variants",
+    "surfaces": "On surfaces",
     "sizes": "Sizes",
     "radius": "Radius",
     "icons": "Icons",
@@ -50,6 +54,10 @@
       "variants": {
         "title": "Variants",
         "description": "Use one primary action per area. Secondary, outline, and ghost styles reduce visual priority; destructive is reserved for irreversible actions."
+      },
+      "surfaces": {
+        "title": "On surfaces",
+        "description": "A button must read as part of the surface it sits on. Variants that carry their own material stay opaque; adaptive variants fill with an alpha overlay, so a toned card shows through them instead of being covered by a flat grey rectangle."
       },
       "sizes": {
         "title": "Sizes",
@@ -141,6 +149,10 @@
         "className": "Adds layout utilities such as w-full without changing the recipe.",
         "render": "Base UI element substitution. For navigation, style a Link with buttonVariants instead."
       }
+    },
+    "surfaces": {
+      "solidLabel": "Own material · opaque",
+      "adaptiveLabel": "Adaptive · takes the surface tone"
     }
   },
   "combobox": {
@@ -156,7 +168,8 @@
       "api": "API reference"
     },
     "placeholders": {
-      "search": "Search…"
+      "search": "Search…",
+      "pickOne": "Pick one…"
     },
     "empty": "Nothing found",
     "sections": {
@@ -402,7 +415,8 @@
     },
     "placeholders": {
       "disabled": "Read-only notes…",
-      "invalid": "This field has an error"
+      "invalid": "This field has an error",
+      "small": "A short note…"
     },
     "rows": {
       "small": {
@@ -770,6 +784,388 @@
       "auto": "Auto",
       "list": "List",
       "split": "Two columns"
+    }
+  },
+  "cards": {
+    "title": "Card",
+    "description": "One primitive, four independent axes. The surface is never a variant name — it is fill × tone × border × elevation, and the same card keeps its meaning on a work canvas, on a brand backdrop, and in either theme.",
+    "importLabel": "SHARED IMPORT",
+    "scene": {
+      "solid": {
+        "label": "No backdrop",
+        "hint": "Work screens: dashboard, record pages, settings. Opaque surfaces one step above the canvas."
+      },
+      "brand": {
+        "label": "Brand",
+        "hint": "The real showcase backdrop (/guide). The canvas turns transparent and every surface becomes glass."
+      },
+      "violet": {
+        "label": "Violet",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      },
+      "emerald": {
+        "label": "Emerald",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      },
+      "amber": {
+        "label": "Amber",
+        "hint": "Same backdrop, different hue. Only --backdrop-* changes — no card markup is touched."
+      }
+    },
+    "sections": {
+      "fill": {
+        "title": "Axis 1 — fill",
+        "description": "How much surface the card has. Dark builds the levels with transparency, light with fills that sit above and below the canvas — same meaning, mirrored mechanics, no shadow in either."
+      },
+      "nested": {
+        "title": "nested — a panel inside a card",
+        "description": "The one role that measures itself against its PARENT, not the canvas. Everything else on this axis is a share of the base fill, and a share of the base is invisible on a surface that is already raised."
+      },
+      "elevation": {
+        "title": "Axis 4 — elevation",
+        "description": "How far the card stands off the canvas. Four steps of the theme's shared shadow ladder, so a tile, its drag ghost and a menu over it read as one staircase. Dark keeps shadows short and dense — there the level is carried by the fill."
+      },
+      "tone": {
+        "title": "Axis 2 — tone",
+        "description": "Colour mixed into the neutral base at 14%, border at 22%. Source is the event palette, shared with the calendar."
+      },
+      "matrix": {
+        "title": "Tone × fill",
+        "description": "Every tone carries all four steps. Scroll it over the light and dark patches of the backdrop — a colour that survives both is a colour that works."
+      },
+      "border": {
+        "title": "Axis 3 — border",
+        "description": "The outline is a real outline, not a shadow — that is what makes dashed and dotted possible."
+      },
+      "radius": {
+        "title": "Axis 4 — radius",
+        "description": "Three values, not four: sm matches the controls exactly, none is for cards that run into the edge of the canvas, and nothing in the product has ever asked for a step between them."
+      },
+      "combined": {
+        "title": "Axes combine",
+        "description": "The point of axes instead of variant names: every pair is a real state and needs no name of its own."
+      },
+      "anatomy": {
+        "title": "Anatomy",
+        "description": "Seven parts, all optional. The header switches to a two-column grid as soon as it contains an action."
+      },
+      "sizes": {
+        "title": "Sizes",
+        "description": "Drives --card-spacing and the title size; it does not touch the surface."
+      },
+      "related": {
+        "title": "Related surfaces",
+        "description": "Other panels that look card-like but are not cards. Reach for these instead of restyling a Card."
+      },
+      "texture": {
+        "title": "Texture",
+        "description": "An optional brand texture on top of the fill: texture=\"cubes\" lays the whole card with a fine, faint masonry of squares and stretched blocks. It is one static SVG tile used as a mask, so it repeats at a fixed size and takes the colour of the tone. Meant for accent and showcase surfaces, not for work cards with tables and forms."
+      }
+    },
+    "anatomy": {
+      "title": "CardTitle",
+      "descriptionText": "CardDescription sits under the title.",
+      "action": "CardAction",
+      "content": "CardContent holds the body.",
+      "footer": "CardFooter — tinted, with a top border."
+    },
+    "sizeSample": {
+      "default": {
+        "title": "Default",
+        "description": "spacing 16px, title 16px"
+      },
+      "sm": {
+        "title": "Small",
+        "description": "spacing 12px, title 14px"
+      }
+    },
+    "sampleCard": {
+      "title": "Customers",
+      "description": "Organizations and individuals with contacts.",
+      "body": "A card carries one subject. Its surface says where it sits, not how important it is.",
+      "action": "Open"
+    },
+    "related": {
+      "popover": {
+        "label": "Popover / dropdown",
+        "code": "DropdownMenuContent, SelectContent",
+        "description": "Floats above the page: own ring, real shadow, --popover fill. Never a Card."
+      },
+      "dialog": {
+        "label": "Dialog / sheet",
+        "code": "DialogContent, SheetContent",
+        "description": "Modal surface on --popover with an overlay behind it. Same family as the popover, different trigger."
+      },
+      "alert": {
+        "label": "Alert",
+        "code": "Alert variant=\"warning\"",
+        "description": "A message, not a container: tinted fill and border carry the signal. Muted in dark so it does not outshout the content."
+      },
+      "contextPanel": {
+        "label": "Context panel",
+        "code": "libs/ui context-panel",
+        "description": "The third shell column. It is part of the shell, so it uses the sidebar scale, not the card one."
+      }
+    },
+    "sceneLabel": "Backdrop",
+    "fill": {
+      "default": {
+        "label": "default",
+        "description": "The normal card. Dark: 60% of the base. Light: plain white, one step above the canvas."
+      },
+      "muted": {
+        "label": "muted",
+        "description": "Secondary or not built yet. Dark: half the fill. Light: one step below the canvas."
+      },
+      "ghost": {
+        "label": "ghost",
+        "description": "Outline only. Empty states, placeholders, drop zones."
+      },
+      "opaque": {
+        "label": "opaque",
+        "description": "The exception: nothing may show through (media, overlays)."
+      },
+      "subtle": {
+        "label": "subtle",
+        "description": "Almost no surface, but the tone is still readable. Background markers, long lists."
+      },
+      "nested": {
+        "label": "nested",
+        "description": "A panel INSIDE a card: submitted values, a code sample, a preview. Darkens whatever it sits on, so it reads as a recess in both themes."
+      }
+    },
+    "tone": {
+      "neutral": {
+        "label": "neutral",
+        "description": "The default surface."
+      },
+      "info": {
+        "label": "info",
+        "description": "From --event-blue-line."
+      },
+      "success": {
+        "label": "success",
+        "description": "From --event-green-line."
+      },
+      "warning": {
+        "label": "warning",
+        "description": "From --warning."
+      },
+      "danger": {
+        "label": "danger",
+        "description": "From --event-red-line."
+      },
+      "accent": {
+        "label": "accent",
+        "description": "From --primary."
+      }
+    },
+    "border": {
+      "solid": {
+        "label": "solid",
+        "description": "The default."
+      },
+      "dashed": {
+        "label": "dashed",
+        "description": "Unfinished, draft, planned."
+      },
+      "dotted": {
+        "label": "dotted",
+        "description": "The lightest hint: drop zones."
+      }
+    },
+    "combined": {
+      "planned": {
+        "label": "Planned module",
+        "code": "fill=\"muted\" border=\"dashed\"",
+        "description": "Replaces the bg-card/50 workaround in /guide."
+      },
+      "warning": {
+        "label": "Warning block",
+        "code": "tone=\"warning\" fill=\"muted\"",
+        "description": "Replaces the border-warning/30 bg-warning/10 recipe."
+      },
+      "dropzone": {
+        "label": "Drop zone",
+        "code": "fill=\"ghost\" border=\"dotted\"",
+        "description": "Nothing but a hint of a boundary."
+      },
+      "positive": {
+        "label": "Quiet success",
+        "code": "tone=\"success\" fill=\"muted\"",
+        "description": "A positive status that does not shout."
+      },
+      "event": {
+        "label": "Calendar event",
+        "code": "tone=\"info\" edge",
+        "description": "The agenda row: a quiet tint says \"event\", the 3px edge says which type — readable from the corner of the eye."
+      },
+      "edgeNeutral": {
+        "label": "Edge without a tone",
+        "code": "edge",
+        "description": "Neutral keeps a grey marker: the colour is there with zero strength, so it never reaches the fill but the edge still has something to draw."
+      },
+      "boardCard": {
+        "label": "Board card",
+        "code": "elevation=\"surface\" radius=\"sm\"",
+        "description": "A Jira-style card in a column: control radius, outline and a hairline shadow — it stands on the column, not painted on it."
+      },
+      "dragging": {
+        "label": "Board card, dragging",
+        "code": "elevation=\"overlay\" radius=\"sm\"",
+        "description": "The same card in flight over its neighbours: popover level, same fill and outline, only the height changed."
+      }
+    },
+    "matrix": {
+      "caption": "tone × fill"
+    },
+    "nested": {
+      "onCard": {
+        "label": "inside a card",
+        "code": "<Card><Card fill=\"nested\" /></Card>",
+        "description": "The normal case: submitted values, a code sample, a preview."
+      },
+      "onCanvas": {
+        "label": "straight on the canvas",
+        "code": "<Card fill=\"nested\" />",
+        "description": "Works there too — the role darkens or lightens whatever is under it, so it never depends on one fixed parent."
+      },
+      "vsMuted": {
+        "label": "why not muted",
+        "code": "<Card fill=\"muted\" /> inside a card",
+        "description": "Measured against the canvas, so on a card it lands 0.006 away from it — the panel disappears."
+      },
+      "body": "A panel carries secondary content: values, samples, previews.",
+      "parent": "Parent card"
+    },
+    "radius": {
+      "default": {
+        "label": "default",
+        "description": "Container cards: widgets, sections, record panels."
+      },
+      "sm": {
+        "label": "sm",
+        "description": "The radius of Button, Input, Select and Item. For dense rows that stand next to controls — the agenda row uses it."
+      },
+      "none": {
+        "label": "none",
+        "description": "For a card that runs into the edge of the canvas, where a rounded corner hangs in the air."
+      }
+    },
+    "elevation": {
+      "flat": {
+        "label": "flat (default)",
+        "description": "No shadow at all: a card in a page grid is a level of fill, not a floating object."
+      },
+      "surface": {
+        "label": "surface — a tile in a list",
+        "description": "Outline plus a hairline shadow under the bottom edge: the tile stands ON the surface. The Jira board card at rest."
+      },
+      "raised": {
+        "label": "raised — a card that is the scene",
+        "description": "The sign-in card: alone on the canvas, so it may carry a real shadow."
+      },
+      "overlay": {
+        "label": "overlay — in flight",
+        "description": "The same tile while it is being dragged over its neighbours: the popover level, nothing above it but dialogs."
+      }
+    },
+    "texture": {
+      "onTone": "With a tone — the texture follows it",
+      "onNeutral": "On a neutral card — only the texture is coloured (--card-texture-color)",
+      "sizes": "Different sizes — the tile repeats, it never stretches"
+    }
+  },
+  "popups": {
+    "title": "Popups",
+    "description": "Menus, lists, popovers and hover cards lie on top of page text, so on a brand backdrop a solid surface turns into a grey patch. Here they are glass: a dense tinted fill with a strong blur, so the colour of the backdrop shows through and the text underneath does not. Tune the two knobs and carry the result into brand-backdrop.css §5.",
+    "sceneHint": {
+      "glass": "A brand backdrop is on: the popups below use the glass fill (--popover-glass) and backdrop blur.",
+      "solid": "No backdrop: work screens. Popups stay on the opaque --popover — the knobs have no effect here."
+    },
+    "tune": {
+      "alpha": "Fill opacity",
+      "blur": "Blur",
+      "reset": "Reset"
+    },
+    "triggers": {
+      "title": "Triggers",
+      "description": "Every popup primitive that renders through a portal. Open them over the text below."
+    },
+    "menu": {
+      "trigger": "Account",
+      "label": "My account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "showDone": "Show completed",
+      "more": "More",
+      "export": "Export",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "select": {
+      "any": "Anyone",
+      "me": "Me",
+      "team": "My team"
+    },
+    "combobox": {
+      "placeholder": "Search a framework…"
+    },
+    "popover": {
+      "trigger": "Popover",
+      "title": "Quick filter",
+      "description": "A small form-like popup. Its fill is the same glass as the menus.",
+      "cancel": "Cancel",
+      "apply": "Apply"
+    },
+    "hover": {
+      "trigger": "Hover card",
+      "title": "Northwind Logistics",
+      "description": "A peek card shown on hover. Same surface, no interaction inside."
+    },
+    "context": {
+      "trigger": "Right-click here",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "underlay": {
+      "title": "Text underneath",
+      "p1": "The foundation for building multi-tenant CRM and ERP products. Sign-in, organizations, background jobs, files, live updates, notifications and the UI are already done — a new product starts straight from its own business logic.",
+      "p2": "Each organization sees only its own data — the database itself guarantees this, not developer discipline. Customers and Calendar inside are working reference modules: a new section copies their structure instead of inventing its own.",
+      "p3": "A new domain module — tickets, billing, inventory — should take days, not weeks. Everything every SaaS repeats is solved once and the same way, so the team spends its time on what makes the product different.",
+      "p4": "Key guarantees — organization isolation, an event only together with the saved fact, files bypassing the server — are built into the design, so a new module cannot forget them. Open any popup above and read through this paragraph: if a line stays legible behind the menu, raise the opacity."
+    }
+  },
+  "stepProgress": {
+    "title": "Step progress",
+    "description": "Progress shown as a list of stages: the first is done, the second is running, the rest are waiting. The component only renders a list it is given — a file upload feeds it today, a server operation will feed it the same shape later. The same items appear in the activity dock in the bottom-right corner.",
+    "importLabel": "Shared import",
+    "steps": {
+      "prepare": "Preparing",
+      "transfer": "Uploading",
+      "verify": "Checking the file",
+      "report": "Building the report"
+    },
+    "failedReason": "The file is not an image",
+    "sections": {
+      "states": {
+        "title": "States",
+        "description": "A step is pending, running, done, failed or skipped. Each state has its own marker and is named in hidden text, so it never depends on colour alone. A running step shows a bar only when it reports measurable progress."
+      },
+      "tray": {
+        "title": "Activity dock",
+        "description": "These buttons put simulated files into the real upload queue: nothing is sent to storage, but the queue, the three-at-a-time limit, cancel, retry and the dock in the bottom-right corner behave exactly as with real files. Open another page while they run — they keep going."
+      }
+    },
+    "states": {
+      "indeterminate": "No current/total — the step runs without a bar."
+    },
+    "simulate": {
+      "five": "Simulate 5 uploads",
+      "failing": "Simulate 2, one fails",
+      "started_one": "{{count}} started",
+      "started_other": "{{count}} started"
     }
   }
 }

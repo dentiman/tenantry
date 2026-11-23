@@ -27,3 +27,5 @@ export type {
   CustomerDetailResponse,
   CustomerListResponse,
 } from './customer.types';
+export { CUSTOMER_EXPORT_MAX_ROWS, ExportCustomersSchema, CUSTOMER_OPERATIONS } from './customer.operations';
+export type { ExportCustomers } from './customer.operations';

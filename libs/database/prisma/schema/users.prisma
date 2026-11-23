@@ -43,6 +43,8 @@ model User {
   avatarFile              File?                    @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   uploadedFiles           File[]                   @relation("UploadedFiles")
   scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationRecipient")
+  idempotencyKeys         IdempotencyKey[]         @relation("IdempotencyKeyOwner")
+  userOperations          UserOperation[]          @relation("UserOperationOwner")
 
   // Зворотні звʼязки модулів-фіч (docs/modules.md) — згруповані, щоб видалення фічі з
   // форку прибирало одну групу; `prisma validate` покаже, чого бракує

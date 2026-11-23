@@ -19,6 +19,8 @@
     "./components/page-header": "./src/components/page-header.tsx",
     "./components/page-header-slot": "./src/components/page-header-slot.tsx",
     "./components/resize-handle": "./src/components/resize-handle.tsx",
+    "./components/route-fallbacks": "./src/components/route-fallbacks.tsx",
+    "./components/step-progress": "./src/components/step-progress.tsx",
     "./components/theme-select": "./src/components/theme-select.tsx",
     "./components/theme-switcher": "./src/components/theme-switcher.tsx",
     "./components/ui/*": "./src/components/ui/*.tsx",
@@ -61,7 +63,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^5.0.0"
   }
 }

@@ -49,6 +49,34 @@ const STATUS_BADGE_VARIANT = {
   planned: 'outline',
 } as const satisfies Record<ModuleStatus, string>;
 
+/**
+ * Поверхня картки за статусом — ті самі чотири значення, що в бейджі, але
+ * сказані тоном і щільністю, а не словом.
+ *
+ * Тон узятий ТІЛЬКИ там, де він щось додає: `done` лишається нейтральним
+ * (готове — просто нормальна картка, фарбувати її нема за що), а `partial` і
+ * `designed` отримують найтихіший ступінь `subtle` — ледь помітний відтінок,
+ * який читається як «ще не все». `planned` тримає нейтраль, бо його сигнал —
+ * відсутність поверхні, а не колір.
+ *
+ * Чому `subtle`, а не `muted`: кольорова картка в сітці з дванадцяти інших не
+ * повинна перетягувати увагу на себе — вона мусить лише відрізнятись від
+ * сусідки, коли око вже на ній.
+ */
+const STATUS_SURFACE = {
+  done: { fill: 'default', tone: 'neutral', border: 'solid' },
+  partial: { fill: 'subtle', tone: 'warning', border: 'solid' },
+  designed: { fill: 'subtle', tone: 'info', border: 'dashed' },
+  planned: { fill: 'muted', tone: 'neutral', border: 'dashed' },
+} as const satisfies Record<
+  ModuleStatus,
+  {
+    border: 'solid' | 'dashed';
+    fill: 'default' | 'muted' | 'subtle';
+    tone: 'neutral' | 'warning' | 'info';
+  }
+>;
+
 const DIAGRAM_SRC = '/diagrams/architecture.html';
 
 /**
@@ -339,15 +367,18 @@ function ModuleMap() {
 function ModuleCard({ module }: { module: ProductModule }) {
   const { t } = useTranslation('guide');
   const Icon = module.icon;
-  // Незроблене не повинно візуально конкурувати з готовим: та сама картка,
-  // але приглушена іконка, пунктирний контур і вдвічі прозоріша поверхня.
-  // Зовсім без фону не можна — на брендовому фоні лишалась сама обводка
+  // Незроблене не повинно візуально конкурувати з готовим: та сама картка, але
+  // приглушена іконка й інша поверхня. Зовсім без фону не можна — на брендовому
+  // фоні лишалась сама обводка.
+  //
+  // Поверхню дають осі примітива (`STATUS_SURFACE` вище), а не класи на місці
+  // виклику: доти це був костиль із `bg-card/50` плюс ручне перевизначення
+  // `--border-glass`, бо контур тоді малювало правило фону.
   const isBuilt = module.status === 'done' || module.status === 'partial';
+  const surface = STATUS_SURFACE[module.status];
 
   return (
-    <Card
-      className={cn('h-full', !isBuilt && 'bg-card/50 shadow-none ring-1 ring-border ring-dashed')}
-    >
+    <Card className="h-full" fill={surface.fill} tone={surface.tone} border={surface.border}>
       <CardHeader>
         <div
           className={cn(
@@ -442,9 +473,11 @@ function ArchitectureDiagram() {
   }, [isReady, archifyTheme]);
 
   return (
-    // Картка напівпрозора, як «заплановані» модулі: схема майже на брендовому
-    // фоні, а легка заливка й блюр гасять точки візерунка під її лініями
-    <Card className="bg-card/50 p-6">
+    // `muted` з тієї ж причини, що й «заплановані» модулі: схема майже на
+    // брендовому фоні, а легка заливка й блюр гасять точки візерунка під її
+    // лініями. Доти це був ручний `bg-card/50` — вісь `fill` робить те саме,
+    // але узгоджено з рештою карток і в обох режимах
+    <Card className="p-6" fill="muted">
       <div className="aspect-[1352/496] min-h-60">
         <iframe
           ref={frameRef}

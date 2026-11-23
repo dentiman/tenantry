@@ -2,12 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "outDir": "./dist",
     "rootDir": "../../",
     "target": "ES2023",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    // застосунок, не бібліотека: декларації не потрібні (і дають TS2883 для createZodDto)
+    "declaration": false,
+    "declarationMap": false,
     "strictPropertyInitialization": false,
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",

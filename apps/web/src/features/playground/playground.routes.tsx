@@ -1,17 +1,59 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
-import { PlaygroundPage } from './pages/playground';
-import { PlaygroundComboboxPage } from './pages/playground-combobox';
-import { PlaygroundDataGridPage } from './pages/playground-data-grid';
-import { PlaygroundDialogPage } from './pages/playground-dialog';
-import { PlaygroundInlineFormPage } from './pages/playground-inline-form';
-import { PlaygroundInputPage } from './pages/playground-input';
-import { PlaygroundSelectPage } from './pages/playground-select';
-import { PlaygroundTabsPage } from './pages/playground-tabs';
-import { PlaygroundTextareaPage } from './pages/playground-textarea';
-import { PlaygroundUserSelectPage } from './pages/playground-user-select';
-import { PlaygroundVerticalFormPage } from './pages/playground-vertical-form';
 import { PLAYGROUND_ENABLED } from './playground.flag';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const PlaygroundPage = lazyPage(() => import('./pages/playground'), 'PlaygroundPage');
+const PlaygroundCardsPage = lazyPage(
+  () => import('./pages/playground-cards'),
+  'PlaygroundCardsPage',
+);
+const PlaygroundComboboxPage = lazyPage(
+  () => import('./pages/playground-combobox'),
+  'PlaygroundComboboxPage',
+);
+const PlaygroundDataGridPage = lazyPage(
+  () => import('./pages/playground-data-grid'),
+  'PlaygroundDataGridPage',
+);
+const PlaygroundDialogPage = lazyPage(
+  () => import('./pages/playground-dialog'),
+  'PlaygroundDialogPage',
+);
+const PlaygroundInlineFormPage = lazyPage(
+  () => import('./pages/playground-inline-form'),
+  'PlaygroundInlineFormPage',
+);
+const PlaygroundInputPage = lazyPage(
+  () => import('./pages/playground-input'),
+  'PlaygroundInputPage',
+);
+const PlaygroundPopupsPage = lazyPage(
+  () => import('./pages/playground-popups'),
+  'PlaygroundPopupsPage',
+);
+const PlaygroundSelectPage = lazyPage(
+  () => import('./pages/playground-select'),
+  'PlaygroundSelectPage',
+);
+const PlaygroundStepProgressPage = lazyPage(
+  () => import('./pages/playground-step-progress'),
+  'PlaygroundStepProgressPage',
+);
+const PlaygroundTabsPage = lazyPage(() => import('./pages/playground-tabs'), 'PlaygroundTabsPage');
+const PlaygroundTextareaPage = lazyPage(
+  () => import('./pages/playground-textarea'),
+  'PlaygroundTextareaPage',
+);
+const PlaygroundUserSelectPage = lazyPage(
+  () => import('./pages/playground-user-select'),
+  'PlaygroundUserSelectPage',
+);
+const PlaygroundVerticalFormPage = lazyPage(
+  () => import('./pages/playground-vertical-form'),
+  'PlaygroundVerticalFormPage',
+);
 
 /**
  * Area «Playground» — візуальні стенди примітивів UI. Layout + index: стенд
@@ -70,6 +112,28 @@ export const playgroundComponentsButtonsRoute = createRoute({
   component: PlaygroundPage,
 });
 
+/**
+ * General Components: Card — каталог карткових ПОВЕРХОНЬ. Окремий стенд, бо
+ * вигляд картки задає не проп, а фон під нею, і різницю видно лише поруч:
+ * сторінка перемикає сцену між звичайним полотном і брендовим фоном.
+ */
+export const playgroundComponentsCardsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'cards',
+  component: PlaygroundCardsPage,
+});
+
+/**
+ * General Components: Popups — меню, списки й картки-підказки на різних фонах. Окремий
+ * стенд, бо попап лежить поверх тексту сторінки, і суцільний `--popover` на брендовому
+ * склі виглядає сірою плямою: тут добирають густину скла й розмиття.
+ */
+export const playgroundComponentsPopupsRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'popups',
+  component: PlaygroundPopupsPage,
+});
+
 /** General Components: Combobox — пошук-з-попапом, фундамент усіх бізнес-селектів */
 export const playgroundComponentsComboboxRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
@@ -89,6 +153,16 @@ export const playgroundComponentsSelectRoute = createRoute({
   getParentRoute: () => playgroundComponentsRoute,
   path: 'select',
   component: PlaygroundSelectPage,
+});
+
+/**
+ * General Components: StepProgress — прогрес списком етапів. Той самий стенд наповнює
+ * справжню чергу завантажень фейковими файлами, щоб побачити лоток активності в хедері.
+ */
+export const playgroundComponentsStepProgressRoute = createRoute({
+  getParentRoute: () => playgroundComponentsRoute,
+  path: 'step-progress',
+  component: PlaygroundStepProgressPage,
 });
 
 /** General Components: Textarea — багаторядкове текстове поле */

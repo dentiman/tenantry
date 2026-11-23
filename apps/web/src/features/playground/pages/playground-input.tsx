@@ -68,7 +68,7 @@ export function PlaygroundInputPage() {
                 {t('input.description')}
               </p>
             </div>
-            <div className="rounded-xl bg-muted/50 p-4">
+            <div className="rounded-xl border border-dashed border-border p-4">
               <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t('input.importLabel')}
               </p>
@@ -234,7 +234,7 @@ export function PlaygroundInputPage() {
             description={t('input.sections.usage.description')}
           >
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('input.usage.password.title')}
@@ -259,7 +259,7 @@ export function PlaygroundInputPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {t('input.usage.datePicker.title')}
@@ -283,7 +283,7 @@ export function PlaygroundInputPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('input.usage.combobox.title')}

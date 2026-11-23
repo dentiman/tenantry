@@ -1,7 +1,7 @@
 # chat/webhook-capture Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b1-webhook-capture. Update Purpose after archive.
+Defines how the platform receives Meta (WhatsApp Cloud API) webhooks: the verification handshake, storing every webhook exactly as received together with the signature check result, and the setting that decides whether an invalid signature is merely recorded or rejected.
 
 ## Requirements
 

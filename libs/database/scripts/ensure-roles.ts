@@ -17,6 +17,7 @@
  */
 import '../load-root-env';
 import { Client } from 'pg';
+import { CONTROL_PLANE_TABLES } from './control-plane-tables';
 
 const DEFAULT_ADMIN_URL = 'postgresql://saas:saas@localhost:5432/postgres';
 const DEFAULT_DATABASE_URL = 'postgresql://saas:saas@localhost:5432/saas_skeleton';
@@ -130,7 +131,7 @@ async function ensureDbGrants(dbName: string): Promise<void> {
     // тобто скасовував REVOKE міграцій щоразу, коли ролі переналаштовували після міграцій
     // (e2e global setup, ws:init, db_roles після деплою). Тому обмеження застосовуються
     // тут заново, для тих таблиць, що вже існують.
-    for (const { table, saasApp } of CONTROL_PLANE_TABLES) {
+    for (const { table, saasApp, platformRevoke } of CONTROL_PLANE_TABLES) {
       const exists = await client.query(
         `SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = $1`,
         [table],
@@ -141,6 +142,9 @@ async function ensureDbGrants(dbName: string): Promise<void> {
         await client.query(`GRANT SELECT ON public."${table}" TO saas_app`);
       } else if (saasApp === 'select-insert') {
         await client.query(`GRANT SELECT, INSERT ON public."${table}" TO saas_app`);
+      }
+      if (platformRevoke) {
+        await client.query(`REVOKE ${platformRevoke} ON public."${table}" FROM saas_platform`);
       }
     }
 
@@ -166,27 +170,6 @@ async function ensureDbGrants(dbName: string): Promise<void> {
     await client.end();
   }
 }
-
-/**
- * Таблиці control plane і що з ними може tenant-runtime (`saas_app`). Має збігатися з
- * REVOKE/GRANT у міграціях — ті діють при створенні таблиці, цей список — при кожному
- * переналаштуванні ролей.
- */
-const CONTROL_PLANE_TABLES: readonly {
-  table: string;
-  saasApp: 'none' | 'select' | 'select-insert';
-}[] = [
-  { table: 'platform_users', saasApp: 'none' },
-  { table: 'platform_auth_sessions', saasApp: 'none' },
-  // AI-5a: tenant-процеси читають налаштування й свій дозвіл, але не пишуть
-  { table: 'platform_ai_settings', saasApp: 'select' },
-  { table: 'platform_ai_settings_events', saasApp: 'none' },
-  { table: 'tenant_ai_access', saasApp: 'select' },
-  // AI-5b: тарифи читаються для розрахункової вартості; журнал витрат — tenant-таблиця під
-  // RLS, але append-only для tenant-процесів (добір вартості оновлює його як saas_platform)
-  { table: 'ai_model_prices', saasApp: 'select' },
-  { table: 'ai_usage_events', saasApp: 'select-insert' },
-];
 
 async function main(): Promise<void> {
   const dbName = targetDbName();

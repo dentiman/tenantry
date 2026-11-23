@@ -10,6 +10,7 @@ import { ZodValidationException } from 'nestjs-zod';
 import type { Request, Response } from 'express';
 import { ApiErrorCodeSchema } from '@saas-skeleton/contracts';
 import type { ApiError, ApiErrorCode, FieldError } from '@saas-skeleton/contracts';
+import { LOG_FIELDS } from '../logging/log-fields';
 
 interface PrismaError {
   code: string;
@@ -114,12 +115,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (body.statusCode >= 500) {
       this.logger.error(
-        { err: exception, requestId, path: request.url },
+        { err: exception, [LOG_FIELDS.traceId]: requestId, path: request.url },
         `${request.method} ${request.url} → ${String(body.statusCode)} ${body.code}`,
       );
     } else {
       this.logger.warn(
-        { requestId, path: request.url, code: body.code, fieldErrors: body.fieldErrors },
+        {
+          [LOG_FIELDS.traceId]: requestId,
+          path: request.url,
+          code: body.code,
+          fieldErrors: body.fieldErrors,
+        },
         `${request.method} ${request.url} → ${String(body.statusCode)} ${body.code}: ${body.message}`,
       );
     }

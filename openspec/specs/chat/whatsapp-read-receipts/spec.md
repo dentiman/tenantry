@@ -1,7 +1,7 @@
 # chat/whatsapp-read-receipts Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b3-mark-read. Update Purpose after archive.
+Defines how reading a customer conversation is acknowledged back to WhatsApp as read: sent once per inbound message, on a best-effort basis.
 
 ## Requirements
 

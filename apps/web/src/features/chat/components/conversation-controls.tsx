@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { lowercase } from '@saas-skeleton/ui/lib/i18n-keys';
 import { useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import {
@@ -62,7 +63,7 @@ export function ConversationControls({ conversation }: { conversation: Conversat
   });
   const busy = setStatus.isPending || setAssignee.isPending;
 
-  const items = STATUSES.map((value) => ({ value, label: t(`status.${value.toLowerCase()}`) }));
+  const items = STATUSES.map((value) => ({ value, label: t(`status.${lowercase(value)}`) }));
 
   return (
     <div className="flex items-center gap-2">

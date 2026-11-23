@@ -2,7 +2,7 @@
   "name": "saas-skeleton",
   "version": "0.0.1",
   "private": true,
-  "description": "SaaS Skeleton — multitenant CRM/ERP foundation (NestJS + React)",
+  "description": "Tenantry — production-shaped foundation for multitenant CRM/ERP SaaS products (NestJS + React)",
   "scripts": {
     "docker:up": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml up -d; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml up -d; else docker compose -f docker/docker-compose.yml up -d; fi'",
     "docker:down": "sh -c 'if [ -f .env.local ]; then docker compose --env-file .env.local -f docker/docker-compose.yml down; elif [ -f .env ]; then docker compose --env-file .env -f docker/docker-compose.yml down; else docker compose -f docker/docker-compose.yml down; fi'",
@@ -39,6 +39,7 @@
     "platform:web:build": "pnpm --filter @saas-skeleton/platform-web build",
     "platform:web:codegen": "pnpm --filter @saas-skeleton/platform-web codegen",
     "openapi:generate": "pnpm --filter @saas-skeleton/api openapi:generate",
+    "codegen:check": "bash scripts/codegen-check.sh",
     "verify": "bash scripts/ci-verify.sh",
     "release:hetzner": "bash scripts/hetzner/release.sh",
     "git:sync": "bash scripts/git-sync.sh",
@@ -47,6 +48,8 @@
     "lint": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-knowledge.ts --check && pnpm deps:check && pnpm modules:check --strict && pnpm lint:eslint",
     "lint:eslint": "for dir in apps/* libs/* scripts; do eslint \"$dir\" --max-warnings 0 || exit 1; done",
     "modules:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/modules-check.ts",
+    "bundle:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/bundle-check.ts",
+    "ui:cube-tile": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ui-cube-tile.ts",
     "deps:check": "madge --circular apps/api/src apps/platform-api/src apps/worker/src libs/contracts/src libs/database/src libs/shared/src",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -54,8 +57,11 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "build": "turbo run build",
-    "logs:tail": "tail -f apps/api/logs/api-pretty.log",
-    "logs:clean": "rm -rf apps/api/logs/*.log*",
+    "logs:tail": "tail -F apps/api/logs/api-pretty.log apps/platform-api/logs/platform-api-pretty.log apps/worker/logs/worker-pretty.log",
+    "logs:trace": "tsx scripts/logs.ts trace",
+    "logs:errors": "tsx scripts/logs.ts errors",
+    "debug:jobs": "tsx scripts/debug-jobs.ts",
+    "logs:clean": "rm -rf apps/api/logs/*.log* apps/platform-api/logs/*.log* apps/worker/logs/*.log*",
     "prepare": "husky",
     "whatsapp:probe": "tsx scripts/whatsapp-probe.ts",
     "chat:simulate": "tsx scripts/chat-simulate.ts",
@@ -84,26 +90,26 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings 0 --no-warn-ignored",
-      "prettier --write"
-    ],
-    "*.{json,md,yaml,yml,css}": [
-      "prettier --write"
+      "eslint --fix --max-warnings 0 --no-warn-ignored"
     ]
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@nestjs/cli": "^11.0.16",
+    "@nestjs/cli": "^12.0.15",
+    "@rspack/core": "^2.3.3",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "fork-ts-checker-webpack-plugin": "^9.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",
     "prettier": "^3.8.1",
     "tsx": "^4.19.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0"
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.54.0",
+    "webpack": "^5.106.2",
+    "webpack-node-externals": "^3.0.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -117,6 +123,12 @@
     ],
     "overrides": {
       "zod": "^4.4.3"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "nestjs-zod>@nestjs/common": "^12.0.0",
+        "nestjs-zod>@nestjs/swagger": "^12.0.0"
+      }
     }
   }
 }

@@ -38,6 +38,12 @@ import { applyServerError, FormTextField } from '../../../components/form';
 
 /** Осмислені варіанти першого дня тижня; решта значень 0..6 контракт приймає */
 const WEEK_STARTS = [1, 0, 6] as const;
+/** Ключі назв днів — літералами, щоб `t()` їх перевіряв (число в шаблонному рядку дало б `string`) */
+const WEEK_DAY_KEYS = {
+  0: 'settings.weekDays.0',
+  1: 'settings.weekDays.1',
+  6: 'settings.weekDays.6',
+} as const satisfies Record<(typeof WEEK_STARTS)[number], string>;
 
 /**
  * Секція `calendar` — дефолти КОМПАНІЇ (зона, робочі години, нагадування).
@@ -104,7 +110,7 @@ export function SettingsCalendarPage() {
               <Select
                 items={WEEK_STARTS.map((day) => ({
                   value: String(day),
-                  label: t(`settings.weekDays.${String(day)}`),
+                  label: t(WEEK_DAY_KEYS[day]),
                 }))}
                 value={String(form.watch('weekStartsOn'))}
                 onValueChange={(next: string | null) => {
@@ -122,7 +128,7 @@ export function SettingsCalendarPage() {
                   <SelectGroup>
                     {WEEK_STARTS.map((day) => (
                       <SelectItem key={day} value={String(day)}>
-                        {t(`settings.weekDays.${String(day)}`)}
+                        {t(WEEK_DAY_KEYS[day])}
                       </SelectItem>
                     ))}
                   </SelectGroup>

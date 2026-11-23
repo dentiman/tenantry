@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { ClsModule, type ClsService } from 'nestjs-cls';
 import { SystemPrismaModule } from '@saas-skeleton/database';
+import { LOG_CONTEXT, createLoggerConfig } from '@saas-skeleton/shared/logging';
 import { HealthController } from './health.controller';
 import { PlatformAuthModule } from './auth/platform-auth.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -12,7 +14,6 @@ import { AiCostsModule } from './ai-costs/ai-costs.module';
 import { AiSettingsModule } from './ai-settings/ai-settings.module';
 import { RedisModule } from './redis/redis.module';
 import { AppThrottlerModule } from './common/app-throttler.module';
-import { loggerConfig } from './logger.config';
 import { validatePlatformEnv } from './config/env.schema';
 
 /**
@@ -33,7 +34,21 @@ import { validatePlatformEnv } from './config/env.schema';
       // AUTH-0: невалідний env валить старт, а не проявляється через тиждень
       validate: validatePlatformEnv,
     }),
-    LoggerModule.forRootAsync(loggerConfig),
+    LoggerModule.forRootAsync(createLoggerConfig({ service: 'platform-api' })),
+    // Контекст запиту для логера (`trace_id`, `user.id` оператора). Tenant-контексту тут
+    // немає принципово, тому CLS підключається напряму, а не через TenancyModule. Стоїть
+    // ПІСЛЯ LoggerModule: id запиту на той момент уже видав pino-http
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        mount: true,
+        setup: (cls: ClsService, req: { id?: string | number }): void => {
+          if (req.id !== undefined) {
+            cls.set(LOG_CONTEXT.traceId, String(req.id));
+          }
+        },
+      },
+    }),
     SystemPrismaModule,
     RedisModule,
     AppThrottlerModule,

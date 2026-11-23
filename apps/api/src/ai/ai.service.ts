@@ -540,7 +540,7 @@ export class AiService {
    * (design.md D5). На відміну від `create()` + catch(P2002), тут НІЧОГО не кидає,
    * тож транзакція не переривається: unique violation у Postgres обриває саму
    * транзакцію, і читання одразу після неї без rollback/savepoint не відновило б
-   * її (docs/ai-assistant-review-gaps.md п.4).
+   * її (docs/notes/ai-assistant-review-gaps.md п.4).
    */
   private async createActive(
     userId: string,

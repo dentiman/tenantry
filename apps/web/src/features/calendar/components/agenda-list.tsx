@@ -9,6 +9,7 @@ import {
   AvatarGroupCount,
 } from '@saas-skeleton/ui/components/ui/avatar';
 import { Badge } from '@saas-skeleton/ui/components/ui/badge';
+import { Card } from '@saas-skeleton/ui/components/ui/card';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   Empty,
@@ -19,7 +20,6 @@ import {
   EmptyTitle,
 } from '@saas-skeleton/ui/components/ui/empty';
 import {
-  Item,
   ItemActions,
   ItemContent,
   ItemDescription,
@@ -38,7 +38,7 @@ import {
   formatWeekdayLong,
 } from '../lib/calendar-date';
 import { EventContextMenu, type EventIntent } from './event-context-menu';
-import { KIND_LINE_WIDTH, KIND_STYLES } from './event-kind';
+import { KIND_STYLES } from './event-kind';
 
 /**
  * Agenda — «що далі». Єдиний перегляд календаря, який ходить КУРСОРНИМ
@@ -316,70 +316,57 @@ function AgendaRow({
   const guests = event.attendees;
 
   const row = (
-    <Item
-      size="sm"
-      render={
-        <button
-          type="button"
-          onClick={() => {
-            onSelect(event);
-          }}
-        />
-      }
-      variant="outline"
-      className={cn(
-        // Картка, а не рядок таблиці: тінь поверхні + скруглення (та сама
-        // форма, що в центрі сповіщень).
-        // Заливка — `bgSoft` (мінімальна прозорість кольору типу), а НЕ
-        // `bg-card`: картка тут лежить і на полотні сторінки, і на
-        // `bg-card`-картці кастомера — той самий колір зливав би її з
-        // поверхнею, лишаючи межу єдиним розрізненням.
-        // Наведення НЕ міняє фон: накладка `hover:bg-accent` перебивала б
-        // власний колір типу (`bgSoft`) нейтральним сірим — картка й так
-        // клікабельна кнопка з фокус-кільцем, додаткового hover-стану колір
-        // не потребує
-        'relative w-full items-center gap-2 overflow-hidden py-1.5 pr-3 pl-[13px] shadow-sm',
-        'text-left transition-colors focus-visible:ring-inset',
-        KIND_STYLES[event.kind].bgSoft,
-        (isCancelled || isDeclined) && 'opacity-60',
-      )}
+    // Кнопка — ЗОВНІ картки, а не замість неї: `Card` рендериться як `div` і
+    // пропа `render` не має, а рядок агенди мусить лишитись справжнім
+    // `<button>` (клавіатура, роль, фокус). Обгортка не має власної поверхні —
+    // весь вигляд несе картка всередині, тож вкладеності поверхонь не виникає.
+    <button
+      type="button"
+      onClick={() => {
+        onSelect(event);
+      }}
+      className="w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:outline-none"
     >
-      {/* Смужка типу — не `border-left`: у `border` заокруглення ліпиться
-          з кута НАПІВ (border-radius ділить дугу top-left порівну між
-          верхньою і лівою межею, а верхньої тут немає — виходить криво
-          зрізана чверть дуги, а не ціла).
-          Тут навпаки — ПРЯМОКУТНИК на всю висоту (`inset-y-0`, без
-          власного `rounded-*`), а заокруглення бере САМА картка:
-          `overflow-hidden` + `rounded-lg` на `Item` ріжуть прямокутник
-          по контуру картки, тож дуга смужки — це буквально та сама дуга,
-          що в зовнішньої обводки, ціла, а не половинна */}
-      <span
-        aria-hidden="true"
-        className={cn('absolute inset-y-0 left-0', KIND_LINE_WIDTH, KIND_STYLES[event.kind].line)}
-      />
-      <ItemContent className="min-w-0 gap-0">
-        {/* `ItemTitle` реєстру — `w-fit`: рядок тягнеться під довжину тексту,
+      {/* Заливку й смугу типу дає примітив: `--card-tone-color` приходить із
+          `KIND_STYLES` (домен), а картка сама виводить з нього тиху заливку
+          (14%) і яскравий `edge` (повна сила). Доти це були `bgSoft` плюс
+          окремий `<span>` зі смужкою — той самий малюнок, зібраний вручну.
+          Метрики рядка лишились від `Item size="sm"`: `py-1.5`, `pl-[13px]`
+          (3px смуги + 10px поля). */}
+      <Card
+        size="sm"
+        radius="sm"
+        edge
+        style={KIND_STYLES[event.kind].cardStyle}
+        className={cn(
+          'w-full flex-row items-center gap-2 py-1.5 pr-3 pl-[13px]',
+          'transition-colors',
+          (isCancelled || isDeclined) && 'opacity-60',
+        )}
+      >
+        <ItemContent className="min-w-0 gap-0">
+          {/* `ItemTitle` реєстру — `w-fit`: рядок тягнеться під довжину тексту,
             а не колонки, і `Item` (`flex-wrap`) переносить аватари на другий
             рядок замість обрізання. Той самий патерн, що в `ContextPanelHeader`
             (`libs/ui/.../context-panel-slot.tsx`): `min-w-0` на весь шлях до
             `truncate`-елемента, `w-full` замість `w-fit` */}
-        <ItemTitle className={cn('w-full min-w-0', 'text-[13px]', isCancelled && 'line-through')}>
-          {event.visibility === 'PRIVATE' && (
-            <LockIcon className="size-3 shrink-0 text-muted-foreground" />
-          )}
-          <span className="min-w-0 flex-1 truncate">{event.title}</span>
-        </ItemTitle>
-        {/* Час — у ТІЙ САМІЙ колонці, першим у рядку метаданих: окрема колонка
+          <ItemTitle className={cn('w-full min-w-0', 'text-[13px]', isCancelled && 'line-through')}>
+            {event.visibility === 'PRIVATE' && (
+              <LockIcon className="size-3 shrink-0 text-muted-foreground" />
+            )}
+            <span className="min-w-0 flex-1 truncate">{event.title}</span>
+          </ItemTitle>
+          {/* Час — у ТІЙ САМІЙ колонці, першим у рядку метаданих: окрема колонка
             фіксованої ширини (шлях ReUI, `w-40`) з'їдала третину рядка на
             «9:00 AM – 9:45 AM» і лишала назву притиснутою до середини */}
-        <ItemDescription className="text-[11px] leading-snug">
-          <span className="tabular-nums">{time}</span>
-          {meta && ` · ${meta}`}
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions className="gap-1.5">
-        {guests.length > 0 && (
-          /* Аватари сховані від скрінрідера, а присутності на них НЕМАЄ, і це
+          <ItemDescription className="text-[11px] leading-snug">
+            <span className="tabular-nums">{time}</span>
+            {meta && ` · ${meta}`}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="gap-1.5">
+          {guests.length > 0 && (
+            /* Аватари сховані від скрінрідера, а присутності на них НЕМАЄ, і це
              не забудькуватість: `UserPresenceBadge` — тултіп, тобто фокусований
              елемент, а весь рядок і так одна кнопка. Вкладена інтерактивність
              тут коштувала б дорожче за саму крапку — склад гостей із їхньою
@@ -390,30 +377,31 @@ function AgendaRow({
              займали майже всю ширину, і сусід разом зі своїм `ring-2` зрізав
              другу («AD» читалось як «AC»). Тепер 24px і вужчий `ring-1` —
              того самого перекриття вистачає для «стопки», а літери цілі */
-          <AvatarGroup aria-hidden="true" className="*:data-[slot=avatar]:ring-1">
-            {guests.slice(0, VISIBLE_GUESTS).map((attendee) => (
-              <Avatar key={attendee.id} size="sm" className="size-6">
-                <AvatarFallback className="text-[10px]" colorSeed={attendee.user.id}>
-                  {initialsOf(attendee.user)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-            {guests.length > VISIBLE_GUESTS && (
-              <AvatarGroupCount className="size-6 text-[10px]">
-                +{guests.length - VISIBLE_GUESTS}
-              </AvatarGroupCount>
-            )}
-          </AvatarGroup>
-        )}
-        {/* Статус — найдрібніший елемент рядка: він потрібен лише щоб очі його
+            <AvatarGroup aria-hidden="true" className="*:data-[slot=avatar]:ring-1">
+              {guests.slice(0, VISIBLE_GUESTS).map((attendee) => (
+                <Avatar key={attendee.id} size="sm" className="size-6">
+                  <AvatarFallback className="text-[10px]" colorSeed={attendee.user.id}>
+                    {initialsOf(attendee.user)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {guests.length > VISIBLE_GUESTS && (
+                <AvatarGroupCount className="size-6 text-[10px]">
+                  +{guests.length - VISIBLE_GUESTS}
+                </AvatarGroupCount>
+              )}
+            </AvatarGroup>
+          )}
+          {/* Статус — найдрібніший елемент рядка: він потрібен лише щоб очі його
             ЗНАЙШЛИ, а що саме робити, людина дізнається вже в панелі події */}
-        {event.myResponse === 'NEEDS_ACTION' && (
-          <Badge variant="warning" className="h-4 px-1.5 text-[10px] font-medium">
-            {t('rsvp.pending')}
-          </Badge>
-        )}
-      </ItemActions>
-    </Item>
+          {event.myResponse === 'NEEDS_ACTION' && (
+            <Badge variant="warning" className="h-4 px-1.5 text-[10px] font-medium">
+              {t('rsvp.pending')}
+            </Badge>
+          )}
+        </ItemActions>
+      </Card>
+    </button>
   );
 
   return <EventContextMenu event={event} trigger={row} onIntent={onIntent} />;
@@ -449,7 +437,7 @@ function AgendaSkeleton({ label }: { label: string }) {
                коли приїжджають справжні події */
             <div
               key={row}
-              className="flex flex-col gap-1.5 rounded-lg border border-l-[3px] border-l-muted bg-card py-2.5 pr-3 pl-2.5 shadow-sm"
+              className="flex flex-col gap-1.5 rounded-lg border border-l-[3px] border-l-muted bg-card py-2.5 pr-3 pl-2.5"
             >
               <Skeleton className="h-3 w-40" />
               <Skeleton className="h-2.5 w-56" />

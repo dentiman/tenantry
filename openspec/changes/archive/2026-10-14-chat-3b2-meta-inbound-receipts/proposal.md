@@ -7,7 +7,7 @@ and we store them. A text typed on the phone and the `sent`/`delivered` statuses
 stand are sitting in `channel_webhook_events`, and nothing turns them into a conversation or a tick. The
 core that does that — ingest, de-duplication, status folding that is forward-only, parking of a status that
 beats the write of its id — has existed since CHAT-2a/2b for the fake provider. This change is the missing
-piece: a real `MetaCloudAdapter.parseWebhook`, written against 300 real payloads (fms-dev's export and our own
+piece: a real `MetaCloudAdapter.parseWebhook`, written against 300 real payloads (legacy-dev's export and our own
 captures), plus the switches that make the stand behave like a product.
 
 ## What Changes

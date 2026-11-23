@@ -19,6 +19,7 @@ import type {
 import { MAX_CALENDAR_WINDOW_DAYS, REALTIME_EVENTS } from '@saas-skeleton/contracts';
 import {
   ActivityRecorder,
+  IdempotencyService,
   NotificationRecorder,
   ScheduledNotificationService,
 } from '@saas-skeleton/shared';
@@ -92,6 +93,7 @@ export class CalendarService {
     private readonly access: CalendarAccessService,
     private readonly tenantContext: TenantContextService,
     private readonly realtime: RealtimeEmitter,
+    private readonly idempotency: IdempotencyService,
   ) {}
 
   // ------------------------------------------------------------- читання
@@ -200,6 +202,9 @@ export class CalendarService {
     const reminders = data.reminders ?? (await this.defaultReminders(data.allDay ?? false));
 
     const event = await this.tenantTx.withTenantTx(async (tx) => {
+      // Idempotency-Key (docs/idempotency.md): ключ комітиться разом із подією, запрошеннями
+      // й нагадуваннями — повтор запиту не розішле сповіщення вдруге
+      await this.idempotency.claim(tx);
       const created = await tx.calendarEvent.create({
         data: {
           title: data.title,

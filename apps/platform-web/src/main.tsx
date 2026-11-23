@@ -11,6 +11,9 @@ import { router } from './router';
 import { initAuth } from './features/auth/lib/init-auth';
 import { isGlobalApiError, parseApiError } from '@saas-skeleton/ui/api/api-error';
 import { showApiErrorToast } from '@saas-skeleton/ui/lib/error-toast';
+import { reportError } from '@saas-skeleton/ui/lib/report-error';
+import { useAuthStore } from './features/auth/stores/auth.store';
+import { initErrorReporting } from './lib/error-reporting';
 import './i18n';
 import './index.css';
 
@@ -20,6 +23,14 @@ function handleGlobalError(error: unknown): void {
   const parsed = parseApiError(error);
   if (isGlobalApiError(parsed)) {
     showApiErrorToast(parsed);
+  }
+  // Мережа й 5xx — до збирача помилок разом з id запиту; 403/429 — не дефект, а відповідь
+  if (parsed.status === null || parsed.status >= 500) {
+    reportError({
+      error,
+      source: 'api',
+      context: { requestId: parsed.requestId, status: parsed.status, code: parsed.code },
+    });
   }
 }
 
@@ -35,6 +46,9 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap(): Promise<void> {
+  // Збирач помилок — до всього іншого, щоб перша ж помилка не загубилась (lib/error-reporting.ts)
+  initErrorReporting(() => useAuthStore.getState().operator?.id);
+
   // Сесія відновлюється до першого рендера — guards бачать актуальний стан
   await initAuth();
 

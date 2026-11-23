@@ -34,7 +34,7 @@ export class MetaCloudAdapter implements ChannelAdapter {
 
   /**
    * `X-Hub-Signature-256: sha256=<hex>` = HMAC-SHA256(app secret, сирі байти). Перевірено на 215 справжніх
-   * хуках fms-dev: збіглись усі. Старий `X-Hub-Signature` (sha1) ігноруємо.
+   * хуках legacy-dev: збіглись усі. Старий `X-Hub-Signature` (sha1) ігноруємо.
    */
   verifyWebhook(req: RawWebhookRequest, creds: ChannelCredentials): boolean {
     const header = req.headers['x-hub-signature-256'];

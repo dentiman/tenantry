@@ -298,6 +298,32 @@ describe('Customers API (e2e)', () => {
     );
   });
 
+  it('does not fail the search on digit strings that do not fit INT4 (tax id, phone)', async () => {
+    const { headers } = await admin(`${Date.now()}-int4`);
+    // Десятицифровий ІПН: раніше `WHERE number = 5260250995` → помилка діапазону → 500 на весь пошук
+    const taxed = await createCustomer(headers, { name: 'Long Tax Id', taxId: '5260250995' });
+    const edge = await createCustomer(headers, { name: 'Edge Number', taxId: 'edge' });
+    // Граничний номер: 2147483647 — ще номер (INT4), 2147483648 — уже ні
+    await prisma.customer.update({ where: { id: edge.id }, data: { number: 2_147_483_647 } });
+
+    const search = async (term: string): Promise<CustomerBody[]> => {
+      const response = await request(app.getHttpServer())
+        .get('/api/customers')
+        .query({ search: term })
+        .set(headers)
+        .expect(200);
+      return (response.body as { items: CustomerBody[] }).items;
+    };
+
+    // Пошук по taxId працює далі, навіть коли число не може бути номером
+    expect((await search('5260250995')).map((item) => item.id)).toEqual([taxed.id]);
+    // Верхня межа INT4 — ще збіг по номеру
+    expect((await search('2147483647')).map((item) => item.id)).toEqual([edge.id]);
+    // Межа + 1 — не номер і не 500; збігів немає
+    expect(await search('2147483648')).toEqual([]);
+    expect(await search('C-99999999999999999999')).toEqual([]);
+  });
+
   it('filters by search, status, kind, owner and tag', async () => {
     const { headers, id: actorId } = await admin(`${Date.now()}-filters`);
     await createCustomer(headers, {

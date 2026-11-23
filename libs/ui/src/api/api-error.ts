@@ -5,6 +5,7 @@ import type { ApiErrorCode, FieldError } from '@saas-skeleton/contracts';
 // (обидва фронти піднімають дефолтний інстанс через `i18n.use(initReactI18next).init`).
 // Пакет НЕ знає про неймспейси застосунку — лише про спільні `errors:*` з libs/i18n
 import i18n from 'i18next';
+import { TRACEPARENT_HEADER, traceIdOf } from './trace-context';
 
 /** Нормалізована помилка запиту: ApiError envelope бекенда або синтезований fallback */
 export interface ParsedApiError {
@@ -17,7 +18,30 @@ export interface ParsedApiError {
   requestId?: string;
 }
 
+/**
+ * id запиту, який фронтенд сам поставив у `traceparent`: він відомий і тоді, коли відповіді
+ * не було (мережа) або вона не у форматі envelope (502 від проксі).
+ */
+function sentTraceId(error: unknown): string | undefined {
+  if (!isAxiosError(error)) {
+    return undefined;
+  }
+  const headers = error.config?.headers as { get?: (name: string) => unknown } | undefined;
+  return traceIdOf(headers?.get?.(TRACEPARENT_HEADER));
+}
+
 export function parseApiError(error: unknown): ParsedApiError {
+  const parsed = parseApiErrorBody(error);
+  if (parsed.requestId === undefined) {
+    const requestId = sentTraceId(error);
+    if (requestId !== undefined) {
+      parsed.requestId = requestId;
+    }
+  }
+  return parsed;
+}
+
+function parseApiErrorBody(error: unknown): ParsedApiError {
   if (isAxiosError(error) && error.response) {
     const parsed = ApiErrorSchema.safeParse(error.response.data);
     if (parsed.success) {

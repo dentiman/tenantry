@@ -1,7 +1,7 @@
 # Деплой на Hetzner через GitHub Actions
 
 > **Статус: розгорнуто 2026-10-11.** Паралельний GitLab-пайплайн (`docs/deploy-swarm.md`, стенд
-> `saas-dev` на DOCKER-DEV-01) не змінювався — це другий, незалежний таргет. Тут деплоїться
+> `saas-dev` у робочій мережі) не змінювався — це другий, незалежний таргет. Тут деплоїться
 > гілка **`main`** репозиторію [`github.com/dentiman/tenantry`](https://github.com/dentiman/tenantry)
 > (публічний, MIT; джерело правди коду). GitLab `origin` несе ту саму історію з тими самими SHA.
 > Попередній приватний `dentiman/saas-skeleton` виведено з обігу (архівується) і більше не деплоїть.
@@ -93,8 +93,9 @@ Hetzner VPS (Ubuntu 26.04, 2 vCPU / 4 ГБ + 4 ГБ swap, Helsinki)
 
 | Файл | Коли | Що |
 | --- | --- | --- |
-| `.github/workflows/deploy.yml` | push у `main`, вручну | `build` ×5 образів (self-hosted, по одному) → `deploy` (`scripts/hetzner/deploy.sh`) |
+| `.github/workflows/deploy.yml` | push у `main` зі змінами поза документацією, вручну | `build` ×5 образів (self-hosted, по одному) → `deploy` (`scripts/hetzner/deploy.sh`) |
 | `.github/workflows/verify.yml` | лише вручну / `workflow_call` | повна перевірка на GitHub-hosted (`scripts/ci-verify.sh`); не шлюз деплою |
+| `.github/workflows/check.yml` | push у `dev`, PR, вручну | `pnpm lint` + `pnpm typecheck` + `pnpm codegen:check` на GitHub-hosted (`scripts/ci-check.sh`); без e2e, **не шлюз деплою** (у `deploy.yml` нема `needs`) |
 | `.github/workflows/ops.yml` | вручну («Run workflow») | `seed`, `db_roles`, `seed_demo`, `demo_reset`, `backup_db` (`scripts/hetzner/ops.sh`) |
 
 **Як розкотити:** `pnpm release:hetzner` (`scripts/hetzner/release.sh`) — на гілці `dev` з чистим
@@ -106,6 +107,18 @@ GitLab наздоганяє наступним запуском. `SKIP_VERIFY=1 
 CI/доків, термінове виправлення). Перерозкат без нового коміту: Actions → CI/CD → Run workflow.
 
 Звичайна синхронізація без деплою Hetzner — `pnpm git:sync`: поточний `dev` → `dev` на обох remote-ах.
+
+**Публікація документації без релізу.** Якщо весь push змінює лише `README.md`, `AGENTS.md`,
+`CLAUDE.md`, `LICENSE`, `docs/**` або `openspec/**`, GitHub не запускає CI/CD: README на GitHub
+оновлюється, образи не збираються, стек не перезапускається. Винятки — `docs/ai-knowledge/**`
+і `docs/history-summary.md`: це вхідні дані застосунку, їхні зміни запускають деплой.
+Фільтр перевіряє весь push, тому документація разом із кодом або workflow запускає CI/CD.
+Ручний **Actions → CI/CD → Run workflow** працює незалежно від фільтра.
+
+Для окремого коміту документації в `main` дозволений прямий `git push github main` без
+`release:hetzner`; перевірте, що серед усіх неопублікованих комітів немає змін коду.
+Перед наступним релізом перенесіть ці коміти в `dev` через merge: release-скрипт вимагає
+fast-forward і не перезапише їх. Це правило стосується GitHub; GitLab-пайплайн не змінюється.
 
 `deploy.sh` на **першому** розкаті (стека ще нема): `stack deploy` без очікування → чекає Postgres →
 збирає tools-образ → `db:roles` → чекає `api 1/1` → звичайний розкат. Далі: `stack deploy

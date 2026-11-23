@@ -1,6 +1,6 @@
 # Технічний план: PostgreSQL retrieval для AI-асистента
 
-Оновлено: 2026-10-03. Рішення й дослідження —
+Оновлено: 2026-11-11 (AI-2a.0–2a.4 зроблено й заархівовано 2026-10-03). Рішення й дослідження —
 [retrieval proposal](ai-assistant-retrieval-proposal.md).
 Цей документ визначає послідовність змін у коді та критерії приймання.
 
@@ -12,19 +12,23 @@ workbench і технічні doc_type всередині бізнесових �
 Це явний `all-for-testing`; обмеження draft approvals нижче описують strict default,
 який не застосовується до поточного тестового FMS-профілю.
 
-## 1. Поточний результат першого кроку
+## 1. Результат AI-2a (підсумок за кроками)
 
 **AI-2a.1 foundation реалізовано:** PostgreSQL 17 із pgvector 0.8.6,
 привілейований bootstrap extension, tenant-таблиці джерел/документів/чанків,
 точний cosine search та інтеграційні тести на справжній БД.
 
-Це завершений шар зберігання й пошуку **за готовим вектором**. Чат поки
-використовує `StaticKnowledgeSource`. Offline FMS preview (AI-2a.0) також готовий: manifest, parser/chunker та
-точний підрахунок токенів. **AI-2a.2 зроблено:** embedding adapter
+Це шар зберігання й пошуку **за готовим вектором**. Offline FMS preview (AI-2a.0) також готовий:
+manifest, parser/chunker та точний підрахунок токенів. **AI-2a.2 зроблено:** embedding adapter
 (OpenAI/OpenRouter), повторюваний ingest із checkpoint/reuse і атомарною
 публікацією, CLI `ai:docs:ingest`/`ai:docs:search`; реальний FMS-корпус
-проіндексовано. Наступний крок — AI-2a.3 (`PostgresKnowledgeSource` у чаті).
-Тестові вектори синтетичні: вони доводять коректність SQL та ізоляцію,
+проіндексовано. **AI-2a.3 зроблено:** `PostgresKnowledgeSource` у чаті (вибір джерела —
+інсталяцією через `AI_KNOWLEDGE_BACKEND`, дефолт `static`), відповіді з серверно перевіреними
+цитатами. **AI-2a.4 зроблено:** FTS у тому самому пошуку, режими `vector`/`fts`/`hybrid` (RRF) і
+оцінка якості `ai:docs:eval`; гібрид обрано за eval. Що саме збудовано —
+[ai-assistant-implementation.md](ai-assistant-implementation.md) §18–19. Далі — не AI-2b, а AI-5
+([ai-platform-controls.md](ai-platform-controls.md)).
+Тестові вектори в інтеграційних тестах синтетичні: вони доводять коректність SQL та ізоляцію,
 але не семантичну якість на FMS.
 
 Перший крок бази виконано перед FMS manifest: він не потребує відправлення

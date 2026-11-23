@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 
-const TENANT_ID_KEY = 'tenantId';
+/** Ключ CLS із tenant-ом операції; читає також mixin логера (`libs/shared/src/logging`) */
+export const TENANT_ID_KEY = 'tenantId';
 const RESOLUTION_AUTHORITATIVE_KEY = 'tenantResolutionAuthoritative';
 
 /**

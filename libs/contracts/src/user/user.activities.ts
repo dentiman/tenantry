@@ -23,12 +23,22 @@ export const USER_ACTIVITIES = defineActivityTypes(
         user: EntityRefSchema, // kind: 'user'
       }),
     },
+    // Хто і кого видалив. Лінк `user:<id>` лишається на неіснуючого юзера — журнал переживає
+    // сутність, а label — снапшот (рядка в `users` уже немає). Назву/email беремо ДО видалення
+    'user.deleted': {
+      workspace: true,
+      payload: z.object({
+        user: EntityRefSchema,
+      }),
+    },
     'user.password_changed': {
+      restricted: true,
       payload: z.object({
         user: EntityRefSchema,
       }),
     },
     'user.sessions_revoked': {
+      restricted: true,
       payload: z.object({
         user: EntityRefSchema,
         // Скільки сесій вибито. Число, а не список пристроїв: журнал читають місяцями
@@ -65,6 +75,7 @@ export const USER_ACTIVITIES = defineActivityTypes(
       }),
     },
     'user.email_changed': {
+      restricted: true,
       payload: z.object({
         user: EntityRefSchema,
         from: z.email(),

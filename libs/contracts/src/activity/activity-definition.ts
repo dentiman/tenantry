@@ -44,6 +44,14 @@ export interface ActivityTypeDef {
    * знає, а `activities` не може питати календар: рівень нижче).
    */
   readonly workspace?: boolean;
+  /**
+   * Тип безпековий: у стрічці сутності його бачить лише субʼєкт (власник акаунта — лінк
+   * `user:<id>` на нього самого) і ADMIN тенанта. Колегам — ні: «хто змінив пароль / вибив сесії /
+   * змінив email» стрічка `GET /activities?entityType=user&entityId=<колега>` інакше віддала б
+   * кожному. Дефолт — ні (видно всім, хто бачить стрічку). Не плутати з `workspace`: той про
+   * загальну стрічку, це — про стрічку сутності.
+   */
+  readonly restricted?: boolean;
 }
 
 export type DefinedTypes<T, Extra> = { readonly [K in keyof T]: T[K] & Extra };

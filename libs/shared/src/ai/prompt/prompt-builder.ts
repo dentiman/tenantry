@@ -3,6 +3,7 @@ import {
   renderOrganizationInstructions,
   type AiOrganizationInstructions,
 } from './organization-instructions';
+import { stripUntilStable } from './strip-fence';
 
 /**
  * Контекст користувача в промпті — ЗАКРИТИЙ allowlist, і він закритий ТИПОМ,
@@ -162,7 +163,7 @@ export function renderExcerpts(excerpts: readonly AiKnowledgeExcerpt[]): string 
     'If the excerpts do not answer the question, say that the documentation does not cover it instead of guessing.',
     ...excerpts.map(
       (excerpt) =>
-        `\n<${EXCERPT_FENCE} n="${String(excerpt.n)}" title="${attribute(excerpt.title)}" section="${attribute(excerpt.heading)}" path="${attribute(excerpt.path)}">\n${excerpt.content.replace(EXCERPT_TAG, '')}\n</${EXCERPT_FENCE}>`,
+        `\n<${EXCERPT_FENCE} n="${String(excerpt.n)}" title="${attribute(excerpt.title)}" section="${attribute(excerpt.heading)}" path="${attribute(excerpt.path)}">\n${stripUntilStable(excerpt.content, EXCERPT_TAG)}\n</${EXCERPT_FENCE}>`,
     ),
   ].join('\n');
 }

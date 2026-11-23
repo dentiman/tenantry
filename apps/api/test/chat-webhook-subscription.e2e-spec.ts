@@ -22,7 +22,7 @@ const PHONE_ID = '109000000000777';
 const TOKEN = 'EAAGsubscribeTOKENvalueABCDEFGHIJKLMNOP1234567890xyz';
 const VERIFY_TOKEN = 'verify-token-sub-e2e';
 const BASE = 'https://stand.example.test';
-const FMS = 'https://fms-dev.example.test:8443/api/public/webhooks/whatsapp?k=SECRETKEY';
+const OTHER_HOST = 'https://legacy-dev.example.test:8443/api/public/webhooks/whatsapp?k=SECRETKEY';
 
 interface Person {
   id: string;
@@ -137,17 +137,17 @@ describe('Webhook subscription and captured events (e2e, CHAT-3b1)', () => {
     });
 
     it('чужий хост на рівні WABA → elsewhere з хостом, без повної адреси й секретного ключа', async () => {
-      config = { whatsapp_business_account: FMS, application: FMS };
+      config = { whatsapp_business_account: OTHER_HOST, application: OTHER_HOST };
       const res = await status().expect(200);
       const body = res.body as StatusBody;
-      expect(body).toMatchObject({ state: 'elsewhere', level: 'whatsapp_business_account', host: 'fms-dev.example.test:8443' });
-      expect(body.configured).toEqual({ phoneNumber: null, whatsappBusinessAccount: 'fms-dev.example.test:8443', application: 'fms-dev.example.test:8443' });
+      expect(body).toMatchObject({ state: 'elsewhere', level: 'whatsapp_business_account', host: 'legacy-dev.example.test:8443' });
+      expect(body.configured).toEqual({ phoneNumber: null, whatsappBusinessAccount: 'legacy-dev.example.test:8443', application: 'legacy-dev.example.test:8443' });
       expect(JSON.stringify(body)).not.toContain('SECRETKEY');
       expect(JSON.stringify(body)).not.toContain('webhooks/whatsapp');
     });
 
     it('рівень номера має пріоритет; збіг з нашою адресою → ours', async () => {
-      config = { whatsapp_business_account: FMS, phone_number: address };
+      config = { whatsapp_business_account: OTHER_HOST, phone_number: address };
       const res = await status().expect(200);
       expect(res.body).toMatchObject({ state: 'ours', level: 'phone_number', host: 'stand.example.test' });
     });
@@ -183,16 +183,16 @@ describe('Webhook subscription and captured events (e2e, CHAT-3b1)', () => {
     });
 
     it('чужі події: без назви хоста 409 і жодного запису в Meta; з чужою назвою 409; з правильною — підписано', async () => {
-      config = { whatsapp_business_account: FMS };
+      config = { whatsapp_business_account: OTHER_HOST };
       await subscribe().expect(409);
       await subscribe({ replaceHost: 'other.example.test' }).expect(409);
       expect(writes()).toHaveLength(0);
 
-      const res = await subscribe({ replaceHost: 'fms-dev.example.test:8443' }).expect(200);
+      const res = await subscribe({ replaceHost: 'legacy-dev.example.test:8443' }).expect(200);
       expect(res.body).toMatchObject({ state: 'ours' });
       expect(writes()).toHaveLength(1);
-      // рівень WABA (fms) не чіпали — лише номер
-      expect(config.whatsapp_business_account).toBe(FMS);
+      // рівень WABA (чужий хост) не чіпали — лише номер
+      expect(config.whatsapp_business_account).toBe(OTHER_HOST);
     });
 
     it('без публічної бази — 409, Meta не викликається', async () => {
@@ -217,13 +217,13 @@ describe('Webhook subscription and captured events (e2e, CHAT-3b1)', () => {
 
   describe('відписка', () => {
     it('знімає лише наш override; події повертаються на рівень вище; час очищено', async () => {
-      config = { whatsapp_business_account: FMS };
-      await subscribe({ replaceHost: 'fms-dev.example.test:8443' }).expect(200);
+      config = { whatsapp_business_account: OTHER_HOST };
+      await subscribe({ replaceHost: 'legacy-dev.example.test:8443' }).expect(200);
 
       const res = await unsubscribe().expect(200);
       expect(res.body).toMatchObject({ state: 'elsewhere', level: 'whatsapp_business_account', subscribedAt: null });
       expect(writes().at(-1)?.body).toEqual({ webhook_configuration: { override_callback_uri: '' } });
-      expect(config.whatsapp_business_account).toBe(FMS);
+      expect(config.whatsapp_business_account).toBe(OTHER_HOST);
       expect((await prisma.channel.findUniqueOrThrow({ where: { id: channelId } })).webhookSubscribedAt).toBeNull();
     });
   });

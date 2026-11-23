@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TFunction } from 'i18next';
 import type { ParsedApiError } from '@saas-skeleton/ui/api/api-error';
 import {
   channelState,
@@ -224,8 +225,10 @@ describe('summarizeWebhookBody', () => {
 });
 
 describe('тексти повідомлень із payload', () => {
-  const t = (key: string, options: Record<string, string>): string =>
-    `${key}:${JSON.stringify(options)}`;
+  // Підставний `t`: повертає ключ і параметри, щоб тест бачив, ЩО саме запитали. Справжній
+  // `TFunction` типізований ключами ресурсів, тож підставну функцію доводиться зводити до нього
+  const t = ((key: string, options: Record<string, string>): string =>
+    `${key}:${JSON.stringify(options)}`) as unknown as TFunction<'chat'>;
 
   it('шаблон — з payload.template; без нього null', () => {
     expect(

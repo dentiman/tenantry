@@ -5,9 +5,8 @@
 **A production-shaped foundation for multitenant CRM/ERP SaaS products.**
 
 Two planes (tenant app + operator control plane), Postgres row-level security as the tenant
-boundary, end-to-end typed contracts, a transactional-outbox message bus, realtime, an AI
-assistant with grounded citations, and a WhatsApp customer channel — built as a forkable base
-rather than a demo.
+boundary, end-to-end typed contracts, a transactional-outbox message bus and realtime — built
+as a forkable base rather than a demo.
 
 [**Live demo**](https://web.2-29-1-13.sslip.io) ·
 [Control plane](https://platform.2-29-1-13.sslip.io) ·
@@ -24,7 +23,7 @@ rather than a demo.
 
 </div>
 
-![Customers grid](docs/assets/screenshots/customers.png)
+![Dashboard with product tour](docs/assets/screenshots/dashboard.png)
 
 ## Try it
 
@@ -57,45 +56,46 @@ The demo data can be reset at any time. The AI assistant is live but limited to 
 
 <table>
   <tr>
-    <td><img src="docs/assets/screenshots/dashboard.png" alt="Dashboard"></td>
+    <td><img src="docs/assets/screenshots/customers.png" alt="Customers grid"></td>
     <td><img src="docs/assets/screenshots/chat.png" alt="Customer chat"></td>
   </tr>
   <tr>
-    <td align="center">Dashboard with product tour</td>
+    <td align="center">Customers grid</td>
     <td align="center">Customer chat with linked record</td>
   </tr>
 </table>
 
-## Architecture
+## Built for AI-assisted development
 
-```mermaid
-flowchart LR
-  subgraph Tenant plane
-    web[apps/web<br/>React SPA] -->|REST + Socket.IO| api[apps/api<br/>NestJS]
-  end
-  subgraph Control plane
-    pweb[apps/platform-web<br/>React SPA] -->|REST| papi[apps/platform-api<br/>NestJS]
-  end
-  api -->|withTenantTx + RLS| pg[(PostgreSQL 17<br/>RLS · pgvector · pg-boss)]
-  papi -->|BYPASSRLS role| pg
-  worker[apps/worker<br/>subscribers + cron] --> pg
-  api <--> valkey[(Valkey<br/>Socket.IO adapter · presence)]
-  web -.->|presigned PUT/GET| s3[(S3-compatible storage)]
-  worker --> llm[LLM / embeddings]
-  meta[WhatsApp Cloud API] -->|signed webhook| api
-  worker -->|outbound delivery| meta
-```
+Shared context, explicit extension points and repeatable checks help developers and coding agents
+turn business requirements into changes within an established architecture.
 
-| Path | Role |
-| --- | --- |
-| `apps/api` | Tenant API: auth, account, users, customers, calendar, chat, files, activities, notifications, realtime gateway, AI |
-| `apps/platform-api` | Control plane: operator auth, tenants, job monitoring, AI settings and cost ledger |
-| `apps/worker` | No HTTP: message subscribers, cron, email, AI reply generation |
-| `apps/web`, `apps/platform-web` | SPAs with a two-level navigation shell, code grouped by feature module |
-| `libs/contracts` | Zod schemas, the single source of API types |
-| `libs/database` | Prisma schema (one file per module), migrations, seeds, tenant context and transactions |
-| `libs/shared` | Messaging runtime, recorders, storage, channels, AI pipeline |
-| `libs/ui` | Shared shadcn/ui (Base UI) primitives, theme, data grid, forms |
+- **Persistent project context.** [Shared instructions](AGENTS.md) for Claude Code and Codex:
+  codebase map, commands, conventions and fixed decisions.
+- **Spec-driven changes.** [OpenSpec](openspec/config.yaml) keeps rationale, behavioural specs
+  and implementation tasks available across contributors and sessions.
+- **Change playbooks.** [Backend checklist](.agents/skills/backend-change/SKILL.md) and
+  [reference implementations](docs/backend-conventions.md) guide ownership, transactions and access.
+- **Generated API clients.** [Zod contracts](libs/contracts/src) → DTOs → OpenAPI →
+  [typed clients and query hooks](apps/web/orval.config.ts).
+- **Checked module boundaries.** [Declared ownership and dependencies](modules.config.ts),
+  enforced by the [module checker](scripts/modules-check.ts) during lint.
+- **Explicit extension points.** [Slots, hooks and registries](docs/modules.md) connect features
+  to screens, navigation and lifecycle events.
+- **Shared UI foundation.** [Components and design tokens](docs/frontend/ui-stack.md) keep
+  both frontends consistent as new screens are added.
+- **Reusable screen patterns.** [Forms and DataGrid](libs/ui/src/components), plus
+  [record detail panels](docs/frontend/layout-structure.md), provide established interaction patterns.
+- **Common application services.** [Backend conventions](docs/backend-conventions.md) show how
+  to reuse activity recording, notifications, numbering and transactional messaging.
+- **Development without provider keys.** [Fake LLM](libs/shared/src/ai/llm/fake-llm.provider.ts)
+  and [channel adapters](libs/shared/src/channels/fake-channel.adapter.ts) support local development and tests.
+- **Isolated worktrees.** [`pnpm ws:init`](docs/workspace-slots.md) gives each workspace its own
+  database, containers and ports for concurrent tasks.
+- **Tests for invariants.** [API e2e suites](apps/api/test) cover tenant isolation, access rules,
+  concurrent requests and redelivery scenarios.
+- **One local verification command.** [`pnpm verify`](scripts/ci-verify.sh) runs lint, typecheck,
+  unit and e2e tests in throwaway containers.
 
 ## Engineering practices
 
@@ -149,6 +149,7 @@ Most design documents are written in Ukrainian.
 | Frontend stack and UI conventions | [frontend/ui-stack.md](docs/frontend/ui-stack.md) |
 | Deployment | [deploy-hetzner.md](docs/deploy-hetzner.md), [deploy-swarm.md](docs/deploy-swarm.md) |
 | What's next | [roadmap.md](docs/roadmap.md) |
+| Design journal: proposal, reviews, audits, research | [notes/](docs/notes/README.md) |
 
 ## Status
 

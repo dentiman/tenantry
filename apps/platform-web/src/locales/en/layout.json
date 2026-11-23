@@ -25,8 +25,9 @@
     "system": "System",
     "paletteLabel": "Switch color theme",
     "palettes": {
-      "gray": "Dark grey",
-      "slate": "Slate"
+      "default": "Default",
+      "slate": "Slate",
+      "graphite": "Graphite"
     }
   }
 }

@@ -8,17 +8,15 @@ const DOCS = join(__dirname, '../../../../../docs/ai-sources');
 const read = (name: string): unknown => JSON.parse(readFileSync(join(DOCS, name), 'utf8'));
 
 describe('QuestionSetSchema', () => {
-  it('закомічений приклад конфігурацій валідний як є', () => {
-    expect(EvalConfigFileSchema.safeParse(read('answer-eval-configs.json')).success).toBe(true);
+  // fms-eval.json у публічному репозиторії немає (docs/ai-platform-controls.md §10): без файлу
+  // перевірка пропускається, а не валить `pnpm test` на чистому checkout-і
+  it.skipIf(!existsSync(join(DOCS, 'fms-eval.json')))('наявний fms-eval.json валідний як є', () => {
+    expect(QuestionSetSchema.safeParse(read('fms-eval.json')).success).toBe(true);
   });
 
-  // Набір питань FMS — чужі дані, у публічному репо його немає; перевіряється, лише де лежить локально
-  it.skipIf(!existsSync(join(DOCS, 'fms-eval.json')))(
-    'локальний fms-eval.json валідний як є',
-    () => {
-      expect(QuestionSetSchema.safeParse(read('fms-eval.json')).success).toBe(true);
-    },
-  );
+  it('закомічений приклад конфігурацій валідний', () => {
+    expect(EvalConfigFileSchema.safeParse(read('answer-eval-configs.json')).success).toBe(true);
+  });
 
   const base = {
     id: 'd1',

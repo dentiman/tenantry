@@ -3,6 +3,7 @@ import { Button } from '@saas-skeleton/ui/components/ui/button';
 import { Spinner } from '@saas-skeleton/ui/components/ui/spinner';
 import { Switch } from '@saas-skeleton/ui/components/ui/switch';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import { useQueryClient } from '@tanstack/react-query';
 import { notificationDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import {
@@ -64,7 +65,7 @@ export function NotificationPreferences({ onBack }: { onBack?: () => void }) {
               {/* Окремий ключ-підпис, а не текст самого сповіщення: тому в ньому
                   немає ні розмітки, ні інтерполяцій, які тут нічим заповнити */}
               <span className="min-w-0 text-sm text-foreground">
-                {t(preferenceLabelKey(pref.type))}
+                {t(...runtimeKey(preferenceLabelKey(pref.type)))}
               </span>
               {pref.muteable ? (
                 <Switch

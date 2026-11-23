@@ -6,6 +6,7 @@ import { CUSTOMER_NOTIFICATIONS } from './customer/customer.notifications';
 import { CALENDAR_NOTIFICATIONS } from './calendar/calendar.notifications';
 import { AUTH_NOTIFICATIONS } from './auth/auth.notifications';
 import { CHAT_NOTIFICATIONS } from './chat/chat.notifications';
+import { USER_OPERATION_NOTIFICATIONS } from './user-operation/user-operation.notifications';
 
 /**
  * Composition root типів сповіщень (docs/modules.md §7.1): єдине місце, що знає,
@@ -18,6 +19,7 @@ export const NOTIFICATION_DEFINITIONS = mergeTypeGroups(
   CALENDAR_NOTIFICATIONS,
   AUTH_NOTIFICATIONS,
   CHAT_NOTIFICATIONS,
+  USER_OPERATION_NOTIFICATIONS,
 );
 
 export type NotificationType = Extract<keyof typeof NOTIFICATION_DEFINITIONS, string>;

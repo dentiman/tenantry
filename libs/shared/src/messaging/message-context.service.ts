@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
+import { LOG_CONTEXT } from '../logging/log-fields';
 import type { MessageActor, MessageEnvelope } from './message-envelope';
 
-const CORRELATION_ID_KEY = 'messageCorrelationId';
+// Той самий ключ, з якого mixin логера бере `trace_id`: correlationId ланцюга і є trace-id
+const CORRELATION_ID_KEY = LOG_CONTEXT.traceId;
 const CAUSATION_ID_KEY = 'messageCausationId';
 const ACTOR_KEY = 'messageActor';
 
@@ -50,5 +52,9 @@ export class MessageContextService {
     this.cls.set(CORRELATION_ID_KEY, envelope.correlationId);
     this.cls.set(CAUSATION_ID_KEY, envelope.messageId);
     this.cls.set(ACTOR_KEY, envelope.actor);
+    // Логи підписника несуть ініціатора операції (`user.id`), а не лише tenant
+    if (envelope.actor.type === 'user') {
+      this.cls.set(LOG_CONTEXT.userId, envelope.actor.id);
+    }
   }
 }

@@ -179,8 +179,10 @@ export class AuthSessionService {
     if (session.prevTokenHash && (await verifyHash(session.prevTokenHash, parsed.secret))) {
       if (isWithinReuseWindow(session)) {
         // Гонка, а не крадіжка: другий запит із тим самим токеном отримує СВІЙ
-        // секрет, але `generation` не рухається і `prev` лишається тим самим —
-        // інакше третій паралельний запит уже виглядав би як reuse
+        // секрет, `generation` не рухається. `prev` при цьому ПОСУВАЄТЬСЯ на щойно
+        // витіснений `tokenHash` (див. `rotate`): секрет, виданий першому запиту, мусить
+        // лишитись дійсним, бо порядок прибуття Set-Cookie двох відповідей не гарантований —
+        // кука, що переживе, може бути будь-якою з двох
         return this.rotate(session, { bumpGeneration: false, client });
       }
       await this.handleReuse(session);
@@ -218,13 +220,13 @@ export class AuthSessionService {
         // не має права її подовжувати, інакше «абсолютний» строк став би вічним
         idleExpiresAt: new Date(now.getTime() + this.idleDays * DAY_MS),
         ip: options.client.ip,
-        ...(options.bumpGeneration
-          ? {
-              prevTokenHash: session.tokenHash,
-              prevRotatedAt: now,
-              generation: { increment: 1 },
-            }
-          : {}),
+        // `prev` посувається ЗАВЖДИ: витіснений секрет лишається дійсним у вікні reuse.
+        // Раніше в гілці гонки `prev` стояв на місці, і секрет, виданий переможцю гонки,
+        // переставав збігатися і з `tokenHash`, і з `prev` — наступний refresh вкладки
+        // вбивав сесію як `secret_mismatch`. Вікно рахується від МОМЕНТУ витіснення
+        prevTokenHash: session.tokenHash,
+        prevRotatedAt: now,
+        ...(options.bumpGeneration ? { generation: { increment: 1 } } : {}),
       },
     });
 

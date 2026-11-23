@@ -1,7 +1,10 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute, rootRoute } from '../../app-shell/app.routes';
-import { AboutPage } from './pages/about';
-import { GuidePage } from './pages/guide';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const AboutPage = lazyPage(() => import('./pages/about'), 'AboutPage');
+const GuidePage = lazyPage(() => import('./pages/guide'), 'GuidePage');
 
 /**
  * Area «Guide» — путівник по продукту. Одна сторінка без дочірніх роутів:
@@ -13,7 +16,8 @@ export const guideRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/guide',
   component: GuidePage,
-  staticData: { backdrop: 'brand' },
+  // Експеримент: свій спокійний фон зі світлом ліворуч (`brand-backdrop.css` §4)
+  staticData: { backdrop: 'brand', backdropVariant: 'guide' },
 });
 
 /**

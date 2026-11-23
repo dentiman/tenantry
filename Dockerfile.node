@@ -16,8 +16,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 # ---------------------------------------------------------------------------
-# builder: повний install → prisma generate (клієнт бандлиться webpack-ом у dist)
-#          → nest build обраної апки (webpack-бандл apps/${APP}/dist/main.js)
+# builder: повний install → prisma generate (клієнт бандлиться rspack-ом у dist)
+#          → nest build обраної апки (rspack-бандл apps/${APP}/dist/main.js + чанки)
 # ---------------------------------------------------------------------------
 FROM base AS builder
 ARG APP
@@ -53,7 +53,7 @@ RUN groupadd -r app && useradd -r -g app -u 1001 appuser \
 COPY --from=prod-deps --chown=appuser:app /usr/src/app/node_modules ./node_modules
 COPY --from=builder   --chown=appuser:app /usr/src/app/apps/${APP}/dist ./apps/${APP}/dist
 # Увесь libs/database (реально використовує лише entrypoint-міграція api), не поіменний
-# список файлів: entrypoint виконує prisma.config.ts як сирий TS (не бандлиться webpack-ом
+# список файлів: entrypoint виконує prisma.config.ts як сирий TS (не бандлиться rspack-ом
 # на відміну від apps/*/dist), тож будь-який новий relative-import звідти (як колись
 # load-root-env.ts) більше не зламає runtime мовчки — файл просто приїде разом з рештою
 # директорії. Прибираємо лише те, що свідомо дублює вже скопійоване: власний node_modules

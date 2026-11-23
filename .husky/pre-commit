@@ -1,0 +1,3 @@
+# Дешеві перевірки лише для файлів у коміті (lint-staged → package.json). Повний lint/typecheck — у pre-push.
+# Обхід у крайньому випадку: git commit --no-verify
+pnpm exec lint-staged

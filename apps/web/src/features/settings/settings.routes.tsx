@@ -1,6 +1,9 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { createRoute } from '@tanstack/react-router';
 import { appRoute } from '../../app-shell/app.routes';
-import { SettingsGeneralPage } from './pages/general';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const SettingsGeneralPage = lazyPage(() => import('./pages/general'), 'SettingsGeneralPage');
 
 /**
  * Area «Settings» — налаштування ОРГАНІЗАЦІЇ. Своя area, а не розділ усередині

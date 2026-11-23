@@ -44,7 +44,7 @@ interface ExampleTileProps {
 
 export function ExampleTile({ children, code, description }: ExampleTileProps) {
   return (
-    <div className="flex min-h-40 flex-col rounded-xl bg-muted/50 p-4">
+    <div className="flex min-h-40 flex-col rounded-xl border border-dashed border-border p-4">
       <div className="flex min-h-16 flex-1 items-center justify-center">{children}</div>
       <Separator className="my-4 bg-border/70" />
       <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -58,7 +58,7 @@ export function ExampleTile({ children, code, description }: ExampleTileProps) {
 /** Значення форми як їх бачить submit — головний спосіб «прощупати» поле */
 export function ValueReadout({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="rounded-xl bg-muted/50 p-4">
+    <div className="rounded-xl border border-dashed border-border p-4">
       <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {label}
       </p>

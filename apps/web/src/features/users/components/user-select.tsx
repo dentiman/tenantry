@@ -154,7 +154,7 @@ export function UserSelect({
           // висоти: ідентичність — два рядки, а метрика 36px описує ОДНОрядкові
           // контроли. Поки є що чистити, шеврон ховається, а `pr-9` резервує його
           // слот під X — той самий прийом, що в `ComboboxInput` реєстру
-          className="flex min-h-9 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-field py-1 pr-2.5 pl-3 text-sm transition-colors outline-none select-none group-has-data-[slot=combobox-clear]:pr-9 group-has-data-[slot=combobox-clear]:[&>svg]:hidden hover:bg-field-hover focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/60"
+          className="flex min-h-9 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-field py-1 pr-2.5 pl-3 text-sm transition-colors outline-none select-none group-has-data-[slot=combobox-clear]:pr-9 group-has-data-[slot=combobox-clear]:[&>svg]:hidden hover:bg-field-hover focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive"
         >
           <span className="flex min-w-0 flex-1 items-center">
             {selected ? (

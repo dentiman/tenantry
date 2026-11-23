@@ -41,7 +41,7 @@ export function AiCitations({
           <li key={citation.n}>
             <button
               type="button"
-              className="flex w-full items-start gap-1.5 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex w-full items-start gap-1.5 rounded-md px-1.5 py-1 text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               onClick={() => {
                 setOpen(citation);
               }}

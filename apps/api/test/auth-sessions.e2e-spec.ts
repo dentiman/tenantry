@@ -160,6 +160,67 @@ describe('Auth sessions (e2e)', () => {
       expect(session.generation).toBe(1);
     });
 
+    // Дві вкладки шлють refresh з ОДНІЄЮ кукою; кожна отримує свій секрет, а яка Set-Cookie
+    // дійде до браузера останньою — не гарантовано. Обидва секрети мусять лишатись дійсними
+    // (раніше переможець гонки отримував секрет, що не збігався ні з `tokenHash`, ні з `prev`,
+    // і його наступний refresh вбивав сесію як `secret_mismatch`)
+    it('у вікні гонки ОБИДВА видані секрети лишаються дійсними', async () => {
+      const first = refreshTokenFromCookie(await refresh(tokens.refreshToken).expect(200));
+      const second = refreshTokenFromCookie(await refresh(tokens.refreshToken).expect(200));
+      expect(first).not.toBe(second);
+
+      // Яким би не виявився «виживший» в jar-і, наступний refresh ним проходить
+      await refresh(first).expect(200);
+
+      const session = await prisma.authSession.findUniqueOrThrow({
+        where: { id: sid(tokens.refreshToken) },
+      });
+      expect(session.revokedAt).toBeNull();
+      // Лічильник не бреше: гонка (секрет із `prev` у вікні) покоління не рухає
+      expect(session.generation).toBe(1);
+    });
+
+    it('паралельні refresh однієї куки: кожен виданий секрет далі працює', async () => {
+      const [a, b] = await Promise.all([refresh(tokens.refreshToken), refresh(tokens.refreshToken)]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+
+      // Окремо для кожного секрета на копії сесії: порядок виконання двох запитів невідомий,
+      // тож перевіряємо обидві можливі куки, а не ту, що «пощастило» залишитись
+      const issued = [refreshTokenFromCookie(a), refreshTokenFromCookie(b)];
+      const sessionId = sid(tokens.refreshToken);
+      const snapshot = await prisma.authSession.findUniqueOrThrow({ where: { id: sessionId } });
+      for (const secret of issued) {
+        await prisma.authSession.update({
+          where: { id: sessionId },
+          data: {
+            tokenHash: snapshot.tokenHash,
+            prevTokenHash: snapshot.prevTokenHash,
+            prevRotatedAt: snapshot.prevRotatedAt,
+            generation: snapshot.generation,
+            revokedAt: null,
+            revokedReason: null,
+          },
+        });
+        await refresh(secret).expect(200);
+      }
+    });
+
+    it('після гонки секрет поза вікном — як і раніше reuse: сесія вмирає', async () => {
+      const first = refreshTokenFromCookie(await refresh(tokens.refreshToken).expect(200));
+      await refresh(tokens.refreshToken).expect(200);
+
+      await prisma.authSession.update({
+        where: { id: sid(tokens.refreshToken) },
+        data: { prevRotatedAt: new Date(Date.now() - 2 * 60 * 1000) },
+      });
+      await refresh(first).expect(401);
+
+      const session = await prisma.authSession.findUniqueOrThrow({
+        where: { id: sid(tokens.refreshToken) },
+      });
+      expect(session.revokedReason).toBe('rotation_reuse');
+    });
+
     it('поза вікном — відкликає сесію, шле сповіщення і пише активність', async () => {
       const other = await loginTestUser(app, EMAIL, PASSWORD);
       await refresh(tokens.refreshToken).expect(200);

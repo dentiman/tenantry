@@ -120,8 +120,8 @@ export class UsersController {
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.usersService.remove(id);
+  async remove(@Param('id') id: string, @CurrentUser() actor: JwtPayload): Promise<void> {
+    await this.usersService.remove(id, actor);
   }
 
   private toResponse(user: UserWithAvatar): Promise<UserResponse> {

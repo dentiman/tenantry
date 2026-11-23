@@ -51,6 +51,21 @@ export function LoginPage() {
   return (
     <AuthLayout
       title={t('login.title')}
+      aside={
+        DEMO_LOGINS_ENABLED && (
+          <DemoAccounts
+            disabled={isSubmitting}
+            onSelect={(account) => {
+              form.reset({
+                email: account.email,
+                password: account.password,
+                tenant: account.tenant,
+              });
+              void onSubmit();
+            }}
+          />
+        )
+      }
       footerLink={
         // Публічний путівник (`/about`, модуль guide): вхід — єдина сторінка без сесії, куди
         // приходять із запрошення на демо, тож «що це за система» — тут
@@ -98,19 +113,6 @@ export function LoginPage() {
             {t('login.forgotPassword')}
           </Link>
         </form>
-        {DEMO_LOGINS_ENABLED && (
-          <DemoAccounts
-            disabled={isSubmitting}
-            onSelect={(account) => {
-              form.reset({
-                email: account.email,
-                password: account.password,
-                tenant: account.tenant,
-              });
-              void onSubmit();
-            }}
-          />
-        )}
       </div>
     </AuthLayout>
   );

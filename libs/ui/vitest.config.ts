@@ -7,6 +7,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // `.tsx` — рендер-тести через `renderToStaticMarkup`, DOM для них не потрібен
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

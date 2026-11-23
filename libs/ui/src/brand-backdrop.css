@@ -41,7 +41,6 @@
   --backdrop-glow-2: color-mix(in oklch, var(--primary) 18%, white);
   --backdrop-glow-3: color-mix(in oklch, oklch(0.75 0.14 200) 30%, white);
   --backdrop-glow-opacity: 0.2;
-  --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 70%);
 }
 
 .dark {
@@ -56,7 +55,17 @@
   --backdrop-glow-2: color-mix(in oklch, var(--primary) 45%, black);
   --backdrop-glow-3: color-mix(in oklch, oklch(0.6 0.12 205) 55%, black);
   --backdrop-glow-opacity: 0.5;
-  --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 6%);
+  /* У ТЕМРЯВІ межа скла мусить бути вдвічі сильнішою за світлову (10%), і це
+     не смак. Межа — напівпрозора накладка, і лягає вона на ФОН під карткою,
+     а не на саму картку: під брендовим фоном це 0.227, тож 10% давали 0.285
+     при самій картці 0.272 — різниця 0.013, тобто лінії фактично не було, а
+     згладжений перехід читався як подвоєна розмита смуга.
+     Підібрано емпірично по кроках 20% → 18%: нижче опускати нема куди. Межа
+     лягає на ФОН (0.174), а картка стоїть на 0.290, тож кожен пункт відсотка
+     з'їдає ~0.0075 їхньої різниці — на 16% вони зрівнюються і лінія зникає
+     зовсім. 18% лишають +0.02 над карткою: рівно той запас, що має звичайна
+     межа на робочих екранах. */
+  --border-glass: color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
 /* ── 2. Шел поверх фону ───────────────────────────────────────────────────── */
@@ -64,6 +73,9 @@
   /* Полотно й хедер прозорі — під ними фон */
   --background: transparent;
   --sidebar: var(--sidebar-glass);
+  /* Картки сюди вже НЕ дивляться: їхня заливка будується з `--card-base`
+     і власної альфи (`card-surface.css`), однаково в обох сценах. Токен
+     лишений для решти поверхонь, що фарбуються `bg-card`. */
   --card: var(--card-glass);
   --border: var(--border-glass);
   --sidebar-border: var(--border-glass);
@@ -109,7 +121,6 @@
    при прокрутці, і фільтр перераховується щокадру — 6px на порядок дешевший
    за 24px сайдбара */
 [data-backdrop='brand'] [data-slot='card'] {
-  box-shadow: var(--glass-highlight), var(--surface-shadow);
   backdrop-filter: blur(6px);
 }
 
@@ -121,6 +132,15 @@
   pointer-events: none;
   background-color: var(--backdrop-base);
   animation: brand-backdrop-in 320ms ease-out;
+}
+
+/* Варіант для демо-сцени (`/playground/components/cards`): той самий фон, але
+   обмежений своїм контейнером, а не вікном. Потрібен рівно там, де брендову
+   поверхню треба показати ПОРУЧ зі звичайною на одному екрані — на реальних
+   сторінках фон завжди на все вікно. */
+.brand-backdrop--inset {
+  position: absolute;
+  animation: none;
 }
 
 /* Точки, а не сітка. Лінійна сітка зливалась із межами шела (сайдбар, хедер,
@@ -184,118 +204,156 @@
 }
 
 /* ── 3. Варіант `auth`: сторінки входу (`AuthShell`) ──────────────────────────
-   Простіший за `/guide`: БЕЗ точок (шар `__dots` не рендериться), а три плями
-   не розкидані по кутах шела, а зібрані в одну ауру за карткою по центру вікна.
-   Усе нижче — ЛИШЕ під `.brand-backdrop--auth` або `[data-slot='auth-card']`;
-   правила `/guide` вище не змінюються.
+   Простіший за `/guide`: БЕЗ точок (шар `__dots` не рендериться) і БЕЗ трьох
+   плям — їх приховано, фон збирається з кольору сайдбара та м'яких аур по кутах.
+   Усе нижче — ЛИШЕ під `.brand-backdrop--auth` або `[data-auth-card]`; правила
+   `/guide` вище не змінюються.
 
-   Кольори — сам `--primary` і два суміжні відтінки, виведені з нього ж відносним
-   синтаксисом (`oklch(from …)`): +50° по колу (фіолетовий бік синього бренду) і
-   −55° (бірюзовий бік). Бренд тенанта зміниться — аура повернеться разом із ним.
-   Змішування з білим/чорним у `oklch` тримає відтінок чистим: у `srgb` суміш
-   синього з білим на майже-білому фоні сіріла б. */
+   База — колір бічного меню (`--sidebar`). Токен фіксуємо на `:root` ДО
+   `[data-backdrop]`, де `--sidebar` стає склом (§1). */
 :root {
-  --auth-glow-1: color-mix(in oklch, var(--primary) 55%, white);
-  --auth-glow-2: color-mix(in oklch, oklch(from var(--primary) l c calc(h + 50)) 50%, white);
-  --auth-glow-3: color-mix(in oklch, oklch(from var(--primary) l c calc(h - 55)) 42%, white);
-  --auth-glow-opacity: 0.75;
-  /* Рамка картки: світліший кут зверху-зліва → майже прозорий знизу-справа */
-  --auth-edge-from: color-mix(in oklab, var(--primary) 30%, white);
-  --auth-edge-via: color-mix(in oklab, var(--foreground) 9%, transparent);
-  --auth-edge-to: color-mix(in oklab, var(--foreground) 3%, transparent);
-  /* Зовнішнє світіння картки — ледь тоноване брендом, а не нейтральна тінь */
-  --auth-card-glow: color-mix(in oklab, var(--primary) 20%, transparent);
-  /* Заливка картки входу. Як і `--card-glass`, оголошена на `:root` (див. §1 —
-     інакше цикл). У світлі трохи щільніша за звичайне скло (65% проти 60%) */
-  --auth-card-fill: color-mix(in oklab, var(--card) 65%, transparent);
-  /* Приглушений текст у картці — на крок темніший. Аура під склом тонує
-     заливку в блакитний (≈ #eff2ff), і стоковий `--muted-foreground` давав там
-     4.3:1 — менше за AA 4.5. Щільніша заливка цього не лікує, поки картка
-     лишається склом (потрібно було б ~80%). З домішкою 15% `--foreground` —
-     ≈5.3:1. У темряві запас і так 6.3:1, тож там стоковий */
-  --auth-muted-foreground: color-mix(in oklab, var(--muted-foreground) 85%, var(--foreground));
+  --auth-base: var(--sidebar);
+  /* Ауры по кутах: у світлій темі ледь помітні відтінки бренду, без затемнення */
+  --auth-aura-1: color-mix(in oklab, var(--primary) 7%, transparent);
+  --auth-aura-2: oklch(0.75 0.14 200 / 0.06);
+  --auth-bottom-shade: transparent;
+  --auth-dim: transparent;
 }
 
 .dark {
-  /* Як і на `/guide` — глибокі «нічні» відтінки, а не яскравий бренд */
-  --auth-glow-1: color-mix(in oklch, var(--primary) 80%, black);
-  --auth-glow-2: color-mix(in oklch, oklch(from var(--primary) l c calc(h + 50)) 70%, black);
-  --auth-glow-3: color-mix(in oklch, oklch(from var(--primary) l c calc(h - 55)) 62%, black);
-  --auth-glow-opacity: 0.85;
-  --auth-edge-from: rgb(255 255 255 / 22%);
-  --auth-edge-via: rgb(255 255 255 / 7%);
-  --auth-edge-to: rgb(255 255 255 / 2%);
-  --auth-card-glow: color-mix(in oklab, var(--primary) 28%, transparent);
-  --auth-card-fill: var(--card-glass);
-  --auth-muted-foreground: var(--muted-foreground);
+  --auth-aura-1: color-mix(in oklab, var(--primary) 30%, transparent);
+  --auth-aura-2: oklch(0.6 0.12 205 / 0.28);
+  --auth-bottom-shade: rgb(0 0 0 / 0.45);
+  --auth-dim: rgb(0 0 0 / 0.5);
 }
 
-/* Геометрія: усі три плями відцентровані на вікні й зсунуті від центру на
-   кілька сотень px. `min()` стискає і розміри, і зсуви на вузькому екрані,
-   тож на телефоні аура лишається за карткою, а не з'їжджає за край */
-.brand-backdrop--auth .brand-backdrop__glow {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  opacity: var(--auth-glow-opacity);
-  filter: blur(80px);
+.brand-backdrop--auth,
+.brand-backdrop--guide {
+  background-color: var(--auth-base);
 }
 
-.brand-backdrop--auth .brand-backdrop__glow--1 {
-  width: min(820px, 120vw);
-  height: min(600px, 85vh);
-  transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, var(--auth-glow-1), transparent);
+.brand-backdrop--auth {
+  /* Ауры бренду по кутах — відтінки по всьому фону, центр лишається тихим */
+  background-image:
+    linear-gradient(to top, var(--auth-bottom-shade), transparent 28%),
+    linear-gradient(var(--auth-dim), var(--auth-dim)),
+    radial-gradient(60vw 55vh at 5% 0%, var(--auth-aura-1), transparent),
+    radial-gradient(50vw 50vh at 100% 15%, var(--auth-aura-2), transparent),
+    radial-gradient(60vw 55vh at 75% 105%, var(--auth-aura-1), transparent),
+    radial-gradient(40vw 40vh at 0% 100%, var(--auth-aura-2), transparent);
 }
 
-.brand-backdrop--auth .brand-backdrop__glow--2 {
-  width: min(520px, 85vw);
-  height: min(420px, 60vh);
-  transform: translate(calc(-50% - min(260px, 24vw)), calc(-50% - min(170px, 18vh)));
-  background: radial-gradient(closest-side, var(--auth-glow-2), transparent);
+/* Світла тема: тло входу майже біле (а не сіре сайдбара) */
+:root:not(.dark) .brand-backdrop--auth,
+:root:not(.dark) .brand-backdrop--guide {
+  background-color: color-mix(in oklab, var(--auth-base) 20%, white);
 }
 
-.brand-backdrop--auth .brand-backdrop__glow--3 {
-  width: min(500px, 85vw);
-  height: min(400px, 55vh);
-  transform: translate(calc(-50% + min(260px, 24vw)), calc(-50% + min(190px, 20vh)));
-  background: radial-gradient(closest-side, var(--auth-glow-3), transparent);
+.brand-backdrop--auth .brand-backdrop__glow,
+.brand-backdrop--guide .brand-backdrop__glow {
+  display: none;
 }
 
-/* Картка входу — скло сильніше за звичайні картки (`blur 6px` вище): вона одна
-   і не їде з прокруткою на десктопі, тож дорожчий фільтр тут доречний. Заливка —
-   той самий `--card` (= `--card-glass` під `[data-backdrop]`), колір не дублюється.
-   `data-slot='auth-card'` ставить `AuthShell`, тож загальне правило карток вище
-   сюди не потрапляє — хайлайт додано явно */
-[data-backdrop='brand'] [data-slot='auth-card'] {
-  position: relative;
-  --muted-foreground: var(--auth-muted-foreground);
-  background-color: var(--auth-card-fill);
-  backdrop-filter: blur(20px) saturate(1.5);
-  box-shadow:
-    var(--glass-highlight),
-    0 24px 64px -20px var(--auth-card-glow),
-    var(--surface-shadow);
+/* ── 4. Варіант `guide`: путівник (`/guide`, `/about`) ───────────────────────
+   Той самий спокійний фон, що в `auth` (без точок, без трьох плям), але світло
+   ПЕРЕНЕСЕНО ліворуч: головна аура стоїть на стику бічної колонки й контенту
+   (≈22% ширини, зверху), де в «вітринному» варіанті була пляма `glow--1`; друга,
+   бірюзова, — внизу там само. Права половина тиха. База й затемнення — токени
+   `auth` (§3), свої лише кольори ауры: сильніші, бо ауру тут нічим не перекриває
+   картка по центру. */
+:root {
+  --guide-aura-1: color-mix(in oklab, var(--primary) 11%, transparent);
+  --guide-aura-2: oklch(0.75 0.14 200 / 0.09);
 }
 
-/* Градієнтна hairline-рамка. Не `border-image` (губить радіус) і не два шари
-   фону `padding-box`/`border-box` (градієнт border-box просвічував би крізь
-   напівпрозору заливку) — а псевдоелемент з маскою: `exclude` двох шарів лишає
-   рівно 1px кільце по контуру, усередині нічого не фарбується */
-[data-backdrop='brand'] [data-slot='auth-card']::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(
-    135deg,
-    var(--auth-edge-from),
-    var(--auth-edge-via) 45%,
-    var(--auth-edge-to)
+.dark {
+  /* Глибокий «нічний» відтінок бренду (бренд + 40% чорного), а не сам `--primary`:
+     тихіша й темніша аура, ніж була (40% яскравого бренду / бірюза 0.6 з альфою 0.3) */
+  --guide-aura-1: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--primary) 60%, black) 32%,
+    transparent
   );
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
+  --guide-aura-2: oklch(0.45 0.1 205 / 0.22);
+}
+
+.brand-backdrop--guide {
+  /* Ауры — ВЕРХНІ шари (перший у списку лежить зверху): затемнення під ними, а не над
+     ними, як в `auth`, інакше воно гасило б світло вдвічі */
+  background-image:
+    radial-gradient(55vw 62vh at 22% 0%, var(--guide-aura-1), transparent),
+    radial-gradient(42vw 48vh at 18% 100%, var(--guide-aura-2), transparent),
+    linear-gradient(to top, var(--auth-bottom-shade), transparent 28%),
+    linear-gradient(var(--auth-dim), var(--auth-dim));
+}
+
+/* Картка входу (`AuthShell`) — звичайний `Card` із `elevation="raised"`: тінь
+   вона бере з шкали висот теми (`--raised-shadow`), власної тут НЕМАЄ. Тут лише
+   те, чим вона відрізняється від картки у сітці: у світлі заливка суцільна біла
+   (`--card-base`, а не втоплений `muted`) і контур сильніший — картка стоїть
+   сама на тлі кольору сайдбара, і слабка лінія на ньому губиться. У темряві
+   лишається склом `muted` зі звичайним контуром. Специфічність 0-3-0 — вища за
+   правила осі `fill` у `card-surface.css`, тому без `!important`. */
+[data-backdrop='brand'] [data-slot='card'][data-auth-card] {
+  --card-surface: var(--card-base);
+  /* Той самий токен, що в контурі діалогу — у темряві `.dark` міняє його сам */
+  --card-outline: var(--raised-outline);
+}
+
+.dark [data-backdrop='brand'] [data-slot='card'][data-auth-card] {
+  --card-surface: var(--card-fill-muted);
+}
+
+/* ── 5. Попапи під брендовим фоном ────────────────────────────────────────────
+   Меню, випадаючі списки, `Popover`, `HoverCard`, контекстні меню рендеряться
+   через Portal у `body`, тобто ПОЗА елементом з `data-backdrop` — правила
+   `[data-backdrop='brand'] …` з §2 на них не діють. Тому фон визначається через
+   `:root:has([data-backdrop='brand'])`: поки на сторінці є брендовий шел, кореневий
+   елемент це «знає», а коли роут його не оголошує (робочі екрани) — попапи лишаються
+   суцільними `--popover`, як були.
+
+   Скло ГУСТІШЕ, ніж у карток (60% + blur 6px): картка стоїть на фоні, а попап лежить
+   ПОВЕРХ тексту сторінки, і крізь легке скло той читається поверх меню. Тому —
+   близько 60% заливки й сильне розмиття з насиченням: кольори плям фону проступають
+   тоном, а рядки під попапом розмиваються в пляму.
+
+   `--popup-glass-alpha` / `--popup-blur` — ручки підбору; стенд попапів
+   (`/playground/components/popups`) ставить їх на `<html>` наживо. Заливка оголошена
+   на `:root` (див. §1: `var()` підставляється там, де ОГОЛОШЕНО), тож бере значення
+   теми й режиму без циклу. */
+/* Кільце попапа на склі — знову НАПІВПРОЗОРЕ: база (`styles.css`) і темні блоки
+   тем домішують `--popover`, щоб лінія не залежала від підкладки, але на
+   скляному попапі суцільна лінія тону `--popover` читалась би рамкою чужого
+   кольору. Друга пара селекторів — 0-3-0, щоб перебити темні блоки тем
+   (`:root[data-theme].dark`), які стоять вище за порядком імпорту. */
+:root:has([data-backdrop='brand']),
+:root.dark:has([data-backdrop='brand']) {
+  --overlay-outline: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+
+:root {
+  --popup-glass-alpha: 60%;
+  --popup-blur: 30px;
+  --popover-glass: color-mix(in oklab, var(--popover) var(--popup-glass-alpha), transparent);
+}
+
+:root:has([data-backdrop='brand'])
+  :is(
+    [data-slot='popover-content'],
+    [data-slot='dropdown-menu-content'],
+    [data-slot='dropdown-menu-sub-content'],
+    [data-slot='context-menu-content'],
+    [data-slot='context-menu-sub-content'],
+    [data-slot='select-content'],
+    [data-slot='combobox-content'],
+    [data-slot='hover-card-content']
+  ) {
+  background-color: var(--popover-glass);
+  backdrop-filter: blur(var(--popup-blur)) saturate(1.6);
+}
+
+/* Смужки прокрутки списку (`Select`) мають власний `bg-popover` — на склі вони
+   виглядали б суцільними планками */
+:root:has([data-backdrop='brand']) :is([data-slot='select-content'] [data-slot^='select-scroll']) {
+  background-color: transparent;
 }

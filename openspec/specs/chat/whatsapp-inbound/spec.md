@@ -1,7 +1,7 @@
 # chat/whatsapp-inbound Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b2-meta-inbound-receipts. Update Purpose after archive.
+Defines how inbound WhatsApp webhooks become conversation content: text becomes a customer message, every other type leaves a visible placeholder, unrelated webhook fields are stored and ignored, extra provider identifiers are kept, and reactions are stored without opening the reply window.
 
 ## Requirements
 

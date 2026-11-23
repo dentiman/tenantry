@@ -150,7 +150,7 @@ export function PlaygroundInlineFormPage() {
           title={t('inlineForm.sections.toolbar.title')}
           description={t('inlineForm.sections.toolbar.description')}
         >
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-border p-4">
             <Input
               className="w-56"
               aria-label={t('forms.fields.query')}
@@ -180,7 +180,7 @@ export function PlaygroundInlineFormPage() {
           title={t('inlineForm.sections.narrow.title')}
           description={t('inlineForm.sections.narrow.description')}
         >
-          <div className="max-w-sm rounded-xl bg-muted/50 p-4">
+          <div className="max-w-sm rounded-xl border border-dashed border-border p-4">
             <div className="flex flex-wrap items-end gap-3">
               <Field className="w-auto flex-1 basis-44">
                 <FieldLabel htmlFor="narrow-date">{t('forms.fields.date')}</FieldLabel>

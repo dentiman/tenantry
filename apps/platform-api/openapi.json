@@ -613,6 +613,7 @@
               "type": "string",
               "enum": [
                 "user.created",
+                "user.deleted",
                 "user.password_changed",
                 "user.sessions_revoked",
                 "user.enabled",
@@ -1349,7 +1350,7 @@
     }
   },
   "info": {
-    "title": "SaaS Skeleton Platform API",
+    "title": "Tenantry Platform API",
     "description": "Control plane: tenants CRUD, queue monitoring, platform operators",
     "version": "0.0.1",
     "contact": {}
@@ -1833,6 +1834,7 @@
                   "type": "string",
                   "enum": [
                     "user.created",
+                    "user.deleted",
                     "user.password_changed",
                     "user.sessions_revoked",
                     "user.enabled",

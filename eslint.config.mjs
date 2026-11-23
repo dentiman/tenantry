@@ -70,6 +70,11 @@ export default tseslint.config(
       '**/coverage/',
       '**/generated/',
       '**/prisma.config.ts',
+      // Корінь репо: не під жодним tsconfig-проектом (апки/libs/scripts мають свій), тож
+      // projectService не знаходить для нього проект. `pnpm lint` його й так не перевіряє
+      // (lint:eslint обходить лише apps/*, libs/*, scripts) — без цього падав лише pre-commit
+      // lint-staged, який бере всі застосовані *.ts без винятку.
+      'modules.config.ts',
       '**/*.js',
       '**/*.mjs',
       '**/test/**/*.e2e-spec.ts',
@@ -176,6 +181,24 @@ export default tseslint.config(
       group: ['**/pages/**', '**/components/**'],
       message:
         'Файл навігації (*.nav.ts) збирається eager у головний чанк — не імпортуй сторінки й компоненти; панель area — *-sidebar.tsx у корені модуля.',
+    }),
+  },
+  {
+    // Composition roots і файли маршрутів не імпортують сторінки статично: сторінка — окремий
+    // чанк (`lazyPage(() => import('./pages/x'), 'XPage')`), а статичний імпорт зливає її в
+    // стартовий (docs/frontend/lazy-loading.md). Динамічний `import()` це правило не чіпає.
+    // Єдиний свідомий виняток — сторінка входу, з inline-disable та причиною.
+    files: [
+      'apps/web/src/**/*.routes.tsx',
+      'apps/web/src/{router,main}.{ts,tsx}',
+      'apps/web/src/slot-fills.ts',
+      'apps/platform-web/src/**/*.routes.tsx',
+      'apps/platform-web/src/{router,main}.{ts,tsx}',
+    ],
+    rules: restrictImports(CROSS_APP, BACKEND_LIBS, {
+      group: ['**/pages/**'],
+      message:
+        "Сторінку не імпортуємо статично в routes/router/main: це зливає її у стартовий чанк. Використай lazyPage(() => import(…), 'Назва') з @saas-skeleton/ui/lib/lazy (docs/frontend/lazy-loading.md).",
     }),
   },
   {

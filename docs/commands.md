@@ -15,6 +15,7 @@
 - [Застосунки — розробка](#застосунки--розробка)
 - [Кодогенерація контрактів](#кодогенерація-контрактів)
 - [Корпус знань AI-асистента](#корпус-знань-ai-асистента)
+- [Чат і WhatsApp (dev-інструменти)](#чат-і-whatsapp-dev-інструменти)
 - [Якість коду](#якість-коду)
 - [Тести](#тести)
 - [Логи](#логи)
@@ -304,7 +305,8 @@ orval → типізовані TanStack Query хуки. **Ручних типі�
 
 ```bash
 pnpm openapi:generate
-# → apps/api/openapi.json (ts-node, потрібен .env з JWT_SECRET)
+# → apps/api/openapi.json (ts-node; env валідується на старті — потрібні JWT_SECRET і ENCRYPTION_KEY,
+#   напр. з .env; помилка конфігурації тепер видна, раніше скрипт мовчки падав з кодом 1)
 
 pnpm platform:openapi:generate
 # → apps/platform-api/openapi.json
@@ -322,7 +324,27 @@ pnpm platform:web:codegen
 
 Після будь-якої зміни контрактів/контролерів завжди прогнати парою: спершу
 `*openapi:generate`, потім відповідний `*:codegen` — обидва артефакти комітяться
-в репозиторій.
+в репозиторій. orval-конфіги мають `clean: true`: файли, яких генератор більше не створює (мертві
+моделі після переїзду ендпоінтів), видаляються при кожній генерації; чиститься лише
+`src/api/generated`, рукописний `src/api/http-client.ts` лежить поза ним.
+
+### `pnpm codegen:check`
+
+```bash
+pnpm codegen:check
+# → перегенеровує ОБИДВІ площини (openapi:generate → web:codegen, platform:openapi:generate →
+#   platform:web:codegen) і падає (exit 1), якщо apps/{api,platform-api}/openapi.json або
+#   apps/{web,platform-web}/src/api/generated відрізняються від того, що було на диску до запуску
+```
+
+`scripts/codegen-check.sh`. БД, Valkey і workspace-слот не потрібні (Nest лише збирає DI-граф);
+потрібні `node_modules` і згенерований Prisma-клієнт (`pnpm db:generate`, офлайн). ≈18–20 с.
+Оточення фіксоване (`env -i` + dummy-секрети), тож результат не залежить від локальних
+`.env`/`.env.local` — перевірено: з `.env.local` слота й без нього артефакти ідентичні. Порівнює стан
+**до/після** генерації, а не `git diff`, тому не залежить від того, закомічені вже правки; при
+дрейфі залишає перегенеровані файли на диску — лишається переглянути `git diff` і закомітити.
+Входить у `scripts/ci-verify.sh` (і в `ci-check.sh`), але **не** в `pre-push`: ≈20 с — задовго для
+хука, який і так ≈75 с; рішення про додавання — за власником.
 
 ---
 
@@ -359,6 +381,9 @@ pnpm ai:docs:ingest --source fms --root <checkout> --manifest docs/ai-sources/fm
 pnpm ai:docs:search --product fms --tenant default --role ADMIN --query "..." [--limit 5]
 ```
 
+> Дефолтні `docs/ai-sources/fms-eval.json` і `fms-pilot.json` у репозиторії **відсутні** — передавайте
+> власні файли (`--questions`, `--manifest`); див. [ai-platform-controls.md](ai-platform-controls.md) §10.
+
 Операторські CLI (AI-2a.2): ingest пише embeddings у `ai_knowledge_*` обраного tenant-а й
 атомарно публікує ревізію (повтор без змін — нуль викликів API); search — питання → top-K
 опублікованих чанків. `pnpm ai:docs:eval --tenant default` порівнює режими пошуку й пороги
@@ -377,6 +402,48 @@ Eval відповідей (AI-5c): набір питань × файл конф�
 таблиця «якість × ціна відповіді», `summary.md` і `answers.json`. Пише лише журнал витрат
 (`kind = eval`); `--max-cost` обовʼязковий, якщо не `--fake`. Потребує ingest продукту в tenant-і й
 тарифів моделей. [Формат файлів і як читати звіт](ai-sources/README.md#eval-відповідей-pnpm-aianswerseval-ai-5c).
+
+## Чат і WhatsApp (dev-інструменти)
+
+Скрипти в `scripts/`. `chat:simulate` і `chat:connect-meta` ходять у запущений API під адміном
+(`--api`, `--email`, `--password`, `--tenant` перевизначають дефолти з `.env`/`.env.local`);
+`whatsapp:probe` ходить напряму в Meta Graph API. Секрети `WHATSAPP_*` беруться з кореневого `.env` і
+ніколи не друкуються. Опис фаз і потоків — [chat.md](chat.md), [whatsapp-channel.md](whatsapp-channel.md),
+[whatsapp-feature-flows.md](whatsapp-feature-flows.md).
+
+### `pnpm chat:simulate`
+
+```bash
+pnpm chat:simulate --text "Доброго дня" --from +380501234567 --name "Олена"
+pnpm chat:simulate --text "ще раз" --id sim-1            # той самий --id двічі = повтор доставки (дедуп)
+pnpm chat:simulate --status delivered --message <id>     # квитанція про вихідне: sent|delivered|read|failed
+```
+
+Симулятор вхідних клієнтських повідомлень (CHAT-2a/2b): гарантує fake-канал і шле підписане
+повідомлення на **публічний вебхук**, тож проходить увесь шлях як справжній провайдер. Потрібні
+`CHAT_DEV_TOOLS=true` і запущені `api` + `worker`.
+
+### `pnpm chat:connect-meta`
+
+```bash
+pnpm chat:connect-meta                       # підключити акаунт (або оновити токен), синхронізувати номери
+pnpm chat:connect-meta --send                # + розмова з WHATSAPP_TEST_RECIPIENT і шаблон hello_world/en_US
+pnpm chat:connect-meta --send --text "Привіт"  # + звичайний текст (лише коли вікно 24 год відкрите)
+```
+
+Повторювана жива перевірка WhatsApp (CHAT-3a): ті самі виклики API, що й екран налаштувань. Для
+`--send` потрібні запущені `api` + `worker`.
+
+### `pnpm whatsapp:probe`
+
+```bash
+pnpm whatsapp:probe                  # лише читання: debug_token, WABA, номери, підписки, шаблони
+pnpm whatsapp:probe --subscribe      # + підписка WABA з override_callback_uri (потрібен WEBHOOK_BASE_URL)
+pnpm whatsapp:probe --send           # + тестовий шаблон hello_world на WHATSAPP_TEST_RECIPIENT
+```
+
+Проба Cloud API на живому тестовому акаунті **поза продуктом** — довідка для рішень, а не частина
+застосунку (`whatsapp-feature-flows.md` §F0.5; результати — `whatsapp-research/live-probe-*.md`).
 
 ## Якість коду
 
@@ -407,6 +474,28 @@ pnpm deps:check  # → madge --circular по apps/{api,platform-api,worker}/src 
 Падає на будь-якому циклі runtime-імпортів (type-only імпорти не рахуються, `.madgerc`).
 Секунди; входить у `pnpm lint`.
 
+### `pnpm ui:cube-tile`
+
+```bash
+pnpm ui:cube-tile            # перегенерувати libs/ui/src/assets/cube-tile.svg
+pnpm ui:cube-tile --check    # звірити закомічений SVG із генератором (нічого не пише)
+```
+
+Вихідник фактури картки `<Card texture="cubes">` (`scripts/ui-cube-tile.ts`): параметри малюнка
+(сітка, форми, шов, ступені тону) живуть у скрипті, у бандл іде лише згенерований SVG. Після зміни
+параметрів комітити скрипт і SVG разом. Деталі — `docs/frontend/ui-stack.md`, опція `texture`.
+
+### `pnpm bundle:check`
+
+```bash
+pnpm bundle:check            # збирає web і platform-web у тимчасову теку, звіряє стартовий JS з бюджетом
+pnpm bundle:check --report   # + найбільші чанки й що з них у стартовому наборі
+```
+
+Бюджет (`BUDGETS` у `scripts/bundle-check.ts`) і перевірка, що сторінки модулів не потрапили в
+стартовий чанк, — `docs/frontend/lazy-loading.md` §5. Не входить у `pnpm lint` і `verify`
+(потрібен `vite build`); запускати після змін у `router.tsx`/`slot-fills.ts`/залежностях і перед релізом.
+
 ### `pnpm modules:check`
 
 ```bash
@@ -423,7 +512,7 @@ pnpm modules:check --edges    # фактичний граф модуль → м�
 ### `bash scripts/ci-verify.sh`
 
 Повний CI-гейт локально — те саме, що GitLab-джоба `verify` (там вона лише ручна кнопка, не шлюз, тож перед пушем у `dev` її проганяють тут): `pnpm install` → `db:generate` →
-`lint` → `typecheck` → `test` → e2e обох API. Postgres і Valkey — одноразові контейнери у
+`lint` → `typecheck` → `codegen:check` → `test` → демо-сід ×2 → e2e обох API. Postgres і Valkey — одноразові контейнери у
 власній docker-мережі, тож dev-стек і workspace-слоти не зачіпаються; потрібен лише Docker.
 Перший прогін довгий (холодний pnpm store), далі store береться з тому
 `saas-verify-pnpm-store`. Деталі — `docs/deploy-swarm.md` §6.
@@ -442,6 +531,40 @@ force-push). Пуш `dev` у GitLab запускає розкат `saas-dev`; He
 з чистим деревом проганяє той самий `verify`, потім через `git-sync` ставить `dev` і `main` на HEAD
 на обох remote-ах (пуш у `github/main` запускає розкат). Verify у GitHub-пайплайн свідомо не
 входить. `SKIP_VERIFY=1 pnpm release:hetzner` пропускає перевірку.
+
+### Хуки git (husky) і легкий гейт
+
+`pnpm install` ставить husky (`prepare`), хуки лежать у `.husky/`. Повний `verify` ручний, а ці
+два — автоматичні й офлайн (без Docker і БД):
+
+| Хук | Що робить | Час |
+| --- | --- | --- |
+| `pre-commit` | `lint-staged`: ESLint (`--fix --max-warnings 0`) по staged `*.ts`/`*.tsx` | ≈3 с на файл |
+| `pre-push` | `scripts/pre-push-gate.sh`: `pnpm lint` і `pnpm typecheck` паралельно | ≈75 с холодно (lint ≈80 с сам по собі, typecheck 24 с / 0.4 с з кешу turbo) |
+
+`lint-staged` свідомо **без `prettier --write`**: 430 файлів репозиторію не відповідають
+`.prettierrc` (у тому числі більшість `docs/*.md`), тож хук переписував би цілі файли за кожну
+дотичну правку, а `pnpm-lock.yaml` і згенеровані клієнти теж потрапили б під формат. Повернути —
+після окремого коміту `pnpm format` на всьому дереві (рішення власника).
+
+`pre-push` не ганяє перевірки, коли нема що перевіряти: видалення гілки/тегу, пуш без нових
+комітів, пуш лише документації (`README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `docs/**`,
+`openspec/**` — ті самі шляхи, що пропускає `deploy.yml`; винятки `docs/ai-knowledge/**` і
+`docs/history-summary.md`). Без `node_modules` падає з підказкою; без згенерованого Prisma-клієнта
+сам виконує `pnpm db:generate`.
+
+**Обхід у крайньому випадку:** `SKIP_PREPUSH=1 git push …` — шлюз сам пише, що саме не
+перевірено; або `git commit/push --no-verify` (git — мовчки). e2e, unit і демо-сід шлюз **не**
+запускає — це `pnpm verify`.
+
+**Взаємодія зі скриптами пуша.** `pnpm git:sync` ганяє шлюз один раз до своїх двох пушів
+(GitHub, потім GitLab), а хук у них пропускає змінна `PREPUSH_GATE_DONE`. `pnpm release:hetzner`
+після `verify` виставляє її сама (verify уже містить lint і typecheck), тож повторів нема;
+`SKIP_VERIFY=1` скасовує лише важкий verify — легкий шлюз усе одно відпрацює у `git-sync`
+(крім пушу лише документації), вимкнути його теж — `SKIP_PREPUSH=1`.
+
+Серверний дубль легкого шлюзу — `bash scripts/ci-check.sh` (Docker, чистий checkout, ≈2.7 хв
+холодно) і `.github/workflows/check.yml` (push у `dev`, PR, вручну; не блокує деплой).
 
 ### `pnpm format` / `pnpm format:check`
 
@@ -521,18 +644,23 @@ pnpm platform:test:e2e
 ### `pnpm logs:tail` / `pnpm logs:clean`
 
 ```bash
-pnpm logs:tail   # → tail -f apps/api/logs/api-pretty.log
-pnpm logs:clean  # → rm -rf apps/api/logs/*.log*
+pnpm logs:tail   # → pretty-логи api, platform-api і worker одним потоком
+pnpm logs:trace <trace-id>    # усі записи однієї операції з усіх процесів (docs/observability.md §4)
+pnpm logs:errors --since 15m  # помилки за проміжок
+pnpm debug:jobs <trace-id>    # джоби pg-boss цього ланцюга (потребує БД)
+pnpm logs:clean  # → видаляє логи всіх трьох застосунків (apps/{api,platform-api,worker}/logs)
 ```
 
 Pino-логи пишуться в `join(process.cwd(), 'logs')` — команди `api` треба запускати з cwd
-`apps/api` (`pnpm --filter` це гарантує).
+`apps/api` (`pnpm --filter` це гарантує). Поля запису, id операції й редагування секретів —
+`docs/observability.md`.
 
 У dev кожен застосунок пише у свою теку `apps/{api,platform-api,worker}/logs/` з **ротацією за
 розміром**: 10 МБ на файл, два попередні поруч (`<дата>-NN-worker.log`) і службовий `*.log.txt`
 з історією ротації — тобто ≤ ~30 МБ на файл логу. Без ротації лог воркера (cron щохвилини) за
-кілька днів доростав до сотень мегабайтів. Прод api ротує свій файл так само (добово, 30 днів,
-gzip); worker і platform-api у проді пишуть лише в stdout.
+кілька днів доростав до сотень мегабайтів. Кожен застосунок пише JSON (`<service>.log`) і
+читабельну копію (`<service>-pretty.log`). У проді всі три процеси пишуть лише в stdout; файл
+(добова ротація, 30 файлів, gzip) вмикається через `LOG_FILE=1`.
 
 ---
 

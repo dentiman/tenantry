@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '../lib/i18n-keys';
 import { Button } from '@saas-skeleton/ui/components/ui/button';
 import {
   DropdownMenu,
@@ -45,7 +46,7 @@ export function ThemeSelect() {
         render={<Button aria-label={t('theme.paletteLabel')} size="sm" variant="outline" />}
       >
         <ThemeSwatch theme={active} />
-        {t(active.labelKey)}
+        {t(...runtimeKey(active.labelKey))}
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
@@ -61,7 +62,7 @@ export function ThemeSelect() {
           {UI_THEMES.map((item) => (
             <DropdownMenuRadioItem key={item.id} value={item.id}>
               <ThemeSwatch theme={item} />
-              {t(item.labelKey)}
+              {t(...runtimeKey(item.labelKey))}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

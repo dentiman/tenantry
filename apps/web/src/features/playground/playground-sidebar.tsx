@@ -80,6 +80,22 @@ export function PlaygroundSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/cards'}
+                      render={<Link to="/playground/components/cards" />}
+                    >
+                      {t('nav.cards')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/popups'}
+                      render={<Link to="/playground/components/popups" />}
+                    >
+                      {t('nav.popups')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
                       isActive={pathname === '/playground/components/combobox'}
                       render={<Link to="/playground/components/combobox" />}
                     >
@@ -116,6 +132,14 @@ export function PlaygroundSidebar() {
                       render={<Link to="/playground/components/tabs" />}
                     >
                       {t('nav.tabs')}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={pathname === '/playground/components/step-progress'}
+                      render={<Link to="/playground/components/step-progress" />}
+                    >
+                      {t('nav.stepProgress')}
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>

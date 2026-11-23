@@ -26,6 +26,11 @@ import {
 } from './definitions/maintenance.messages';
 import { dispatchScheduledNotificationsCommand } from './definitions/notifications.messages';
 import { userRegisteredEvent } from './definitions/users.messages';
+import { exportCustomersCommand } from './definitions/customers.messages';
+import {
+  purgeFinishedUserOperationsCommand,
+  sweepStalledUserOperationsCommand,
+} from './definitions/user-operations.messages';
 
 /**
  * Політика черги споживача.
@@ -261,6 +266,27 @@ export const MESSAGE_TOPOLOGY: readonly TopologyEntry[] = [
     definition: dispatchScheduledNotificationsCommand,
     consumers: [{ id: 'scheduled-dispatcher', retryLimit: 1 }],
     cron: '* * * * *',
+  },
+  {
+    // Операція користувача (docs/user-operations.md §5): повтор продовжує ту саму операцію —
+    // runner перехоплює її за heartbeat. Вичерпані повтори → `dlq`, а операцію закриє sweeper.
+    // expireInSeconds з запасом під 50 000 рядків; довша робота мусить писати прогрес
+    definition: exportCustomersCommand,
+    consumers: [
+      { id: 'customers-exporter', retryLimit: 3, retryDelaySeconds: 5, retryBackoff: true, expireInSeconds: 900 },
+    ],
+  },
+  {
+    // Кожні 5 хв: поріг зависання 15 хв, тож операція закривається не пізніше ніж за ~20 хв
+    definition: sweepStalledUserOperationsCommand,
+    consumers: [{ id: 'user-operations-sweeper', retryLimit: 1 }],
+    cron: '*/5 * * * *',
+  },
+  {
+    // Щодоби у вільний нічний слот після чисток 03:xx і цін AI 04:15
+    definition: purgeFinishedUserOperationsCommand,
+    consumers: [{ id: 'user-operations-purger', retryLimit: 1 }],
+    cron: '45 4 * * *',
   },
 ];
 

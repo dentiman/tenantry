@@ -1,11 +1,23 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { CustomerQuerySchema } from '@saas-skeleton/contracts';
 import { createRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { workspaceRoute } from '../../app-shell/app.routes';
-import { CustomerContactsTab } from './pages/customer-contacts';
-import { CustomerDetailLayout } from './pages/customer-detail';
-import { CustomerOverviewTab } from './pages/customer-overview';
-import { CustomersPage } from './pages/customers';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const CustomerContactsTab = lazyPage(
+  () => import('./pages/customer-contacts'),
+  'CustomerContactsTab',
+);
+const CustomerDetailLayout = lazyPage(
+  () => import('./pages/customer-detail'),
+  'CustomerDetailLayout',
+);
+const CustomerOverviewTab = lazyPage(
+  () => import('./pages/customer-overview'),
+  'CustomerOverviewTab',
+);
+const CustomersPage = lazyPage(() => import('./pages/customers'), 'CustomersPage');
 
 // Той самий контракт, що в /users: стан списку живе в URL, невалідні значення
 // тихо падають у дефолт замість помилки роута

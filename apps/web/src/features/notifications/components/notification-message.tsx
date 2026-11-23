@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { NotificationResponseDtoOutput } from '../../../api/generated/model/notificationResponseDtoOutput';
 import { notificationDefinition, textKeyBase } from '@saas-skeleton/contracts';
 import { entityLink } from '../../../lib/entity-routes';
+import { runtimeTransKey } from '@saas-skeleton/ui/lib/i18n-keys';
 import { payloadValues } from '@saas-skeleton/ui/lib/payload-values';
 
 type Notification = NotificationResponseDtoOutput;
@@ -64,7 +65,7 @@ export function NotificationMessage({
   return (
     <Trans
       t={t}
-      i18nKey={`${textKeyBase(definition.texts)}type.${notification.type}`}
+      i18nKey={runtimeTransKey(`${textKeyBase(definition.texts)}type.${notification.type}`)}
       count={notification.groupCount}
       values={{
         ...payloadValues(payload),

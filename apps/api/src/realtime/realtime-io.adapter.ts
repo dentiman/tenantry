@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-streams-adapter';
 import type { Redis } from 'ioredis';
-import type { ServerOptions } from 'socket.io';
+import type { Server, ServerOptions } from 'socket.io';
 import {
   REALTIME_PATH,
   realtimeSessionKeyPrefix,
@@ -30,7 +30,9 @@ import type { RealtimeConfig } from './realtime.config';
  * із брокером і дочитує пропущені пакети з offset-у, тоді як pub/sub їх просто губить.
  */
 export class RealtimeIoAdapter extends IoAdapter {
-  private readonly logger = new Logger(RealtimeIoAdapter.name);
+  // Nest 12: у базового IoAdapter є `protected readonly logger` — свій лишаємо під іншим іменем,
+  // щоб у логах контекст і далі був `RealtimeIoAdapter`
+  private readonly realtimeLogger = new Logger(RealtimeIoAdapter.name);
 
   constructor(
     app: INestApplicationContext,
@@ -40,10 +42,12 @@ export class RealtimeIoAdapter extends IoAdapter {
     super(app);
   }
 
-  createIOServer(port: number, options?: ServerOptions): unknown {
+  // Nest 12: порт може бути `undefined` (сервер без HTTP, `createWithoutListener`),
+  // а результат типізований як `Server` — раніше обидва були `any`.
+  override createIOServer(port: number | undefined, options?: ServerOptions): Server {
     const allowedOrigins = new Set(this.config.allowedOrigins);
 
-    const server: unknown = super.createIOServer(port, {
+    const server = super.createIOServer(port, {
       ...options,
       path: REALTIME_PATH,
       // Polling вимкнено свідомо: у swarm балансує Docker VIP по TCP-зʼєднанню,
@@ -63,7 +67,7 @@ export class RealtimeIoAdapter extends IoAdapter {
         // сам браузер; справжня автентифікація — JWT у handshake, вона обовʼязкова завжди.
         const allowed = origin === undefined || allowedOrigins.has(origin);
         if (!allowed) {
-          this.logger.warn(`Rejected socket handshake from origin ${origin}`);
+          this.realtimeLogger.warn(`Rejected socket handshake from origin ${origin}`);
         }
         callback(null, allowed);
       },
@@ -89,7 +93,10 @@ export class RealtimeIoAdapter extends IoAdapter {
         // коштують один round-trip на секунду.
         blockTimeInMs: 1_000,
       }),
-    });
+      // Nest 12 типізує аргумент повним `ServerOptions` (там `serveClient` обовʼязковий),
+      // тоді як сам socket.io приймає `Partial<ServerOptions>` — spread необовʼязкових
+      // `options` без приведення не компілюється
+    } as ServerOptions);
 
     return server;
   }

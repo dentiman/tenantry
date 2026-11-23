@@ -93,7 +93,7 @@ export function PlaygroundComboboxPage() {
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="min-w-0 space-y-6">
           <section id="combobox-overview" className="scroll-mt-6">
-            <div className="rounded-xl bg-muted/50 p-4">
+            <div className="rounded-xl border border-dashed border-border p-4">
               <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t('combobox.importLabel')}
               </p>
@@ -267,13 +267,13 @@ export function PlaygroundComboboxPage() {
             description={t('combobox.sections.usage.description')}
           >
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.serverSearch.title')}
+                    {t('combobox.sections.usage.serverSearch.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.serverSearch.description')}
+                    {t('combobox.sections.usage.serverSearch.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -281,13 +281,13 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.countrySelect.title')}
+                    {t('combobox.sections.usage.countrySelect.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.countrySelect.description')}
+                    {t('combobox.sections.usage.countrySelect.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -295,13 +295,13 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.chipsMulti.title')}
+                    {t('combobox.sections.usage.chipsMulti.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.chipsMulti.description')}
+                    {t('combobox.sections.usage.chipsMulti.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">
@@ -309,13 +309,13 @@ export function PlaygroundComboboxPage() {
                 </code>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t('combobox.usage.customerSelect.title')}
+                    {t('combobox.sections.usage.customerSelect.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t('combobox.usage.customerSelect.description')}
+                    {t('combobox.sections.usage.customerSelect.description')}
                   </p>
                 </div>
                 <code className="w-fit rounded-md bg-background px-2 py-1 font-mono text-xs text-foreground shadow-xs">

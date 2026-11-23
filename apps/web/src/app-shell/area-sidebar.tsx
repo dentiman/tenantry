@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { runtimeKey } from '@saas-skeleton/ui/lib/i18n-keys';
+import { LazyBoundary, PanelPending } from '@saas-skeleton/ui/components/route-fallbacks';
 import { Sidebar, SidebarContent, SidebarHeader } from '@saas-skeleton/ui/components/ui/sidebar';
 import { ResizeHandle } from '@saas-skeleton/ui/components/resize-handle';
 import { useSettingsBootstrap } from '../api/generated/api';
@@ -74,11 +76,19 @@ export function AreaSidebar() {
             переїхав у смугу, тому тут лишився самий текст */}
         <div className="grid leading-tight">
           <span className="truncate font-semibold">{tenantName}</span>
-          <span className="truncate text-xs text-muted-foreground">{t(area.label)}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {t(...runtimeKey(area.label))}
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {area.panel === 'menu' ? <AreaNav areaId={area.id} /> : <area.panel />}
+        {area.panel === 'menu' ? (
+          <AreaNav areaId={area.id} />
+        ) : (
+          <LazyBoundary fallback={<PanelPending />} name={`area-panel:${area.id}`}>
+            <area.panel />
+          </LazyBoundary>
+        )}
       </SidebarContent>
     </Sidebar>
   );

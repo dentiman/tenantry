@@ -4,6 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2023"],
+    // TS 6/7: `types` за замовчуванням порожній — глобали Node (URL, process, Buffer) підключаємо явно
+    "types": ["node"],
     "strict": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
@@ -18,17 +20,16 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": ".",
     "paths": {
-      "@saas-skeleton/contracts": ["libs/contracts/src/index.ts"],
-      "@saas-skeleton/contracts/*": ["libs/contracts/src/*"],
-      "@saas-skeleton/database": ["libs/database/src/index.ts"],
-      "@saas-skeleton/database/*": ["libs/database/src/*"],
-      "@saas-skeleton/i18n": ["libs/i18n/src/index.ts"],
-      "@saas-skeleton/i18n/*": ["libs/i18n/src/*"],
-      "@saas-skeleton/shared": ["libs/shared/src/index.ts"],
-      "@saas-skeleton/shared/*": ["libs/shared/src/*"],
-      "@saas-skeleton/ui/*": ["libs/ui/src/*"]
+      "@saas-skeleton/contracts": ["./libs/contracts/src/index.ts"],
+      "@saas-skeleton/contracts/*": ["./libs/contracts/src/*"],
+      "@saas-skeleton/database": ["./libs/database/src/index.ts"],
+      "@saas-skeleton/database/*": ["./libs/database/src/*"],
+      "@saas-skeleton/i18n": ["./libs/i18n/src/index.ts"],
+      "@saas-skeleton/i18n/*": ["./libs/i18n/src/*"],
+      "@saas-skeleton/shared": ["./libs/shared/src/index.ts"],
+      "@saas-skeleton/shared/*": ["./libs/shared/src/*"],
+      "@saas-skeleton/ui/*": ["./libs/ui/src/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

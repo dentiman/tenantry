@@ -1,7 +1,7 @@
 # chat/webhook-events Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b1-webhook-capture. Update Purpose after archive.
+Defines what an administrator can read of the captured webhooks of a messaging account, for diagnosing what the provider actually sent.
 
 ## Requirements
 

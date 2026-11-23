@@ -4,6 +4,17 @@ import type { CalendarEventResponse } from '@saas-skeleton/contracts';
 import { formatDateTime, formatFullDate, formatTime } from '../lib/calendar-date';
 
 /**
+ * Текст власної відповіді. Явна мапа, а не `rsvp.${status.toLowerCase()}`: для `NEEDS_ACTION`
+ * текст лежить під `rsvp.pending`, і зібраний ключ `rsvp.needs_action` показував би сам себе.
+ */
+const RSVP_TEXT = {
+  ACCEPTED: 'rsvp.accepted',
+  TENTATIVE: 'rsvp.tentative',
+  DECLINED: 'rsvp.declined',
+  NEEDS_ACTION: 'rsvp.pending',
+} as const satisfies Record<NonNullable<CalendarEventResponse['myResponse']>, string>;
+
+/**
  * Вміст peek-картки події (CAL-2, наведення на плитку).
  *
  * **Тільки читання — жодної дії.** Плитка в сітці показує назву і час, і цього
@@ -65,7 +76,7 @@ export function EventPeekContent({
           сказав, що буду?». Показуємо лише коли я справді учасник */}
       {event.myResponse && (
         <span className="text-xs text-muted-foreground">
-          {t('peek.myResponse', { response: t(`rsvp.${event.myResponse.toLowerCase()}`) })}
+          {t('peek.myResponse', { response: t(RSVP_TEXT[event.myResponse]) })}
         </span>
       )}
     </div>

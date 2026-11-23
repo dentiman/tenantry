@@ -2,8 +2,14 @@ import { createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-
 import { NotFoundPage } from '@saas-skeleton/ui/components/not-found-page';
 import { requireAuth } from '../features/auth/auth.guards';
 import { ToastHost } from '../components/toast-host';
-import { AppShell } from './app-shell';
 import { isUnder } from '@saas-skeleton/ui/navigation';
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
+
+/**
+ * Шел — окремий чанк: гість на `/login` його не завантажує, а залогінений тягне його паралельно
+ * з чанком сторінки (роутер вантажить усі збіги разом). Docs: docs/frontend/lazy-loading.md
+ */
+const AppShell = lazyPage(() => import('./app-shell'), 'AppShell');
 
 /**
  * `/jobs` жив у корені до появи area-навігації, тепер живе під `/operations`.

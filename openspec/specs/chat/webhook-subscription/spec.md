@@ -1,7 +1,7 @@
 # chat/webhook-subscription Specification
 
 ## Purpose
-TBD - created by archiving change chat-3b1-webhook-capture. Update Purpose after archive.
+Defines how an administrator controls where a WhatsApp number's webhooks are delivered: seeing the current destination, subscribing or unsubscribing one number explicitly, and the confirmation required before taking over a number that points at another host.
 
 ## Requirements
 

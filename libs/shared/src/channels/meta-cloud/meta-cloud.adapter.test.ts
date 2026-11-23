@@ -182,7 +182,7 @@ describe('реєстр адаптерів', () => {
 describe('MetaCloudAdapter webhooks (CHAT-3b1)', () => {
   const adapter = new MetaCloudAdapter();
   const creds = { appSecret: 'shh-secret', verifyToken: 'vt-123', accessToken: null };
-  // Форма справжнього статусу з експорту fms-dev (значення вигадані)
+  // Форма справжнього статусу з експорту legacy-dev (значення вигадані)
   const body = Buffer.from(
     '{"object":"whatsapp_business_account","entry":[{"id":"1","changes":[{"field":"messages","value":{"statuses":[{"id":"wamid.X","status":"sent","pricing":{"billable":true}}]}}]}]}',
   );

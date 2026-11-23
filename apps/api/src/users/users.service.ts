@@ -174,13 +174,56 @@ export class UsersService {
     if (typeof data.avatarFileId === 'string') {
       await this.assertUsableAvatar(data.avatarFileId);
     }
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { ...data, ...normalizePhonePair(data) },
-      include: { avatarFile: true },
+    const demotes = data.role !== undefined && data.role !== Role.ADMIN;
+    const user = await this.tenantTx.withTenantTx(async (tx) => {
+      // Зняття ролі ADMIN — читання стану й запис в одній транзакції під блокуванням адмінів
+      // (див. `assertAnotherActiveAdmin`); решта змін її не потребує
+      if (demotes) {
+        await this.assertAnotherActiveAdmin(tx, id, 'role');
+      }
+      return tx.user.update({
+        where: { id },
+        data: { ...data, ...normalizePhonePair(data) },
+        include: { avatarFile: true },
+      });
     });
     this.logger.log(`User updated successfully: ${user.email} (ID: ${user.id})`);
     return user;
+  }
+
+  /**
+   * Інваріант «у тенанта завжди лишається хоч один активний ADMIN»: без нього тенант, у якого
+   * останній адмін зняв із себе роль, видалив себе чи був вимкнений, відновлює лише оператор
+   * платформи (так само, як `setStatus` забороняє замкнути себе).
+   *
+   * Читання-рішення-запис мусять бути атомарними (docs/backend-conventions.md §4), тож тут
+   * `SELECT … FOR UPDATE` по ВСІХ активних адмінах тенанта в детермінованому порядку (`ORDER BY id` —
+   * без взаємного дедлока). Два адміни, що одночасно знімають роль один з одного, серіалізуються:
+   * другий, діждавшись коміту першого, бачить уже одного адміна й отримує 400. Викликати треба
+   * ДО зміни `id`; якщо `id` — не активний адмін, нічого не перевіряється (кількість адмінів
+   * не зменшується) — стан `id` читається вже під блокуванням, а не до транзакції.
+   */
+  private async assertAnotherActiveAdmin(
+    tx: Prisma.TransactionClient,
+    id: string,
+    field: 'role' | 'isActive' | 'id' = 'id',
+  ): Promise<void> {
+    const admins = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true ORDER BY id FOR UPDATE
+    `;
+    const isTargetAdmin = admins.some((admin) => admin.id === id);
+    if (isTargetAdmin && admins.length < 2) {
+      throw new BadRequestException({
+        message: 'The organization must keep at least one active administrator',
+        fieldErrors: [
+          {
+            field,
+            message: 'The last active administrator cannot be demoted, disabled or deleted',
+            code: 'last_admin',
+          },
+        ],
+      });
+    }
   }
 
   /**
@@ -259,6 +302,11 @@ export class UsersService {
     }
 
     return this.tenantTx.withTenantTx(async (tx) => {
+      // Самому себе вимкнутись не можна (вище), але двоє адмінів можуть вимкнути один одного
+      // одночасно — той самий інваріант «лишається хоч один активний ADMIN»
+      if (!isActive) {
+        await this.assertAnotherActiveAdmin(tx, id, 'isActive');
+      }
       const updated = await tx.user.update({
         where: { id },
         data: { isActive },
@@ -301,9 +349,29 @@ export class UsersService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor: JwtPayload): Promise<void> {
     this.logger.log(`Deleting user: ${id}`);
-    const user = await this.prisma.user.delete({ where: { id } });
+    const user = await this.tenantTx.withTenantTx(async (tx) => {
+      await this.assertAnotherActiveAdmin(tx, id);
+      const deleted = await tx.user.delete({ where: { id } });
+
+      // Журнал переживає сутність: актор і label — снапшоти, лінк лишається на id, якого вже немає
+      await this.activities.record(tx, {
+        type: 'user.deleted',
+        actor: { type: 'user', id: actor.sub, label: actor.email },
+        payload: {
+          user: { kind: 'user', id: deleted.id, label: deleted.name ?? deleted.email },
+        },
+        links: [{ entityType: 'user', entityId: deleted.id, role: 'subject' }],
+      });
+
+      // Після коміту (lossy-прискорювач): сесії зникають каскадом з рядком, але живий socket
+      // видаленого юзера інакше дотягнув би до закінчення access-токена
+      this.tenantTx.onCommit(tx, () => {
+        this.realtime.disconnectUser(id);
+      });
+      return deleted;
+    });
     this.logger.log(`User deleted successfully: ${user.email} (ID: ${user.id})`);
   }
 }

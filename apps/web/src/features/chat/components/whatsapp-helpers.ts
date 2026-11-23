@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { ParsedApiError } from '@saas-skeleton/ui/api/api-error';
 
 /** Мінімум того, що потрібно знати про токен акаунта для картки (форма — з `MessagingAccountResponse.token`) */
@@ -189,7 +190,7 @@ export function summarizeWebhookBody(body: string): string {
 /** Шаблонне повідомлення (CHAT-3a) показується як «Template: імʼя (мова)», а не голим імʼям */
 export function templateText(
   message: { payload?: unknown },
-  t: (key: string, options: Record<string, string>) => string,
+  t: TFunction<'chat'>,
 ): string | null {
   const payload = message.payload as
     { template?: { name?: string; language?: string } } | null | undefined;
@@ -204,7 +205,7 @@ export function templateText(
  */
 export function unsupportedText(
   message: { payload?: unknown },
-  t: (key: string, options: Record<string, string>) => string,
+  t: TFunction<'chat'>,
 ): string | null {
   const payload = message.payload as
     | { unsupported?: { type?: string }; reaction?: { emoji?: string | null } }

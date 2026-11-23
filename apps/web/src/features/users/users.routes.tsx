@@ -1,9 +1,12 @@
+import { lazyPage } from '@saas-skeleton/ui/lib/lazy';
 import { UserQuerySchema } from '@saas-skeleton/contracts';
 import { createRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { workspaceRoute } from '../../app-shell/app.routes';
-import { UserDetailPage } from './pages/user-detail';
-import { UsersPage } from './pages/users';
+
+/** Сторінки — окремі чанки (docs/frontend/lazy-loading.md) */
+const UserDetailPage = lazyPage(() => import('./pages/user-detail'), 'UserDetailPage');
+const UsersPage = lazyPage(() => import('./pages/users'), 'UsersPage');
 
 // Стан списку живе в URL — лінк можна шерити, F5 не губить пошук/сторінку.
 // .catch() — невалідні значення з URL тихо падають у дефолт замість помилки роута

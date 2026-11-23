@@ -145,9 +145,12 @@ export class PlatformAuthSessionService {
         tokenHash: sha256Hash(secret),
         lastUsedAt: now,
         idleExpiresAt: new Date(now.getTime() + this.idleDays * DAY_MS),
-        ...(bumpGeneration
-          ? { prevTokenHash: session.tokenHash, prevRotatedAt: now, generation: { increment: 1 } }
-          : {}),
+        // `prev` посувається ЗАВЖДИ: витіснений секрет лишається дійсним у вікні reuse. Інакше
+        // секрет, виданий переможцю гонки двох вкладок, не збігався б ні з `tokenHash`, ні з
+        // `prev`, і його наступний refresh вбивав би сесію як `secret_mismatch`
+        prevTokenHash: session.tokenHash,
+        prevRotatedAt: now,
+        ...(bumpGeneration ? { generation: { increment: 1 } } : {}),
       },
     });
 

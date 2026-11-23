@@ -70,7 +70,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 **Правки в репо (мінімальні, потрібні для деплою):**
 - `libs/database/package.json` — `prisma` перенесено devDependencies→dependencies (CLI потрібен
   у runtime для entrypoint-міграцій);
-- `.npmrc` — `shamefully-hoist=true` (плоский node_modules: webpack-бандли тримають npm-депи
+- `.npmrc` — `shamefully-hoist=true` (плоский node_modules: rspack-бандли (раніше webpack) тримають npm-депи
   external, у runtime-образ копіюється лише кореневий node_modules — без hoisting isolated-симлінки
   губляться і `require('argon2'/'sharp'/'pg-boss'/'prisma')` падає).
 - **Жодних змін бізнес-коду.** (Prisma 7 `prisma-client`-генератор + `@prisma/adapter-pg` —
@@ -92,7 +92,7 @@ manager. **Жодного `scp` — ні stack, ні `.env`, ні config.json н
 ## 4. Образи (механіка)
 
 **`Dockerfile.node`** — 3 стадії: `builder` (повний install → `prisma generate` → `nest build`
-webpack-бандл `apps/$APP/dist/main.js`) → `prod-deps` (`pnpm install --prod`, лише runtime-депи)
+rspack-бандл `apps/$APP/dist/main.js` + чанки; Nest CLI 12 `builder: rspack`) → `prod-deps` (`pnpm install --prod`, лише runtime-депи)
 → `runtime` (тонкий, non-root; копіює кореневий `node_modules` + `dist` + prisma-схему/config).
 `api` у стеку override-ить `entrypoint` на `entrypoint-api.sh`; `platform-api`/`worker` —
 дефолтний CMD `node apps/$APP/dist/main.js`.
@@ -126,11 +126,17 @@ Docker embedded-DNS (`resolver 127.0.0.11` + змінна в `proxy_pass`).
 **check** — до будь-якої збірки, на кожній гілці:
 - `ai_knowledge_check` — закомічений корпус знань AI не розійшовся з `docs/ai-knowledge`;
 - `verify` — **ручна кнопка, не шлюз** (рішення власника 2026-10-19: прогін забирав надто багато
-  часу; перевірка — локально перед пушем). `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` →
+  часу; перевірка — локально перед пушем). `bash scripts/ci-verify.sh`: `pnpm lint` (разом із `deps:check`) → `typecheck` → `codegen:check` →
   unit → e2e обох API. Postgres (той самий pgvector-образ і digest) і Valkey — одноразові
   контейнери на власній docker-мережі джоби; checkout монтується read-only і копіюється в
   node-контейнер (shell-executor не зміг би прибрати root-овий `node_modules`). pnpm store
   кешується в іменованому томі `saas-verify-pnpm-store` на раннері.
+
+Легкого серверного дубля (`lint` + `typecheck`) у GitLab **немає свідомо**: стадія `build` стартує
+лише після завершення всієї стадії `check`, тож навіть джоба з `allow_failure` подовжила б кожен
+розкат `saas-dev` і зайняла спільний раннер — це зміна умов деплою, потрібне рішення власника.
+Локально цю роль виконує `pre-push` (`docs/commands.md`, «Хуки git»), на GitHub — неблокуючий
+`check.yml`. Якщо вирішать додати: джоба `check_lint` у `check`, `bash scripts/ci-check.sh`.
 
 Стадія build чекає лише на `ai_knowledge_check`; `verify` (`when: manual`, `allow_failure: true`)
 її не тримає, тож SHA збирається й деплоїться без повного прогону — відповідальність за нього на

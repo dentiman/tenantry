@@ -32,6 +32,8 @@ model Tenant {
   activityLinks           ActivityLink[]
   notifications           Notification[]
   notificationStates      NotificationState[]
+  idempotencyKeys         IdempotencyKey[]
+  userOperations          UserOperation[]
   notificationPreferences NotificationPreference[]
   scheduledNotifications  ScheduledNotification[]
   numberSequences         NumberSequence[]

@@ -53,7 +53,7 @@
 | `code`        | enum (закритий)              | Машинний код — фронт світчиться по ньому, **не** по `message`     |
 | `message`     | `string`                     | Людське повідомлення; для 5xx завжди замасковане                  |
 | `fieldErrors` | `{field, message, code?, params?}[]` (опц.) | Прив'язка до полів request-схеми; вкладеність через крапку |
-| `requestId`   | `string` (опц.)              | id запиту з pino-http — кореляція відповіді з рядком у лозі       |
+| `requestId`   | `string` (опц.)              | trace-id запиту (32 hex) — поле `trace_id` у логах, `docs/observability.md` |
 
 **I18N-2** (`libs/contracts/src/error/error.schema.ts`): `FieldError.code` — машинний код помилки
 поля (Zod issue code: `too_small`, `invalid_format`… або бізнес-код `already_exists`), `params` —
@@ -70,6 +70,8 @@
 | `FORBIDDEN`           | 403  | Немає прав (RBAC — у беклозі)                       | —                  |
 | `NOT_FOUND`           | 404  | Ресурс не знайдено (явно або Prisma P2025)          | —                  |
 | `CONFLICT`            | 409  | Унікальність/конфлікт стану (P2002, явний конфлікт) | так, якщо відоме поле |
+| `IDEMPOTENCY_IN_PROGRESS` | 409 | Запит з цим `Idempotency-Key` уже застосовано, але його відповідь недоступна; заголовок `Retry-After` (`docs/idempotency.md` §3) | — |
+| `IDEMPOTENCY_KEY_REUSED` | 422 | Той самий `Idempotency-Key` з іншим запитом (`docs/idempotency.md` §4) | — |
 | `CHANNEL_WINDOW_CLOSED` | 422 | Вікно вільного тексту каналу закрите (CHAT-2b); фронт пояснює правило й пропонує нотатку | — |
 | `INTERNAL_ERROR`      | 500  | Невідомий виняток; message завжди замаскований      | —                  |
 | `SERVICE_UNAVAILABLE` | 503  | БД/залежність недоступна — клієнту можна ретраїти   | —                  |
@@ -101,7 +103,8 @@
 - **Маскування 5xx**: жоден внутрішній message/stack не виходить назовні. Деталі — тільки в лог
   (`logger.error` з повним `err`), відповідь містить `requestId` для кореляції.
 - **Логування**: 5xx → `error` (з винятком і stack), 4xx → `warn` (з `code` і `fieldErrors`).
-- **`requestId`** — з pino-http (`req.id`), додається в кожен envelope.
+- **`requestId`** — з pino-http (`req.id` = trace-id з `traceparent` фронтенду або згенерований),
+  додається в кожен envelope.
 
 ### Підводні камені Prisma 7 + adapter-pg (перевірено на живо)
 
@@ -153,7 +156,12 @@ throw new UnauthorizedException('Invalid email or password');
 ### Глобальний toast (`main.tsx` + `lib/error-toast.ts`)
 
 - `QueryCache.onError` + `MutationCache.onError` → `parseApiError` → `isGlobalApiError`
-  (network / 403 / ≥500) → `toast.add({ type: 'error' })`.
+  (network / 403 / ≥500) → `toast.add({ type: 'error' })`. Клієнт створює `createAppQueryClient`
+  (`apps/web/src/lib/query-client.ts`), а політику тоста задає `main.tsx`.
+- **Опт-аут `meta.silentError: true`** — для викликів, чия відмова є легальним станом UI, а не
+  подією для юзера (presence: «невідомо»; надсилання в чаті: рядок «не надіслано» вже і є
+  повідомленням). Діє і на запити, і на мутації (мутації він не зупиняв до 2026-11-11). Є лише в
+  `apps/web`: у `platform-web` свого `QueryClient`-фабрики з опт-аутом поки немає.
 - **Дедуп 5 с** по ключу `status:code:message` — сторінки з автооновленням (jobs, 5 с)
   не спамлять однаковими тостами.
 - **Розміщення** (`components/toast-host.tsx`, живе в root-роуті): адмінка — знизу

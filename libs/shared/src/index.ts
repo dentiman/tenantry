@@ -1,6 +1,7 @@
 export * from './auth';
 export * from './crypto';
 export * from './errors';
+export * from './logging';
 export * from './messaging';
 export * from './storage';
 export * from './activities';
@@ -10,3 +11,6 @@ export * from './ai';
 export * from './chat';
 export * from './channels';
 export * from './realtime';
+export * from './idempotency';
+export * from './user-operations';
+export * from './customers';

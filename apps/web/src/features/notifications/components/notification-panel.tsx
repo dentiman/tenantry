@@ -31,6 +31,7 @@ import {
 } from '../../../api/generated/api';
 import type { NotificationResponseDtoOutput } from '../../../api/generated/model/notificationResponseDtoOutput';
 import type { NotificationsFindAllFilter } from '../../../api/generated/model/notificationsFindAllFilter';
+import { entityAction } from '../../../lib/entity-actions';
 import { entityLink, entityPath } from '../../../lib/entity-routes';
 import { NotificationItem } from './notification-item';
 import { NotificationPreferences } from './notification-preferences';
@@ -124,6 +125,12 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
     if (link && entityPath(link) !== pathname) {
       void navigate(link);
       onClose();
+      return;
+    }
+    // Ціль без сторінки — дія (завантажити файл операції); панель лишається відкритою
+    const action = notification.target ? entityAction(notification.target.kind) : null;
+    if (action && notification.target) {
+      action(notification.target.id);
     }
   };
 
@@ -139,18 +146,23 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
         }
       }}
     >
-      {/* bg-sidebar замість дефолтного bg-popover: центр сповіщень — те саме
-          "шасі", що бічні колонки шела, а не полотно/картка (див. правило
-          --sidebar для бічних поверхонь, docs/frontend). У світлій темі
-          --popover чисто білий, а --sidebar — той самий теплий сірий, що й
-          сайдбар зліва; у темній вони й так близькі, різниця непомітна.
+      {/* bg-muted замість дефолтного bg-popover (до 2026-11-12 — bg-sidebar):
+          центр сповіщень у світлі — ВТОПЛЕНА поверхня, на якій білі картки
+          читаються підняттям, а не лише контуром. `--sidebar` для цього не
+          годиться: у темах із білим шелом (`ink`) він і є білий, і картки
+          зливались із панеллю. `--muted` в усіх світлих темах — сходинка
+          нижче за полотно (у `tenantry`/`gray` він збігається з `--sidebar`,
+          тож там вигляд не змінився). Рішення власника 2026-11-12.
           Лівий бордер (`data-[side=right]:border-l` реєстру) розрахований на
           повнокольоровий `--border` поверх білого `--popover` — на новому
           `--sidebar`-фоні дві близькі за тоном сірі лінії поруч читались як
           задвоєна межа. Приглушуємо колір самого бордера (opacity, а не
           прибираємо зовсім — межа з полотном шела лишається потрібною), і
           ще тьмяніше в темній темі, де яскрава лінія на й так темному тлі
-          різала око сильніше, ніж у світлій. */}
+          різала око сильніше, ніж у світлій.
+          У ТЕМРЯВІ (2026-11-10) панель перейшла на поверхню діалогу: `bg-dialog`
+          і межа `--raised-outline` приходять із самого `SheetContent`, тому тут
+          лишились тільки світлі перевизначення. */}
       <SheetContent
         side="right"
         // Вбудований close вимкнено: він абсолютний (`top-3 right-3`) і центрується
@@ -158,7 +170,7 @@ export function NotificationPanel({ isOpen, onClose }: { isOpen: boolean; onClos
         // шестернею (32px, у потоці) це давало видиму розбіжність по вертикалі.
         // Свій close нижче — той самий елемент, просто рядковий сусід інших кнопок
         showCloseButton={false}
-        className="bg-sidebar data-[side=right]:border-l-border/30 sm:max-w-[440px] dark:data-[side=right]:border-l-border/10"
+        className="bg-muted data-[side=right]:border-l-border/30 sm:max-w-[440px] dark:bg-dialog dark:data-[side=right]:border-l-(--raised-outline)"
       >
         <SheetHeader>
           {showSettings ? (

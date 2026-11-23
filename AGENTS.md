@@ -1,9 +1,9 @@
-# SaaS Skeleton — AGENTS.md
+# Tenantry — AGENTS.md
 
 Forkable skeleton for multitenant CRM/ERP products (billing, customers, tickets, queues).
 Two planes, each a full stack: **tenant plane** (`apps/api` + `apps/web`) and **control
 plane** (`apps/platform-api` + `apps/platform-web`, operator-facing, manages tenants).
-Auth and core patterns were ported from a prior project (`fibo-admin`) and extended here.
+Auth and core patterns were ported from a prior internal project and extended here.
 
 This file covers what's needed on nearly every task: commands, directory map, cross-cutting
 conventions, and rules that are easy to violate by accident. Subsystem depth (data model,
@@ -37,6 +37,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
 - `docs/activity-log.md` — activity feed (`activities`/`activity_links`)
 - `docs/file-storage.md` — S3 presigned upload/download flow
 - `docs/error-handling.md` — `ApiError` envelope and normalization rules
+- `docs/observability.md` — log record fields (OpenTelemetry names), the one operation id
+  (`traceparent` → `requestId` → `correlationId` → `trace_id`), redaction, what is not built yet
 - `docs/i18n-plan.md` — localization approach and phases
 - `docs/customers.md`, `docs/calendar.md`, `docs/settings.md`, `docs/account-settings.md` —
   reference domain modules; read before extending or copying their pattern
@@ -50,6 +52,15 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   історією проєкту (`docs/history-summary.md` — **демо-дані**, ведуться вручну)
 - `docs/workspace-slots.md` — isolated per-worktree dev stacks (`pnpm ws:init`)
 - `docs/commands.md` — full `package.json` command reference
+- `docs/database-seed.md` — the minimal seed (`db:seed`), seed identities and `db:reset`; the demo
+  dataset that builds on it is `docs/demo.md`
+- `docs/deployment-options.md` — deployment variants for this infrastructure (one VPS → managed
+  services); what the project needs running, where DB/files live, how realtime and the registry fit.
+  The two deploys actually in use are `deploy-swarm.md` and `deploy-hetzner.md`
+- `docs/ai-driven-architecture.md` — retrospective on how the stack was built with AI: file
+  structure as project memory (theses, not a reference)
+- `docs/notes/` — design journal (initial proposal, dated reviews/audits, research spikes); a
+  record of how decisions were reached, not the current reference
 - `docs/roadmap.md` — priorities, phase status, and what's intentionally not built yet
 - `docs/frontend/ui-stack.md` — primitives, tokens, form and **DataGrid** conventions
   (**start here** for any UI work, including `createDataGrid<TFilters, TItem>()`);
@@ -59,17 +70,26 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   (`staticData.backdrop`, only `/guide` so far; work screens stay solid);
   `docs/frontend/layout-structure.md` — quick visual map + naming of shell columns/
   panels (rail, area sidebar, context panel) for both frontends;
-  `docs/frontend/ui-known-issues.md` — open vendored-code issues
+  `docs/frontend/ui-known-issues.md` — open vendored-code issues;
+  `docs/frontend/lazy-loading.md` — route-level code splitting (`lazyPage`/`lazyComponent`), what stays
+  in the start chunk, bundle budget (`pnpm bundle:check`)
 - `docs/chat.md` — **the** reference for chat (human conversations). §7 is the phase plan,
   §7.6 the invariants later phases build on — don't break them. Built: internal conversations (REST + realtime, notifications) and the customer channel core on a fake
   provider — inbound, replies with ordered delivery, receipts, workflow (CHAT-0.1…2b); the real WhatsApp adapter is CHAT-3a…3c.
   `docs/bulk-operations.md` — **design only, not implemented** (a disabled demo slot on `/users`).
+- `docs/idempotency.md` — **the** reference for the `Idempotency-Key` header on REST mutations: the key
+  is committed in the transaction of the effect (`IdempotencyService.claim(tx)`), a repeat replays the
+  first response, failures leave nothing; how to opt an endpoint in, how the web client derives the key.
+- `docs/user-operations.md` — **the** reference for `UserOperation`: the user-visible resource behind a
+  `202` (owner-only, guarded transitions, heartbeat + stall sweeper, 30-day retention, private result
+  file), how to add an operation type, the upload queue, `StepProgress` and the activity tray. Built:
+  the runtime and the customer CSV export; operations with steps/cursor (import) are the next phase (§10).
 - `docs/whatsapp-channel.md` — **the** plan for the first external channel, WhatsApp Cloud API (design
   only, nothing built): decisions of 2026-10-13 (WhatsApp only, provider-neutral core so a second
   provider is an adapter, mentions/presence/snooze dropped), channel architecture (signed webhook →
   raw event store → ingest, outbox `QUEUED→SENDING→SENT`, status folding, identity with BSUID,
   templates), WhatsApp feature catalogue with levels, phases CHAT-2a…3c, open questions O-W1…9.
-  Evidence (Meta API reference, fms-api review, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`; `fms-webhook-sample-2026-10-14.md` — shapes of 300 real webhooks) is in `docs/whatsapp-research/`.
+  Evidence (Meta API reference, OSS patterns, and `live-probe-2026-10-13.md` / `live-probe-2026-10-14.md` — what a live test account verified; `pnpm whatsapp:probe`, `pnpm chat:connect-meta`) is in `docs/whatsapp-research/`.
   `docs/whatsapp-feature-flows.md` — per-feature flows (UI, system steps, Graph calls, webhooks) and the
   one-time Meta setup runbook (app, WABA, system-user token, webhook, test number).
 - `docs/ai-assistant.md` — **the** reference for the sidebar AI assistant: fixed decisions and
@@ -87,7 +107,8 @@ does not belong here — it goes stale first; it lives in `docs/roadmap.md` and 
   the next AI phase) and `docs/ai-assistant-implementation-plan.md` (AI-2a step plan with measured
   results — read before touching anything under `ai/`). `docs/ai-sources/README.md` — operator
   guide for an external documentation source (FMS) and the `ai:docs:*` / `ai:answers:eval` CLIs;
-  `docs/ai-sources/fms-eval.json` is a **draft** question set pending product-owner review.
+  the FMS question set and manifest (`fms-eval.json`, `fms-pilot.json`) are **not in the repo**, so
+  those CLIs need `--questions` pointing at your own file (see `docs/ai-platform-controls.md` §10).
   `FakeLlmProvider` stays the default and CI backbone (no key, no network, no cost).
 
 ## Planning layers
@@ -116,6 +137,14 @@ Two rules that are easy to lose:
    externally observable behaviour declares `skip_specs: true` rather than inventing a
    requirement to pass validation.
 
+## Review tooling
+
+`/ecc-code-review` (local diff or PR) and `/ecc-architecture-review` (whole repo or an area, against
+this file, `docs/`, `modules.config.ts` and `openspec/specs/`) live in `.claude/commands/`, backed by
+the vendored agents in `.claude/agents/`. Reports are written to `.claude/reviews/`, which is
+gitignored: the repo is public and a report lists findings that are not fixed yet. Findings that
+turn into work belong in `docs/roadmap.md` §2.12, not in the report.
+
 ## Commands
 
 ```bash
@@ -141,6 +170,8 @@ pnpm web:dev                        # tenant web   http://localhost:5173
 pnpm platform:web:dev               # platform web http://localhost:5174
 pnpm openapi:generate && pnpm web:codegen                   # after tenant contract/controller changes
 pnpm platform:openapi:generate && pnpm platform:web:codegen # after platform contract/controller changes
+pnpm codegen:check         # regenerate both planes, fail if committed artifacts drifted (~20 s, no DB;
+                           # part of `pnpm verify`, not of the pre-push hook)
 pnpm ai:knowledge          # docs/ai-knowledge/*.md → committed JSON artifact in libs/shared (after
                            # any corpus edit; `pnpm lint` and CI run `ai:knowledge:check` first)
 pnpm ai:docs:preview       # external Markdown docs → admission + chunks + tokens; offline, no DB/keys
@@ -154,6 +185,11 @@ pnpm ai:answers:eval       # answer quality × price per configuration file (AI-
                            # --fake; writes only `eval` ledger rows — docs/ai-sources/README.md)
 pnpm lint && pnpm typecheck && pnpm build   # lint = ai:knowledge:check + deps:check +
                                             # modules:check --strict + eslint
+pnpm bundle:check          # start-chunk budget of both frontends + "no page in the start chunk" check
+                           # (docs/frontend/lazy-loading.md); builds into a temp dir, ~15 s
+pnpm logs:trace <id>       # every log line of one operation across api/worker/platform-api and both
+                           # frontends (id = `requestId` from an API error); `pnpm logs:errors --since 15m`;
+                           # `pnpm debug:jobs <id>` = its pg-boss jobs. Debug with these first — docs/observability.md §4
 pnpm deps:check            # madge: no runtime import cycles in backend apps and libs
 pnpm modules:check         # imports vs the declared module graph (modules.config.ts); `--strict`
                            # runs inside `pnpm lint`. Blind spots (string links, Prisma) — docs/modules.md §6
@@ -196,6 +232,12 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   `pnpm release:hetzner` = local verify, then `dev` and `main` → HEAD on both (deploys Hetzner;
   `main` == `dev` after). GitLab is reachable only from the work network — the script warns and
   it catches up on the next run.
+- **Documentation-only publication on GitHub:** `git push github main` is allowed for commits
+  limited to `README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `docs/**` and `openspec/**`.
+  The deploy workflow skips these pushes, except `docs/ai-knowledge/**` and
+  `docs/history-summary.md` (application inputs). Any other changed path triggers deployment;
+  manual dispatch always remains available. Merge documentation commits back into `dev`
+  before the next release so the fast-forward check passes. See `docs/deploy-hetzner.md` §4.
 - **Secrets are never in git** (public repo). Committed `docker/stack.env` holds only non-secret
   shared config; secrets live in the stand's env — `/etc/saas/deploy.env` on Hetzner, the
   File-type Protected CI Variable `DEPLOY_ENV` on GitLab (template `docker/deploy.env.example`).
@@ -203,7 +245,10 @@ a contract or controller changes — see `docs/commands.md` for the full list in
   on every rollout.
 - **Neither CI runs `verify` automatically** (owner decision 2026-10-19: too slow). The gate is
   local: run `pnpm verify` (`scripts/ci-verify.sh`) before pushing to `dev`; `pnpm release:hetzner`
-  does it before pushing. **GitLab:** stage `check` gates `build` only through
+  does it before pushing. What *is* automatic on every `git push` is the offline half —
+  `.husky/pre-push` runs `pnpm lint` + `pnpm typecheck` (~75 s; skipped for docs-only pushes;
+  emergency bypass `SKIP_PREPUSH=1`, see `docs/commands.md` "Хуки git"); e2e, unit and the demo seed
+  stay manual. **GitLab:** stage `check` gates `build` only through
   `ai_knowledge_check`; `verify` is a manual job with `allow_failure` — details
   `docs/deploy-swarm.md` §6. **GitHub:** `verify.yml` is a manual button only.
 
@@ -216,11 +261,16 @@ apps/api            Tenant NestJS API. Modules: auth, account (self-service prof
                      (Socket.IO gateway), calendar, ai (assistant conversation + citation
                      read; the current conversation has no id in its path — only reply ids
                      and history `/ai/conversations/:id` do), chat (CHAT-0.1: internal conversations, server-assigned
-                     `seq`, one access service, no queue/socket seams yet). Pino logging,
+                     `seq`, one access service, no queue/socket seams yet), user-operations
+                     (owner-only read/cancel/result link of `UserOperation`). Pino logging,
                      AllExceptionsFilter via configureApp() (shared between main.ts and e2e).
 apps/platform-api   Control-plane NestJS API (MT-3, :3002): platform-auth (separate identity/
-                     JWT/DB role), tenants CRUD, jobs monitoring (moved here because
-                     `pgboss.*` sits outside RLS), AI settings and the AI cost ledger/prices.
+                     JWT/DB role), tenants CRUD (+ `tenants/:id/users` for emergency user
+                     management, audited in `platform_audit_events`, and a read-only
+                     `tenants/:id/activities` feed), jobs monitoring (moved
+                     here because `pgboss.*` sits outside RLS), AI settings and the AI cost
+                     ledger/prices, and `channel-events` (the log of inbound channel events no
+                     tenant could be routed to — `channel_unroutable_events`, no `tenant_id`).
 apps/worker         NestJS application context, no HTTP. Message subscribers
                      (`src/subscribers/`) + cron via pg-boss, MailerService → Mailpit,
                      local i18next for email content. AI reply generation lives here
@@ -239,8 +289,8 @@ apps/web             Tenant SPA: React 19, Vite 7, TanStack Router/Query v5, Zus
                      `libs/ui`) is the default surface for record detail — prefer it over
                      `Sheet` unless the interaction is a dismiss-and-forget overlay.
 apps/platform-web    Same stack/shell pattern as apps/web (:5174, proxy → :3002). Areas:
-                     Tenants, Operations (Jobs/Queues), AI (settings, costs, prices), User
-                     settings. No org-level Settings — the platform itself is the subject. Same `src/features/<module>/` grouping, one `<module>.routes.tsx` per module.
+                     Tenants, Operations (Jobs/Queues/Channel events), AI (settings, costs,
+                     prices), User settings. No org-level Settings — the platform itself is the subject. Same `src/features/<module>/` grouping, one `<module>.routes.tsx` per module.
 libs/contracts       Zod 4 schemas + z.infer types — the only source of truth for API types.
                      Platform contracts live under the `/platform` subpath, not re-exported
                      from the root (needs an explicit `exports` entry in package.json — Vite/
@@ -362,6 +412,11 @@ The rules most easily broken:
   (`CalendarService.update`/`setAttendees` still do — known debt, deferred).
 - **After commit**: `onCommit` only for lossy accelerators (socket emit); anything that must
   happen goes through `publish(tx, …)`.
+- **Work a user waits on for minutes** (export, import) is a `UserOperation` run by
+  `UserOperationRunner`, not a `runOnce` subscriber — `docs/user-operations.md` §5.
+- **A `POST` that must not run twice** (create, start an operation) gets `@Idempotent()` on the
+  endpoint **and** `await this.idempotency.claim(tx)` first in its `withTenantTx` — one without the
+  other answers `500` to a keyed request (`docs/idempotency.md` §5).
 - **RLS is the tenant boundary only**; who may see or change a record inside the tenant is the
   module's single access function (`calendar.access.ts`, `conversation-access.service.ts`).
 - **An invariant change ships with the e2e that would break without it** (negative, concurrent
@@ -370,8 +425,8 @@ The rules most easily broken:
 ## Critical rules and pitfalls
 
 1. A new shared library needs three coordinated edits: `tsconfig.base.json` paths,
-   the consuming app's `tsconfig.json` paths, and its `webpack.config.js` alias/allowlist —
-   tsc does not rewrite runtime aliases, so webpack needs its own entry.
+   the consuming app's `tsconfig.json` paths, and its `rspack.config.js` alias/allowlist (Nest CLI 12 `builder: rspack`, wired in `nest-cli.json`) —
+   tsc does not rewrite runtime aliases, so the bundler needs its own entry.
 2. Zod 4: normalize before format validation —
    `z.string().trim().toLowerCase().pipe(z.email())`. Never `z.coerce.date()` in response
    schemas — dates on the wire are `z.iso.datetime()` strings; mappers call
@@ -420,9 +475,11 @@ The rules most easily broken:
     them — check the effective `baseUrl` whenever a subpath import behaves differently in an
     app than at the repo root.
 15. A socket event normally says "re-read" and never carries the payload itself
-    (`docs/realtime.md`). Three events carry state, and each is safe only because of the
-    guards that must be copied together with the pattern — **a payload is allowed only with a
-    monotonic counter and a REST resync**: the AI assistant's `ai.message-delta.v1` (a
+    (`docs/realtime.md`). Three events carry durable state, and each is safe only because of
+    the guards that must be copied together with the pattern — **a payload is allowed only with
+    a monotonic counter and a REST resync** (`presence.changed.v1` follows the same rule with a
+    `revision` and a REST snapshot; `chat.typing-changed.v1` is ephemeral, carries a relative
+    `expiresInMs` and loses nothing when dropped, so it needs neither): the AI assistant's `ai.message-delta.v1` (a
     monotonic `chunkSeq` within one generation attempt, a gap sends the client back to the
     REST transcript; a higher `attempt` meaning "discard and restart" — AI-0.1 replaced the
     earlier `chunkSeq === 0` rule, which also mistook a stale attempt's first frame for a
@@ -472,7 +529,7 @@ Do not revisit without an explicit user request.
 | Validation | Zod v4 |
 | Monorepo | pnpm workspaces + Turborepo (Nx rejected) |
 | UI | shadcn/ui on Base UI (style `base-nova`) for both frontends, shared via `libs/ui`. `lucide-react` icons |
-| Forms (web) | React Hook Form + zodResolver + repo wrappers in `apps/web/src/components/form/` |
+| Forms (web) | React Hook Form + zodResolver + repo wrappers in `libs/ui/src/components/form/` (only app-specific fields, e.g. the phone field, stay in `apps/web/src/components/form/`) |
 | Create user (API) | Password is required and set by the admin (argon2 hash); changing your own password is a separate security flow, not the users PATCH endpoint |
 | Files | S3 API as the storage abstraction (SeaweedFS for dev; MinIO ruled out — archived; Garage ruled out — AGPL). Presigned two-phase upload, never a proxy-through-API upload. Access only via short-lived presigned GET after authz |
 | Deploy | Docker Swarm single-node + GitLab CI via docker-context over SSH (no files copied to the server). Kubernetes/Helm out of scope |
@@ -497,9 +554,10 @@ not assumed to exist:
   reference data — `docs/multi-tenancy-architecture.md` backlog section.
 - **EDA-2**: DLQ/replay UI, correlationId filter, queue depth/lag in `/operations/jobs` — the
   messaging pipeline has no failure-visibility surface yet.
-- **Chat** beyond WhatsApp send-only (CHAT-3b webhooks and checks, 3c templates and operations; media and operator tools CHAT-2c come after WhatsApp) —
+- **Chat** beyond what shipped (WhatsApp send, webhooks, receipts and mark-as-read exist; still open: CHAT-3c templates, channel health, consent, BSUID identity, resume delivery; from 3b the typing indicator and outbound reactions; media and operator tools CHAT-2c come after WhatsApp) —
   `docs/whatsapp-channel.md` §6 and `docs/chat.md` §7.3; mentions, presence dot and snooze were dropped. **Bulk operations** — design only.
-- **AI assistant** feature expansion is paused (AI-2b/AI-3/AI-4 postponed); work goes into AI-5
-  platform controls — `docs/ai-platform-controls.md`.
+- **AI assistant** is finished and parked: AI-5a/b/c shipped and archived, AI-2b/AI-3/AI-4
+  postponed, `ai-5c2-quality-settings` not started (waits for an own `saas` eval set). Where it
+  stopped and the order to resume — `docs/ai-platform-controls.md` §10.
 - **Domain modules**: tickets, then billing (`PaymentProvider` interface → fake provider →
   Stripe), are the next reference modules after customers/calendar.

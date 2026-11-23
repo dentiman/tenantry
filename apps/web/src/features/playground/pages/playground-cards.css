@@ -1,0 +1,58 @@
+/**
+ * Демо-тони брендового фону — ТІЛЬКИ для стенда каталогу карток.
+ *
+ * Сенс стенда в тому, що розмітка картки не змінюється ніколи: `<Card>`
+ * лишається тим самим рядком JSX, а різний вигляд дають ЗНАЧЕННЯ токенів, які
+ * приходять від фону. Один brand-фон це показує наполовину — легко подумати,
+ * що «скло» прив'язане саме до синього бренду. Тому тут кілька тонів: вони
+ * переозначають лише `--backdrop-*`, і жодна картка про них не знає.
+ *
+ * Чому не в `libs/ui`: у продукті фон рівно один (бренд). Це матеріал стенда,
+ * а не палітра продукту, тож він живе поруч зі сторінкою і видаляється разом
+ * з нею.
+ */
+
+/* Світлий режим — плями зведені до білого, як у базових `:root` */
+.cards-scene[data-tone='violet'] {
+  --backdrop-base: oklch(0.985 0.008 305);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.62 0.2 300) 32%, white);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.6 0.16 325) 18%, white);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.6 0.14 265) 30%, white);
+}
+
+.cards-scene[data-tone='emerald'] {
+  --backdrop-base: oklch(0.985 0.008 165);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.62 0.15 165) 32%, white);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.66 0.13 195) 18%, white);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.7 0.12 140) 30%, white);
+}
+
+.cards-scene[data-tone='amber'] {
+  --backdrop-base: oklch(0.99 0.01 85);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.75 0.15 75) 32%, white);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.7 0.14 45) 18%, white);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.8 0.13 95) 30%, white);
+}
+
+/* Темний режим — «нічні» відтінки, зведені до чорного (патерн `.dark` у
+   `brand-backdrop.css`: не яскравий колір, а його глибока версія) */
+.dark .cards-scene[data-tone='violet'] {
+  --backdrop-base: oklch(0.155 0.014 300);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.62 0.2 300) 70%, black);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.6 0.16 325) 45%, black);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.6 0.14 265) 55%, black);
+}
+
+.dark .cards-scene[data-tone='emerald'] {
+  --backdrop-base: oklch(0.15 0.012 170);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.62 0.15 165) 70%, black);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.66 0.13 195) 45%, black);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.7 0.12 140) 55%, black);
+}
+
+.dark .cards-scene[data-tone='amber'] {
+  --backdrop-base: oklch(0.16 0.012 70);
+  --backdrop-glow-1: color-mix(in oklch, oklch(0.72 0.15 70) 70%, black);
+  --backdrop-glow-2: color-mix(in oklch, oklch(0.68 0.14 40) 45%, black);
+  --backdrop-glow-3: color-mix(in oklch, oklch(0.78 0.13 95) 55%, black);
+}

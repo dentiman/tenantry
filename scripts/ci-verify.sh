@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Повна перевірка коміту перед збіркою образів: lint (з ai:knowledge:check) → typecheck →
-# unit → демо-сід (двічі) → e2e обох API. Це джоба `verify` стадії check у .gitlab-ci.yml; локально той самий
+# codegen:check → unit → демо-сід (двічі) → e2e обох API. Це джоба `verify` стадії check у .gitlab-ci.yml; локально той самий
 # прогін — `bash scripts/ci-verify.sh` (потрібен лише Docker, dev-стек не чіпає).
 #
 # Усе живе в одноразових контейнерах на власній docker-мережі: Postgres (той самий
@@ -52,10 +52,12 @@ docker run --rm --network "$RUN_ID" \
   -e PLATFORM_JWT_SECRET=ci-only-platform-secret-not-for-production-32chars \
   "$NODE_IMAGE" bash -euo pipefail -c '
     mkdir -p /work
+    # .git не копіюємо: у linked worktree це файл-вказівка, а guard Prisma (load-root-env.ts) приймає його
+    # за worktree без .env.local і відмовляє `db:roles`; для перевірок історія git не потрібна
     # logs/ — пишуть запущені поруч dev-процеси (`api:dev`, `worker:dev`): tar падає на
     # «file changed as we read it», а самі логи перевірці не потрібні
     tar -C /src --exclude=./node_modules --exclude="*/node_modules" --exclude=./.turbo \
-      --exclude=./.env --exclude=./.env.local --exclude="./apps/*/logs" -cf - . | tar -C /work -xf -
+      --exclude=./.git --exclude=./.env --exclude=./.env.local --exclude="./apps/*/logs" -cf - . | tar -C /work -xf -
     cd /work
     echo "verify: $(nproc) CPU, $(awk "/MemTotal/ {print int(\$2/1024)}" /proc/meminfo) MB RAM, node heap limit $(node -p "Math.round(require(\"v8\").getHeapStatistics().heap_size_limit/1048576)") MB"
     corepack enable
@@ -64,6 +66,8 @@ docker run --rm --network "$RUN_ID" \
     pnpm db:generate
     pnpm lint
     pnpm typecheck
+    # Закомічені openapi.json і orval-клієнти збігаються з результатом генерації (AGENTS.md «Type pipeline»)
+    pnpm codegen:check
     pnpm test
     # Демо-сід на чистій БД двічі: перший прогін ловить розрив зі схемою/контрактами, другий —
     # неідемпотентність (docs/demo.md). e2e нижче користуються окремою тестовою БД, тож це їх не чіпає

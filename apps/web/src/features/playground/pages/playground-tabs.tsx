@@ -51,7 +51,7 @@ export function PlaygroundTabsPage() {
 
       <div className="min-w-0 space-y-6">
         <section id="tabs-overview" className="scroll-mt-6">
-          <div className="rounded-xl bg-muted/50 p-4">
+          <div className="rounded-xl border border-dashed border-border p-4">
             <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {t('tabs.importLabel')}
             </p>
@@ -131,7 +131,7 @@ export function PlaygroundTabsPage() {
           description={t('tabs.sections.usage.description')}
         >
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('tabs.usage.content.title')}
@@ -163,7 +163,7 @@ export function PlaygroundTabsPage() {
               </code>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('tabs.usage.switcher.title')}

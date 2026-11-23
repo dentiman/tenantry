@@ -37,6 +37,20 @@ check_ff() {
 refspecs() { local b; for b in $BRANCHES; do printf 'HEAD:refs/heads/%s ' "$b"; done; }
 
 check_ff "$PRIMARY" || die "$PRIMARY недоступний"
+
+# Легкий шлюз (lint + typecheck) — один раз на всі пуші цього скрипту: далі його хук pre-push
+# пропускає (PREPUSH_GATE_DONE), інакше він відпрацював би двічі — на GitHub і на GitLab.
+# release.sh після verify виставляє ту саму змінну: verify уже включає і lint, і typecheck.
+if [ -z "${PREPUSH_GATE_DONE:-}" ]; then
+  gate_input=""
+  for b in $BRANCHES; do
+    remote_sha="$(git rev-parse -q --verify "refs/remotes/$PRIMARY/$b" || echo 0000000000000000000000000000000000000000)"
+    gate_input+="refs/heads/$b $head refs/heads/$b $remote_sha"$'\n'
+  done
+  printf '%s' "$gate_input" | bash scripts/pre-push-gate.sh || die "шлюз перед пушем не пройдено (SKIP_PREPUSH=1 — обхід у крайньому випадку)"
+fi
+export PREPUSH_GATE_DONE=1
+
 # shellcheck disable=SC2046
 git push --atomic "$PRIMARY" $(refspecs)
 echo "ok: $PRIMARY ← $BRANCHES @ $(git rev-parse --short HEAD)"

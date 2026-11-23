@@ -22,6 +22,7 @@ import { ThemeSwitcher } from '@saas-skeleton/ui/components/theme-switcher';
 import { NotificationBell } from '../features/notifications/components/notification-bell';
 import { SlotOutlet } from '../lib/slots';
 import { AppFooterBar } from './account-footer';
+import { ActivityDock } from './activity-dock';
 import { AppRail } from './app-rail';
 import { AreaSidebar } from './area-sidebar';
 import { shellHeaderActions, shellSidePanels } from './slots';
@@ -67,6 +68,7 @@ export function AppShell() {
   // Так само від сторінки — брендовий фон і скляний шел над ним
   // (`libs/ui/src/brand-backdrop.css`). Робочі екрани його не оголошують
   const backdrop = matches.at(-1)?.staticData.backdrop;
+  const backdropVariant = matches.at(-1)?.staticData.backdropVariant;
 
   /**
    * Прокрутка скидається на початок при переході на іншу сторінку.
@@ -112,7 +114,7 @@ export function AppShell() {
         >
           {/* Фон — ПЕРША дитина і без z-index: так він під фіксованим
             сайдбаром і під `SidebarInset`, але над непрозорим `body` */}
-          {backdrop === 'brand' && <BrandBackdrop />}
+          {backdrop === 'brand' && <BrandBackdrop variant={backdropVariant} />}
 
           {/* collapsible="icon": згортання стискає контейнер до ширини рейлу, а
             overflow-hidden відрізає панель. Тобто SidebarTrigger і Cmd+B тепер
@@ -136,7 +138,7 @@ export function AppShell() {
               єдина в застосунку лишалась постійною і забирала 15px у КОЖНОЇ
               сторінки. Побічний виграш: хедер тепер поза скролером, а не
               `sticky` над ним */}
-          <SidebarInset className="h-svh min-w-0 overflow-hidden">
+          <SidebarInset className="relative h-svh min-w-0 overflow-hidden">
             <header
               data-slot="app-header"
               className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6"
@@ -168,6 +170,11 @@ export function AppShell() {
                 <Outlet />
               </div>
             </ScrollArea>
+
+            {/* Док активності (завантаження, операції) — у правому нижньому куті робочої області,
+                поверх контенту; порожній нічого не малює. Усередині Inset, тому відкриті
+                праві колонки зсувають його, а не ховаються під ним */}
+            <ActivityDock />
           </SidebarInset>
 
           {/* Контекстна панель — СУСІД `SidebarInset`, а не його дитина: вона

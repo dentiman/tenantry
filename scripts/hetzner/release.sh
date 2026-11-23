@@ -6,6 +6,10 @@
 #   pnpm release:hetzner              # перевірити dev і поставити на нього dev+main обох remote-ів
 #   SKIP_VERIFY=1 pnpm release:hetzner   # лише запушити (правка CI/доків, термінове виправлення)
 #
+# Легкий шлюз pre-push (lint + typecheck, scripts/pre-push-gate.sh) після verify не повторюється;
+# при SKIP_VERIFY=1 він ВСЕ ОДНО відпрацює (раз, у git-sync.sh), якщо диф не лише документація.
+# SKIP_PREPUSH=1 вимикає і його — разом із SKIP_VERIFY=1 це повний «аварійний» пуш без перевірок.
+#
 # Перевіряється робоча тека, а пушиться HEAD, тому дерево мусить бути чистим: інакше
 # перевірили б не той код, що поїде на сервер.
 set -euo pipefail
@@ -32,6 +36,8 @@ if [ "${SKIP_VERIFY:-}" = 1 ]; then
 else
   echo "→ verify локально (потрібен Docker; dev-стек не зачіпається)…"
   bash scripts/ci-verify.sh
+  # verify уже включає lint і typecheck — хук pre-push і git-sync вдруге їх не ганяють
+  export PREPUSH_GATE_DONE=1
 fi
 
 echo "→ dev і main → HEAD на обох remote-ах (push у github/main запускає деплой)"

@@ -27,7 +27,7 @@ State after CHAT-2b (archived) and the plan reorder of 2026-10-14:
   Graph v23.0: `debug_token` with an app token (`APP_ID|APP_SECRET`) for a system-user token, the WABA
   and phone-number reads, one template send (`message_status: "accepted"`) and one text send in an open
   window (no `message_status`). Not verified: real error codes, `biz_opaque_callback_data` placement.
-- The WABA is shared with another application (`fms-api`) that holds the WABA's webhook override. This
+- The WABA is shared with another application (`legacy-api`) that holds the WABA's webhook override. This
   slice subscribes to nothing, so it cannot disturb it.
 - `ApiError.code` is a closed set; `AllExceptionsFilter` accepts a domain-named code from it.
 

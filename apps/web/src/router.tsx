@@ -1,4 +1,6 @@
 import { createRouter } from '@tanstack/react-router';
+import { RouteError, RoutePending } from '@saas-skeleton/ui/components/route-fallbacks';
+import { reportError } from '@saas-skeleton/ui/lib/report-error';
 import type { RouteAccess } from './features/auth/auth.access';
 import {
   rootRoute,
@@ -59,9 +61,12 @@ import {
   playgroundInlineFormRoute,
   playgroundComponentsRoute,
   playgroundComponentsButtonsRoute,
+  playgroundComponentsCardsRoute,
   playgroundComponentsComboboxRoute,
   playgroundComponentsInputRoute,
+  playgroundComponentsPopupsRoute,
   playgroundComponentsSelectRoute,
+  playgroundComponentsStepProgressRoute,
   playgroundComponentsTextareaRoute,
   playgroundComponentsTabsRoute,
   playgroundComponentsDataGridRoute,
@@ -122,10 +127,13 @@ const routeTree = rootRoute.addChildren([
       playgroundInlineFormRoute,
       playgroundComponentsRoute.addChildren([
         playgroundComponentsButtonsRoute,
+        playgroundComponentsCardsRoute,
         playgroundComponentsComboboxRoute,
         playgroundComponentsDataGridRoute,
         playgroundComponentsInputRoute,
+        playgroundComponentsPopupsRoute,
         playgroundComponentsSelectRoute,
+        playgroundComponentsStepProgressRoute,
         playgroundComponentsTabsRoute,
         playgroundComponentsTextareaRoute,
         playgroundComponentsUserSelectRoute,
@@ -137,7 +145,28 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+/**
+ * Політика ледачого завантаження — одна на всі маршрути (docs/frontend/lazy-loading.md):
+ * - `defaultPreload: 'intent'` — чанк (і loader) стартує на hover/focus/touchstart посилання,
+ *   до кліку; сам клік тоді майже миттєвий;
+ * - `defaultPendingMs`/`defaultPendingMinMs` — скелет з'являється лише якщо перехід триває
+ *   довше 300 мс і тоді тримається не менше 300 мс: швидкі переходи не мигають, а повільні
+ *   не виглядають зависанням (до цього стара сторінка лишається на місці);
+ * - спільні `RoutePending`/`RouteError` — на роутах їх не оголошуємо;
+ * - `defaultOnCatch` — кожна помилка межі роута йде в `reportError` (єдина точка для Sentry,
+ *   `src/lib/error-reporting.ts`); у production роутер сам її не логує.
+ */
+export const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  defaultPendingMs: 300,
+  defaultPendingMinMs: 300,
+  defaultPendingComponent: RoutePending,
+  defaultErrorComponent: RouteError,
+  defaultOnCatch: (error) => {
+    reportError({ error, source: 'route' });
+  },
+});
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -168,6 +197,12 @@ declare module '@tanstack/react-router' {
      * даних. Стилі — `libs/ui/src/brand-backdrop.css`.
      */
     backdrop?: 'brand';
+    /**
+     * Який фон під `backdrop: 'brand'`: `shell` (дефолт, три плями й точки), `auth` (фон
+     * сторінок входу: база кольору сайдбара й ауры по кутах, без точок) або `guide` (те саме,
+     * але світло зліва, на стику колонки й контенту). Без `backdrop` ні на що не впливає.
+     */
+    backdropVariant?: 'shell' | 'auth' | 'guide';
     /**
      * Хто може відкрити сторінку (лейаут → усі діти). ЄДИНЕ джерело: гейт `requireAuth` на
      * `appRoute` відсікає за ним перехід, а меню й рейл (`libs/ui/src/navigation`) ховають

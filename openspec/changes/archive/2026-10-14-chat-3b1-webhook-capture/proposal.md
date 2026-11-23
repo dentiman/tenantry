@@ -4,7 +4,7 @@
 
 CHAT-3a sends real WhatsApp messages but hears nothing back: a message stays at "accepted" forever, and
 inbound is impossible. Before building receipts and inbound on top of Meta's webhooks, we need the real
-thing in hand. fms-api (another project on the same test WABA) already logged 300 real webhooks; they
+thing in hand. legacy-api (another project on the same test WABA) already logged 300 real webhooks; they
 show what Meta actually sends — statuses with pricing, `biz_opaque_callback_data` coming back, BSUIDs
 (`user_id`), media, reactions, template and account updates, `131049` failures. Reading them is a start;
 receiving and storing **our own** hooks on a public address, then reading them back through the API, is the
@@ -25,7 +25,7 @@ slice (receipts and inbound) be written against recorded samples.
 - **Subscribe / unsubscribe by button, per phone number.** The admin sees where the number's webhooks go
   today (ours, nobody, or another host) and presses "Subscribe": we set the number-level
   `override_callback_uri` to this account's address with its verify token. Nothing subscribes by itself.
-  When the number's events currently go to another host (the shared test WABA has fms-dev), the admin must
+  When the number's events currently go to another host (the shared test WABA has legacy-dev), the admin must
   name that host to take them over. "Unsubscribe" clears our override, and the events return to the
   level above.
 - **Read the captured hooks through the API** (tenant admin, per account): list with headers, raw body,
@@ -58,5 +58,5 @@ None. (The generic public webhook of CHAT-2a keeps its behaviour for the fake pr
   events list.
 - Deploy: `docker/docker-compose.stack.yml` api env, `scripts/hetzner/common.sh` defaults
   (`CHANNEL_WEBHOOK_BASE_URL`, `CHANNEL_WEBHOOK_SIGNATURE=record`).
-- Docs: `whatsapp-channel.md` §4.3/§4.13/§6/§8.1, `whatsapp-feature-flows.md` F3, a research note on the fms-api
+- Docs: `whatsapp-channel.md` §4.3/§4.13/§6/§8.1, `whatsapp-feature-flows.md` F3, a research note on the legacy-api
   sample.

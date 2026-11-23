@@ -113,7 +113,7 @@ export function CustomerSelect({
           id={id}
           // `min-h-9` замість фіксованої висоти: ідентичність — два рядки, а
           // метрика 36px описує ОДНОрядкові контроли (те саме, що в `UserSelect`)
-          className="flex min-h-9 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-field py-1 pr-2.5 pl-3 text-sm transition-colors outline-none select-none group-has-data-[slot=combobox-clear]:pr-9 group-has-data-[slot=combobox-clear]:[&>svg]:hidden hover:bg-field-hover focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-9 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-field py-1 pr-2.5 pl-3 text-sm transition-colors outline-none select-none group-has-data-[slot=combobox-clear]:pr-9 group-has-data-[slot=combobox-clear]:[&>svg]:hidden hover:bg-field-hover focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="flex min-w-0 flex-1 items-center">
             {selected ? (

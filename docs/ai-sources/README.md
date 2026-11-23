@@ -7,7 +7,7 @@
 
 ```bash
 pnpm ai:docs:preview --source fms \
-  --root /path/to/fms-api/fms-docs \
+  --root /path/to/fms-docs \
   --manifest docs/ai-sources/fms-pilot.json \
   --output /tmp/fms-docs-preview.json
 ```
@@ -116,7 +116,7 @@ CLI/parser не імпортуються в runtime barrel `libs/shared/src/ai/i
 
 ```bash
 pnpm ai:docs:ingest --source fms \
-  --root /path/to/fms-api/fms-docs \
+  --root /path/to/fms-docs \
   --manifest docs/ai-sources/fms-pilot.json \
   --tenant default            # slug або id активного tenant-а
 ```
@@ -275,6 +275,10 @@ Eval перевіряє лише retrieval, без генерації й без 
 Recall@k (хоча б одна очікувана сторінка серед k фрагментів; для `expectAll` — усі),
 MRR, частка питань без відповіді, на які пошук не дав нічого (abstain), p50/p95 пошуку,
 розподіл distance правильних сторінок і найближчого кандидата на питання без відповіді.
+
+> **Файл `fms-eval.json` (як і `fms-pilot.json`) у `main` відсутній** — він лишився в старих гілках
+> історії до публікації. Команди нижче мають його за дефолт `--questions`, тож без власного файла
+> (`--questions <шлях>`) не запустяться. Власний набір для нашого корпусу — `docs/ai-platform-controls.md` §10.4.
 
 `fms-eval.json` — **чернетка**: 40 питань (10 точних термінів, 14 перефразувань,
 6 українських до англійського корпусу, 2 на кілька документів, 6 без відповіді,

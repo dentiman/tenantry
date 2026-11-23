@@ -395,6 +395,44 @@ describe('Platform API (e2e)', () => {
         .expect(401);
     });
 
+    // Дві вкладки з однією кукою: кожна отримує свій секрет, порядок Set-Cookie не гарантований —
+    // обидва мусять лишатись дійсними в межах вікна (раніше переможець гонки вбивав сесію
+    // наступним refresh-ем як secret_mismatch)
+    it('race inside the window: BOTH issued secrets stay valid; outside it → reuse', async () => {
+      const login1 = await login().expect(200);
+      const cookie1 = cookieValueOf(login1);
+      const sid = rawTokenOf(login1).split(':')[0]!;
+
+      const first = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .expect(200);
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookie1)
+        .expect(200);
+
+      // Секрет, виданий першому запиту, досі працює
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValueOf(first))
+        .expect(200);
+      const session = await prisma.platformAuthSession.findUniqueOrThrow({ where: { id: sid } });
+      expect(session.revokedAt).toBeNull();
+      // гонка (секрет із prev у вікні) generation не рухає
+      expect(session.generation).toBe(1);
+
+      // Поза вікном той самий секрет — уже reuse
+      await prisma.platformAuthSession.update({
+        where: { id: sid },
+        data: { prevRotatedAt: new Date(Date.now() - 2 * 60 * 1000) },
+      });
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', cookieValueOf(first))
+        .expect(401);
+    });
+
     it('logout clears the cookie and revokes the session', async () => {
       const login1 = await login().expect(200);
       const cookie1 = cookieValueOf(login1);
@@ -533,15 +571,21 @@ describe('Platform API (e2e)', () => {
         .expect(200);
       const raw = login1.headers['set-cookie'] as string[] | string;
       const cookies = Array.isArray(raw) ? raw : [raw];
-      const cookie = cookies
+      let cookie = cookies
         .find((c) => c.startsWith('saas_platform_refresh='))!
         .split(';')[0]!;
 
       for (let attempt = 1; attempt <= 30; attempt++) {
-        await request(throttledApp.getHttpServer())
+        // Як браузер: кожен наступний refresh іде з кукою, яку видала попередня відповідь.
+        // Тримати ту саму застарілу куку 30 разів підряд — не клієнт, а reuse
+        const refreshed = await request(throttledApp.getHttpServer())
           .post('/api/auth/refresh')
           .set('Cookie', cookie)
           .expect(200);
+        const raw2 = refreshed.headers['set-cookie'] as string[] | string;
+        cookie = (Array.isArray(raw2) ? raw2 : [raw2])
+          .find((c) => c.startsWith('saas_platform_refresh='))!
+          .split(';')[0]!;
       }
       await request(throttledApp.getHttpServer())
         .post('/api/auth/refresh')

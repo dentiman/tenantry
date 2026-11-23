@@ -2,10 +2,7 @@ import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { TriangleAlertIcon } from 'lucide-react';
 import { Calendar } from '@saas-skeleton/ui/components/ui/calendar';
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-} from '@saas-skeleton/ui/components/ui/sidebar';
+import { SidebarGroup, SidebarGroupContent } from '@saas-skeleton/ui/components/ui/sidebar';
 import {
   asWeekStart,
   CALENDAR_VIEWS,
@@ -138,7 +135,7 @@ export function CalendarSidebar() {
           <SidebarGroupContent>
             <Link
               to="/user-settings"
-              className="flex gap-2 rounded-lg border border-warning/30 border-l-[3px] border-l-warning bg-warning/10 px-2 py-1.5 text-warning transition-colors hover:bg-warning/15"
+              className="flex gap-2 rounded-lg border border-warning/30 border-l-[3px] border-l-warning bg-warning/10 px-2 py-1.5 text-warning transition-colors hover:bg-warning/15 dark:border-warning/15 dark:border-l-warning/70 dark:bg-warning/[0.06] dark:hover:bg-warning/10"
             >
               <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
               <span className="flex min-w-0 flex-col gap-0.5">

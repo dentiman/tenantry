@@ -85,22 +85,27 @@ export class SettingsController {
    * Журнал змін налаштувань компанії. Окремий ендпоінт, а не
    * `GET /activities?entityType=tenant&entityId=…`, рівно з тієї ж причини, що
    * й решта секції: id організації клієнту не віддається і в шляху не фігурує —
-   * сутність береться з токена. Пагінація — той самий курсор, сервіс той самий.
+   * сутність береться з токена. Пагінація — той самий курсор, сервіс той самий. Лише ADMIN: журнал
+   * налаштувань компанії — справа адміністраторів, як і сам редактор налаштувань.
    */
   @Get('activity')
+  @Roles(Role.ADMIN)
   @ApiOkResponse({ type: ActivityListResponseDto.Output })
   async activity(
     @Query() query: SettingsActivityQueryDto,
     @CurrentUser() actor: JwtPayload,
   ): Promise<ActivityListResponse> {
-    const { items, nextCursor } = await this.activities.findAll({
-      // Поля перелічені явно: `query` — інстанс DTO-класу, і спред зняв би з нього
-      // прототип (ESLint ловить це окремим правилом)
-      cursor: query.cursor,
-      limit: query.limit,
-      entityType: 'tenant',
-      entityId: actor.tenantId,
-    });
+    const { items, nextCursor } = await this.activities.findAll(
+      {
+        // Поля перелічені явно: `query` — інстанс DTO-класу, і спред зняв би з нього
+        // прототип (ESLint ловить це окремим правилом)
+        cursor: query.cursor,
+        limit: query.limit,
+        entityType: 'tenant',
+        entityId: actor.tenantId,
+      },
+      actor,
+    );
     return { items: items.map(toActivityResponse), nextCursor };
   }
 }
