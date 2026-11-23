@@ -8,6 +8,11 @@ module.exports = function (options) {
       nodeExternals({
         allowlist: [/^@saas-skeleton\//],
       }),
+      // Воркер бандлить nestjs-zod разом із @nestjs/swagger (через libs/shared), бо їх нема в
+      // apps/worker/node_modules. У swagger 12 `@fastify/static` вантажиться через import(),
+      // який webpack резолвить на збірці (у 11 був ледачий require → лише warning). Fastify
+      // воркеру не потрібен — лишаємо пакет зовнішнім, він ніколи не виконується.
+      { '@fastify/static': 'commonjs @fastify/static' },
     ],
     resolve: {
       ...options.resolve,
