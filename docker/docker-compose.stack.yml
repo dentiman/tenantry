@@ -367,7 +367,11 @@ configs:
   s3_config:
     # Swarm-config незмінний — імʼя з хешем вмісту (S3_CONFIG_HASH друкує
     # scripts/deploy/write-s3-config.sh), інакше зміна ключів валить `stack deploy`.
-    name: ${STACK_NAME:?}_s3_config_${S3_CONFIG_HASH:?S3_CONFIG_HASH не задано — див. scripts/deploy/write-s3-config.sh}
+    # ТЕКСТ після `:?` — без ASCII-дефіса (`-`) і `+`: інтерполяція Docker CLI бере їх за оператори
+    # `${VAR-default}`/`${VAR+alt}` НАВІТЬ усередині повідомлення про помилку. З дефісом у
+    # «write-s3-config.sh» імʼя мовчки ставало `…_s3-config.sh` (хеш ігнорувався, а перевірка
+    # `:?` не спрацьовувала). Перевірка: `docker stack config -c … | grep -A2 '^configs:'`.
+    name: ${STACK_NAME:?}_s3_config_${S3_CONFIG_HASH:?set S3_CONFIG_HASH via write_s3_config script}
     # Читається на раннері (client-side), відправляється в swarm як config-обʼєкт.
     # Шлях ВІДНОСНО теки цього stack-файлу (docker/), а НЕ від кореня репо —
     # docker stack deploy резолвить configs.file від директорії compose-файлу.
